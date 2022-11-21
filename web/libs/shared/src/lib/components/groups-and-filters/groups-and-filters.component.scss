@@ -1,0 +1,34 @@
+:host {
+    overflow: hidden;
+}
+
+.groups-ang-filter__list {
+    overflow: auto;
+}
+
+.groups-ang-filter__label {
+    margin-right: 16px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.groups-ang-filter__view {
+    display: none;
+    text-decoration: none;
+}
+
+.groups-ang-filter__group:hover,
+.groups-ang-filter__group:active {
+    .groups-ang-filter__display-count {
+        display: none;
+    }
+
+    .groups-ang-filter__view {
+        display: block;
+    }
+}
+
+.groups-ang-filter__not-found {
+    padding: 10px 16px;
+}

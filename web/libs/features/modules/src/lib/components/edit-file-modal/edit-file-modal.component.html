@@ -1,0 +1,144 @@
+<ng-container *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <ng-template #header>
+            <div class="layout-row layout-align-space-between">
+                <div class="flex-none mc-title" *ngrxLet="module$; let module">
+                    <ng-container *ngrxLet="lang$; let lang">
+                        {{ module.locale.module[lang].title }}
+                    </ng-container>
+                </div>
+                <div class="flex-none layout-margin-left-xxl">
+                    <mc-divider [vertical]="true"></mc-divider>
+                </div>
+                <div class="flex-auto">
+                    <button
+                        *ngrxLet="isSavingFiles$; let isSavingFiles"
+                        mc-button
+                        class="mc-button_transparent"
+                        [class.mc-progress]="isSavingFiles"
+                        [disabled]="!canSave"
+                        (click)="saveFileInTab(activeTab)">
+                        <i mc-icon="soldr-icons-save_16" class="soldr-icons"></i>
+                        <span>
+                            {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                            <span class="text_second">
+                                <ng-container *ngIf="os.isMacOS; else isNotMacOs">
+                                    {{ t('Modules.ModuleEdit.ButtonText.ShortcutKeyOnSaveInMacOs') }}
+                                </ng-container>
+                                <ng-template #isNotMacOs>
+                                    {{ t('Modules.ModuleEdit.ButtonText.ShortcutKeyOnSaveInNormalOs') }}
+                                </ng-template>
+                            </span>
+                        </span>
+                    </button>
+                    <ng-container *ngrxLet="canUpdateModuleInPolicies$; let canUpdateModuleInPolicies">
+                        <button
+                            *ngrxLet="isUpdatingModuleInPolicies$; let isUpdatingModuleInPolicies"
+                            mc-button
+                            class="mc-button_transparent"
+                            [class.mc-progress]="isUpdatingModuleInPolicies"
+                            [disabled]="!canUpdateModuleInPolicies"
+                            (click)="updateInPolicies()">
+                            <i mc-icon="soldr-icons-policies_16" class="soldr-icons"></i>
+                            {{ t('Modules.ModuleEdit.ButtonText.UpdateInPolicies') }}
+                        </button>
+                    </ng-container>
+                    <button
+                        *ngrxLet="isLoadingFiles$; let isLoadingFiles"
+                        mc-button
+                        class="mc-button_transparent"
+                        [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.Synchronize')"
+                        [class.mc-progress]="isLoadingFiles"
+                        (click)="synchronize()">
+                        <i mc-icon="soldr-icons-refresh_16" class="soldr-icons"></i>
+                    </button>
+                </div>
+            </div>
+        </ng-template>
+
+        <ng-template #content>
+            <mc-splitter class="layout-fill">
+                <div mc-splitter-area class="edit-file-modal__sidebar layout-column">
+                    <header
+                        class="flex-none layout-padding-left-l layout-padding-right-l layout-padding-top-s layout-padding-bottom-m mc-subheading">
+                        {{ t('Modules.ModuleEdit.Label.Files') }}
+                    </header>
+                    <mc-divider class="flex-none"></mc-divider>
+                    <div class="flex-none layout-padding-top-s layout-padding-bottom-s">
+                        <mc-form-field mcFormFieldWithoutBorders>
+                            <i mcPrefix mc-icon="mc-search_16"></i>
+                            <input
+                                type="text"
+                                mcInput
+                                [placeholder]="t('Modules.ModuleEdit.InputPlaceholderText.FilesFilterTextInEditor')"
+                                [(ngModel)]="filterText"/>
+                            <mc-cleaner></mc-cleaner>
+                        </mc-form-field>
+                    </div>
+                    <mc-divider class="flex-none"></mc-divider>
+                    <div class="flex-auto edit-file-modal__tree">
+                        <soldr-files-tree
+                            class="layout-fill"
+                            [files]="files"
+                            [filter]="filterText"
+                            [hideClibs]="true"
+                            [moduleName]="module.info.name"
+                            [moduleVersion]="module.info.version | moduleVersion"
+                            [readOnly]="readOnly"
+                            (openFile)="openFile($event)">
+                        </soldr-files-tree>
+                    </div>
+                </div>
+
+                <mc-divider [vertical]="true"></mc-divider>
+
+                <div mc-splitter-area class="flex">
+                    <ng-container *ngIf="openedTabs.length > 0; else empty">
+                        <mc-tab-group
+                            class="layout-fill"
+                            *ngrxLet="openedFiles$; let openedFiles"
+                            [(selectedIndex)]="activeTabIndex">
+                            <mc-tab *ngFor="let tab of openedTabs">
+                                <ng-template mc-tab-label>
+                                    <div [mcTooltip]="tab.filepath">
+                                        {{ t('Modules.ModuleEdit.TabTitle.FileTab', {
+                                                filename: tab.filename,
+                                                prefix: tab.prefix,
+                                                modified: openedFiles[tab.filepath]?.loaded && tab.content !== openedFiles[tab.filepath]?.content
+                                            })
+                                        }}
+                                        <button
+                                            mc-button
+                                            class="mc-button_transparent"
+                                            (click)="$event.stopPropagation(); closeTab(tab, tab.content !== openedFiles[tab.filepath]?.content && openedFiles[tab.filepath]?.loaded);">
+                                            <i mc-icon="soldr-icons-close-L_16" class="soldr-icons"></i>
+                                        </button>
+                                    </div>
+                                </ng-template>
+                                <div class="layout-fill">
+                                    <mc-loader-overlay
+                                        *ngIf="!openedFiles[tab.filepath]?.loaded; else editor"></mc-loader-overlay>
+                                    <ng-template #editor>
+                                        <div class="edit-file-modal__editor layout-fill" [attr.filename]="tab.filename">
+                                        </div>
+                                    </ng-template>
+                                </div>
+                            </mc-tab>
+                        </mc-tab-group>
+                    </ng-container>
+                    <ng-template #empty>
+                        <div *ngIf="openedTabs.length === 0" class="layout-fill layout-row layout-align-center-center">
+                            <span class="text_second">
+                                {{ t('Modules.ModuleEdit.Text.EmptyFilesTab') }}
+                            </span>
+                        </div>
+                    </ng-template>
+                </div>
+            </mc-splitter>
+        </ng-template>
+
+        <ng-content #footer>
+
+        </ng-content>
+    </ng-container>
+</ng-container>

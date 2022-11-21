@@ -1,0 +1,187 @@
+<div class="layout-row layout-fill" *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <div class="flex-50 layout-column">
+            <div class="flex-none layout-row layout-align-space-between-start layout-margin-l">
+                <div class="mc-subheading flex-auto">{{ t('Modules.ModuleEdit.Label.Schema') }}</div>
+
+                <button *ngIf="!readOnly" e2e-id="btnAddModuleEvent" mc-button (click)="addEvent()">
+                    <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                    {{ tCommon('Common.Pseudo.ButtonText.Add') }}
+                </button>
+
+                <div *ngIf="!readOnly" class="layout-margin-left-s">
+                    <button
+                        e2e-id="btnRemoveAllEventsFromModule"
+                        mc-button [disabled]="events.length === 0"
+                        (click)="removeAllEvents()">
+                        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                        {{ tCommon('Common.Pseudo.ButtonText.DeleteAll') }}
+                    </button>
+                </div>
+            </div>
+
+            <mc-divider class="flex-none"></mc-divider>
+
+            <div class="flex-auto scrollable-y layout-padding-l">
+                <form #formElement [formGroup]="form" (ngSubmit)="onSubmitForm()">
+                    <soldr-toggle-list formArrayName="events">
+                        <soldr-toggle-item
+                            e2e-id="tiModuleEvent"
+                            *ngFor="let event of events.controls; let index = index"
+                            [formGroupName]="index"
+                            [canDelete]="!readOnly"
+                            [title]="event.get('name').value"
+                            (delete)="removeEvent(event.get('name').value)">
+                            <div class="mc-form-vertical layout-margin-left-xxs layout-margin-right-xxs">
+                                <div class="mc-form__row mc-form-row_margin">
+                                    <label class="mc-form__label">
+                                        {{ t('Modules.ModuleEdit.Label.EventConfigEventId') }} *
+                                    </label>
+                                    <mc-form-field class="mc-form__control">
+                                        <input e2e-id="txtModuleEventName" mcInput formControlName="name">
+                                        <mc-hint
+                                            [color]="event.get('name').errors?.formItemName ? themePalette.Error : themePalette.Default">
+                                            {{ t('Modules.ModuleEdit.HintText.ItemName') }}
+                                        </mc-hint>
+                                        <mc-hint
+                                            *ngIf="event.get('name').errors?.overlapping"
+                                            [color]="themePalette.Error">
+                                            {{ t('Modules.ModuleEdit.ValidationText.OverlappedEventName') }}
+                                        </mc-hint>
+                                        <mc-hint
+                                            *ngIf="event.get('name').errors?.maxlength"
+                                            [color]="themePalette.Error">
+                                            {{ t('Modules.ModuleEdit.ValidationText.MaxLengthEvent') }}
+                                        </mc-hint>
+                                        <mc-hint
+                                            *ngIf="event.get('name').errors?.eventNameExists"
+                                            [color]="themePalette.Error">
+                                            {{ t('Modules.ModuleEdit.ValidationText.EventConfigEventIdAlreadyExistsValidation') }}
+                                        </mc-hint>
+                                    </mc-form-field>
+                                </div>
+
+                                <div class="mc-form__row mc-form-row_margin">
+                                    <label
+                                        class="mc-form__label">
+                                        {{ t('Modules.ModuleEdit.Label.EventConfigType') }} *
+                                    </label>
+                                    <mc-form-field class="mc-form__control">
+                                        <mc-select e2e-id="selModuleEventType" formControlName="type">
+                                            <mc-option
+                                                e2e-id="optModuleEventType"
+                                                *ngFor="let type of typeList"
+                                                [value]="type.value">
+                                                {{ type.label }}
+                                            </mc-option>
+                                        </mc-select>
+                                        <mc-hint
+                                            *ngIf="event.errors?.eventConfigTypeEmptyObject"
+                                            [color]="themePalette.Error">
+                                            {{ t('Modules.ModuleEdit.ValidationText.EventConfigTypeEmptyObjectValidation') }}
+                                        </mc-hint>
+                                        <mc-hint
+                                            *ngIf="event.errors?.eventConfigTypeEmptyList"
+                                            [color]="themePalette.Error">
+                                            {{ t('Modules.ModuleEdit.ValidationText.EventConfigTypeEmptyListValidation') }}
+                                        </mc-hint>
+                                    </mc-form-field>
+                                </div>
+
+                                <ng-container *ngIf="event.get('type').value === types.Atomic">
+                                    <div class="mc-form__row mc-form-row_margin">
+                                        <label
+                                            class="mc-form__label">
+                                            {{ t('Modules.ModuleEdit.Label.Fields') }}
+                                        </label>
+                                        <mc-form-field class="mc-form__control">
+                                            <mc-select e2e-id="selModuleEventFields" multiple formControlName="fields">
+                                                <mc-option
+                                                    e2e-id="optModuleEventField"
+                                                    *ngFor="let field of fields"
+                                                    [value]="field">
+                                                    {{ field }}
+                                                </mc-option>
+                                            </mc-select>
+                                            <mc-hint>
+                                                {{ t('Modules.ModuleEdit.HintText.Fields') }}
+                                            </mc-hint>
+                                        </mc-form-field>
+                                    </div>
+
+                                    <div class="mc-form__row mc-form-row_margin">
+                                        <label class="mc-form__label">
+                                            {{ t('Modules.ModuleEdit.Label.EventConfigFieldsConfig') }} *
+                                        </label>
+                                        <mc-form-field class="mc-form__control">
+                                            <textarea
+                                                e2e-id="txtModuleEventConfigFields"
+                                                mcTextarea
+                                                class="mc-textarea-resizable"
+                                                rows="7"
+                                                formControlName="config_fields">
+                                            </textarea>
+                                            <mc-hint>{{ t('Modules.ModuleEdit.HintText.EventConfigFields') }}</mc-hint>
+                                        </mc-form-field>
+                                        <mc-hint
+                                            *ngIf="event.get('config_fields').errors?.formItemFields"
+                                            [color]="themePalette.Error">
+                                            {{ t('Modules.ModuleEdit.ValidationText.EventConfigFieldsValidation') }}
+                                        </mc-hint>
+                                    </div>
+
+                                    <div class="mc-form__fieldset">
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <div class="layout-row layout-align-space-between">
+                                                <label class="mc-form__label">
+                                                    {{ t('Modules.ModuleEdit.Label.EventConfigKeys') }}
+                                                </label>
+                                                <button
+                                                    *ngIf="!readOnly"
+                                                    mc-button
+                                                    type="button"
+                                                    e2e-id="btnAddConfigKeyToModuleEvent"
+                                                    (click)="addKey(event.get('name').value)">
+                                                    <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                                                    {{ tCommon('Common.Pseudo.ButtonText.Add') }}
+                                                </button>
+                                            </div>
+                                            <soldr-config-param-tabs
+                                                e2e-id="tbsModuleEventConfigKeys"
+                                                [activeTabIndex]="activeKeyTabIndex"
+                                                [form]="$any(event)"
+                                                [formArrayName]="'keys'"
+                                                [readOnly]="readOnly"
+                                                (deleteParam)="deleteKey(event.get('name').value, $event)">
+                                            </soldr-config-param-tabs>
+                                        </div>
+                                    </div>
+                                </ng-container>
+                            </div>
+                        </soldr-toggle-item>
+                    </soldr-toggle-list>
+                </form>
+            </div>
+        </div>
+
+        <div class="flex-none">
+            <mc-divider [vertical]="true"></mc-divider>
+        </div>
+
+        <div class="flex-50 layout-padding-top-l layout-column">
+            <div class="mc-subheading flex-none layout-padding-left-l layout-padding-right-l">
+                {{ t('Modules.ModuleEdit.Label.Default') }}
+            </div>
+
+            <div class="flex-auto layout-padding-bottom-l scrollable-y">
+                <soldr-ncform-wrapper
+                    [model]="defaultModel"
+                    [schema]="defaultSchema"
+                    [isReadOnly]="readOnly"
+                    (registerApi)="onRegisterApiDefaultConfigForm($event)"
+                    (modelChange)="onChangeDefaultConfig($event)">
+                </soldr-ncform-wrapper>
+            </div>
+        </div>
+    </ng-container>
+</div>

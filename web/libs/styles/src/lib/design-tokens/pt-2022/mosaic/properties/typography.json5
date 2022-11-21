@@ -1,0 +1,36 @@
+{
+    "typography": {
+        "body": {
+            "font-size": { value: '13px' },
+            "line-height": { value: '16px' },
+            "letter-spacing": { value: '0.15px' },
+            "font-weight": { value: 'normal' },
+            "font-family": { value: '{font.family.base.value}' },
+            "text-transform": { value: 'null' }
+        },
+        "body-strong": {
+            "font-size": { value: '13px' },
+            "line-height": { value: '16px' },
+            "letter-spacing": { value: '0.15px' },
+            "font-weight": { value: '500' },
+            "font-family": { value: '{font.family.base.value}' },
+            "text-transform": { value: 'null' }
+        },
+        "body-caps": {
+            "font-size": { value: '13px' },
+            "line-height": { value: '16px' },
+            "letter-spacing": { value: '1.7px' },
+            "font-weight": { value: 'normal' },
+            "font-family": { value: '{font.family.base.value}' },
+            "text-transform": { value: 'uppercase' }
+        },
+        "body-mono": {
+            "font-size": { value: '13px' },
+            "line-height": { value: '16px' },
+            "letter-spacing": { value: 'normal' },
+            "font-weight": { value: 'normal' },
+            "font-family": { value: '{font.family.monospace.value}' },
+            "text-transform": { value: 'null' }
+        }
+    }
+}

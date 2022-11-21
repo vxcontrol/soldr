@@ -1,0 +1,58 @@
+<ng-container *ngIf="module && { language: language$ | async} as data">
+    <table
+        class="changelog__table"
+        [ngClass]="{ 'changelog__table_read-only': readOnly }"
+        *transloco="let tShared; read: 'shared'">
+        <tr
+            *ngFor="let item of versions" class="changelog__item changelog__item_draft"
+            [ngClass]="{ 'changelog__item_current': (module.info.version | moduleVersion) === (item.info.version | moduleVersion) }">
+            <td class="changelog__left-part">
+                <div class="flex-none layout-column layout-align-start-end">
+                    <div class="mc-body_mono">{{ item.info.version | moduleVersion }}</div>
+                    <div
+                        *ngIf="item.state === 'draft'"
+                        class="mc-badge mc-badge_mini mc-badge_default mc-badge_pastel mc-badge_warning changelog__draft-badge">
+                        {{ tShared('Shared.ModuleView.Text.Draft') }}
+                    </div>
+                    <div
+                        *ngIf="(module.info.version | moduleVersion) === (item.info.version | moduleVersion)"
+                        class="mc-badge mc-badge_mini mc-badge_default mc-badge_pastel mc-badge_primary changelog__draft-badge">
+                        {{ tShared('Shared.ModuleView.Text.Installed') }}
+                    </div>
+                </div>
+            </td>
+            <td class="changelog__right-part">
+                <div class="layout-row layout-align-space-between-start">
+                    <div>
+                        <div
+                            *ngIf="!readOnly && (module.info.version | moduleVersion) !== (item.info.version | moduleVersion); else title"
+                            mc-link
+                            class="changelog__title"
+                            (click)="select(item)">
+                            <ng-container [ngTemplateOutlet]="title"></ng-container>
+                        </div>
+                        <ng-template #title>
+                            <div class="mc-subheading">
+                                {{ item.changelog[item.info.version | moduleVersion][data.language].title }}
+                            </div>
+                        </ng-template>
+                        <div class="changelog__time">
+                            {{ item.changelog[item.info.version | moduleVersion][data.language].date }}
+                        </div>
+                    </div>
+
+                    <button
+                        *ngIf="(!readOnly && !selectable) && (module.info.version | moduleVersion) !== (item.info.version | moduleVersion)"
+                        mc-button
+                        [color]="themePalette.Primary"
+                        (click)="select(item)">
+                        {{ tShared('Shared.ModuleView.ButtonText.Install') }}
+                    </button>
+                </div>
+                <div class="changelog__description">
+                    {{ item.changelog[item.info.version | moduleVersion][data.language].description }}
+                </div>
+            </td>
+        </tr>
+    </table>
+</ng-container>

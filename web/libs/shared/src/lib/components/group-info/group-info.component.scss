@@ -1,0 +1,26 @@
+:host {
+    display: block;
+    overflow-y: auto;
+    white-space: normal;
+}
+
+.group-info__tag {
+    max-width: 100%;
+
+    &:not(:first-child) {
+        margin-left: 8px;
+    }
+}
+
+.group-info__modules {
+    .modules-info-item {
+        mc-progress-bar {
+            height: 2px;
+            overflow: visible;
+        }
+
+        &:not(:last-child) {
+            margin-bottom: 4px;
+        }
+    }
+}

@@ -1,0 +1,26 @@
+.action-details-panel__close-button-wrapper {
+    width: 32px;
+    height: 32px;
+    float: right;
+    margin-bottom: 8px;
+    margin-left: 8px;
+    position: relative;
+}
+
+.action-details-panel__close-button {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+}
+
+.action-details-panel__fixed-header {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 56px;
+}
+
+.action-details-panel__ncform-wrapper {
+    height: auto;
+}

@@ -1,0 +1,579 @@
+<ng-container
+    *ngIf="({
+        language: language$ | async,
+        page: page$ | async,
+        selected: selected$ | async,
+        selectedGroupsTags: selectedGroupsTags$ | async,
+        total: total$ | async,
+        policyModules: policyModules$ | async
+    }) as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <ng-container *transloco="let tCommon; read: 'common'">
+            <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read: 'policies'">
+                <soldr-actionbar class="flex-none">
+                    <ng-container
+                        actionbar-header>{{ t('Policies.PoliciesList.ActionBarTitle.Policies') }}</ng-container>
+
+                    <ng-container actionbar-left>
+                        <soldr-edit-policy-modal *ngIf="permitted.CreatePolicies" (afterSave)="refreshData()">
+                            <button
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                e2e-id="btnCreatePolicy">
+                                <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                                <span>{{ t('Policies.PoliciesList.ButtonText.Create') }}</span>
+                            </button>
+                        </soldr-edit-policy-modal>
+
+                        <soldr-edit-policy-modal *ngIf="permitted.EditPolicies" [policy]="data.selected[0]"
+                                               (afterSave)="refreshData()">
+                            <button
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                e2e-id="btnEditPolicy"
+                                [disabled]="!data.selected[0] || data.selected[0]?.info?.system">
+                                <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                                <span>{{ tCommon('Common.Pseudo.ButtonText.Edit') }}</span>
+                            </button>
+                        </soldr-edit-policy-modal>
+
+                        <soldr-link-group-to-policy
+                            *ngIf="permitted.LinkPolicies"
+                            [title]="t('Policies.LinkToGroup.SidebarTitle.LinkToGroup')"
+                            [placeholder]="t('Policies.LinkToGroup.InputPlaceHolder.SearchGroup')"
+                            [linkedLabel]="t('Policies.LinkToGroup.Label.LinkedGroups')"
+                            [conflictTitle]="linkGroupLinkedConflictTitle">
+                            <button
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                e2e-id="btnLinkPolicyToGroup"
+                                [disabled]="!data.selected[0] || data.selected[0]?.info?.system">
+                                <i mc-icon="soldr-icons-link_16" class="soldr-icons"></i>
+                                <span>{{ t('Policies.PoliciesList.ButtonText.LinkToGroup') }}</span>
+                            </button>
+                        </soldr-link-group-to-policy>
+                        <ng-template #linkGroupLinkedConflictTitle>
+                            {{ t('Policies.LinkToGroup.ModalTitle.PolicyIncompatibleWithGroup') }}
+                        </ng-template>
+
+                        <soldr-edit-policy-modal
+                            *ngIf="permitted.CreatePolicies"
+                            [policy]="data.selected[0]"
+                            [isCopy]="true"
+                            (afterSave)="refreshData()">
+                            <button
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                e2e-id="btnCopyPolicy"
+                                [disabled]="!data.selected[0]">
+                                <i mc-icon="soldr-icons-copy_16" class="soldr-icons"></i>
+                                <span>{{ t('Policies.PoliciesList.ButtonText.Copy') }}</span>
+                            </button>
+                        </soldr-edit-policy-modal>
+
+                        <soldr-delete-policy-modal
+                            *ngIf="permitted.DeletePolicies"
+                            [policy]="data.selected[0]"
+                            (afterDelete)="refreshData()">
+                            <button
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                e2e-id="btnDeletePolicy"
+                                [disabled]="!data.selected[0] || data.selected[0]?.info.system || data.selected[0]?.details.groups?.length > 0">
+                                <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                <span>{{ tCommon('Common.Pseudo.ButtonText.Delete') }}</span>
+                            </button>
+                        </soldr-delete-policy-modal>
+                    </ng-container>
+                </soldr-actionbar>
+
+                <mc-splitter
+                    class="flex-auto layout-row"
+                    [direction]="direction.Horizontal"
+                    [hideGutters]="!pageState.leftSidebar.opened">
+
+                    <mc-sidebar
+                        #leftSidebar="mcSidebar"
+                        class="sidebar_left"
+                        mc-splitter-area
+                        soldrSaveState
+                        [position]="sidebarPositions.Left"
+                        [opened]="pageState.leftSidebar.opened"
+                        [saveStateKey]="'policies.list.leftSidebar'"
+                        [saveStateValue]="pageState.leftSidebar"
+                        (stateChanged)="saveLeftSidebarState($event)"
+                        (soldrWidthChange)="saveLeftSidebarWidth($event)">
+
+                        <div
+                            mc-sidebar-opened
+                            class="sidebar_opened page-layout__panel layout-column"
+                            [width]="pageState.leftSidebar.width"
+                            [minWidth]="'265px'"
+                            [maxWidth]="'400px'">
+                            <header class="sidebar-header flex-none">
+                                <button
+                                    mc-button
+                                    class="mc-button_transparent sidebar-toggle"
+                                    e2e-id="btnPolicyCollapseSidebar"
+                                    [mcTooltip]="tShared('Shared.Pseudo.TooltipText.CollapseSidebar')"
+                                    (click)="leftSidebar.toggle()">
+                                    <i mc-icon="soldr-icons-double-angle-left_16" class="soldr-icons"></i>
+                                </button>
+
+                                <div class="sidebar-title layout-right-padding_16">
+                                    {{ tShared('Shared.FiltersAndGroups.SidebarTitle.FiltersAndGroups') }}
+                                </div>
+
+                                <soldr-tree-popover
+                                    [items]="groupsTags$ | async"
+                                    [selected]="selectedGroupsTags$ | async"
+                                    (search)="onSearchGroupsTags($event)"
+                                    (apply)="onSelectGroupsTags($event)">
+                                    <button
+                                        mc-button
+                                        class="mc-button_transparent"
+                                        e2e-id="btnFilterByGroupsTags"
+                                        [mcTooltip]="tShared('Shared.Pseudo.TooltipText.GroupsTags')">
+                                        <i mc-icon="soldr-icons-tags_16" class="soldr-icons">
+                                    <span
+                                        *ngIf="data.selectedGroupsTags?.length > 0"
+                                        class="mc-badge mc-badge_mini mc-badge_solid mc-badge_primary">
+                                        {{data.selectedGroupsTags?.length < 99 ? data.selectedGroupsTags?.length : '99+'}}
+                                    </span>
+                                        </i>
+                                    </button>
+                                </soldr-tree-popover>
+                            </header>
+
+                            <mc-divider class="flex-none"></mc-divider>
+
+                            <soldr-groups-and-filters
+                                class="flex-auto"
+                                [viewMode]="viewModeEnum.Policies"
+                                [filters]="filters$ | async"
+                                [filterId]="selectedFilterId$ | async"
+                                (selectFilter)="onSelectFilter($event)"
+                                (selectFilterByGroup)="onSelectGroup($event)">
+                            </soldr-groups-and-filters>
+
+                            <div></div>
+                        </div>
+
+                        <div
+                            mc-sidebar-closed
+                            class="sidebar-closed layout-column layout-align-start-center"
+                            (click)="leftSidebar.toggle()">
+
+                            <header class="sidebar-header">
+                                <button
+                                    mc-button
+                                    class="mc-button_transparent sidebar-toggle"
+                                    e2e-id="btnPolicyExpandSidebar"
+                                    [mcTooltip]="tShared('Shared.Pseudo.TooltipText.ExpandSidebar')">
+                                    <i mc-icon="soldr-icons-double-angle-right_16" class="soldr-icons"></i>
+                                </button>
+                            </header>
+
+                            <section class="flex">
+                                <span class="sidebar-title">
+                                    {{ tShared('Shared.FiltersAndGroups.SidebarTitle.FiltersAndGroups') }}
+                                </span>
+                            </section>
+                        </div>
+                    </mc-sidebar>
+
+                    <div mc-splitter-area class="flex layout-row">
+                        <mc-splitter
+                            class="flex layout-row"
+                            [direction]="direction.Horizontal"
+                            [hideGutters]="!pageState.rightSidebar.opened">
+
+                            <div mc-splitter-area class="flex page-layout__panel">
+                                <soldr-grid
+                                    #policiesGrid
+                                    e2e-id="grPolicies"
+                                    class="layout-fill"
+                                    [data]="dataGrid$ | async"
+                                    [emptyText]="emptyText$ | async"
+                                    [exportSelectedTemplate]="exportSelected"
+                                    [exportAllTemplate]="exportAll"
+                                    [filtration]="gridFiltration$ | async"
+                                    [footerTemplate]="gridFooter"
+                                    [isLoading]="isLoading$ | async"
+                                    [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FieldsForSearch')"
+                                    [searchString]="search$ | async"
+                                    [selected]="data.selected"
+                                    [sorting]="sorting$ | async"
+                                    [storageKey]="'policies-list'"
+                                    [total]="data.total"
+                                    (addedNewRows)="refreshSelected()"
+                                    (export)="onExport($event)"
+                                    (search)="onGridSearch($event)"
+                                    (sortChanged)="onGridSort($event)"
+                                    (selectRows)="onGridSelectRows($event)"
+                                    (resetFiltration)="onResetFiltration()"
+                                    (nextPage)="loadNextPage(data.page + 1)">
+
+                                    <ng-template #consistencyCell let-node="params.data">
+                                        <soldr-consistency-icon
+                                            *ngIf="!node.details.consistency"
+                                            [viewMode]="viewModeEnum.Policies">
+                                        </soldr-consistency-icon>
+                                    </ng-template>
+
+                                    <ng-template #nameCell let-node="params.data">
+                                        <soldr-text-overflow>
+                                            <a
+                                                mc-link
+                                                e2e-id="lnkPolicyPage"
+                                                [routerLink]="['/policies', node.hash]">
+                                                {{ node.info.name[data.language] }}
+                                            </a>
+                                        </soldr-text-overflow>
+                                    </ng-template>
+
+                                    <ng-template #modulesCell let-node="params.data">
+                                        <soldr-related-list
+                                            [base]="node"
+                                            [list]="node.details?.modules | sort:sortModules:data.language"
+                                            [itemTemplate]="moduleItem"
+                                            [popoverItemTemplate]="modulePopoverItem">
+                                        </soldr-related-list>
+                                    </ng-template>
+
+                                    <ng-template #moduleItem let-module="item" let-policy="base">
+                                        <a mc-link
+                                           e2e-id="lnkPolicyModule"
+                                           [routerLink]="['/policies', policy.hash, 'modules', module.info.name]"
+                                           [mcTooltip]="module.locale.module[data.language].title"
+                                           [mcPlacement]="placement.TopLeft">
+                                            {{ module.locale.module[data.language].title}}
+                                        </a>
+                                    </ng-template>
+
+                                    <ng-template #modulePopoverItem let-module="item" let-policy="base">
+                                        <a mc-link
+                                           e2e-id="lnkPolicyModule"
+                                           [routerLink]="['/policies', policy.hash, 'modules', module.info.name]">
+                                            {{ module.locale.module[data.language].title}}
+                                        </a>
+                                    </ng-template>
+
+                                    <ng-template #osCell let-node="params.data">
+                                        <soldr-os [os]="node.info.os"></soldr-os>
+                                    </ng-template>
+
+                                    <ng-template #groupsCell let-node="params.data">
+                                        <soldr-related-list
+                                            [base]="node"
+                                            [list]="node.details?.groups | sort:sortGroups:data.language"
+                                            [itemTemplate]="groupItem"
+                                            [popoverItemTemplate]="groupPopoverItem">
+                                        </soldr-related-list>
+                                    </ng-template>
+
+                                    <ng-template #groupItem let-policy="item">
+                                        <a
+                                            *ngIf="permitted.ViewGroups; else linkText"
+                                            mc-link
+                                            e2e-id="lnkGroupPage"
+                                            [routerLink]="['/groups', policy.hash]"
+                                            [mcTooltip]="policy.info.name[data.language]"
+                                            [mcPlacement]="placement.TopLeft">
+                                            <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                        </a>
+                                        <ng-template #linkText>
+                                            {{ policy.info.name[data.language] }}
+                                        </ng-template>
+                                    </ng-template>
+
+                                    <ng-template #groupPopoverItem let-policy="item">
+                                        <a
+                                            *ngIf="permitted.ViewGroups; else linkText"
+                                            mc-link
+                                            e2e-id="lnkGroupPage"
+                                            [routerLink]="['/groups', policy.hash]">
+                                            <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                        </a>
+                                        <ng-template #linkText>
+                                            {{ policy.info.name[data.language] }}
+                                        </ng-template>
+                                    </ng-template>
+
+                                    <ng-template #tagsCell let-node="params.data">
+                                        <soldr-related-list
+                                            [base]="node"
+                                            [list]="node.info?.tags | sort:sortTags:data.language"
+                                            [itemTemplate]="tagItem"
+                                            [popoverItemTemplate]="tagPopoverItem">
+                                        </soldr-related-list>
+                                    </ng-template>
+
+                                    <ng-template #tagItem let-tag="item">
+                                        <a mc-link
+                                           e2e-id="lnkFilterPolicyTags"
+                                           [mcTooltip]="tag"
+                                           [mcPlacement]="placement.TopLeft"
+                                           (click)="setTag(tag)">
+                                            {{ tag }}
+                                        </a>
+                                    </ng-template>
+
+                                    <ng-template #tagPopoverItem let-tag="item">
+                                        <a mc-link e2e-id="lnkFilterPolicyTags" (click)="setTag(tag)">
+                                            {{ tag }}
+                                        </a>
+                                    </ng-template>
+
+                                    <soldr-column
+                                        field="details.consistency"
+                                        [displayName]="''"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Consistency')"
+                                        [template]="consistencyCell"
+                                        [width]="32"
+                                        [minWidth]="32"
+                                        [default]="false"
+                                        [headerComponentParams]="{ template: '' }">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="info.name"
+                                        [template]="nameCell"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Name')"
+                                        [width]="200"
+                                        [default]="true"
+                                        [required]="true"
+                                        [resizable]="true"
+                                        [sortable]="true"
+                                        [sortField]="'name'">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="details.modules"
+                                        filtrationField="module_name"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Modules')"
+                                        [template]="modulesCell"
+                                        [minWidth]="100"
+                                        [width]="240"
+                                        [default]="true"
+                                        [resizable]="true">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="created_date"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Created')"
+                                        [width]="200"
+                                        [resizable]="true"
+                                        [sortable]="true">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="os"
+                                        filtrationField="module_os"
+                                        [template]="osCell"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Os')"
+                                        [width]="96"
+                                        [minWidth]="72"
+                                        [default]="true"
+                                        [resizable]="true">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="details.groups"
+                                        filtrationField="group_id"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Groups')"
+                                        [template]="groupsCell"
+                                        [minWidth]="100"
+                                        [width]="400"
+                                        [default]="true"
+                                        [resizable]="true">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="info.tags"
+                                        filtrationField="tags"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Tags')"
+                                        [template]="tagsCell"
+                                        [minWidth]="100"
+                                        [width]="240"
+                                        [default]="true"
+                                        [resizable]="true">
+                                    </soldr-column>
+
+                                    <soldr-column
+                                        field="hash"
+                                        [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Hash')"
+                                        [default]="false"
+                                        [resizable]="true">
+                                    </soldr-column>
+
+                                    <soldr-filter
+                                        e2e-id="grfPoliciesFilterByOs"
+                                        [field]="'module_os'"
+                                        [title]="t('Policies.PoliciesList.GridColumnsTitle.Os')"
+                                        [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByOs')"
+                                        [multiple]="true"
+                                        [selectedValues]="(gridFiltrationByField$ | async).module_os?.value"
+                                        (changeValue)="onGridFilter($event)">
+                                        <soldr-filter-item
+                                            *ngFor="let item of gridColumnsFilters?.os"
+                                            [label]="item.label"
+                                            [value]="item.value">
+                                        </soldr-filter-item>
+                                    </soldr-filter>
+
+                                    <soldr-filter
+                                        e2e-id="grfPoliciesFilterByModule"
+                                        [field]="'module_name'"
+                                        [title]="t('Policies.PoliciesList.DropdownButtonText.Modules')"
+                                        [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByModule')"
+                                        [multiple]="true"
+                                        [selectedValues]="(gridFiltrationByField$ | async).module_name?.value"
+                                        (changeValue)="onGridFilter($event)">
+                                        <soldr-filter-item
+                                            *ngFor="let item of gridColumnsFilters?.modules"
+                                            [label]="item.label"
+                                            [value]="item.value">
+                                        </soldr-filter-item>
+                                    </soldr-filter>
+
+                                    <soldr-filter
+                                        e2e-id="grfPoliciesFilterByTag"
+                                        [field]="'tags'"
+                                        [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                                        [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByTag')"
+                                        [selectedValues]="(gridFiltrationByField$ | async).tags?.value"
+                                        [multiple]="true"
+                                        (changeValue)="onGridFilter($event)">
+                                        <soldr-filter-item
+                                            *ngFor="let item of gridColumnsFilters?.tags"
+                                            [label]="item.label"
+                                            [value]="item.value">
+                                        </soldr-filter-item>
+                                    </soldr-filter>
+
+                                    <soldr-filter
+                                        e2e-id="grfPoliciesFilterByGroup"
+                                        [field]="'group_id'"
+                                        [title]="t('Policies.PoliciesList.GridColumnsTitle.Groups')"
+                                        [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByGroup')"
+                                        [selectedValues]="(gridFiltrationByField$ | async).group_id?.value"
+                                        [multiple]="true"
+                                        (changeValue)="onGridFilter($event)">
+                                        <soldr-filter-item
+                                            *ngFor="let item of gridColumnsFilters?.groups"
+                                            [label]="item.label"
+                                            [value]="item.value">
+                                        </soldr-filter-item>
+                                    </soldr-filter>
+
+                                </soldr-grid>
+                                <ng-template #gridFooter let-total="total">
+                                    <span>{{ t('Policies.PoliciesList.Text.Total', {total}) }}</span>
+                                </ng-template>
+
+                                <ng-template #exportSelected let-selected="selected">
+                                    {{ t('Policies.ExportPolicies.DropdownButtonText.ExportSelected', { selected }) }}
+                                </ng-template>
+                                <ng-template #exportAll let-total="total">
+                                    {{ t('Policies.ExportPolicies.DropdownButtonText.ExportAll', { total }) }}
+                                </ng-template>
+                            </div>
+
+                            <mc-sidebar
+                                class="sidebar_right"
+                                mc-splitter-area
+                                soldrSaveState
+                                #rightSidebar="mcSidebar"
+                                [position]="sidebarPositions.Right"
+                                [opened]="pageState.rightSidebar.opened"
+                                [saveStateKey]="'policies.list.rightSidebar'"
+                                [saveStateValue]="pageState.rightSidebar"
+                                (stateChanged)="saveRightSidebarState($event)"
+                                (soldrWidthChange)="saveRightSidebarWidth($event)">
+
+                                <div
+                                    mc-sidebar-opened
+                                    class="sidebar_opened page-layout__panel layout-column"
+                                    [width]="pageState.rightSidebar.width"
+                                    [minWidth]="'265px'"
+                                    [maxWidth]="'400px'">
+                                    <header class="sidebar-header">
+                                        <button
+                                            mc-button
+                                            class="mc-button_transparent sidebar-toggle"
+                                            e2e-id="btnPolicyCollapseSidebar"
+                                            [mcTooltip]="tShared('Shared.Pseudo.TooltipText.CollapseSidebar')"
+                                            (click)="rightSidebar.toggle()">
+                                            <span mc-icon="soldr-icons-double-angle-right_16" class="soldr-icons"></span>
+                                        </button>
+
+                                        <div class="sidebar-title layout-right-padding_16">
+                                            <a *ngIf="data.selected[0]"
+                                               mc-link
+                                               e2e-id="lnkPolicyPage"
+                                               [noUnderline]="true"
+                                               [routerLink]="['/policies', data.selected[0]?.hash]">
+                                                <span class="mc-link__text">
+                                                    {{ data.selected[0]?.info.name[data.language] }}
+                                                </span>
+                                            </a>
+                                        </div>
+                                    </header>
+
+                                    <mc-divider></mc-divider>
+
+                                    <div
+                                        *ngrxLet="isLoadingPolicyInfo$; let isLoadingPolicyInfo"
+                                        class="sidebar-content flex-auto"
+                                        soldrProgressSpinner
+                                        [loadingFlag]="isLoadingPolicyInfo">
+                                        <soldr-policy-info
+                                            *ngIf="data.selected[0]"
+                                            [stateStorageKey]="'policies.list.rightSidebar'"
+                                            [modules]="data.policyModules"
+                                            [state]="pageState.rightSidebar"
+                                            [policy]="data.selected[0]"
+                                            [showModules]="true"
+                                            [showGroups]="true"
+                                            (selectTag)="setTag($event)">
+                                        </soldr-policy-info>
+
+                                        <div
+                                            *ngIf="data.selected.length === 0"
+                                            class="layout-fill layout-column layout-align-center-center">
+                                            <span class="text_second">
+                                                {{ tCommon('Common.Pseudo.Text.NoInformation') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    mc-sidebar-closed
+                                    class="sidebar-closed layout-column layout-align-start-center"
+                                    (click)="rightSidebar.toggle()">
+                                    <header class="sidebar-header layout-row">
+                                        <button
+                                            mc-button
+                                            class="mc-button_transparent sidebar-toggle"
+                                            e2e-id="btnPolicyExpandSidebar"
+                                            [mcTooltip]="tShared('Shared.Pseudo.TooltipText.ExpandSidebar')">
+                                            <i mc-icon="soldr-icons-double-angle-left_16" class="soldr-icons"></i>
+                                        </button>
+                                    </header>
+
+                                    <section class="flex">
+                                        <div class="sidebar-title">
+                                            {{ data.selected[0]?.info.name[data.language] }}
+                                        </div>
+                                    </section>
+                                </div>
+                            </mc-sidebar>
+                        </mc-splitter>
+                    </div>
+                </mc-splitter>
+            </div>
+        </ng-container>
+    </ng-container>
+</ng-container>

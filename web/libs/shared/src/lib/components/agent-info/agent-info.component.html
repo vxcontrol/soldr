@@ -1,0 +1,144 @@
+<ng-container *ngIf="agent && {
+    language: language$ | async
+} as data">
+    <soldr-upgrade-status-message
+        [agent]="agent"
+        [latestBinaryVersion]="latestBinaryVersion"
+        [isUpgradingAgents]="isUpgradingAgents"
+        [isCancelUpgradingAgent]="isCancelUpgradingAgent"
+        (refresh)="onRefresh()"
+        (upgradeAgents)="upgrade($event)"
+        (cancelUpgradeAgent)="cancelUpgrade($event)">
+    </soldr-upgrade-status-message>
+
+    <div *transloco="let t; read: 'agents'">
+        <soldr-accordion
+            soldrSaveState
+            [title]="t('Agents.AgentsList.Label.Parameters')"
+            [expanded]="state.parameters.opened"
+            [saveStateKey]="stateStorageKey + '.parameters.opened'"
+            [saveStateValue]="state.parameters.opened"
+            (stateChanged)="state.parameters.opened = $event">
+
+            <mc-dl class="agent-info__description-list" [vertical]="true">
+                <mc-dd class="layout-row">
+                    <soldr-agent-connection-status
+                        class="dl__icon mc-icon"
+                        [status]="agent.status"
+                        [hideTooltip]="true"
+                        [colored]="true">
+                    </soldr-agent-connection-status>
+                    <div class="flex-auto">
+                        <div *ngIf="agent.status === 'connected'">
+                            {{t('Agents.AgentsList.Text.Connected')}}
+                        </div>
+                        <div *ngIf="agent.status === 'disconnected'">
+                            {{t('Agents.AgentsList.Text.Disconnected')}}
+                        </div>
+                        <div class="list__second-text">
+                            {{ agent.connected_date | toDateTime:(data.language) | relativeLongDateTime | lastConnected }}
+                        </div>
+                    </div>
+                </mc-dd>
+
+                <mc-dd>
+                    <soldr-agent-auth-status
+                        class="dl__icon"
+                        [view]="'detailed'"
+                        [status]="agent.auth_status">
+                    </soldr-agent-auth-status>
+                </mc-dd>
+
+                <mc-dd>
+                    <i mc-icon="soldr-icons-asset-network-device_16" class="dl__icon soldr-icons"></i>
+                    <span>{{ agent.ip }}</span>
+                </mc-dd>
+
+                <mc-dd>
+                    <soldr-os
+                        class="dl__icon"
+                        [os]="agent.info.os"
+                        [showLabels]="true">
+                    </soldr-os>
+                </mc-dd>
+
+                <mc-dd>
+                    <i mc-icon="soldr-icons-hash_16" class="dl__icon soldr-icons"></i>
+                    <span>{{ agent.hash | hash }}</span>
+                    <soldr-copy [value]="agent.hash"></soldr-copy>
+                </mc-dd>
+
+                <mc-dd>
+                    <i mc-icon="soldr-icons-download_16" class="dl__icon soldr-icons"></i>
+                    <span>{{ t('Agents.AgentsList.Label.Version') }}</span>
+                    <span>&nbsp;{{ agent.version | agentVersion }}</span>
+                </mc-dd>
+
+                <mc-dd class="display-flex" *ngIf="agent.details?.group">
+                    <i mc-icon="soldr-icons-folder-closed_16" class="dl__icon soldr-icons"></i>
+                    <soldr-group-link [group]="agent.details?.group"></soldr-group-link>
+                </mc-dd>
+            </mc-dl>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="showModules && agent?.details?.modules?.length > 0"
+            soldrSaveState
+            [title]="t('Agents.AgentsList.Label.EnabledModules')"
+            [expanded]="state.modules.opened"
+            [saveStateKey]="stateStorageKey + '.modules.opened'"
+            [saveStateValue]="state.modules.opened"
+            (stateChanged)="state.modules.opened = $event">
+            <ng-container *transloco="let tShared; read: 'shared'">
+                <div
+                    class="layout-row layout-align-space-between"
+                    [class.layout-margin-bottom-s]="!isLast"
+                    *ngFor="let module of agent?.details?.modules | sort:sortModules:data.language; last as isLast">
+                    <div class="flex">
+                        <soldr-text-overflow>
+                            <a
+                                *ngIf="permitted.ViewPolicies; else linkText"
+                                mc-link
+                                e2e-id="lnkAgentModule"
+                                [routerLink]="['/agents', agent.hash, 'modules', module.info.name]">
+                                <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                            </a>
+                            <ng-template #linkText>
+                                {{ module.locale.module[data.language]?.title }}
+                            </ng-template>
+                        </soldr-text-overflow>
+                    </div>
+                    <i
+                        *ngIf="modulesUpgradesByName[module.info.name]"
+                        mc-icon="soldr-icons-info_16"
+                        [color]="themePalette.Default"
+                        class="mc-icon_light soldr-icons"
+                        [mcTooltip]="tShared('Shared.ModuleView.TooltipText.CanUpgrade')">
+                    </i>
+                    <soldr-consistency-icon
+                        *ngIf="!modulesConsistencyByName[module.info.name]"
+                        [viewMode]="viewModeEnum.Agents"
+                        [isModuleInstance]="true">
+                    </soldr-consistency-icon>
+                </div>
+            </ng-container>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="agent.info.tags?.length > 0"
+            soldrSaveState
+            [title]="t('Agents.AgentsList.Label.Tags')"
+            [expanded]="state.tags.opened"
+            [saveStateKey]="stateStorageKey + '.tags.opened'"
+            [saveStateValue]="state.tags.opened"
+            (stateChanged)="state.tags.opened = $event">
+            <soldr-tag
+                *ngFor="let tag of agent.info.tags | sort:sortTags:data.language"
+                class="agent-info__tag"
+                e2e-id="lnkFilterAgentsByTag"
+                (click)="selectTag.emit(tag)">
+                {{ tag }}
+            </soldr-tag>
+        </soldr-accordion>
+    </div>
+</ng-container>

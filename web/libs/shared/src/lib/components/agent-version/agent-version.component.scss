@@ -1,0 +1,9 @@
+.agent-version__indicator {
+    min-width: 16px;
+    margin-right: 4px;
+    line-height: 100%;
+}
+
+.indeterminate-state {
+    width: calc(100% - 16px);
+}

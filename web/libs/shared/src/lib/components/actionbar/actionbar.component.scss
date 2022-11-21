@@ -1,0 +1,17 @@
+:host {
+    position: relative;
+    display: block;
+    height: 48px;
+    padding: 0 16px;
+
+    .actionbar__container {
+        display: grid;
+        grid-template-columns: 1fr auto;
+
+        &,
+        .actionbar__left,
+        .actionbar__right {
+            height: 100%;
+        }
+    }
+}

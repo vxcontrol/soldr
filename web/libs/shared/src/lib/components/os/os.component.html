@@ -1,0 +1,25 @@
+<div
+    [mcTooltip]="tooltipContent"
+    [mcPlacementPriority]="popUpPlacements.Top"
+    [mcTooltipDisabled]="showLabels || !tooltipText">
+    <ng-container *ngFor="let item of items">
+        <ng-container *ngIf="!showLabels" [ngTemplateOutlet]="icon" [ngTemplateOutletContext]="{ item }"></ng-container>
+        <div *ngIf="showLabels && item.text">
+            <ng-container [ngTemplateOutlet]="icon" [ngTemplateOutletContext]="{ item }"></ng-container>
+            <span>{{ item.text }}</span>
+        </div>
+    </ng-container>
+</div>
+
+<ng-template #icon let-item="item">
+    <i
+        class="os os__icon mc-icon soldr-icons"
+        [class.os__icon_with_tooltip]="!showLabels"
+        [class.os__icon_disable] = "item.isDisable"
+        [ngClass]="item.iconClass">
+    </i>
+</ng-template>
+
+<ng-template #tooltipContent>
+    <div class="text_center">{{tooltipText}}</div>
+</ng-template>

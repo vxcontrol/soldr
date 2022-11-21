@@ -1,0 +1,22 @@
+{
+    "overrides": [
+        {
+            "files": [
+                "*.ts"
+            ],
+            "rules": {
+                "@typescript-eslint/naming-convention": [
+                    "warn",
+                    {
+                        "selector": "property",
+                        "format": [
+                            "camelCase",
+                            "snake_case",
+                            "UPPER_CASE"
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

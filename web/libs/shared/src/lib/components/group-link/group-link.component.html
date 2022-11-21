@@ -1,0 +1,13 @@
+<soldr-text-overflow>
+    <a
+        *ngIf="group && permitted.ViewGroups; else linkText"
+        mc-link
+        e2e-id="lnkGroupCard"
+        [routerLink]="['/groups', group.hash]"
+        (click)="$event.stopPropagation()">
+        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+    </a>
+    <ng-template #linkText>
+        {{ group?.info.name[language$ | async]}}
+    </ng-template>
+</soldr-text-overflow>

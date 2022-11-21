@@ -1,0 +1,70 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+vendor/
+
+# Visual Studio Code directory
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Intelij idea dir
+.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# build artifacts
+build/data/*
+build/logs/*
+build/ssl/*
+build/package/agent/_tmp/*
+web/node_modules/*
+web/dist/*
+web/tmp/*
+web/out-tsc/*
+
+# security information
+security/certs
+security/vconf/lic/sbh.json
+security/vconf/hardening/abh.json
+internal/app/api/utils/dbencryptor/sec-store-key.txt
+
+# misc
+web/.angular/cache
+web/.sass-cache
+web/.eslintcache
+web/connect.lock
+web/coverage
+web/libpeerconnection.log
+web/typings
+web/npm-debug.log
+web/yarn-error.log
+web/testem.log
+.env
+__debug_bin*
+*.log
+!.gitkeep
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Proxy config
+proxy.conf.json

@@ -1,0 +1,244 @@
+<ng-container *transloco="let tShared; read: 'shared'">
+    <ng-container *transloco="let tCommon; read: 'common'">
+        <div class="layout-column layout-fill">
+
+            <ng-container *ngIf="gridActionBar; else defaultActionBar">
+                <ng-content select="[soldrGridActionBar]"></ng-content>
+            </ng-container>
+
+            <mc-divider *ngIf="hasHeader"></mc-divider>
+
+            <ng-container *ngIf="canShowFiltersBlock">
+                <div class="flex-none grid__filter-block layout-row layout-align-space-between-center">
+                    <div class="flex-auto">
+                        <ng-content select="soldr-filter"></ng-content>
+                    </div>
+                    <button
+                        mc-button
+                        class="grid__button_reset-filters flex-none mc-button_transparent"
+                        (click)="resetFilters()">
+                        <i mc-icon="soldr-icons-close-circle_16" class="soldr-icons"></i>
+                    </button>
+                </div>
+
+                <mc-divider></mc-divider>
+            </ng-container>
+
+            <div class="flex-auto">
+                <soldr-progress-container [loadingFlag]="isLoading">
+                    <ag-grid-angular
+                        class="layout-fill"
+                        [domLayout]="domLayout"
+                        [frameworkComponents]="frameworkComponents"
+                        [gridOptions]="gridOptions"
+                        [immutableData]="true"
+                        [rowData]="data"
+                        [rowSelection]="selectionType"
+                        (columnMoved)="saveState()"
+                        (columnResized)="saveState()"
+                        (columnVisible)="saveState()"
+                        (soldrGridScrollToBodyEnd)="nextPageCallback()"
+                        (gridReady)="gridReady($event)"
+                        (firstDataRendered)="onFirstDataRendered()"
+                        (rowDataUpdated)="rowDataChanged()"
+                        (selectionChanged)="onSelectionChange($event)"
+                        (sortChanged)="sortChangedCallback()"
+                        (focusin)="onFocusIn()"
+                        (focusout)="onFocusOut()"
+                        (keyup)="onKeyUp($event)">
+                        <ng-content></ng-content>
+                    </ag-grid-angular>
+                </soldr-progress-container>
+            </div>
+
+            <ng-container *ngIf="gridFooter; else defaultFooter">
+                <ng-content select="[soldrGridFooter]"></ng-content>
+            </ng-container>
+        </div>
+
+        <ng-template #defaultActionBar>
+            <div class="flex-none grid__search-block layout-row layout-align-space-between-center">
+                <mc-form-field class="grid__search-input">
+                    <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+
+                    <input
+                        mcInput
+                        autocomplete="off"
+                        [placeholder]="placeholder"
+                        (keyup.enter)="onChangeSearch()"
+                        [(ngModel)]="this.searchValue">
+
+                    <mc-cleaner (click)="clearSearch()"></mc-cleaner>
+                </mc-form-field>
+
+                <button
+                    *ngIf="filters?.length > 0"
+                    mc-button
+                    class="grid__button_show-filters mc-button_transparent"
+                    [class.mc-active]="canShowFiltersBlock"
+                    [mcTooltip]="tShared('Shared.Grid.TooltipText.ShowFilters')"
+                    (click)="toggleFiltersBlock()">
+                    <i mc-icon="soldr-icons-filter_16" class="soldr-icons">
+                        <span
+                            *ngIf="filtration?.length > 0 && !canShowFiltersBlock"
+                            class="mc-badge mc-badge_mini mc-badge_solid mc-badge_primary">
+                            {{ filtration.length }}
+                        </span>
+                    </i>
+                </button>
+            </div>
+        </ng-template>
+
+        <ng-template #defaultFooter>
+
+            <mc-divider></mc-divider>
+
+            <div class="flex-none grid__footer-block layout-row layout-align-space-between-center">
+
+                <div class="flex-auto grid__footer-items">
+                    <ng-container *ngIf="!footerTemplate; else hasFooter">
+                        <span>{{ tShared('Shared.Grid.Text.Total', { total }) }}</span>
+                        <span *ngIf="selectionType === selection.Multiple">
+                            {{ tShared('Shared.Grid.Text.Selected', { selected: selected?.length }) }}
+                        </span>
+                    </ng-container>
+                    <ng-template #hasFooter>
+                        <ng-container
+                            [ngTemplateOutlet]="footerTemplate"
+                            [ngTemplateOutletContext]="{ total, selected: selectedRows }"></ng-container>
+                    </ng-template>
+                </div>
+
+                <button
+                    *ngIf="export.observed"
+                    mc-button
+                    class="mc-button_transparent"
+                    [disabled]="data?.length === 0"
+                    [mcDropdownTriggerFor]="exportDropdown"
+                    [mcTooltip]="tShared('Shared.Grid.ButtonTooltipText.Export')">
+                    <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
+                </button>
+                <mc-dropdown #exportDropdown="mcDropdown">
+                    <div class="mc-dropdown__group-header mc-dropdown__group-header_small">
+                        {{ tShared('Shared.Grid.DropdownItemText.Export') }}
+                    </div>
+                    <button mc-dropdown-item (click)="onExportSelected()">
+                        <ng-container
+                            *ngIf="exportSelectedTemplate; else defaultExportSelectedTemplate"
+                            [ngTemplateOutlet]="exportSelectedTemplate"
+                            [ngTemplateOutletContext]="{ selected: selected?.length }">
+                        </ng-container>
+                        <ng-template #defaultExportSelectedTemplate>
+                            {{ tShared('Shared.Grid.DropdownButtonText.OnlySelected', { selected: selected?.length }) }}
+                        </ng-template>
+                    </button>
+                    <button
+                        e2e-id="btnGridExport"
+                        mc-dropdown-item
+                        (click)="onExportAll()">
+                        <ng-container
+                            *ngIf="exportAllTemplate; else defaultExportAllTemplate"
+                            [ngTemplateOutlet]="exportAllTemplate"
+                            [ngTemplateOutletContext]="{ total }">
+                        </ng-container>
+                        <ng-template #defaultExportAllTemplate>
+                            {{ tShared('Shared.Grid.DropdownButtonText.All', { total })}}
+                        </ng-template>
+                    </button>
+                </mc-dropdown>
+
+                <div class="flex-none">
+                    <ng-container
+                        [ngTemplateOutlet]="columnsSelector"
+                        [ngTemplateOutletContext]="{ columns: columnsDefs$ | async }">
+                    </ng-container>
+                </div>
+            </div>
+        </ng-template>
+
+        <ng-template #columnsSelector let-columns="columns">
+            <button
+                mc-button
+                mcPopover
+                #columnsStatePopover="mcPopover"
+                class="mc-button_transparent grid__filter-button grid__customization-button"
+                mcPopoverClass="grid__filter-popover grid__customization-popover"
+                [mcPopoverHeader]="tShared('Shared.Grid.PopoverTitle.ColumnsState')"
+                [mcPopoverContent]="popoverContent"
+                [mcPopoverFooter]="popoverFooter"
+                [mcPopoverPlacementPriority]="'top'"
+                (mcPopoverVisibleChange)="columnsPopoverVisibleChange($event)">
+                <i mc-icon="soldr-icons-gear_16" class="soldr-icons"></i>
+            </button>
+
+            <ng-template #popoverContent>
+                <div
+                    class="grid__filter-popover-content">
+                    <mc-form-field mcFormFieldWithoutBorders>
+                        <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+                        <input
+                            #searchInput
+                            type="text"
+                            [placeholder]="tShared('Shared.Pseudo.InputPlaceholder.QuickSearch')"
+                            mcInput
+                            autocomplete="off"
+                            (input)="columnsSearch.next(searchInput.value)">
+                        <mc-cleaner></mc-cleaner>
+                    </mc-form-field>
+
+                    <mc-divider></mc-divider>
+
+                    <ng-container *ngIf="(foundColumns$ | async) as foundColumns">
+                        <mc-list-selection
+                            *ngIf="foundColumns?.length > 0; else notFound"
+                            class="grid__filter-popover-list"
+                            multiple
+                            (selectionChange)="onChangeColumnsVisibility($event)">
+                            <ng-container *ngFor="let column of foundColumns">
+                                <mc-list-option
+                                    [value]="column.field"
+                                    [disabled]="column.required"
+                                    [selected]="selectedVisibleColumns.includes(column.field)">
+                                    {{ column.headerName }}
+                                </mc-list-option>
+                            </ng-container>
+                        </mc-list-selection>
+
+                        <ng-template #notFound>
+                            <div
+                                class="grid__filter-popover-not-found layout-row layout-align-center-center">
+                                <span>{{ tCommon('Common.Pseudo.Text.NotFound') }}</span>
+                            </div>
+                        </ng-template>
+                    </ng-container>
+                </div>
+            </ng-template>
+
+            <ng-template #popoverFooter>
+                <div
+                    class="layout-row layout-align-space-between-center grid__column-filter-popover-footer"
+                    cdkTrapFocus="true"
+                    cdkTrapFocusAutoCapture="true">
+                    <button mc-button (click)="resetColumnsState()">
+                        {{ tShared('Shared.Grid.ButtonText.ResetToDefault') }}
+                    </button>
+
+                    <div class="layout-row">
+                        <button
+                            mc-button
+                            [color]="themePalette.Primary"
+                            (click)="applyColumnsState()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Apply') }}
+                        </button>
+                        <button
+                            mc-button
+                            (click)="cancelColumnsState()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                        </button>
+                    </div>
+                </div>
+            </ng-template>
+        </ng-template>
+
+    </ng-container>
+</ng-container>

@@ -1,0 +1,270 @@
+<ng-container
+    *ngIf="{
+        language: language$ | async,
+        search: search$ | async,
+        isLoading: isLoading$ | async,
+        conflictsByEntityId: conflictsByEntityId$ | async,
+        searchedLinked: (linked$ | async) | search: (search$ | async): searchPolicy,
+        searchedAvailable: (available$ | async) | search: (search$ | async): searchPolicy,
+        searchedUnavailable: (unavailable$ | async) | search: (search$ | async): searchPolicy,
+        conflictGroup: conflictGroup$ | async,
+        conflictPolicy: conflictPolicy$ | async,
+        groupedConflictsByModule: groupedConflictsByModule$ | async,
+        groupedConflictsByPolicy: groupedConflictsByPolicy$ | async,
+        baseEntity: baseEntity$ | async,
+        sortDirectionByModule: sortDirectionByModule$ | async,
+        sortDirectionByPolicy: sortDirectionByPolicy$ | async
+    } as data">
+    <div class="link-group-to-policy-modal" (click)="open()">
+        <ng-content></ng-content>
+    </div>
+
+    <ng-container *transloco="let tShared; read 'shared'">
+        <ng-template #panel>
+            <mc-sidepanel-header [closeable]="true">
+                {{ title }}
+            </mc-sidepanel-header>
+            <mc-sidepanel-body class="layout-column">
+                <soldr-progress-container [loadingFlag]="data.isLoading">
+                    <div class="layout-column layout-fill">
+                        <mc-form-field mcFormFieldWithoutBorders class="flex-none">
+                            <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+                            <input
+                                #search
+                                type="text"
+                                mcInput
+                                autocomplete="off"
+                                e2e-id="txtGroupName"
+                                [(ngModel)]="searchValue"
+                                [placeholder]="placeholder"
+                                (ngModelChange)="search$.next(search.value)">
+                            <mc-cleaner></mc-cleaner>
+                        </mc-form-field>
+
+                        <mc-divider class="flex-none"></mc-divider>
+
+                        <ng-container
+                            *ngIf="data.searchedLinked?.length > 0 || data.searchedAvailable?.length > 0 || data.searchedUnavailable?.length > 0; else notFound"
+                            class="flex-auto">
+                            <mc-list-selection class="scrollable-y" [autoSelect]="false">
+
+                                <ng-container *ngIf="data.searchedLinked.length > 0">
+                                    <mc-optgroup [label]="linkedLabel">
+                                        <mc-list-option
+                                            e2e-id="selLinkGroup"
+                                            *ngFor="let item of data.searchedLinked | sort:sortItems:data.language">
+                                            <div class="layout-row layout-align-space-between-center">
+                                                <div class="ellipsis">{{ item.info.name[data.language] }}</div>
+                                                <mc-option-action
+                                                    e2e-id="btnUnlinkGroup"
+                                                    [mcTooltip]="tShared('Shared.LinkGroupToPolicy.TooltipText.Unlink')"
+                                                    (click)="unlink(data.baseEntity, item)">
+                                                    <i #customIcon mc-icon="soldr-icons-unlink_16" class="soldr-icons"></i>
+                                                </mc-option-action>
+                                            </div>
+                                        </mc-list-option>
+                                    </mc-optgroup>
+
+                                    <mc-divider></mc-divider>
+                                </ng-container>
+
+                                <mc-optgroup
+                                    *ngIf="data.searchedAvailable?.length > 0"
+                                    [label]="tShared('Shared.LinkGroupToPolicy.Label.Available')">
+                                    <mc-list-option
+                                        *ngFor="let item of data.searchedAvailable | sort:sortItems:data.language">
+                                        <div class="layout-row layout-align-space-between-center">
+                                            <div class="ellipsis">{{ item.info.name[data.language] }}</div>
+                                            <mc-option-action
+                                                e2e-id="btnLinkGroup"
+                                                [mcTooltip]="tShared('Shared.LinkGroupToPolicy.TooltipText.Link')"
+                                                (click)="link(data.baseEntity, item)">
+                                                <i #customIcon mc-icon="soldr-icons-link_16" class="soldr-icons"></i>
+                                            </mc-option-action>
+                                        </div>
+                                    </mc-list-option>
+                                </mc-optgroup>
+
+                                <mc-optgroup
+                                    *ngIf="data.searchedUnavailable?.length > 0"
+                                    [label]="tShared('Shared.LinkGroupToPolicy.Label.Unavailable')">
+                                    <mc-list-option
+                                        *ngFor="let item of data.searchedUnavailable | sort:sortItems:data.language"
+                                        [disabled]="true">
+                                        <div class="layout-row layout-align-space-between-center">
+                                            <div class="ellipsis">{{ item.info.name[data.language] }}</div>
+                                            <mc-option-action
+                                                *ngIf="data.conflictsByEntityId[item.id].length === 1"
+                                                class="link-group-to-policy__conflicted-policy_one-module"
+                                                [mcTooltip]="tooltipWithOneConflict">
+                                                <i #customIcon mc-icon="soldr-icons-info-o_16" class="soldr-icons"></i>
+                                            </mc-option-action>
+                                            <mc-option-action
+                                                e2e-id="btnOpenConflictsPopover"
+                                                *ngIf="data.conflictsByEntityId[item.id].length > 1"
+                                                [mcTooltip]="tooltipWithManyConflicts"
+                                                (click)="openConflictsPopover(item)">
+                                                <i #customIcon mc-icon="soldr-icons-info-o_16" class="soldr-icons"></i>
+                                            </mc-option-action>
+                                        </div>
+                                        <ng-template #tooltipWithOneConflict>
+                                            <div [innerHTML]="tShared('Shared.LinkGroupToPolicy.TooltipText.AlreadySetOne', {
+                                            module: data.conflictsByEntityId[item.id][0]?.module.locale.module[data.language].title,
+                                            policy: data.conflictsByEntityId[item.id][0]?.conflictedPolicy?.info.name[data.language]
+                                        })"></div>
+                                        </ng-template>
+                                        <ng-template #tooltipWithManyConflicts>
+                                            {{ tShared('Shared.LinkGroupToPolicy.TooltipText.AlreadySetMany') }}
+                                        </ng-template>
+                                    </mc-list-option>
+                                </mc-optgroup>
+
+                            </mc-list-selection>
+                        </ng-container>
+                    </div>
+                </soldr-progress-container>
+
+                <ng-template #notFound>
+                    <div class="flex-auto layout-column layout-align-center-center">
+                        <span class="text_second" *transloco="let tCommon; read: 'common'">
+                            {{ tCommon('Common.Pseudo.Text.NotFound') }}
+                        </span>
+                    </div>
+                </ng-template>
+            </mc-sidepanel-body>
+        </ng-template>
+
+        <ng-template #conflictsContent>
+            <div class="display-none">
+                <a
+                    #policyLink
+                    mc-link
+                    [routerLink]="['/policies', data.conflictPolicy?.id]">
+                    {{data.conflictPolicy?.info.name[data.language]}}
+                </a>
+                <a
+                    #groupLink
+                    mc-link
+                    [routerLink]="['/groups', data.conflictGroup?.id]">
+                    {{data.conflictGroup?.info.name[data.language]}}
+                </a>
+            </div>
+            <div [innerHTML]="tShared('Shared.LinkGroupToPolicy.Text.GroupIncompatible', {
+                policyLink: permitted.ViewPolicies ? policyLink.outerHTML : data.conflictPolicy?.info.name[data.language],
+                groupLink: permitted.ViewGroups ? groupLink.outerHTML : data.conflictGroup?.info.name[data.language],
+                policyName: data.conflictPolicy?.info.name[data.language]
+            })">
+            </div>
+
+            <div class="layout-column layout-align-start-stretch" *ngIf="permitted.ViewPolicies">
+                <mc-button-toggle-group class="link-group-to-policy__grouping-buttons" [(ngModel)]="grouping">
+                    <mc-button-toggle
+                        e2e-id="btnGroupByModule"
+                        [value]="'module'">{{ tShared('Shared.LinkGroupToPolicy.ButtonText.GroupByModule') }}</mc-button-toggle>
+                    <mc-button-toggle
+                        e2e-id="btnGroupByPolicy"
+                        [value]="'policy'">{{ tShared('Shared.LinkGroupToPolicy.ButtonText.GroupByPolicy') }}</mc-button-toggle>
+                </mc-button-toggle-group>
+
+
+                <ng-container *ngIf="grouping === 'module'; else groupedByPolicy">
+                    <table mc-table class="flex-auto">
+                        <thead>
+                        <tr>
+                            <th>
+                                <div
+                                    class="link-group-to-policy__table-column_with-sort"
+                                    (click)="toggleSortByModule(data.sortDirectionByModule)">
+                                <span>
+                                    {{ tShared('Shared.LinkGroupToPolicy.TableColumnTitle.Module') }}
+                                    <i
+                                        *ngIf="data.sortDirectionByModule === sorting.ASC"
+                                        mc-icon="soldr-icons-triangle-down_16"
+                                        class="soldr-icons"></i>
+                                    <i
+                                        *ngIf="data.sortDirectionByModule === sorting.DESC"
+                                        mc-icon="soldr-icons-triangle-up_16"
+                                        class="soldr-icons"></i>
+                                </span>
+                                </div>
+                            </th>
+                            <th>{{ tShared('Shared.LinkGroupToPolicy.TableColumnTitle.Policy') }}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let conflict of (data.groupedConflictsByModule)">
+                            <td>
+                                <a
+                                    mc-link
+                                    e2e-id="lnkPolicyModule"
+                                    [routerLink]="['/policies', conflict.conflictedPolicy?.hash, 'modules', conflict.module.info.name]">
+                                    {{conflict.module.locale.module[data.language].title}}
+                                </a>
+                            </td>
+                            <td>
+                                <a
+                                    mc-link
+                                    e2e-id="lnkPolicyPage"
+                                    [routerLink]="['/policies', conflict.conflictedPolicy?.hash]">
+                                    {{conflict.conflictedPolicy?.info.name[data.language]}}
+                                </a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </ng-container>
+                <ng-template #groupedByPolicy>
+                    <table mc-table class="mc-table_bordered flex-auto">
+                        <thead>
+                        <tr>
+                            <th>
+                                <div
+                                    class="link-group-to-policy__table-column_with-sort"
+                                    (click)="toggleSortByPolicy(data.sortDirectionByPolicy)">
+                                <span>
+                                    {{ tShared('Shared.LinkGroupToPolicy.TableColumnTitle.Policy') }}
+                                    <i
+                                        *ngIf="data.sortDirectionByPolicy === sorting.ASC"
+                                        mc-icon="soldr-icons-triangle-down_16"
+                                        class="soldr-icons"></i>
+                                    <i
+                                        *ngIf="data.sortDirectionByPolicy === sorting.DESC"
+                                        mc-icon="soldr-icons-triangle-up_16"
+                                        class="soldr-icons"></i>
+                                </span>
+                                </div>
+                            </th>
+                            <th>{{ tShared('Shared.LinkGroupToPolicy.TableColumnTitle.Modules') }}</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr *ngFor="let item of data.groupedConflictsByPolicy">
+                            <td>
+                                <a
+                                    mc-link
+                                    e2e-id="lnkPolicyPage"
+                                    [routerLink]="['/policy', item.conflictedPolicy?.hash]">
+                                    {{item.conflictedPolicy?.info.name[data.language]}}
+                                </a>
+                            </td>
+                            <td>
+                                <div *ngFor="let module of item.modules" class="link-group-to-policy__module-item">
+                                    <a
+                                        mc-link
+                                        e2e-id="lnkPolicyModule"
+                                        [routerLink]="['/policies', item.conflictedPolicy?.hash, 'modules', module.info.name]">
+                                        {{module.locale.module[data.language].title}}
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </ng-template>
+            </div>
+
+        </ng-template>
+    </ng-container>
+
+    <ng-template #conflictsFooter></ng-template>
+</ng-container>

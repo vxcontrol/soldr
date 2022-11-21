@@ -1,0 +1,41 @@
+.modules-config__left-column {
+    width: 265px;
+    padding-top: 4px;
+}
+
+.modules-config__icon {
+    margin-left: 8px;
+    cursor: help;
+}
+
+.modules-config__header {
+    padding: 14px 16px;
+}
+
+.modules-config__name {
+    margin-bottom: 4px;
+}
+
+.list-option__text {
+    min-width: 0;
+}
+
+.modules-config__upgrade-link {
+    margin-top: 8px;
+}
+
+.modules-config__content {
+    padding: 16px;
+}
+
+.modules-config__footer {
+    padding: 16px;
+
+    .mc-button + .mc-button {
+        margin-left: 16px;
+    }
+}
+
+.modules-config__right-column {
+    overflow: hidden;
+}

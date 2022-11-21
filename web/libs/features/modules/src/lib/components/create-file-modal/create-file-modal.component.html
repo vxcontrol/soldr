@@ -1,0 +1,11 @@
+<div *transloco="let t; read 'modules'" [formGroup]="form">
+    <mc-form-field>
+        <input mcInput formControlName="path">
+        <mc-hint>
+            {{ t('Modules.ModuleEdit.Text.UploadText', { prefix: this.prefix }) }}
+        </mc-hint>
+        <mc-hint *ngIf="form.get('path').errors?.clibs" [color]="themePalette.Error">
+            {{ t('Modules.ModuleEdit.ValidationText.UploadForClibs') }}
+        </mc-hint>
+    </mc-form-field>
+</div>

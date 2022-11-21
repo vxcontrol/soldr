@@ -1,0 +1,230 @@
+<ng-container *ngIf="{
+    events: events$ | async,
+    language: language$ | async,
+    search: search$ | async
+} as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <mc-splitter
+            class="layout-fill layout-row"
+            [direction]="direction.Horizontal">
+            <div mc-splitter-area class="flex-auto layout-row">
+                <soldr-grid
+                    class="layout-fill flex-auto"
+                    [data]="data.events"
+                    [footerTemplate]="gridFooter"
+                    [isLoading]="isLoading"
+                    [placeholder]="placeholderKey"
+                    [storageKey]="storageKey"
+                    [total]="total"
+                    [searchString]="data.search"
+                    [filtration]="gridFiltration"
+                    (search)="onSearch($event)"
+                    (nextPage)="nextPage()"
+                    (selectRows)="onGridSelectRows($event)"
+                    (resetFiltration)="onResetFiltration()"
+                    (sortChanged)="onGridSort($event)">
+
+                    <ng-template #agentCell let-node="params.data">
+                        <soldr-text-overflow>
+                            <a
+                                *ngIf="permitted.ViewAgents; else linkText"
+                                mc-link
+                                [routerLink]="['/agents', node.agent.hash]">
+                                <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                            </a>
+                            <ng-template #linkText>
+                                {{ node.agent.description }}
+                            </ng-template>
+                        </soldr-text-overflow>
+                    </ng-template>
+
+                    <ng-template #moduleCell let-node="params.data">
+                        <ng-container
+                            [ngTemplateOutlet]="moduleLink"
+                            [ngTemplateOutletContext]="{ module: node.module }">
+                        </ng-container>
+                    </ng-template>
+
+                    <ng-template #titleCell let-node="params.data">
+                        <soldr-text-overflow>
+                            {{ node.module?.locale.events[node.info.name]?.[data.language]?.title || node.info.name }}
+                        </soldr-text-overflow>
+                    </ng-template>
+
+                    <ng-template #groupCell let-node="params.data">
+                        <soldr-text-overflow>
+                            <a
+                                *ngIf="permitted.ViewGroups; else linkText"
+                                mc-link
+                                [routerLink]="['/groups', node.group.hash]">
+                                <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                            </a>
+                            <ng-template #linkText>
+                                {{ node.group.info.name[data.language] }}
+                            </ng-template>
+                        </soldr-text-overflow>
+                    </ng-template>
+
+                    <ng-template #policyCell let-node="params.data">
+                        <soldr-text-overflow>
+                            <a
+                                *ngIf="permitted.ViewPolicies; else linkText"
+                                mc-link
+                                [routerLink]="['/policies', node.policy.hash]">
+                                <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                            </a>
+                            <ng-template #linkText>
+                                {{ node.policy.info.name[data.language] }}
+                            </ng-template>
+                        </soldr-text-overflow>
+                    </ng-template>
+
+                    <soldr-column
+                        field="date"
+                        [headerName]="tShared('Shared.EventsView.GridColumnsTitle.Datetime')"
+                        [width]="200"
+                        [default]="true"
+                        [required]="true"
+                        [resizable]="true"
+                        [sortable]="true">
+                    </soldr-column>
+
+                    <soldr-column
+                        *ngIf="viewMode !== viewModeEnum.Agents"
+                        field="agent_name"
+                        filtrationField="agent_id"
+                        [headerName]="tShared('Shared.EventsView.GridColumnsTitle.Agent')"
+                        [template]="agentCell"
+                        [width]="200"
+                        [default]="true"
+                        [resizable]="true"
+                        [sortable]="true">
+                    </soldr-column>
+
+                    <soldr-column
+                        *ngIf="!isModulePage"
+                        field="localizedModuleName"
+                        filtrationField="module_name"
+                        [headerName]="tShared('Shared.EventsView.GridColumnsTitle.Module')"
+                        [template]="moduleCell"
+                        [width]="200"
+                        [default]="true"
+                        [resizable]="true"
+                        [sortable]="true">
+                    </soldr-column>
+
+                    <soldr-column
+                        field="localizedEventName"
+                        [headerName]="tShared('Shared.EventsView.GridColumnsTitle.EventTitle')"
+                        [template]="titleCell"
+                        [width]="300"
+                        [default]="true"
+                        [resizable]="true"
+                        [sortable]="true">
+                    </soldr-column>
+
+                    <soldr-column
+                        *ngIf="viewMode === viewModeEnum.Policies"
+                        field="group_id"
+                        [headerName]="tShared('Shared.EventsView.GridColumnsTitle.Group')"
+                        [template]="groupCell"
+                        [width]="200"
+                        [default]="true"
+                        [resizable]="true">
+                    </soldr-column>
+
+                    <soldr-column
+                        *ngIf="viewMode === viewModeEnum.Groups"
+                        field="policy_id"
+                        [headerName]="tShared('Shared.EventsView.GridColumnsTitle.Policy')"
+                        [template]="policyCell"
+                        [width]="200"
+                        [default]="true"
+                        [resizable]="true">
+                    </soldr-column>
+
+                    <soldr-filter
+                        *ngIf="!isModulePage"
+                        [field]="'module_name'"
+                        [title]="tShared('Shared.EventsView.DropdownButtonText.Modules')"
+                        [placeholder]="tShared('Shared.EventsView.InputPlaceholder.FilterByModule')"
+                        [multiple]="true"
+                        [selectedValues]="gridFiltrationByFields?.module_name?.value"
+                        (changeValue)="onGridFilter($event)">
+                        <soldr-filter-item
+                            *ngFor="let item of gridColumnsFilters.modules"
+                            [label]="item.label"
+                            [value]="item.value">
+                        </soldr-filter-item>
+                    </soldr-filter>
+
+                    <soldr-filter
+                        *ngIf="viewMode === viewModeEnum.Groups || viewMode === viewModeEnum.Policies"
+                        [field]="'agent_id'"
+                        [title]="tShared('Shared.EventsView.DropdownButtonText.Agents')"
+                        [placeholder]="tShared('Shared.EventsView.InputPlaceholder.FilterByAgent')"
+                        [multiple]="true"
+                        [selectedValues]="gridFiltrationByFields?.agent_id?.value"
+                        (changeValue)="onGridFilter($event)">
+                        <soldr-filter-item
+                            *ngFor="let item of gridColumnsFilters.agents"
+                            [label]="item.label"
+                            [value]="item.value">
+                        </soldr-filter-item>
+                    </soldr-filter>
+
+                    <soldr-filter
+                        *ngIf="viewMode === viewModeEnum.Policies"
+                        [field]="'group_id'"
+                        [title]="tShared('Shared.EventsView.DropdownButtonText.Groups')"
+                        [placeholder]="tShared('Shared.EventsView.InputPlaceholder.FilterByGroup')"
+                        [multiple]="true"
+                        [selectedValues]="gridFiltrationByFields?.group_id?.value"
+                        (changeValue)="onGridFilter($event)">
+                        <soldr-filter-item
+                            *ngFor="let item of gridColumnsFilters.groups"
+                            [label]="item.label"
+                            [value]="item.value">
+                        </soldr-filter-item>
+                    </soldr-filter>
+
+                    <soldr-filter
+                        *ngIf="viewMode === viewModeEnum.Groups && !isModulePage"
+                        [field]="'policy_id'"
+                        [title]="tShared('Shared.EventsView.DropdownButtonText.Policies')"
+                        [placeholder]="tShared('Shared.EventsView.InputPlaceholder.FilterByPolicy')"
+                        [multiple]="true"
+                        [selectedValues]="gridFiltrationByFields?.policy_id?.value"
+                        (changeValue)="onGridFilter($event)">
+                        <soldr-filter-item
+                            *ngFor="let item of gridColumnsFilters.policies"
+                            [label]="item.label"
+                            [value]="item.value">
+                        </soldr-filter-item>
+                    </soldr-filter>
+                </soldr-grid>
+                <mc-divider [vertical]="true"></mc-divider>
+            </div>
+
+            <div
+                mc-splitter-area
+                class="events-grid__info-panel"
+                soldrSaveState
+                [saveStateKey]="'events.list.rightSidebar.width'"
+                [saveStateValue]="state.rightSidebar.width"
+                (soldrWidthChange)="saveState($event)">
+                <soldr-event-info
+                    class="layout-fill"
+                    [style.width]="state.rightSidebar.width"
+                    [event]="event"
+                    [moduleLink]="moduleLink"
+                    [viewMode]="viewMode">
+                </soldr-event-info>
+            </div>
+        </mc-splitter>
+
+        <ng-template #gridFooter let-total="total" let-selected="selected">
+            <span>{{ tShared('Shared.EventsView.Text.TotalEvents', { total }) }}</span>
+        </ng-template>
+    </ng-container>
+</ng-container>

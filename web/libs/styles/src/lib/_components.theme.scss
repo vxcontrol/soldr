@@ -1,0 +1,91 @@
+@import '../../../shared/src/lib/components/accordion/accordion.component.theme';
+@import '../../../shared/src/lib/components/action-priority/action-priority.component.theme';
+@import '../../../shared/src/lib/components/actionbar/actionbar.component.theme';
+@import '../../../shared/src/lib/components/agent-connection-status/agent-connection-status.component.theme';
+@import '../../../shared/src/lib/components/agent-version/agent-version.component.theme';
+@import '../../../shared/src/lib/components/assigning-actions-master/assigning-actions-master.component.theme';
+@import '../../../shared/src/lib/components/assigning-actions-to-event/assigning-actions-to-event.component.theme';
+@import '../../../shared/src/lib/components/autocomplete-tags/autocomplete-tags.component.theme';
+@import '../../../shared/src/lib/components/breadcrumbs/breadcrumbs.component.theme';
+@import '../../../shared/src/lib/components/changelog/changelog.component.theme';
+@import '../../../shared/src/lib/components/consistency-icon/consistency-icon.component.theme';
+@import '../../../shared/src/lib/components/dependency-status/dependency-status.component.theme';
+@import '../../../shared/src/lib/components/divider/divider.component.theme';
+@import '../../../shared/src/lib/components/event-data-block/event-data-block.component.theme';
+@import '../../../shared/src/lib/components/event-details-panel/event-details-panel.component.theme';
+@import '../../../shared/src/lib/components/events-grid/events-grid.component.theme';
+@import '../../../shared/src/lib/components/grid/grid.component.theme';
+@import '../../../shared/src/lib/components/group-info/group-info.component.theme';
+@import '../../../shared/src/lib/components/groups-and-filters/groups-and-filters.component.theme';
+@import '../../../shared/src/lib/components/modules-config/modules-config.component.theme';
+@import '../../../shared/src/lib/components/multiple-selection-panel/multiple-selection-panel.component.theme';
+@import '../../../shared/src/lib/components/os/os.component.theme';
+@import '../../../shared/src/lib/components/progress-container/progress-container.theme';
+@import '../../../shared/src/lib/components/related-list/related-list.component.theme';
+@import '../../../shared/src/lib/components/secure-module-config/secure-module-config.component.theme';
+@import '../../../shared/src/lib/components/text-overflow/text-overflow.component.theme';
+@import '../../../shared/src/lib/components/tree-popover/tree-popover.component.theme';
+
+@import '../../../../apps/soldr-ui/src/app/components/navbar/navbar.component.theme';
+@import '../../../features/distributions/src/lib/routes/distributions-page/distributions-page.component.theme';
+@import '../../../features/login/src/lib/routes/login-page/login-page.component.theme';
+@import '../../../features/modules/src/lib/components/import-module-modal/import-module-modal.component.theme';
+@import '../../../features/modules/src/lib/components/toggle-item/toggle-item.component.theme';
+
+@import 'ag-grid/ag-grid-theme';
+@import 'mc-tabs/mc-tabs.theme';
+@import 'page-layout/page-layout.theme';
+@import 'sidebar/sidebar.theme';
+
+@mixin soldr-ui-components-theme($mosaic-theme) {
+    @include accordion-theme($mosaic-theme);
+    @include action-priority-theme($mosaic-theme);
+    @include actionbar-theme($mosaic-theme);
+    @include agent-connection-status-theme($mosaic-theme);
+    @include agent-version-theme($mosaic-theme);
+    @include assigning-actions-master-theme($mosaic-theme);
+    @include assigning-actions-to-event-theme($mosaic-theme);
+    @include autocomplete-tags-theme($mosaic-theme);
+    @include breadcrumbs-theme($mosaic-theme);
+    @include changelog-theme($mosaic-theme);
+    @include consistency-icon-theme($mosaic-theme);
+    @include dependency-status-theme($mosaic-theme);
+    @include distributions-page-theme($mosaic-theme);
+    @include divider-component-theme($mosaic-theme);
+    @include event-data-block-theme($mosaic-theme);
+    @include event-details-panel-theme($mosaic-theme);
+    @include events-grid-theme($mosaic-theme);
+    @include grid-theme($mosaic-theme);
+    @include group-info-theme($mosaic-theme);
+    @include groups-and-filters-theme($mosaic-theme);
+    @include import-module-modal-theme($mosaic-theme);
+    @include login-page-theme($mosaic-theme);
+    @include mc-tabs($mosaic-theme);
+    @include modules-config-theme($mosaic-theme);
+    @include multiple-selection-panel-theme($mosaic-theme);
+    @include navbar-theme($mosaic-theme);
+    @include os-theme($mosaic-theme);
+    @include page-layout-theme($mosaic-theme);
+    @include progress-container-theme($mosaic-theme);
+    @include ag-grid-theme($mosaic-theme);
+    @include related-list-theme($mosaic-theme);
+    @include secure-module-config-theme($mosaic-theme);
+    @include sidebar-theme($mosaic-theme);
+    @include text-overflow-theme($mosaic-theme);
+    @include toggle-item-theme($mosaic-theme);
+    @include tree-popover-theme($mosaic-theme);
+}
+
+@mixin soldr-ui-components-typography($typography) {
+    @include accordion-typography($typography);
+    @include actionbar-typography($typography);
+    @include assigning-actions-master-typography($typography);
+    @include breadcrumbs-typography($typography);
+    @include changelog-typography($typography);
+    @include distributions-page-typography($typography);
+    @include grid-typography($typography);
+    @include ag-grid-typography($typography);
+    @include secure-module-config-typography($typography);
+    @include sidebar-typography($typography);
+    @include toggle-item-typography($typography);
+}

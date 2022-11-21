@@ -1,0 +1,13 @@
+@mixin overriden-vue-theme($theme) {
+    div.__object-form-item > legend,
+    div.__array-tabs-form-item > legend,
+    div.__array-form-item > legend {
+        color: map-deep-get($theme, foreground, text);
+        background-color: map-deep-get($theme, background, background-less-contrast);
+        border-color: map-deep-get($theme, foreground, border);
+    }
+
+    .__object-form-item > [class*='-layout'] {
+        border-color: map-deep-get($theme, foreground, divider);
+    }
+}

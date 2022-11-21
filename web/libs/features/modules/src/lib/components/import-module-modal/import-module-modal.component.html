@@ -1,0 +1,108 @@
+<ng-container *ngIf="({
+    modulesByTitle: (options$ | async)?.modulesByTitle,
+    versionsByName: (options$ | async)?.versionsByName
+}) as data">
+    <ng-container *transloco="let t; read: 'modules'">
+        <input
+            #fileUpload
+            [(ngModel)]="value"
+            type="file"
+            class="display-none"
+            accept="application/zip"
+            (change)="onFileSelected($event)">
+
+        <button
+            mc-button
+            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+            (click)="fileUpload.click()">
+            <i mc-icon="soldr-icons-upload-to-cloud_16" class="soldr-icons"></i>
+            <span>{{ t('Modules.ModulesList.ActionBarButtonText.Import') }}</span>
+        </button>
+
+
+        <ng-template #tplTitle>
+            <span>{{ t('Modules.ImportModule.ModalTitle.Header') }}</span>
+        </ng-template>
+        <ng-template #tplContent>
+            <ng-container *ngIf="!importInProgress && !importFailed; else container">
+                <form
+                    #editForm="ngForm"
+                    class="mc-form-vertical"
+                    [formGroup]="form"
+                    (ngSubmit)="importModule()">
+                    <div class="mc-form__fieldset">
+                        <div class="mc-form__row mc-form-row_margin" *transloco="let tShared; read: 'shared'">
+                            <label class="mc-form__label">{{ t('Modules.ImportModule.Label.Module') }}</label>
+                            <mc-form-field class="mc-form__control">
+                                <mc-select formControlName="name">
+                                    <mc-option *ngFor="let name of data.modulesByTitle | keyvalue" [value]="name.value">
+                                        {{name.key}}
+                                    </mc-option>
+                                </mc-select>
+                                <mc-hint *ngIf="form.get('name').errors?.required">
+                                    {{ tShared('Shared.Pseudo.ValidationText.Required') }}
+                                </mc-hint>
+                            </mc-form-field>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label">{{ t('Modules.ImportModule.Label.Version') }}</label>
+                            <mc-form-field class="mc-form__control">
+                                <mc-select formControlName="version">
+                                    <mc-option
+                                        [value]="defaultVersion">{{t('Modules.ImportModule.SelectItem.AllVersion')}}</mc-option>
+                                    <ng-container *ngIf="form.controls.name.value">
+                                        <mc-option *ngFor="let version of data.versionsByName.get(form.controls.name.value)" [value]="version">
+                                            {{version}}
+                                        </mc-option>
+                                    </ng-container>
+                                </mc-select>
+                            </mc-form-field>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <div class="mc-form__control">
+                                <mc-checkbox formControlName="isRewrite">
+                                    {{t('Modules.ImportModule.Label.IsRewrite')}}
+                                </mc-checkbox>
+                                <div
+                                    class="import-modal__hint text_second">{{t('Modules.ImportModule.CheckboxHint.IsRewrite')}}</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </ng-container>
+            <ng-template #container>
+                <div class="import-modal__progress layout-column layout-align-center">
+                    <ng-container *ngIf="!importFailed; else errorContainer">
+                        <mc-progress-bar [mode]="'indeterminate'" [color]="themePalette.Primary"></mc-progress-bar>
+                        <span class="text_center import-modal__text">{{t('Modules.ImportModule.Text.Import')}}</span>
+                    </ng-container>
+                    <ng-template #errorContainer>
+                        <span class="text_center import-modal__error-text">{{errorImportText}}</span>
+                        <span *ngIf="errorImportTextSecond" class="text_center text_second import-modal__caption-text">
+                        {{errorImportTextSecond}}
+                    </span>
+                    </ng-template>
+                </div>
+            </ng-template>
+        </ng-template>
+        <ng-template #tplFooter>
+            <button
+                *ngIf="!importInProgress && !importFailed"
+                mc-button
+                type="submit"
+                [color]="themePalette.Primary"
+                [disabled]="form?.invalid"
+                (click)="editForm.ngSubmit.emit()">
+                {{ t('Modules.ImportModule.ButtonText.Import') }}
+            </button>
+            <button
+                mc-button
+                [color]="themePalette.Second"
+                (click)="destroyModal()"
+                *transloco="let tCommon; read: 'common'">
+                {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+            </button>
+        </ng-template>
+    </ng-container>
+</ng-container>
+

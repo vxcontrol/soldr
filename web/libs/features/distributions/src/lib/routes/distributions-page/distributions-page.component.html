@@ -1,0 +1,92 @@
+<ng-container
+    *ngIf="({
+        agentBinaryVersions: agentBinaryVersions$ | async,
+        isLoadingBinaries: isLoadingBinaries$ | async,
+        language: language$ | async,
+        latestAgentBinary : latestAgentBinary$ | async
+    }) as data">
+    <soldr-progress-container [loadingFlag]="data.isLoadingBinaries">
+        <div class="distributions-page__content" *transloco="let tShared; read: 'shared'">
+            <div class="layout-column layout-align-center-center" *transloco="let t; read: 'distributions'">
+                <div class="mc-display-3 distributions-page__title">
+                    {{t('Distributions.DistributionsPage.Title.Distributions')}}
+                </div>
+                <div class="distributions-page__subtitle">
+                    {{t('Distributions.Pseudo.Text.LatestVersion', {
+                    version: data.latestAgentBinary?.version | agentVersion,
+                    date: data.latestAgentBinary?.upload_date | toDateTime:data.language | absoluteLongDate
+                })}}
+                </div>
+                <div class="distributions-page__container">
+                    <div class="layout-row distributions-page__os">
+                        <div class="layout-column layout-align-center-center flex distributions-page__os-card">
+                            <img class="os-img-windows"
+                                 src="assets/images/distributions/windows.svg"
+                                 alt="{{tShared('Shared.Os.Text.Windows')}}">
+                            <span class="mc-headline os-title">{{tShared('Shared.Os.Text.Windows')}}</span>
+                            <div #firstButtonGroup class="display-flex distributions-page__os-action" tabindex="0">
+                                <button
+                                    class="flex os-action-button"
+                                    mc-button
+                                    (click)="exportFile(operationSystem.Windows, arch.I386)">
+                                    <span class="os-action-text">{{tShared('Shared.Os.Text.I386')}}</span>
+                                </button>
+                                <button
+                                    class="flex os-action-button"
+                                    mc-button
+                                    (click)="exportFile(operationSystem.Windows, arch.Amd64)">
+                                    <span class="os-action-text">{{tShared('Shared.Os.Text.Amd64')}}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="distributions-page__divider"></div>
+                        <div class="layout-column layout-align-center-center flex distributions-page__os-card">
+                            <img class="os-img-linux"
+                                 src="assets/images/distributions/linux.png"
+                                 srcset="assets/images/distributions/linux@2x.png"
+                                 alt="{{tShared('Shared.Os.Text.Linux')}}">
+                            <span class="mc-headline os-title os-title-linux">{{tShared('Shared.Os.Text.Linux')}}</span>
+                            <div class="display-flex distributions-page__os-action">
+                                <button
+                                    class="flex os-action-button"
+                                    mc-button
+                                    (click)="exportFile(operationSystem.Linux, arch.I386)">
+                                    <span class="os-action-text">{{tShared('Shared.Os.Text.I386')}}</span>
+                                </button>
+                                <button
+                                    class="flex os-action-button"
+                                    mc-button
+                                    (click)="exportFile(operationSystem.Linux, arch.Amd64)">
+                                    <span class="os-action-text">{{tShared('Shared.Os.Text.Amd64')}}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="distributions-page__divider"></div>
+                        <div class="layout-column layout-align-center-center flex distributions-page__os-card">
+                            <img class="os-img-macos"
+                                 src="assets/images/distributions/macos.svg"
+                                 alt="{{tShared('Shared.Os.Text.Macos')}}">
+                            <span class="mc-headline os-title">{{tShared('Shared.Os.Text.Macos')}}</span>
+                            <div class="display-flex distributions-page__os-action">
+                                <button
+                                    class="flex os-action-button"
+                                    mc-button
+                                    (click)="exportFile(operationSystem.Darwin, arch.Amd64)">
+                                    <span class="os-action-text">{{tShared('Shared.Os.Text.Amd64')}}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text_center distributions-page__versions">
+                        <span class="versions-text">{{t('Distributions.Pseudo.Text.Supports')}}</span>
+                        <ng-container *ngFor="let version of data.agentBinaryVersions">
+                            {{version | agentVersion}}&nbsp;
+                        </ng-container>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </soldr-progress-container>
+</ng-container>
+
+

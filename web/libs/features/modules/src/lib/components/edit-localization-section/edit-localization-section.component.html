@@ -1,0 +1,492 @@
+<ng-container *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <form #formElement class="layout-fill" [formGroup]="form" (ngSubmit)="onSubmitForm()">
+            <mc-tab-group e2e-id="tbsModuleLocalization" vertical class="layout-fill">
+                <mc-tab class="scrollable-y" [label]="t('Modules.ModuleEdit.TabTitle.ModuleLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l">
+                            <ng-container formGroupName="module">
+                                <ng-container *ngFor="let lang of languages">
+                                    <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                        <div class="layout-margin-bottom-s">
+                                            <ng-container *ngIf="lang === languagesEnum.ru">
+                                                {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                            </ng-container>
+                                            <ng-container *ngIf="lang === languagesEnum.en">
+                                                {{ t('Modules.ModuleEdit.Label.English') }}
+                                            </ng-container>
+                                        </div>
+
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <label class="mc-form__label flex-10">
+                                                {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                            </label>
+                                            <mc-form-field class="mc-form__control">
+                                                <input e2e-id="txtModuleTitleLocale" mcInput formControlName="title">
+                                            </mc-form-field>
+                                        </div>
+
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <label class="mc-form__label flex-10">
+                                                {{ t('Modules.ModuleEdit.Label.Description')}}
+                                            </label>
+                                            <mc-form-field class="mc-form__control">
+                                                <input e2e-id="txtModuleDescriptionLocale" mcInput formControlName="description">
+                                            </mc-form-field>
+                                        </div>
+                                    </div>
+                                </ng-container>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab class="scrollable-y" [label]="t('Modules.ModuleEdit.TabTitle.ConfigLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="configParams$; let configParams">
+                            <ng-container *ngFor="let param of configParams; last as last, first as first">
+                                <div class="mc-subheading">
+                                    {{ param }}
+                                </div>
+                                <ng-container [formGroup]="$any(form.controls.config)">
+                                    <ng-container [formGroupName]="param">
+                                        <ng-container *ngFor="let lang of languages">
+                                            <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                                <div class="layout-margin-bottom-s">
+                                                    <ng-container *ngIf="lang === languagesEnum.ru">
+                                                        {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                    </ng-container>
+                                                    <ng-container *ngIf="lang === languagesEnum.en">
+                                                        {{ t('Modules.ModuleEdit.Label.English') }}
+                                                    </ng-container>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtConfigParamTitleLocale"
+                                                            mcInput
+                                                            formControlName="title">
+                                                    </mc-form-field>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtConfigParamDescriptionLocale"
+                                                            mcInput
+                                                            formControlName="description">
+                                                    </mc-form-field>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </ng-container>
+                                </ng-container>
+                                <mc-divider *ngIf="!last"></mc-divider>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab class="scrollable-y" [label]="t('Modules.ModuleEdit.TabTitle.SecureConfigLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="secureConfigParams$; let secureConfigParams">
+                            <ng-container *ngFor="let param of secureConfigParams; last as last, first as first">
+                                <div class="mc-subheading" [class.layout-margin-top-s]="!first">
+                                    {{ param }}
+                                </div>
+                                <ng-container [formGroup]="$any(form.controls.secure_config)">
+                                    <ng-container [formGroupName]="param">
+                                        <ng-container *ngFor="let lang of languages">
+                                            <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                                <div class="layout-margin-bottom-s">
+                                                    <ng-container *ngIf="lang === languagesEnum.ru">
+                                                        {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                    </ng-container>
+                                                    <ng-container *ngIf="lang === languagesEnum.en">
+                                                        {{ t('Modules.ModuleEdit.Label.English') }}
+                                                    </ng-container>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtSecureConfigParamTitleLocale"
+                                                            mcInput
+                                                            formControlName="title">
+                                                    </mc-form-field>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtSecureConfigParamDescriptionLocale"
+                                                            mcInput
+                                                            formControlName="description">
+                                                    </mc-form-field>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </ng-container>
+                                </ng-container>
+                                <mc-divider *ngIf="!last"></mc-divider>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.EventsLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="events$; let events">
+                            <ng-container *ngFor="let event of events; last as last, first as first">
+                                <div class="mc-subheading" [class.layout-margin-top-s]="!first">
+                                    {{ event }}
+                                </div>
+                                <ng-container [formGroup]="$any(form.controls.events)">
+                                    <ng-container [formGroupName]="event">
+                                        <ng-container *ngFor="let lang of languages">
+                                            <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                                <div class="layout-margin-bottom-s">
+                                                    <ng-container *ngIf="lang === languagesEnum.ru">
+                                                        {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                    </ng-container>
+                                                    <ng-container *ngIf="lang === languagesEnum.en">
+                                                        {{ t('Modules.ModuleEdit.Label.English') }}
+                                                    </ng-container>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtEventTitleLocale"
+                                                            mcInput
+                                                            formControlName="title">
+                                                    </mc-form-field>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtEventDescriptionLocale"
+                                                            mcInput
+                                                            formControlName="description">
+                                                    </mc-form-field>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </ng-container>
+                                </ng-container>
+                                <mc-divider *ngIf="!last"></mc-divider>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.EventsConfigLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="eventConfig$; let eventConfig">
+                            <soldr-toggle-list>
+                                <soldr-toggle-item
+                                    *ngFor="let event of eventConfig; last as last, first as first"
+                                    [title]="event">
+                                    <ng-container *ngrxLet="eventConfigKeys$; let eventConfigKeys">
+                                        <ng-container
+                                            *ngFor="let key of eventConfigKeys[event]; last as last, first as first">
+                                            <div class="mc-headline" [class.layout-margin-top-s]="!first">
+                                                {{ key }}
+                                            </div>
+                                            <ng-container
+                                                [formGroup]="$any(form.controls.event_config).controls[event]">
+                                                <ng-container [formGroupName]="key">
+                                                    <ng-container *ngFor="let lang of languages">
+                                                        <div class="mc-form-horizontal layout-margin-s"
+                                                             [formGroupName]="lang">
+                                                            <div class="layout-margin-bottom-s">
+                                                                <ng-container *ngIf="lang === languagesEnum.ru">
+                                                                    {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                                </ng-container>
+                                                                <ng-container *ngIf="lang === languagesEnum.en">
+                                                                    {{ t('Modules.ModuleEdit.Label.English') }}
+                                                                </ng-container>
+                                                            </div>
+
+                                                            <div class="mc-form__row mc-form-row_margin">
+                                                                <label class="mc-form__label flex-10">
+                                                                    {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                                </label>
+                                                                <mc-form-field class="mc-form__control">
+                                                                    <input
+                                                                        e2e-id="txtEventConfigKeyTitleLocale"
+                                                                        mcInput
+                                                                        formControlName="title">
+                                                                </mc-form-field>
+                                                            </div>
+
+                                                            <div class="mc-form__row mc-form-row_margin">
+                                                                <label class="mc-form__label flex-10">
+                                                                    {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                                </label>
+                                                                <mc-form-field class="mc-form__control">
+                                                                    <input
+                                                                        e2e-id="txtEventConfigKeyDescriptionLocale"
+                                                                        mcInput
+                                                                        formControlName="description">
+                                                                </mc-form-field>
+                                                            </div>
+                                                        </div>
+                                                    </ng-container>
+                                                </ng-container>
+                                            </ng-container>
+                                            <mc-divider *ngIf="!last"></mc-divider>
+                                        </ng-container>
+                                    </ng-container>
+                                </soldr-toggle-item>
+                            </soldr-toggle-list>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.ActionsLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="actions$; let actions">
+                            <ng-container *ngFor="let action of actions; last as last, first as first">
+                                <div class="mc-subheading" [class.layout-margin-top-s]="!first">
+                                    {{ action }}
+                                </div>
+                                <ng-container [formGroup]="$any(form.controls.actions)">
+                                    <ng-container [formGroupName]="action">
+                                        <ng-container *ngFor="let lang of languages">
+                                            <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                                <div class="layout-margin-bottom-s">
+                                                    <ng-container *ngIf="lang === languagesEnum.ru">
+                                                        {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                    </ng-container>
+                                                    <ng-container *ngIf="lang === languagesEnum.en">
+                                                        {{ t('Modules.ModuleEdit.Label.English') }}
+                                                    </ng-container>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtActionTitleLocale"
+                                                            mcInput
+                                                            formControlName="title">
+                                                    </mc-form-field>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtActionDescriptionLocale"
+                                                            mcInput
+                                                            formControlName="description">
+                                                    </mc-form-field>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </ng-container>
+                                </ng-container>
+                                <mc-divider *ngIf="!last"></mc-divider>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.ActionsConfigLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="actionConfig$; let actionConfig">
+                            <soldr-toggle-list>
+                                <soldr-toggle-item
+                                    *ngFor="let action of actionConfig; last as last, first as first"
+                                    [title]="action">
+                                    <ng-container *ngrxLet="actionConfigKeys$; let actionConfigKeys">
+                                        <ng-container
+                                            *ngFor="let key of actionConfigKeys[action]; last as last, first as first">
+                                            <div class="mc-headline" [class.layout-margin-top-s]="!first">
+                                                {{ key }}
+                                            </div>
+                                            <ng-container
+                                                [formGroup]="$any(form.controls.action_config).controls[action]">
+                                                <ng-container [formGroupName]="key">
+                                                    <ng-container *ngFor="let lang of languages">
+                                                        <div class="mc-form-horizontal layout-margin-s"
+                                                             [formGroupName]="lang">
+                                                            <div class="layout-margin-bottom-s">
+                                                                <ng-container *ngIf="lang === languagesEnum.ru">
+                                                                    {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                                </ng-container>
+                                                                <ng-container *ngIf="lang === languagesEnum.en">
+                                                                    {{ t('Modules.ModuleEdit.Label.English') }}
+                                                                </ng-container>
+                                                            </div>
+
+                                                            <div class="mc-form__row mc-form-row_margin">
+                                                                <label class="mc-form__label flex-10">
+                                                                    {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                                </label>
+                                                                <mc-form-field class="mc-form__control">
+                                                                    <input
+                                                                        e2e-id="txtActionConfigKeyTitleLocale"
+                                                                        mcInput
+                                                                        formControlName="title">
+                                                                </mc-form-field>
+                                                            </div>
+
+                                                            <div class="mc-form__row mc-form-row_margin">
+                                                                <label class="mc-form__label flex-10">
+                                                                    {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                                </label>
+                                                                <mc-form-field class="mc-form__control">
+                                                                    <input
+                                                                        e2e-id="txtActionConfigKeyDescriptionLocale"
+                                                                        mcInput
+                                                                        formControlName="description">
+                                                                </mc-form-field>
+                                                            </div>
+                                                        </div>
+                                                    </ng-container>
+                                                </ng-container>
+                                            </ng-container>
+                                            <mc-divider *ngIf="!last"></mc-divider>
+                                        </ng-container>
+                                    </ng-container>
+                                </soldr-toggle-item>
+                            </soldr-toggle-list>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.FieldsLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="fields$; let fields">
+                            <ng-container *ngFor="let field of fields; last as last, first as first">
+                                <div class="mc-subheading">
+                                    {{ field }}
+                                </div>
+                                <ng-container [formGroup]="$any(form.controls.fields)">
+                                    <ng-container [formGroupName]="field">
+                                        <ng-container *ngFor="let lang of languages">
+                                            <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                                <div class="layout-margin-bottom-s">
+                                                    <ng-container *ngIf="lang === languagesEnum.ru">
+                                                        {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                    </ng-container>
+                                                    <ng-container *ngIf="lang === languagesEnum.en">
+                                                        {{ t('Modules.ModuleEdit.Label.English') }}
+                                                    </ng-container>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtFieldTitleLocale"
+                                                            mcInput
+                                                            formControlName="title">
+                                                    </mc-form-field>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtFieldDescriptionLocale"
+                                                            mcInput
+                                                            formControlName="description">
+                                                    </mc-form-field>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </ng-container>
+                                </ng-container>
+                                <mc-divider *ngIf="!last"></mc-divider>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.TagsLocalization')">
+                    <div class="layout-fill scrollable-y">
+                        <div class="layout-margin-l" *ngrxLet="tags$; let tags">
+                            <ng-container *ngFor="let tag of tags; last as last, first as first">
+                                <div class="mc-subheading">
+                                    {{ tag }}
+                                </div>
+                                <ng-container [formGroup]="$any(form.controls.tags)">
+                                    <ng-container [formGroupName]="tag">
+                                        <ng-container *ngFor="let lang of languages">
+                                            <div class="mc-form-horizontal layout-margin-s" [formGroupName]="lang">
+                                                <div class="layout-margin-bottom-s">
+                                                    <ng-container *ngIf="lang === languagesEnum.ru">
+                                                        {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                                    </ng-container>
+                                                    <ng-container *ngIf="lang === languagesEnum.en">
+                                                        {{ t('Modules.ModuleEdit.Label.English') }}
+                                                    </ng-container>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtTagTitleLocale"
+                                                            mcInput
+                                                            formControlName="title">
+                                                    </mc-form-field>
+                                                </div>
+
+                                                <div class="mc-form__row mc-form-row_margin">
+                                                    <label class="mc-form__label flex-10">
+                                                        {{ t('Modules.ModuleEdit.Label.Description')}}
+                                                    </label>
+                                                    <mc-form-field class="mc-form__control">
+                                                        <input
+                                                            e2e-id="txtTagDescriptionLocale"
+                                                            mcInput
+                                                            formControlName="description">
+                                                    </mc-form-field>
+                                                </div>
+                                            </div>
+                                        </ng-container>
+                                    </ng-container>
+                                </ng-container>
+                                <mc-divider *ngIf="!last"></mc-divider>
+                            </ng-container>
+                        </div>
+                    </div>
+                </mc-tab>
+            </mc-tab-group>
+        </form>
+    </ng-container>
+</ng-container>

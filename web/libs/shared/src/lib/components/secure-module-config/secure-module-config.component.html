@@ -1,0 +1,196 @@
+<ng-container *transloco="let t; read 'shared'">
+    <ng-container *transloco="let tCommon; read 'common'">
+
+        <div *ngFor="let param of params; first as first" [class.layout-margin-top-xl]="!first">
+            <div class="layout-row layout-align-start-center">
+                <span>{{ param.localizedTitle }}</span>
+
+                <ng-container
+                    *ngIf="!permitted.EditSecureConfig && !permitted.ViewSecureConfig; else permittedSecureConfig">
+                    <i
+                        mc-icon="soldr-icons-protection-active_16"
+                        class="soldr-icons icon_secure"
+                        [mcTooltip]="t('Shared.ModuleConfig.TooltipText.AboutSecureParamsIfDenied')">
+                    </i>
+                </ng-container>
+
+                <ng-template #permittedSecureConfig>
+                    <i
+                        mc-icon="soldr-icons-protection-active_16"
+                        class="soldr-icons icon_secure"
+                        mcPopover
+                        [mcPopoverContent]="popoverContent"
+                        [mcTrigger]="'hover'">
+                    </i>
+                </ng-template>
+            </div>
+
+            <div
+                *ngIf="!permitted.EditSecureConfig && !permitted.ViewSecureConfig"
+                class="text_second layout-margin-top-xs">
+                {{ t('Shared.ModuleConfig.Text.UnavailableForViewAndEditing') }}
+            </div>
+
+            <div *ngIf="param.isShowedValue" class="view-form layout-margin-top-xxs">
+                <ng-container *ngIf="!param.isComplexType; else complexTypeView">
+                    <ng-container [ngSwitch]="true">
+                        <ng-container *ngSwitchCase="param.type === PropertyType.BOOLEAN">
+                            <mc-radio-group class="layout-row" [disabled]="true" [value]="param.model">
+                                <mc-radio-button
+                                    [value]="true"
+                                    [disabled]="true">
+                                    {{ tCommon('Common.Pseudo.RadioButtonText.Yes') }}
+                                </mc-radio-button>
+
+                                <mc-radio-button
+                                    class="layout-margin-left-s"
+                                    [value]="false"
+                                    [disabled]="true">
+                                    {{ tCommon('Common.Pseudo.RadioButtonText.No') }}
+                                </mc-radio-button>
+                            </mc-radio-group>
+                        </ng-container>
+                        <mc-form-field *ngSwitchCase="param.type === PropertyType.NUMBER || param.type === PropertyType.INTEGER">
+                            <input
+                                mcInput
+                                type="number"
+                                disabled
+                                [(ngModel)]="param.model">
+                            <mc-stepper></mc-stepper>
+                        </mc-form-field>
+                        <mc-form-field *ngSwitchDefault>
+                            <input
+                                e2e-id="txtSecureParamTextValueView"
+                                type="text"
+                                mcInput
+                                autocomplete="off"
+                                disabled
+                                [value]="param.model">
+                            <mc-cleaner></mc-cleaner>
+                        </mc-form-field>
+                    </ng-container>
+                </ng-container>
+                <ng-template #complexTypeView>
+                    <soldr-ncform-wrapper
+                        [isReadOnly]="true"
+                        [schema]="param.schema"
+                        [model]="param.model">
+                    </soldr-ncform-wrapper>
+                </ng-template>
+            </div>
+
+            <div
+                *ngIf="permitted.ViewSecureConfig || permitted.EditSecureConfig"
+                class="layout-row layout-margin-top-s">
+                <div *ngIf="permitted.ViewSecureConfig && !param.isShowedValue" class="layout-margin-right-s">
+                    <button
+                        e2e-id="btnShowParamValue"
+                        mc-button
+                        [class.mc-progress]="param.isFetchValueForView"
+                        (click)="show(param)">
+                        {{ t('Shared.ModuleConfig.ButtonText.ShowParamValue') }}
+                    </button>
+                </div>
+
+                <button
+                    *ngIf="permitted.EditSecureConfig"
+                    e2e-id="btnEditParamValue"
+                    mc-button
+                    [class.mc-progress]="loadingForEditStatuses[param.name]"
+                    (click)="edit(param)">
+                    {{ t('Shared.ModuleConfig.ButtonText.ChangeParam') }}
+                </button>
+            </div>
+
+            <ng-template #popoverContent>
+                <div mc-icon="soldr-icons-protection-active_16" class="soldr-icons icon_secure icon_in-popover"></div>
+
+                <div class="mc-subheading layout-margin-top-xl">
+                    {{ t('Shared.ModuleConfig.Label.SecureParam') }}
+                </div>
+
+                <div class="layout-margin-top-s" [innerHTML]="t('Shared.ModuleConfig.Text.AboutSecureParam')"></div>
+            </ng-template>
+        </div>
+
+        <ng-template #editParamModalBody>
+            <mc-loader-overlay fixed-top *ngIf="loadingForEditStatuses[currentParam.name]; else editForm">
+            </mc-loader-overlay>
+            <ng-template #editForm>
+                <div class="layout-row layout-margin-bottom-xxl">
+                    <i mc-icon="soldr-icons-protection-active_16" class="soldr-icons icon_secure icon_in-modal"></i>
+                    <div class="layout-margin-left-m text_success">
+                        {{ t('Shared.ModuleConfig.Text.AboutSecureParamsOnEditing') }}
+                    </div>
+                </div>
+                <soldr-ncform-wrapper
+                    #editComplexParam
+                    *ngIf="currentParam.isComplexType; else otherTypes"
+                    [schema]="currentParam.schema"
+                    [model]="currentParam.model"
+                    (registerApi)="onRegisterApi($event)">
+                </soldr-ncform-wrapper>
+                <ng-template #otherTypes>
+                    <div class="layout-margin-bottom-xxs">{{ currentParam.localizedTitle }}</div>
+
+                    <ng-container [ngSwitch]="true">
+                        <ng-container *ngSwitchCase="currentParam.type === PropertyType.BOOLEAN">
+                            <mc-radio-group class="layout-row" [(ngModel)]="currentParam.model">
+                                <mc-radio-button [value]="true">
+                                    {{ tCommon('Common.Pseudo.RadioButtonText.Yes') }}
+                                </mc-radio-button>
+
+                                <mc-radio-button
+                                    class="layout-margin-left-s" [value]="false">
+                                    {{ tCommon('Common.Pseudo.RadioButtonText.No') }}
+                                </mc-radio-button>
+                            </mc-radio-group>
+                        </ng-container>
+                        <mc-form-field *ngSwitchCase="currentParam.type === PropertyType.NUMBER">
+                            <input
+                                mcInput
+                                type="number"
+                                [(ngModel)]="currentParam.model">
+                            <mc-stepper></mc-stepper>
+                        </mc-form-field>
+                        <mc-form-field *ngSwitchCase="currentParam.type === PropertyType.INTEGER">
+                            <input
+                                mcInput
+                                type="number"
+                                step="1"
+                                [(ngModel)]="currentParam.model">
+                            <mc-stepper></mc-stepper>
+                        </mc-form-field>
+                        <ng-container *ngSwitchDefault>
+                            <mc-form-field class="">
+                                <input
+                                    e2e-id="txtSecureParamTextValue"
+                                    type="text"
+                                    mcInput
+                                    autocomplete="off"
+                                    [required]="currentParam.required"
+                                    [(ngModel)]="currentParam.model">
+                            </mc-form-field>
+                        </ng-container>
+                    </ng-container>
+                </ng-template>
+            </ng-template>
+        </ng-template>
+
+        <ng-template #editParamModalFooter>
+            <div class="layout-row layout-align-end-center">
+                <button
+                    mc-button
+                    [color]="themePalette.Primary"
+                    [class.mc-progress]="isSaving"
+                    [disabled]="!currentParam.isComplexType && currentParam.required && !currentParam.model"
+                    (click)="save(currentParam)">
+                    {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                </button>
+                <button mc-button (click)="close()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                </button>
+            </div>
+        </ng-template>
+    </ng-container>
+</ng-container>

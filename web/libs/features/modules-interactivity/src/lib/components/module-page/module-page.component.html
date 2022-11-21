@@ -1,0 +1,194 @@
+<ng-container
+    *ngIf="({
+        events: events$ | async,
+        eventsGridFiltrationByFields: eventsGridFiltrationByFields$ | async,
+        eventsPage: eventsPage$ | async,
+        eventsSearchValue: eventsSearchValue$ | async,
+        isLoadingEvents: isLoadingEvents$ | async,
+        isLoadingModule: isLoadingModule$ | async,
+        isLoadingModules: isLoadingModules$ | async,
+        isSavingModule: isSavingModule$ | async,
+        lang: language$ | async,
+        module: module$ | async,
+        moduleVersions: moduleVersions$ | async,
+        modules: modules$ | async,
+        totalEvents: totalEvents$ | async
+    }) as data">
+    <mc-splitter
+        class="layout-fill layout-row"
+        [direction]="direction.Horizontal"
+        [hideGutters]="!state.leftSidebar.opened"
+        *transloco="let tShared; read: 'shared'">
+        <mc-sidebar
+            #leftSidebar="mcSidebar"
+            class="sidebar_left"
+            mc-splitter-area
+            soldrSaveState
+            [position]="sidebarPositions.Left"
+            [opened]="state.leftSidebar.opened"
+            [saveStateKey]="stateStorageKey + '.leftSidebar'"
+            [saveStateValue]="state.leftSidebar"
+            (stateChanged)="saveLeftSidebarState($event)"
+            (soldrWidthChange)="saveLeftSidebarWidth($event)">
+
+            <div
+                mc-sidebar-opened
+                class="sidebar_opened page-layout__panel layout-column"
+                [width]="state.leftSidebar.width"
+                [minWidth]="'265px'"
+                [maxWidth]="'400px'">
+                <header class="sidebar-header flex-none">
+                    <button
+                        e2e-id="btnCollapseSidebar"
+                        mc-button
+                        class="mc-button_transparent sidebar-toggle"
+                        [mcTooltip]="tShared('Shared.Pseudo.TooltipText.CollapseSidebar')"
+                        (click)="leftSidebar.toggle()">
+                        <i mc-icon="soldr-icons-double-angle-left_1" class="soldr-icons6"></i>
+                    </button>
+
+                    <div class="sidebar-title">
+                        {{ tShared('Shared.ModuleView.SidebarTitle.AboutModule') }}
+                    </div>
+                </header>
+
+                <mc-divider class="flex-none"></mc-divider>
+
+                <div class="sidebar-content flex-auto">
+                    <soldr-module-info
+                        *ngIf="data.module"
+                        [viewMode]="viewMode"
+                        [module]="data.module"
+                        [versions]="data.moduleVersions"
+                        (update)="doUpdate($event)"
+                        (seeVersions)="doSeeVersions()">
+                    </soldr-module-info>
+                </div>
+            </div>
+
+            <div
+                mc-sidebar-closed
+                class="sidebar-closed layout-column layout-align-start-center"
+                (click)="leftSidebar.toggle()">
+
+                <header class="sidebar-header">
+                    <button
+                        e2e-id="btnExpandSidebar"
+                        mc-button
+                        class="mc-button_transparent sidebar-toggle"
+                        [mcTooltip]="tShared('Shared.Pseudo.TooltipText.ExpandSidebar')">
+                        <i mc-icon="soldr-icons-double-angle-right_16" class="soldr-icons"></i>
+                    </button>
+                </header>
+
+                <section class="flex">
+                    <a class="sidebar-title">{{ tShared('Shared.ModuleView.SidebarTitle.AboutModule') }}</a>
+                </section>
+            </div>
+        </mc-sidebar>
+
+        <div mc-splitter-area class="flex page-layout__panel module-page__content">
+            <mc-tab-group
+                e2e-id="tbsModuleInfo"
+                #tabs
+                class="layout-fill"
+                [(selectedIndex)]="tabIndex"
+                (selectedTabChange)="onSelectTab()">
+
+                <mc-tab
+                    *ngIf="hasManagementTab"
+                    [label]="tShared('Shared.ModuleView.Tab.Management')"
+                    [tabId]="'management'">
+                    <soldr-module-interactive-part
+                        *ngIf="data.module && entity"
+                        class="layout-fill scrollable-y layout-padding-l"
+                        [module]="data.module"
+                        [entity]="entity"
+                        [viewMode]="viewMode">
+                    </soldr-module-interactive-part>
+                </mc-tab>
+
+                <mc-tab
+                    *ngIf="permitted.ViewModulesEvents"
+                    [label]="tShared('Shared.ModuleView.Tab.Events')"
+                    [tabId]="'events'">
+                    <soldr-events-grid
+                        e2e-id="grModuleEvents"
+                        [storageKey]="'module-events-list'"
+                        [events]="data.events"
+                        [gridFilters]="eventsGridFilter"
+                        [gridFiltrationByFields]="data.eventsGridFiltrationByFields"
+                        [isLoading]="data.isLoadingEvents"
+                        [searchValue]="data.eventsSearchValue"
+                        [total]="data.totalEvents"
+                        [viewMode]="viewMode"
+                        [hideModuleColumn]="true"
+                        (search)="eventsSearch($event)"
+                        (filter)="eventsFilter($event)"
+                        (resetFiltration)="eventsResetFiltration()"
+                        (loadNextPage)="loadNextEventsPage(data.eventsPage + 1)"
+                        (sort)="eventsSort($event)">
+                    </soldr-events-grid>
+                </mc-tab>
+
+                <mc-tab
+                    *ngIf="permitted.ViewModules"
+                    [label]="tShared('Shared.ModuleView.Tab.Config')"
+                    [tabId]="'config'">
+                    <div
+                        soldrProgressSpinner
+                        [loadingFlag]="data.isLoadingModule">
+                        <div class="scrollable-y layout-padding-l">
+                            <soldr-module-config-block
+                                [module]="data.module"
+                                [isReadOnly]="isReadOnly"
+                                (saveModuleConfig)="saveModuleEventConfig($event)">
+                            </soldr-module-config-block>
+                        </div>
+                        <ng-container *ngIf="!isReadOnly">
+                            <div class="flex-none" *transloco="let tCommon; read 'common'">
+                                <mc-divider></mc-divider>
+                                <div class="layout-row layout-align-end-center layout-padding-l">
+                                    <div class="layout-margin-right-l">
+                                        <button
+                                            mc-button
+                                            [class.mc-progress]="data.isSavingModule"
+                                            [color]="themePalette.Primary"
+                                            [disabled]="!moduleConfig?.isDirty"
+                                            (click)="saveModuleConfig(data.module)">
+                                            {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                                        </button>
+                                    </div>
+                                    <button
+                                        mc-button
+                                        [color]="themePalette.Second"
+                                        [disabled]="!moduleConfig?.isDirty"
+                                        (click)="moduleConfig.reset()">
+                                        {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                                    </button>
+                                </div>
+                            </div>
+                        </ng-container>
+                    </div>
+                </mc-tab>
+
+                <mc-tab
+                    *ngIf="permitted.ViewModules"
+                    [label]="tShared('Shared.ModuleView.Tab.Dependencies')"
+                    [tabId]="'dependencies'">
+                    <soldr-dependencies-info
+                        class="layout-fill scrollable-y"
+                        [module]="data.module"
+                        [modules]="data.modules"
+                        [loading]="data.isLoadingModules">
+                    </soldr-dependencies-info>
+                </mc-tab>
+
+                <mc-tab [label]="tShared('Shared.ModuleView.Tab.Versions')" [tabId]="'versions'">
+                    <soldr-changelog [module]="data.module" [versions]="data.moduleVersions" [readOnly]="true">
+                    </soldr-changelog>
+                </mc-tab>
+            </mc-tab-group>
+        </div>
+    </mc-splitter>
+</ng-container>

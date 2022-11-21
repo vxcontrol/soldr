@@ -1,0 +1,1128 @@
+errors:
+  general:
+    -
+      code: "Internal"
+      http_code: 500
+      description: "internal server error"
+    -
+      code: "Internal.DBNotFound"
+      http_code: 500
+      description: "db not found"
+    -
+      code: "Internal.ServiceNotFound"
+      http_code: 500
+      description: "service not found"
+    -
+      code: "Internal.DBEncryptorNotFound"
+      http_code: 500
+      description: "DBEncryptor not found"
+    -
+      code: "NotPermitted"
+      http_code: 403
+      description: "action not permitted"
+    -
+      code: "AuthRequired"
+      http_code: 403
+      description: "auth required"
+    -
+      code: "LocalUserRequired"
+      http_code: 403
+      description: "local user required"
+    -
+      code: "PrivilegesRequired"
+      http_code: 403
+      description: "some privileges required"
+    -
+      code: "AdminRequired"
+      http_code: 403
+      description: "admin required"
+    -
+      code: "SuperRequired"
+      http_code: 403
+      description: "super admin required"
+
+  agents:
+    -
+      code: "Agents.NotFound"
+      http_code: 404
+      description: "agent not found"
+    -
+      code: "Agents.InvalidData"
+      http_code: 500
+      description: "invalid agent data"
+    -
+      code: "Agents.GetAgents.InvalidRequest"
+      http_code: 400
+      description: "invalid agent request data"
+    -
+      code: "Agents.GetAgents.InvalidQuery"
+      http_code: 500
+      description: "invalid agent query"
+    -
+      code: "Agents.PatchAgents.InvalidAction"
+      http_code: 400
+      description: "invalid agents action"
+    -
+      code: "Agents.PatchAgents.InvalidQuery"
+      http_code: 500
+      description: "invalid agent query"
+    -
+      code: "Agents.PatchAgents.UpdateTasksFail"
+      http_code: 500
+      description: "failed to update tasks by filter"
+    -
+      code: "Agents.PatchAgents.UpdateAgentsFail"
+      http_code: 500
+      description: "failed to update agents by filter"
+    -
+      code: "Agents.PatchAgents.DeleteAgentsFail"
+      http_code: 500
+      description: "failed to delete agents by filter"
+    -
+      code: "Agents.PatchAgents.MoveFail"
+      http_code: 500
+      description: "move fail"
+    -
+      code: "Agents.GetAgent.DetailsNotFound"
+      http_code: 404
+      description: "internal error on retrieving agent details"
+    -
+      code: "Agents.GetAgent.GroupNotFound"
+      http_code: 404
+      description: "group not found"
+    -
+      code: "Agents.GetAgent.InvalidGroupData"
+      http_code: 500
+      description: "invalid group data"
+    -
+      code: "Agents.GetAgent.GroupModulesNotFound"
+      http_code: 404
+      description: "group modules not found"
+    -
+      code: "Agents.GetAgent.InvalidAgentModuleData"
+      http_code: 500
+      description: "invalid agent module data"
+    -
+      code: "Agents.GetAgents.InvalidAgentModuleData"
+      http_code: 500
+      description: "invalid agent module data"
+    -
+      code: "Agents.GetAgents.GetSystemModulesFail"
+      http_code: 500
+      description: "internal error on retrieving system modules list"
+    -
+      code: "Agents.GetAgent.PoliciesNotFound"
+      http_code: 404
+      description: "group policies not found"
+    -
+      code: "Agents.PatchAgent.ValidationError"
+      http_code: 400
+      description: "failed to validate agent"
+    -
+      code: "Agents.PatchAgent.TaskUpdateFail"
+      http_code: 500
+      description: "failed to update tasks by agent"
+    -
+      code: "Agents.CreateAgent.ValidationError"
+      http_code: 400
+      description: "failed to valid agent info"
+    -
+      code: "Agents.CreateAgent.CreateError"
+      http_code: 500
+      description: "failed to create agent to db"
+
+  porting:
+    -
+      code: "Porting.ModuleNotFound"
+      http_code: 404
+      description: "system module not found"
+    -
+      code: "Porting.Export.InvalidModuleData"
+      http_code: 500
+      description: "invalid system module data"
+    -
+      code: "Porting.Export.LoadFilesFail"
+      http_code: 500
+      description: "failed to load system module files"
+    -
+      code: "Porting.Export.BuildConfigFail"
+      http_code: 500
+      description: "failed to build system module config"
+    -
+      code: "Porting.Export.AddFileFail"
+      http_code: 500
+      description: "failed to add system module file"
+    -
+      code: "Porting.Export.WriteFileFail"
+      http_code: 500
+      description: "failed to write system module file"
+    -
+      code: "Porting.Export.CloseArchiveFail"
+      http_code: 500
+      description: "failed to close system module archive"
+    -
+      code: "Porting.Import.ReadArchiveFail"
+      http_code: 400
+      description: "failed to read system module archive"
+    -
+      code: "Porting.Import.ParseArchiveFail"
+      http_code: 400
+      description: "failed to parse system module archive"
+    -
+      code: "Porting.Import.ParseConfigFail"
+      http_code: 400
+      description: "failed to parse system module config"
+    -
+      code: "Porting.Import.ParseFileFail"
+      http_code: 400
+      description: "failed to parse system module file info"
+    -
+      code: "Porting.Import.ValidateConfigFail"
+      http_code: 400
+      description: "failed to validate system module config"
+    -
+      code: "Porting.Import.OverrideNotPermitted"
+      http_code: 403
+      description: "override system module version not permitted"
+    -
+      code: "Porting.Import.StoreS3Fail"
+      http_code: 500
+      description: "failed to store system module to S3"
+    -
+      code: "Porting.Import.StoreDBFail"
+      http_code: 500
+      description: "failed to store system module to DB"
+
+  binaries:
+    -
+      code: "Binaries.AgentBinaries.InvalidRequest"
+      http_code: 400
+      description: "invalid agent binaries request data"
+    -
+      code: "Binaries.AgentBinaries.InvalidData"
+      http_code: 500
+      description: "invalid agent binaries data"
+    -
+      code: "Binaries.AgentBinaryFile.InvalidOS"
+      http_code: 400
+      description: "failed to valid agent os"
+    -
+      code: "Binaries.AgentBinaryFile.InvalidArch"
+      http_code: 400
+      description: "failed to valid agent arch"
+    -
+      code: "Binaries.AgentBinaryFile.NotFound"
+      http_code: 404
+      description: "agent binary record not found"
+    -
+      code: "Binaries.AgentBinaryFile.Corrupted"
+      http_code: 404
+      description: "agent binary file was corrupted"
+
+  events:
+    -
+      code: "Events.InvalidRequest"
+      http_code: 400
+      description: "invalid event request data"
+    -
+      code: "Events.InvalidQuery"
+      http_code: 500
+      description: "invalid event query"
+    -
+      code: "Events.InvalidData"
+      http_code: 500
+      description: "invalid event data"
+
+  group-policy:
+    -
+      code: "GroupPolicy.PoliciesNotFound"
+      http_code: 404
+      description: "group policies not found"
+    -
+      code: "GroupPolicy.GroupsNotFound"
+      http_code: 404
+      description: "policy groups not found"
+    -
+      code: "GroupPolicy.MergeModulesFail"
+      http_code: 400
+      description: "failed to merge modules"
+    -
+      code: "GroupPolicy.DuplicateModules"
+      http_code: 403
+      description: "found duplicate modules"
+    -
+      code: "GroupPolicy.LinkFail"
+      http_code: 500
+      description: "failed to create link"
+    -
+      code: "GroupPolicy.LinkExists"
+      http_code: 400
+      description: "link already exists"
+    -
+      code: "GroupPolicy.RemoveLink"
+      http_code: 500
+      description: "failed to remove link"
+    -
+      code: "GroupPolicy.LinkNotFound"
+      http_code: 404
+      description: "link not found"
+    -
+      code: "GroupPolicy.UnkownAction"
+      http_code: 400
+      description: "action not found or unknown"
+
+  groups:
+    -
+      code: "Groups.InvalidRequest"
+      http_code: 400
+      description: "invalid group request data"
+    -
+      code: "Groups.InvalidQuery"
+      http_code: 500
+      description: "invalid group query"
+    -
+      code: "Groups.InvalidData"
+      http_code: 500
+      description: "invalid group data"
+    -
+      code: "Groups.NotFound"
+      http_code: 404
+      description: "group not found"
+    -
+      code: "Groups.ValidationFail"
+      http_code: 400
+      description: "failed to validate group"
+    -
+      code: "Groups.GetGroup.DetailsNotFound"
+      http_code: 404
+      description: "internal error on retrieving group details"
+    -
+      code: "Groups.GetGroup.ModulesNotFound"
+      http_code: 404
+      description: "modules not found while getting group"
+    -
+      code: "Groups.GetGroups.DetailsNotFound"
+      http_code: 404
+      description: "internal error on retrieving groups details"
+    -
+      code: "Groups.GetGroups.ModulesNotFound"
+      http_code: 404
+      description: "modules not found while getting groups"
+    -
+      code: "Groups.GetGroups.InvalidModuleData"
+      http_code: 500
+      description: "invalid group module data"
+    -
+      code: "Groups.GetGroups.GetSystemModulesFail"
+      http_code: 500
+      description: "internal error on retrieving system modules list"
+    -
+      code: "Groups.GetGroups.PoliciesNotFound"
+      http_code: 404
+      description: "group policies not found"
+    -
+      code: "Groups.CreateGroup.SourceNotFound"
+      http_code: 404
+      description: "source group not found"
+    -
+      code: "Groups.CreateGroup.CreateFail"
+      http_code: 500
+      description: "failed to create group to db"
+    -
+      code: "Groups.CreateGroup.GetPolicies"
+      http_code: 500
+      description: "failed to get group policies"
+    -
+      code: "Groups.CreateGroup.CreatePolicies"
+      http_code: 500
+      description: "failed to create group policies to db"
+
+  modules:
+    -
+      code: "Modules.InvalidRequest"
+      http_code: 400
+      description: "invalid agent modules request data"
+    -
+      code: "Modules.NotFound"
+      http_code: 404
+      description: "module not found"
+    -
+      code: "Modules.SystemModuleNotFound"
+      http_code: 404
+      description: "system module not found"
+    -
+      code: "Modules.InvalidSystemModuleData"
+      http_code: 500
+      description: "invalid system module data"
+    -
+      code: "Modules.InvalidData"
+      http_code: 500
+      description: "invalid module data"
+    -
+      code: "Modules.GetAgentModules.AgentNotFound"
+      http_code: 404
+      description: "agent not found"
+    -
+      code: "Modules.GetAgentModules.AgentPoliciesNotFound"
+      http_code: 404
+      description: "agent policies not found"
+    -
+      code: "Modules.GetAgentModules.InvalidAgentPoliciesData"
+      http_code: 500
+      description: "invalid agent policies data"
+    -
+      code: "Modules.GetAgentModules.InvalidQuery"
+      http_code: 500
+      description: "invalid agent modules query"
+    -
+      code: "Modules.GetAgentModules.InvalidAgentData"
+      http_code: 500
+      description: "invalid agent module data"
+    -
+      code: "Modules.GetAgentModules.DetailsNotFound"
+      http_code: 404
+      description: "failed to retrieve agents modules details"
+    -
+      code: "Modules.GetAgentModule.AgentNotFound"
+      http_code: 404
+      description: "agent not found"
+    -
+      code: "Modules.GetAgentModule.AgentPoliceNotFound"
+      http_code: 404
+      description: "agent policies not found"
+    -
+      code: "Modules.GetAgentModule.InvalidAgentPoliceData"
+      http_code: 500
+      description: "invalid agent policies data"
+    -
+      code: "Modules.GetAgentBModule.InvalidAgentPoliceData"
+      http_code: 500
+      description: "invalid agent policies data"
+    -
+      code: "Modules.GetGroupModules.GroupNotFound"
+      http_code: 404
+      description: "group not found"
+    -
+      code: "Modules.GetGroupModules.GroupPoliciesNotFound"
+      http_code: 404
+      description: "group policies not found"
+    -
+      code: "Modules.GetGroupModules.InvalidGroupPoliciesData"
+      http_code: 500
+      description: "invalid group policies data"
+    -
+      code: "Modules.GetGroupModules.InvalidGroupQuery"
+      http_code: 500
+      description: "invalid group modules query"
+    -
+      code: "Modules.GetGroupModules.InvalidGroupData"
+      http_code: 500
+      description: "invalid group modules data"
+    -
+      code: "Modules.GetGroupModules.DetailsNotFound"
+      http_code: 404
+      description: "failed to retrieve group modules details"
+    -
+      code: "Modules.GetGroupModule.GroupNotFound"
+      http_code: 404
+      description: "group not found"
+    -
+      code: "Modules.GetGroupModule.GroupPoliciesNotFound"
+      http_code: 404
+      description: "group policies not found"
+    -
+      code: "Modules.GetGroupModule.InvalidGroupPoliciesData"
+      http_code: 500
+      description: "invalid group policies data"
+    -
+      code: "Modules.GetGroupBModule.InvalidGroupPoliciesData"
+      http_code: 500
+      description: "invalid group policies data"
+    -
+      code: "Modules.GetPolicyModules.PolicyNotFound"
+      http_code: 404
+      description: "policy not found"
+    -
+      code: "Modules.GetPolicyModules.InvalidPolicyData"
+      http_code: 500
+      description: "invalid policy data"
+    -
+      code: "Modules.GetPolicyModules.InvalidPolicyQuery"
+      http_code: 500
+      description: "invalid policy modules query"
+    -
+      code: "Modules.GetPolicyModules.InvalidModulesQuery"
+      http_code: 500
+      description: "invalid system modules query"
+    -
+      code: "Modules.GetPolicyModules.DetailsNotFound"
+      http_code: 404
+      description: "failed to retrieve policy modules details"
+    -
+      code: "Modules.GetPolicyModule.PolicyNotFound"
+      http_code: 404
+      description: "policy not found"
+    -
+      code: "Modules.GetPolicyModule.InvalidPolicyData"
+      http_code: 500
+      description: "invalid policy data"
+    -
+      code: "Modules.PatchPolicyModule.PolicyNotFound"
+      http_code: 404
+      description: "policy not found"
+    -
+      code: "Modules.PatchPolicyModule.InvalidPolicyData"
+      http_code: 500
+      description: "invalid policy data"
+    -
+      code: "Modules.PatchPolicyModule.DuplicatedModule"
+      http_code: 403
+      description: "found duplicate modules"
+    -
+      code: "Modules.PatchPolicyModule.NewModuleInvalid"
+      http_code: 400
+      description: "failed to valid new module data"
+    -
+      code: "Modules.PatchPolicyModule.AcceptFail"
+      http_code: 500
+      description: "failed accept system changes"
+    -
+      code: "Modules.PatchPolicyModule.ActionNotFound"
+      http_code: 404
+      description: "action not found or unknown"
+    -
+      code: "Modules.DeletePolicyModule.PolicyNotFound"
+      http_code: 404
+      description: "policy not found"
+    -
+      code: "Modules.DeletePolicyModule.InvalidPolicyData"
+      http_code: 500
+      description: "invalid policy data"
+    -
+      code: "Modules.GetModules.InvalidModulesQuery"
+      http_code: 500
+      description: "invalid system modules query"
+    -
+      code: "Modules.CreateModule.InvalidInfo"
+      http_code: 400
+      description: "failed to valid module info"
+    -
+      code: "Modules.CreateModule.GetCountFail"
+      http_code: 404
+      description: "failed to get number of system module"
+    -
+      code: "Modules.CreateModule.SecondSystemModule"
+      http_code: 400
+      description: "failed to create second system module"
+    -
+      code: "Modules.CreateModule.LoadFail"
+      http_code: 500
+      description: "failed to load module"
+    -
+      code: "Modules.CreateModule.ValidationFail"
+      http_code: 500
+      description: "failed to validate module"
+    -
+      code: "Modules.CreateModule.StoreS3Fail"
+      http_code: 500
+      description: "failed to store module to s3"
+    -
+      code: "Modules.CreateModule.StoreDBFail"
+      http_code: 500
+      description: "failed to store module to db"
+    -
+      code: "Modules.DeleteModule.ServiceNotFound"
+      http_code: 404
+      description: "services not found"
+    -
+      code: "Modules.DeleteModule.DeleteFail"
+      http_code: 500
+      description: "failed to delete policy modules"
+    -
+      code: "Modules.DeleteModule.DeleteFilesFail"
+      http_code: 500
+      description: "failed to delete system module files"
+    -
+      code: "Modules.GetModuleVersions.InvalidModulesQuery"
+      http_code: 500
+      description: "invalid system modules query"
+    -
+      code: "Modules.PatchModuleVersion.AcceptReleaseChangesFail"
+      http_code: 500
+      description: "failed to accept changes for released module"
+    -
+      code: "Modules.PatchModuleVersion.AcceptSystemChangesFail"
+      http_code: 500
+      description: "failed accept system changes"
+    -
+      code: "Modules.PatchModuleVersion.UpdateFail"
+      http_code: 500
+      description: "failed to update module into db"
+    -
+      code: "Modules.PatchModuleVersion.BuildFilesFail"
+      http_code: 500
+      description: "failed to build module files"
+    -
+      code: "Modules.PatchModuleVersion.UpdateS3Fail"
+      http_code: 500
+      description: "failed to update module to s3"
+    -
+      code: "Modules.PatchModuleVersion.ServiceNotFound"
+      http_code: 404
+      description: "services not found"
+    -
+      code: "Modules.CreateModuleVersion.GetDraftNumberFail"
+      http_code: 404
+      description: "failed to get number of system module drafts"
+    -
+      code: "Modules.CreateModuleVersion.SecondSystemModuleDraft"
+      http_code: 400
+      description: "failed to create system module second draft"
+    -
+      code: "Modules.CreateModuleVersion.InvalidModuleVersionFormat"
+      http_code: 500
+      description: "invalid new system module version format"
+    -
+      code: "Modules.CreateModuleVersion.InvalidModuleVersion"
+      http_code: 500
+      description: "invalid new system module version"
+    -
+      code: "Modules.CreateModuleVersion.BuildFilesFail"
+      http_code: 500
+      description: "failed to build module files"
+    -
+      code: "Modules.CreateModuleVersion.ValidationFail"
+      http_code: 500
+      description: "failed to validate module"
+    -
+      code: "Modules.CreateModuleVersion.StoreS3Fail"
+      http_code: 500
+      description: "failed to store module to s3"
+    -
+      code: "Modules.CreateModuleVersion.StoreDBFail"
+      http_code: 500
+      description: "failed to store module to db"
+    -
+      code: "Modules.DeleteModuleVersion.GetVersionNumberFail"
+      http_code: 404
+      description: "failed to get number of system module versions"
+    -
+      code: "Modules.DeleteModuleVersion.DeleteLastVersionFail"
+      http_code: 404
+      description: "can't delete last module version"
+    -
+      code: "Modules.DeleteModuleVersion.DeleteFilesFail"
+      http_code: 500
+      description: "failed to delete system module files"
+    -
+      code: "Modules.GetModuleVersionUpdates.InvalidPolicyData"
+      http_code: 500
+      description: "invalid policy data"
+    -
+      code: "Modules.GetModuleVersionFiles.ListenFail"
+      http_code: 500
+      description: "failed to listening module files"
+    -
+      code: "Modules.GetModuleVersionFile.ParsePathFail"
+      http_code: 403
+      description: "failed to parse path to file"
+    -
+      code: "Modules.GetModuleVersionFile.ReadFail"
+      http_code: 500
+      description: "failed to read module file"
+    -
+      code: "Modules.PatchModuleVersionFile.UpdateFail"
+      http_code: 403
+      description: "failed to update released module"
+    -
+      code: "Modules.PatchModuleVersionFile.ParsePathFail"
+      http_code: 403
+      description: "failed to parse path to object"
+    -
+      code: "Modules.PatchModuleVersionFile.ParseModuleFileFail"
+      http_code: 500
+      description: "failed to parse module file content"
+    -
+      code: "Modules.PatchModuleVersionFile.WriteModuleFileFail"
+      http_code: 500
+      description: "failed to write module file"
+    -
+      code: "Modules.PatchModuleVersionFile.WriteModuleObjectFail"
+      http_code: 500
+      description: "failed to write module object"
+    -
+      code: "Modules.PatchModuleVersionFile.ParseNewpathFail"
+      http_code: 403
+      description: "failed to parse newpath to object"
+    -
+      code: "Modules.PatchModuleVersionFile.ObjectNotFound"
+      http_code: 500
+      description: "failed to find object by path"
+    -
+      code: "Modules.PatchModuleVersionFile.PathIdentical"
+      http_code: 500
+      description: "newpath is identical to path"
+    -
+      code: "Modules.PatchModuleVersionFile.ObjectMoveFail"
+      http_code: 500
+      description: "failed to move object"
+    -
+      code: "Modules.PatchModuleVersionFile.GetFilesFail"
+      http_code: 500
+      description: "failed to get files by path"
+    -
+      code: "Modules.PatchModuleVersionFile.ActionNotFound"
+      http_code: 404
+      description: "action not found or unknown"
+    -
+      code: "Modules.PatchModuleVersionFile.SystemModuleUpdateFail"
+      http_code: 500
+      description: "failed to update system module"
+    -
+      code: "Modules.GetModuleVersionOption.MakeJsonFail"
+      http_code: 500
+      description: "failed to make json"
+    -
+      code: "Modules.GetModuleVersionOption.ParseJsonFail"
+      http_code: 500
+      description: "failed to parse json"
+    -
+      code: "Modules.GetModuleVersionOption.NotFound"
+      http_code: 404
+      description: "option not found"
+    -
+      code: "Modules.InvalidParameterValue"
+      http_code: 400
+      description: "invalid parameter value type"
+    -
+      code: "Modules.FailedToEncryptSecureConfig"
+      http_code: 500
+      description: "failed to encrypt secure config"
+    -
+      code: "Modules.FailedToDecryptSecureConfig"
+      http_code: 500
+      description: "failed to decrypt secure config"
+    -
+      code: "Modules.DataNotEncryptedOnDBInsert"
+      http_code: 500
+      description: "module data not encrypted on inserting to DB"
+    -
+      code: "Modules.FailedToCompareChanges"
+      http_code: 500
+      description: "failed to compare requested module data"
+
+  notifications:
+    -
+      code: "Notifications.SubscribesEmptyList"
+      http_code: 500
+      description: "subscribes empty list after filtering"
+    -
+      code: "Notifications.InvalidServiceValue"
+      http_code: 500
+      description: "invalid service value"
+    -
+      code: "Notifications.UpgradeWSConnFail"
+      http_code: 500
+      description: "failed to upgrade ws connection"
+    -
+      code: "Notifications.ServiceNotFound"
+      http_code: 500
+      description: "service not found"
+
+  options:
+    -
+      code: "Options.InvalidRequestData"
+      http_code: 400
+      description: "invalid global option, list request data"
+    -
+      code: "Options.InvalidQuery"
+      http_code: 500
+      description: "invalid global option, list query"
+    -
+      code: "Options.InvalidData"
+      http_code: 500
+      description: "invalid global option, data"
+
+  policies:
+    -
+      code: "Policies.InvalidRequest"
+      http_code: 400
+      description: "invalid policy request data"
+    -
+      code: "Policies.NotFound"
+      http_code: 404
+      description: "policy not found"
+    -
+      code: "Policies.InvalidData"
+      http_code: 500
+      description: "invalid policy data"
+    -
+      code: "Policies.InvalidQuery"
+      http_code: 500
+      description: "invalid policy query"
+    -
+      code: "Policies.GetPolicies.SystemModulesNotFound"
+      http_code: 404
+      description: "internal error on retrieving system modules"
+    -
+      code: "Policies.GetPolicies.DetailsNotFound"
+      http_code: 404
+      description: "internal error on retrieving policies details"
+    -
+      code: "Policies.GetPolicies.ModulesNotFound"
+      http_code: 404
+      description: "policy modules not found"
+    -
+      code: "Policies.GetPolicies.InvalidGroupData"
+      http_code: 500
+      description: "invalid policy group data"
+    -
+      code: "Policies.GetPolicies.InvalidModuleData"
+      http_code: 500
+      description: "invalid policy module data"
+    -
+      code: "Policies.GetPolicies.GroupsNotFound"
+      http_code: 404
+      description: "policy groups not found"
+    -
+      code: "Policies.GetPolicy.SystemModulesNotFound"
+      http_code: 404
+      description: "internal error on retrieving system modules"
+    -
+      code: "Policies.GetPolicy.DetailsNotFound"
+      http_code: 404
+      description: "internal error on retrieving policy details"
+    -
+      code: "Policies.GetPolicy.ModulesNotFound"
+      http_code: 404
+      description: "policy modules not found"
+    -
+      code: "Policies.GetPolicy.InvalidModuleData"
+      http_code: 500
+      description: "invalid policy module data"
+    -
+      code: "Policies.GetPolicy.GroupsNotFound"
+      http_code: 404
+      description: "policy groups not found"
+    -
+      code: "Policies.PatchPolicyGroup.InvalidGroupData"
+      http_code: 500
+      description: "invalid group data"
+    -
+      code: "Policies.CreatePolicy.SourceNotFound"
+      http_code: 404
+      description: "source policy not found"
+    -
+      code: "Policies.CreatePolicy.CreateFail"
+      http_code: 500
+      description: "failed to create policy to db"
+    -
+      code: "Policies.CreatePolicy.ModulesNotFound"
+      http_code: 500
+      description: "failed to get policy modules"
+    -
+      code: "Policies.CreatePolicy.CreateModulesFail"
+      http_code: 500
+      description: "failed to create policy modules to db"
+    -
+      code: "Policies.DeletePolicy.PolicyLinkedToGroups"
+      http_code: 403
+      description: "failed to remove linked policy to groups"
+    -
+      code: "Policies.DeletePolicy.SystemPolicy"
+      http_code: 403
+      description: "failed to remove system policy"
+    -
+      code: "Policies.DeletePolicy.ModulesNotFound"
+      http_code: 404
+      description: "policy modules not found"
+    -
+      code: "Policies.DeletePolicy.GroupsNotFound"
+      http_code: 404
+      description: "policy groups not found"
+
+  proto:
+    -
+      code: "Proto.InvalidRequest"
+      http_code: 400
+      description: "failed to validate auth token request"
+    -
+      code: "Proto.CreateTokenFail"
+      http_code: 400
+      description: "failed to make auth token"
+    -
+      code: "Proto.InvalidToken"
+      http_code: 400
+      description: "failed to valid auth token"
+
+  roles:
+    -
+      code: "Roles.InvalidRequest"
+      http_code: 400
+      description: "invalid role request data"
+    -
+      code: "Roles.InvalidData"
+      http_code: 500
+      description: "invalid role data"
+
+  services:
+    -
+      code: "Services.InvalidRequest"
+      http_code: 400
+      description: "invalid service request data"
+    -
+      code: "Services.InvalidData"
+      http_code: 500
+      description: "invalid service data"
+    -
+      code: "Services.NotFound"
+      http_code: 404
+      description: "service not found"
+
+  tags:
+    -
+      code: "Tags.InvalidRequest"
+      http_code: 400
+      description: "invalid tags request data"
+    -
+      code: "Tags.MappersNotFound"
+      http_code: 400
+      description: "failed to get tag mappers by query"
+    -
+      code: "Tags.InvalidQuery"
+      http_code: 500
+      description: "invalid tags query"
+
+  tenants:
+    -
+      code: "Tenants.InvalidRequest"
+      http_code: 400
+      description: "invalid tenant request data"
+    -
+      code: "Tenants.InvalidData"
+      http_code: 500
+      description: "invalid tenant data"
+    -
+      code: "Tenants.NotFound"
+      http_code: 404
+      description: "tenant not found"
+
+  upgrades:
+    -
+      code: "Upgrades.GetAgentsUpgrades.InvalidRequest"
+      http_code: 400
+      description: "invalid agents upgrades request data"
+    -
+      code: "Upgrades.GetAgentsUpgrades.InvalidData"
+      http_code: 500
+      description: "invalid agents upgrades data"
+    -
+      code: "Upgrades.CreateAgentsUpgrades.InvalidRequest"
+      http_code: 400
+      description: "invalid agents upgrades request data"
+    -
+      code: "Upgrades.CreateAgentsUpgrades.AgentNotFound"
+      http_code: 404
+      description: "agent binary record not found"
+    -
+      code: "Upgrades.CreateAgentsUpgrades.CreateTaskFail"
+      http_code: 500
+      description: "creating new upgrade tasks failed"
+    -
+      code: "Upgrades.CreateAgentsUpgrades.UpdateAgentBinariesFail"
+      http_code: 400
+      description: "failed to update agent binaries"
+    -
+      code: "Upgrades.GetLastAgentUpgrade.LastUpgradeNotFound"
+      http_code: 404
+      description: "last agent upgrade information not found"
+    -
+      code: "Upgrades.GetLastAgentUpgrade.InvalidLastData"
+      http_code: 500
+      description: "invalid last agent upgrade data"
+    -
+      code: "Upgrades.GetLastAgentUpgrade.AgentNotFound"
+      http_code: 404
+      description: "agent not found"
+    -
+      code: "Upgrades.GetLastAgentUpgrade.InvalidAgentData"
+      http_code: 500
+      description: "invalid agent data"
+    -
+      code: "Upgrades.GetLastAgentUpgrade.GroupNotFound"
+      http_code: 404
+      description: "group not found"
+    -
+      code: "Upgrades.GetLastAgentUpgrade.InvalidGroupData"
+      http_code: 500
+      description: "invalid group data"
+    -
+      code: "Upgrades.PatchLastAgentUpgrade.InvalidAgentUpgradeInfo"
+      http_code: 400
+      description: "failed to validate last agent upgrade information"
+    -
+      code: "Upgrades.PatchLastAgentUpgrade.AgentNotFound"
+      http_code: 404
+      description: "agent not found"
+    -
+      code: "Upgrades.PatchLastAgentUpgrade.InvalidAgentData"
+      http_code: 500
+      description: "invalid agent data"
+    -
+      code: "Upgrades.PatchLastAgentUpgrade.AgentBinaryNotFound"
+      http_code: 404
+      description: "agent binary record not found"
+    -
+      code: "Upgrades.PatchLastAgentUpgrade.UpdateAgentBinariesFail"
+      http_code: 400
+      description: "failed to update agent binaries"
+    -
+      code: "Upgrades.PatchLastAgentUpgrade.LastUpgradeInfoNotFound"
+      http_code: 404
+      description: "last agent upgrade information not found"
+
+  users:
+    -
+      code: "Users.NotFound"
+      http_code: 404
+      description: "user not found"
+    -
+      code: "Users.InvalidData"
+      http_code: 500
+      description: "invalid user data"
+    -
+      code: "Users.InvalidRequest"
+      http_code: 400
+      description: "invalid user request data"
+    -
+      code: "Users.ChangePasswordCurrentUser.InvalidPassword"
+      http_code: 400
+      description: "failed to validate user password"
+    -
+      code: "Users.ChangePasswordCurrentUser.InvalidCurrentPassword"
+      http_code: 403
+      description: "invalid current password"
+    -
+      code: "Users.ChangePasswordCurrentUser.InvalidNewPassword"
+      http_code: 400
+      description: "invalid new password form data"
+    -
+      code: "Users.GetUser.ModelsNotFound"
+      http_code: 404
+      description: "user linked models not found"
+    -
+      code: "Users.CreateUser.InvalidUser"
+      http_code: 400
+      description: "failed to validate user"
+    -
+      code: "Users.PatchUser.ModelsNotFound"
+      http_code: 404
+      description: "user linked models not found"
+    -
+      code: "Users.DeleteUser.ModelsNotFound"
+      http_code: 404
+      description: "user linked models not found"
+
+  versions:
+    -
+      code: "Versions.InvalidRequest"
+      http_code: 400
+      description: "invalid versions request data"
+    -
+      code: "Versions.MapperNotFound"
+      http_code: 400
+      description: "failed to get version mappers by query"
+    -
+      code: "Versions.InvalidQuery"
+      http_code: 500
+      description: "invalid versions query"
+
+  proto_proto:
+    -
+      code: "Proto.SockMismatch"
+      http_code: 400
+      description: "mismatch socket type"
+    -
+      code: "Proto.InvalidAgentID"
+      http_code: 400
+      description: "error validating agent ID"
+    -
+      code: "Proto.NoServiceInfo"
+      http_code: 400
+      description: "error getting service information"
+    -
+      code: "Proto.UpgradeFail"
+      http_code: 400
+      description: "error upgrading to websockets"
+
+  info:
+    -
+      code: "Info.UserNotFound"
+      http_code: 404
+      description: "user not found"
+    -
+      code: "Info.InvalidUserData"
+      http_code: 500
+      description: "invalid user data"
+    -
+      code: "Info.InvalidServiceData"
+      http_code: 500
+      description: "invalid service data"
+
+  auth:
+    -
+      code: "Auth.InvalidLoginRequest"
+      http_code: 400
+      description: "invalid login data"
+    -
+      code: "Auth.InvalidAuthorizeQuery"
+      http_code: 400
+      description: "invalid authorize query"
+    -
+      code: "Auth.InvalidLoginCallbackRequest"
+      http_code: 400
+      description: "invalid login callback data"
+    -
+      code: "Auth.InvalidAuthorizationState"
+      http_code: 400
+      description: "invalid authorization state data"
+    -
+      code: "Auth.InvalidSwitchServiceHash"
+      http_code: 400
+      description: "invalid switch service hash input data"
+    -
+      code: "Auth.InvalidAuthorizationNonce"
+      http_code: 400
+      description: "invalid authorization nonce data"
+    -
+      code: "Auth.InvalidCredentials"
+      http_code: 401
+      description: "invalid login or password"
+    -
+      code: "Auth.InvalidUserData"
+      http_code: 500
+      description: "invalid user data"
+    -
+      code: "Auth.InactiveUser"
+      http_code: 403
+      description: "user is inactive"
+    -
+      code: "Auth.ExchangeTokenFail"
+      http_code: 403
+      description: "error on exchanging token"
+    -
+      code: "Auth.TokenExpired"
+      http_code: 403
+      description: "token is expired"
+    -
+      code: "Auth.VerificationTokenFail"
+      http_code: 403
+      description: "error on verifying token"
+    -
+      code: "Auth.InvalidServiceData"
+      http_code: 500
+      description: "invalid service data"
+    -
+      code: "Auth.InvalidTenantData"
+      http_code: 500
+      description: "invalid tenant data"

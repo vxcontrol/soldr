@@ -1,0 +1,48 @@
+@mixin action-priority-theme($mosaic-theme) {
+    $error: map-get($mosaic-theme, error);
+    $foreground: map-get($mosaic-theme, foreground);
+    $second: map-get($mosaic-theme, second);
+    $warning: map-get($mosaic-theme, warning);
+
+    .action-priority_high {
+        color: mc-color($error, 400);
+
+        .action-priority__box {
+            color: mc-color($error, 600);
+            background-color: mc-color($error, 60);
+            border-color: mc-color($error, 200);
+        }
+    }
+
+    .action-priority_medium {
+        color: mc-color($warning, 400);
+
+        .action-priority__box {
+            color: mc-color($warning, 600);
+            background-color: mc-color($warning, 60);
+            border-color: mc-color($warning, 200);
+        }
+    }
+
+    .action-priority_low {
+        color: map-get($foreground, text-less-contrast);
+
+        .action-priority__box {
+            color: map-get($second, 600);
+            background-color: mc-color($second, 60);
+            border-color: mc-color($second, 200);
+        }
+    }
+
+    .action-priority__icon_high {
+        background-image: url(/assets/images/action-priority-level/high.svg);
+    }
+
+    .action-priority__icon_medium {
+        background-image: url(/assets/images/action-priority-level/medium.svg);
+    }
+
+    .action-priority__icon_low {
+        background-image: url(/assets/images/action-priority-level/low.svg);
+    }
+}

@@ -1,0 +1,171 @@
+<ng-container *ngIf="{ language: language$ | async} as data">
+    <ng-container *transloco="let t; read: 'groups'">
+        <ng-container *ngIf="!isShortView; else groupInfoParameters">
+            <soldr-accordion
+                soldrSaveState
+                [title]="t('Groups.Pseudo.Label.Parameters')"
+                [expanded]="state.parameters.opened"
+                [saveStateKey]="stateStorageKey + '.parameters.opened'"
+                [saveStateValue]="state.parameters.opened"
+                (stateChanged)="state.parameters.opened = $event">
+                <ng-container [ngTemplateOutlet]="groupInfoParameters"></ng-container>
+            </soldr-accordion>
+
+            <soldr-accordion
+                *ngIf="!isShortView && group?.details?.modules?.length > 0"
+                soldrSaveState
+                [title]="t('Groups.Pseudo.Label.EnabledModules')"
+                [expanded]="state.modules.opened"
+                [saveStateKey]="stateStorageKey + '.modules.opened'"
+                [saveStateValue]="state.modules.opened"
+                (stateChanged)="state.modules.opened = $event">
+                <ng-container *transloco="let tShared; read: 'shared'">
+                    <div
+                        class="layout-row layout-align-space-between"
+                        [class.layout-margin-bottom-s]="!isLast"
+                        *ngFor="let module of group?.details?.modules | sort:sortModules:data.language; last as isLast">
+                        <div class="flex">
+                            <soldr-text-overflow>
+                                <a
+                                    e2e-id="lnkGroupModule"
+                                    *ngIf="permitted.ViewPolicies; else linkText"
+                                    mc-link
+                                    [routerLink]="['/groups', group.hash, 'modules', module.info.name]">
+                                    <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                </a>
+                                <ng-template #linkText>
+                                    {{ module.locale.module[data.language].title }}
+                                </ng-template>
+                            </soldr-text-overflow>
+                        </div>
+                        <i
+                            *ngIf="modulesUpgradesByName[module.info.name]"
+                            mc-icon="soldr-icons-info_16"
+                            class="soldr-icons layout-margin-left-s"
+                            [color]="themePalette.Default"
+                            [mcTooltip]="tShared('Shared.ModuleView.TooltipText.CanUpgrade')">
+                        </i>
+                        <soldr-consistency-icon
+                            *ngIf="!modulesConsistencyByName[module.info.name]"
+                            class="layout-margin-left-s"
+                            [viewMode]="viewModeEnum.Groups"
+                            [isModuleInstance]="true">
+                        </soldr-consistency-icon>
+                    </div>
+                </ng-container>
+            </soldr-accordion>
+
+            <soldr-accordion
+                *ngIf="group?.details?.policies?.length > 0"
+                soldrSaveState
+                [title]="t('Groups.Pseudo.Label.LinkedPolicies')"
+                [expanded]="state.policies.opened"
+                [saveStateKey]="stateStorageKey + '.policies.opened'"
+                [saveStateValue]="state.policies.opened"
+                (stateChanged)="state.policies.opened = $event">
+                <div
+                    class="layout-row"
+                    [class.layout-margin-bottom-s]="!isLast"
+                    *ngFor="let policy of group?.details?.policies| sort:sortPolicies:data.language; last as isLast">
+                    <soldr-text-overflow>
+                        <a
+                            e2e-id="lnkPolicy"
+                            *ngIf="permitted.ViewPolicies; else linkText"
+                            mc-link
+                            [routerLink]="['/policies', policy.hash]">
+                            <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                        </a>
+                        <ng-template #linkText>
+                            {{ policy.info.name[data.language] }}
+                        </ng-template>
+                    </soldr-text-overflow>
+                </div>
+            </soldr-accordion>
+
+            <soldr-accordion
+                *ngIf="group?.info?.tags.length > 0"
+                soldrSaveState
+                [title]="t('Groups.Pseudo.Label.Tags')"
+                [expanded]="state.tags.opened"
+                [saveStateKey]="stateStorageKey + '.tags.opened'"
+                [saveStateValue]="state.tags.opened"
+                (stateChanged)="state.tags.opened = $event">
+                <soldr-tag
+                    e2e-id="lnkShowGroupsByTag"
+                    *ngFor="let tag of group?.info?.tags | sort:sortTags:data.language"
+                    class="group-info__tag"
+                    (click)="selectTag.emit(tag)">
+                    {{ tag }}
+                </soldr-tag>
+            </soldr-accordion>
+        </ng-container>
+        <ng-template #groupInfoParameters>
+            <mc-dl [vertical]="true">
+                <mc-dt>{{ t('Groups.Pseudo.Label.AgentsTotal') }}</mc-dt>
+                <mc-dd>
+                    <a
+                        e2e-id="lnkShowAgentsByGroup"
+                        *ngIf="permitted.ViewAgents; else linkText"
+                        mc-link
+                        [routerLink]="['/agents']"
+                        [queryParams]="{ filtration: getFiltrationByGroup() }">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        <i class="soldr-icons" mc-icon="soldr-icons-table-list_16"></i>
+                        <span class="mc-link__text">{{ group?.details?.agents || 0 }}</span>
+                    </ng-template>
+                </mc-dd>
+
+                <ng-container *ngIf="provisionerCount || collectorCount || detectorCount">
+                    <mc-dt>{{ t('Groups.Pseudo.Label.Modules') }}</mc-dt>
+                    <mc-dd class="group-info__modules">
+                        <div class="modules-info-item" *ngIf="provisionerCount">
+                            <div class="layout-row layout-align-space-between">
+                                <span>{{ t('Groups.GroupInfo.Text.ProvisionerType') }}</span>
+                                <span class="modules-info-count">{{ provisionerCount }}</span>
+                            </div>
+                            <mc-progress-bar class="provisioner-type" [value]="provisionerPercent"></mc-progress-bar>
+                        </div>
+                        <div class="modules-info-item" *ngIf="collectorCount">
+                            <div class="layout-row layout-align-space-between">
+                                <span>{{ t('Groups.GroupInfo.Text.CollectorType') }}</span>
+                                <span class="modules-info-count">{{ collectorCount }}</span>
+                            </div>
+                            <mc-progress-bar class="collector-type" [value]="collectorPercent"></mc-progress-bar>
+                        </div>
+                        <div class="modules-info-item" *ngIf="detectorCount">
+                            <div class="layout-row layout-align-space-between">
+                                <span>{{ t('Groups.GroupInfo.Text.DetectorType') }}</span>
+                                <span class="modules-info-count">{{ detectorCount }}</span>
+                            </div>
+                            <mc-progress-bar class="detector-type" [value]="detectorPercent"></mc-progress-bar>
+                        </div>
+                    </mc-dd>
+                </ng-container>
+
+                <ng-container *ngIf="group?.info?.tags.length > 0 && isShortView">
+                    <mc-dt>{{ t('Groups.Pseudo.Label.Tags') }}</mc-dt>
+                    <mc-dd>
+                        <soldr-tag
+                            e2e-id="lnkShowGroupsByTag"
+                            *ngFor="let tag of group?.info?.tags | sort:sortTags:data.language"
+                            class="group-info__tag"
+                            (click)="selectTag.emit(tag)">
+                            {{ tag }}
+                        </soldr-tag>
+                    </mc-dd>
+                </ng-container>
+
+                <mc-dt>{{ t('Groups.Pseudo.Label.Hash') }}</mc-dt>
+                <mc-dd>
+                    {{ group?.hash | hash }}
+                    <soldr-copy [value]="group?.hash"></soldr-copy>
+                </mc-dd>
+
+                <mc-dt>{{ t('Groups.Pseudo.Label.Created') }}</mc-dt>
+                <mc-dd>{{ group?.created_date | toDateTime:data.language | absoluteShortDateTime }}</mc-dd>
+            </mc-dl>
+        </ng-template>
+    </ng-container>
+</ng-container>

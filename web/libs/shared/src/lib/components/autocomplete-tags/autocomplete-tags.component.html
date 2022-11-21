@@ -1,0 +1,49 @@
+<ng-container *transloco="let tShared; read: 'shared'">
+    <mc-form-field
+        [mcWarningTooltip]="errorsTooltip"
+        [mcTrigger]="'manual'"
+        [mcVisible]="(showErrorsTooltip$ | async) === true"
+        [mcTooltipClass]="'warning'"
+        [ngClass]="{'form-field-error': control.errors}">
+        <mc-tag-list #tagList [disabled]="disabled">
+            <mc-tag
+                e2e-id="optTag"
+                *ngFor="let tag of selectedTags"
+                [value]="tag"
+                (removed)="onRemove(tag)">
+                {{ tag }}
+                <i *ngIf="!disabled" e2e-id="btnRemoveTag" mc-icon="mc-close-S_16" mcTagRemove></i>
+            </mc-tag>
+            <input
+                e2e-id="txtTagName"
+                #tagInput
+                [formControl]="control"
+                [mcAutocomplete]="autocomplete"
+                [mcTagInputFor]="tagList"
+                (mcTagInputTokenEnd)="onCreate($event)"
+                [mcTagInputAddOnBlur]="false"
+                (blur)="addOnBlurFunc($event)"
+                (input)="onInput($event)">
+
+            <mc-cleaner e2e-id="btnCleatAllTags" (click)="clearAll()"></mc-cleaner>
+        </mc-tag-list>
+        <mc-autocomplete #autocomplete (optionSelected)="onSelect($event)">
+            <mc-option
+                e2e-id="optCreateNewTag"
+                *ngIf="tagInput.value && control.valid"
+                [value]="{ new: true, value: tagInput.value }"
+                [innerHTML]="tShared('Shared.Pseudo.ListItemText.CreateTag', { tag: tagInput.value })">
+            </mc-option>
+            <mc-option *ngFor="let tag of filteredTags | async" [value]="tag">{{ tag }}</mc-option>
+        </mc-autocomplete>
+        <mc-hint *ngIf="control.errors?.maxLimitTags">
+            {{ tShared('Shared.Pseudo.ValidationText.MaxLimitTags') }}
+        </mc-hint>
+    </mc-form-field>
+    <ng-template #errorsTooltipTagName>
+        <span>{{ tagMaskTooltipText || tShared('Shared.Pseudo.ValidationText.OnlyLettersDigitsAndSymbols') }}</span>
+    </ng-template>
+    <ng-template #errorsTooltipMaxlength>
+        <span>{{ tShared('Shared.Pseudo.ValidationText.MaxLengthTag') }}</span>
+    </ng-template>
+</ng-container>

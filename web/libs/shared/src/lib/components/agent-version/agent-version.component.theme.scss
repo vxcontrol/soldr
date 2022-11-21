@@ -1,0 +1,7 @@
+@mixin agent-version-theme($mosaic-theme) {
+    $warning: map-get($mosaic-theme, warning);
+
+    .agent-version_has-new-version .agent-version__current-version {
+        color: mc-color($warning, 560);
+    }
+}

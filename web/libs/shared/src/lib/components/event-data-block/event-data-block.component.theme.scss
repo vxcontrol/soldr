@@ -1,0 +1,13 @@
+@mixin event-data-block-theme($mosaic-theme) {
+    .event-data-block__editor_bordered.event-data-block__editor {
+        border-color: map-deep-get($mosaic-theme, foreground, divider);
+    }
+
+    .editor-container {
+        height: 100% !important;
+    }
+
+    .monaco-editor .lines-content.monaco-editor-background {
+        margin-left: 12px;
+    }
+}

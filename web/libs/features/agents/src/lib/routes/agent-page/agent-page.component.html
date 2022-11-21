@@ -1,0 +1,308 @@
+<ng-container
+    *ngIf="({
+        agent: agent$ | async,
+        allGroups: allGroups$ | async,
+        canBlockAgent: canBlockAgent$ | async,
+        canUpgradeAgent: canUpgradeAgent$ | async,
+        deleteError: deleteError$ | async,
+        dependencies: dependencies$ | async,
+        eventGridColumnFilterItems: eventGridColumnFilterItems$ | async,
+        events: events$ | async,
+        eventsGridFiltrationByFields: eventsGridFiltrationByFields$ | async,
+        eventsPage: eventsPage$ | async,
+        eventsSearchValue: eventsSearchValue$ | async,
+        isBlockingAgent: isBlockingAgent$ | async,
+        isCancelUpgradingAgent: isCancelUpgradingAgent$ | async,
+        isDeletingAgent: isDeletingAgent$ | async,
+        isDeletingFromGroup: isDeletingFromGroup$ | async,
+        isLoadingAgent: isLoadingAgent$ | async,
+        isLoadingAllGroups: isLoadingAllGroups$ | async,
+        isLoadingEvents: isLoadingEvents$ | async,
+        isLoadingLatestBinary: isLoadingLatestBinary$ | async,
+        isLoadingModules: isLoadingModules$ | async,
+        isMovingAgent: isMovingAgent$ | async,
+        isUpdatingAgent: isUpdatingAgent$ | async,
+        isUpgradingAgent: isUpgradingAgent$ | async,
+        lang: language$ | async,
+        language: language$ | async,
+        latestAgentBinaryVersion: latestAgentBinaryVersion$ | async,
+        modules: modules$ | async,
+        moveToGroupError: moveToGroupError$ | async,
+        totalEvents: totalEvents$ | async,
+        updateError: updateError$ | async
+    }) as data">
+    <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read 'agents'">
+        <soldr-actionbar class="flex-none">
+            <ng-container actionbar-left>
+                <soldr-breadcrumbs
+                    *ngIf="data.agent?.details?.group"
+                    [items]="[
+                        { link: ['/groups'], text: t('Agents.AgentView.LinkText.Groups'), disabled: !permitted.ViewGroups },
+                        {
+                            link: ['/groups', data.agent?.details?.group?.hash],
+                            text: data.agent?.details?.group?.info.name[data.lang],
+                            disabled: !permitted.ViewGroups
+                        },
+                        { text: data.agent?.description }
+                ]">
+                </soldr-breadcrumbs>
+
+                <soldr-breadcrumbs
+                    *ngIf="!data.agent?.details?.group"
+                    [items]="[
+                        { link: ['/agents'], text: t('Agents.AgentView.LinkText.Agents') },
+                        {
+                            link: ['/agents'],
+                            query: { filterId: 'without_groups' },
+                            text: t('Agents.AgentView.LinkText.AgentsWithoutGroups')
+                        },
+                        { text: data.agent?.description }
+                ]">
+                </soldr-breadcrumbs>
+            </ng-container>
+
+            <ng-container actionbar-right>
+                <soldr-edit-agent-modal
+                    *ngIf="permitted.EditAgents"
+                    [agent]="data.agent"
+                    [isUpdatingAgent]="data.isUpdatingAgent"
+                    [updateError]="data.updateError"
+                    (afterSave)="refreshData()"
+                    (updateAgent)="update($event)">
+                    <button
+                        mc-button
+                        class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                        e2e-id="btnEditAgent"
+                        [mcTooltip]="t('Agents.AgentView.ButtonTooltip.Edit')"
+                        [disabled]="!data.agent">
+                        <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                    </button>
+                </soldr-edit-agent-modal>
+
+                <soldr-move-to-group
+                    *ngIf="permitted.EditAgents"
+                    [agents]="data.agent ? [data.agent] : []"
+                    [allGroups]="data.allGroups"
+                    [isDeletingFromGroup]="data.isDeletingFromGroup"
+                    [isMovingAgents]="data.isMovingAgent"
+                    [isLoading]="data.isLoadingAllGroups"
+                    [moveToGroupError]="data.moveToGroupError"
+                    (afterMove)="refreshData()"
+                    (moveToGroups)="moveToGroup($event)"
+                    (moveToNewGroups)="moveToNewGroup($event)"
+                    (afterOpen)="refreshGroups()">
+                    <button
+                        mc-button
+                        class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                        e2e-id="btnMoveAgentToGroup"
+                        [mcTooltip]="t('Agents.AgentView.ButtonTooltip.MoveToGroup')"
+                        [disabled]="!data.agent">
+                        <i mc-icon="soldr-icons-folder-move_16" class="soldr-icons"></i>
+                    </button>
+                </soldr-move-to-group>
+
+                <button
+                    *ngIf="data.canUpgradeAgent && permitted.EditAgents"
+                    mc-button
+                    class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                    e2e-id="btnUpgradeAgent"
+                    [mcTooltip]="t('Agents.AgentView.ButtonTooltip.Upgrade')"
+                    [class.mc-progress]="data.isUpgradingAgent"
+                    (click)="upgradeAgent(data.agent, data.latestAgentBinaryVersion)">
+                    <i mc-icon="soldr-icons-refresh_16" class="soldr-icons"></i>
+                </button>
+
+                <button
+                    *ngIf="data.canBlockAgent && permitted.EditAgents"
+                    mc-button
+                    class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                    e2e-id="btnBlockAgent"
+                    [mcTooltip]="t('Agents.AgentView.ButtonTooltip.Block')"
+                    [class.mc-progress]="data.isBlockingAgent"
+                    (click)="blockAgent(data.agent)">
+                    <i mc-icon="soldr-icons-lock-locked_16" class="soldr-icons"></i>
+                </button>
+
+                <soldr-delete-agents-modal
+                    *ngIf="permitted.DeleteAgents"
+                    [agents]="[data.agent]"
+                    [isDeletingAgent]="data.isDeletingAgent"
+                    [deleteError]="data.deleteError"
+                    (afterDelete)="onAfterDelete()"
+                    (deleteAgents)="delete($event)">
+                    <button
+                        mc-button
+                        class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                        e2e-id="btnDeleteAgent"
+                        [disabled]="!data.agent"
+                        [mcTooltip]="t('Agents.AgentView.ButtonTooltip.Delete')">
+                        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                    </button>
+                </soldr-delete-agents-modal>
+            </ng-container>
+        </soldr-actionbar>
+
+        <mc-splitter
+            class="flex-auto layout-row"
+            [direction]="direction.Horizontal"
+            [hideGutters]="!pageState.leftSidebar.opened"
+            *transloco="let tShared; read 'shared'">
+            <mc-sidebar
+                #leftSidebar="mcSidebar"
+                class="sidebar_left"
+                mc-splitter-area
+                soldrSaveState
+                [position]="sidebarPositions.Left"
+                [opened]="pageState.leftSidebar.opened"
+                [saveStateKey]="'agent.view.leftSidebar'"
+                [saveStateValue]="pageState.leftSidebar"
+                (stateChanged)="saveLeftSidebarState($event)"
+                (soldrWidthChange)="saveLeftSidebarWidth($event)">
+
+                <div
+                    mc-sidebar-opened
+                    class="sidebar_opened page-layout__panel layout-column"
+                    [width]="pageState.leftSidebar.width"
+                    [minWidth]="'265px'"
+                    [maxWidth]="'400px'">
+                    <header class="sidebar-header flex-none">
+                        <button
+                            mc-button
+                            class="mc-button_transparent sidebar-toggle"
+                            e2e-id="btnCollapseAgentSidebar"
+                            [mcTooltip]="tShared('Shared.Pseudo.TooltipText.CollapseSidebar')"
+                            (click)="leftSidebar.toggle()">
+                            <i mc-icon="soldr-icons-double-angle-left_16" class="soldr-icons"></i>
+                        </button>
+
+                        <div class="sidebar-title">{{ t('Agents.AgentView.SidebarTitle.Info') }}</div>
+                    </header>
+
+                    <mc-divider class="flex-none"></mc-divider>
+
+                    <div
+                        class="sidebar-content flex-auto"
+                        soldrProgressSpinner
+                        [loadingFlag]="data.isLoadingAgent || data.isLoadingLatestBinary">
+                        <soldr-agent-info
+                            [agent]="data.agent"
+                            [latestBinaryVersion]="data.latestAgentBinaryVersion"
+                            [state]="pageState.leftSidebar"
+                            [stateStorageKey]="'agent.view.leftSidebar'"
+                            [isUpgradingAgents]="data.isUpgradingAgent"
+                            [isCancelUpgradingAgent]="data.isCancelUpgradingAgent"
+                            (upgradeAgents)="upgrade($event)"
+                            (cancelUpgradeAgent)="cancelUpgrade($event)"
+                            (selectTag)="selectTag($event)"
+                            (refresh)="onRefresh()">
+                        </soldr-agent-info>
+                    </div>
+                </div>
+
+                <div
+                    mc-sidebar-closed
+                    class="sidebar-closed layout-column layout-align-start-center"
+                    (click)="leftSidebar.toggle()">
+
+                    <header class="sidebar-header">
+                        <button
+                            mc-button
+                            class="mc-button_transparent sidebar-toggle"
+                            e2e-id="btnExpandAgentSidebar"
+                            [mcTooltip]="tShared('Shared.Pseudo.TooltipText.ExpandSidebar')">
+                            <i mc-icon="soldr-icons-double-angle-right_16" class="soldr-icons"></i>
+                        </button>
+                    </header>
+
+                    <section class="flex">
+                        <a class="sidebar-title">{{ t('Agents.AgentView.SidebarTitle.Info') }}</a>
+                    </section>
+                </div>
+            </mc-sidebar>
+
+            <div mc-splitter-area class="flex layout-column page-layout__panel agent-page__content">
+                <mc-tab-group
+                    #tabs
+                    e2e-id="tbsAgentPage"
+                    [class.layout-fill]="![0].includes(tabIndex)"
+                    [(selectedIndex)]="tabIndex"
+                    (selectedTabChange)="onSelectTab()">
+                    <mc-tab [label]="t('Agents.AgentView.TabTitle.Modules')" [tabId]="'modules'">
+
+                    </mc-tab>
+
+                    <mc-tab
+                        *ngIf="permitted.ViewModulesEvents"
+                        [label]="t('Agents.AgentView.TabTitle.Events')"
+                        [tabId]="'events'">
+                        <soldr-events-grid
+                            e2e-id="grAgentEvents"
+                            [storageKey]="'agent-events-list'"
+                            [events]="data.events"
+                            [gridFilters]="data.eventGridColumnFilterItems"
+                            [gridFiltrationByFields]="data.eventsGridFiltrationByFields"
+                            [isLoading]="data.isLoadingAgent || data.isLoadingModules || data.isLoadingEvents"
+                            [searchValue]="data.eventsSearchValue"
+                            [total]="data.totalEvents"
+                            [viewMode]="viewModeEnum.Agents"
+                            [moduleLink]="moduleLink"
+                            (search)="eventsSearch($event)"
+                            (filter)="eventsFilter($event)"
+                            (loadNextPage)="loadNextEventsPage(data.agent.id, data.eventsPage + 1)"
+                            (resetFiltration)="resetFiltration()"
+                            (sort)="eventsSort($event)">
+                        </soldr-events-grid>
+                        <ng-template #moduleLink let-module="module">
+                            <a
+                                *ngIf="permitted.ViewPolicies; else linkText"
+                                mc-link
+                                e2e-id="lnkAgentModule"
+                                [routerLink]="['/agents', data.agent?.hash, 'modules', module?.info.name]">
+                                <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                            </a>
+                            <ng-template #linkText>
+                                {{ module?.locale.module[data.language].title }}
+                            </ng-template>
+                        </ng-template>
+                    </mc-tab>
+
+                    <mc-tab
+                        *ngIf="permitted.ViewModules"
+                        [label]="t('Agents.AgentView.TabTitle.Dependencies')"
+                        [tabId]="'dependencies'">
+                        <soldr-progress-container [loadingFlag]="data.isLoadingAgent || data.isLoadingModules">
+                            <soldr-dependencies-grid
+                                e2e-id="grAgentDependencies"
+                                [dependencies]="data.dependencies"
+                                [viewMode]="viewModeEnum.Agents">
+                            </soldr-dependencies-grid>
+                        </soldr-progress-container>
+                    </mc-tab>
+                </mc-tab-group>
+                <soldr-progress-container
+                    class="flex-auto"
+                    [ngStyle]="{'display': tabIndex === 0 ? 'block' : 'none'}"
+                    [loadingFlag]="data.isLoadingAgent">
+                    <soldr-modules-config
+                        [viewMode]="viewModeEnum.Agents"
+                        [modules]="data.modules"
+                        [dependencies]="data.agent?.details.dependencies"
+                        [moduleInstanceLinkTemplate]="moduleInstanceLink"
+                        [selectModuleName]="selectedModuleName"
+                        (selectModule)="onSelectModule($event)">
+                    </soldr-modules-config>
+                    <ng-template #moduleInstanceLink let-moduleName="moduleName">
+                        <a
+                            mc-button
+                            class="mc-button_transparent"
+                            e2e-id="lnkAgentModule"
+                            [mcTooltip]="tShared('Shared.ModulesConfig.ButtonTooltip.GeneralParams')"
+                            [routerLink]="['/agents', data.agent?.hash, 'modules', moduleName]">
+                            <i mc-icon="soldr-icons-gear_16" class="soldr-icons"></i>
+                        </a>
+                    </ng-template>
+                </soldr-progress-container>
+            </div>
+        </mc-splitter>
+    </div>
+</ng-container>

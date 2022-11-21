@@ -1,0 +1,10 @@
+{
+    "Login.LoginForm.InputPlaceholder.Login": "Username",
+    "Login.LoginForm.InputPlaceholder.Password": "Password",
+    "Login.LoginForm.ButtonText.Login": "Log in",
+    "Login.LoginForm.ErrorText.InvalidCredentials": "Invalid email or password",
+    "Login.LoginForm.ErrorText.UserInactive": "User is not activated",
+    "Login.LoginForm.ErrorText.ConnectionError": "Connection error",
+
+    "Login.PageTitle.Text.Login": "Login"
+}

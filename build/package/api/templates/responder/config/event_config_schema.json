@@ -1,0 +1,96 @@
+{
+    "type": "object",
+    "properties": {
+        "{{placeholder}}": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/events.atomic"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "default": [],
+                            "minItems": 0,
+                            "maxItems": 0
+                        }
+                    },
+                    "required": [
+                        "fields"
+                    ]
+                }
+            ]
+        },
+        "{{module_name}}_action_exec_failed": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/events.atomic"
+                },
+                {
+                    "properties": {
+                        "fields": {
+                            "default": [
+                                "reason",
+                                "result"
+                            ],
+                            "items": {
+                                "enum": [
+                                    "reason",
+                                    "result"
+                                ],
+                                "type": "string"
+                            },
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "type": "array"
+                        }
+                    },
+                    "required": [
+                        "fields"
+                    ],
+                    "type": "object"
+                }
+            ]
+        },
+        "{{module_name}}_action_exec_success": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/events.atomic"
+                },
+                {
+                    "properties": {
+                        "fields": {
+                            "default": [
+                                "reason",
+                                "result"
+                            ],
+                            "items": {
+                                "enum": [
+                                    "reason",
+                                    "result"
+                                ],
+                                "type": "string"
+                            },
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "type": "array"
+                        }
+                    },
+                    "required": [
+                        "fields"
+                    ],
+                    "type": "object"
+                }
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "{{module_name}}_action_exec_failed",
+        "{{module_name}}_action_exec_success"
+    ]
+}

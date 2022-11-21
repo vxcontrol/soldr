@@ -1,0 +1,38 @@
+<div class="related-list layout-row layout-align-start-center">
+    <div class="related-list__list layout-row layout-align-start-center">
+        <ng-container *ngIf="list?.length"
+                      [ngTemplateOutlet]="itemTemplate"
+                      [ngTemplateOutletContext]="{ item: list[0], base }">
+        </ng-container>
+        <span class="related-list__separator" *ngIf="list?.length > 1">,&nbsp;</span>
+    </div>
+
+    <div
+        *ngIf="list?.length > 1"
+        class="related-list__mask flex-none">
+        …&nbsp;
+    </div>
+
+    <div class="flex-none" *transloco="let tShared; read: 'shared'">
+        <a
+            *ngIf="list?.length > 1"
+            mc-link
+            mcPopover
+            e2e-id="btnShowAllRelatedEntities"
+            [mcPopoverContent]="popover"
+            [closeOnScroll]="true"
+            (click)="$event.stopPropagation()">
+            {{ tShared('Shared.RelatedList.LinkText.All', {total: list?.length || 0}) }}
+        </a>
+    </div>
+</div>
+
+<ng-template #popover>
+    <div
+        *ngFor="let item of list; let last = last" class="related-list__popover-item"
+        (click)="$event.stopPropagation()">
+        <ng-container [ngTemplateOutlet]="popoverItemTemplate"
+                      [ngTemplateOutletContext]="{ item, base, last }">
+        </ng-container>
+    </div>
+</ng-template>

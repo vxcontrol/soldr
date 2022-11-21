@@ -1,0 +1,14 @@
+@mixin agent-connection-status-theme($mosaic-theme) {
+    $error: map-get($mosaic-theme, error);
+    $success: map-get($mosaic-theme, success);
+
+    .agent-connection-status__colored {
+        &.soldr-icons-plug_16 {
+            color: map-get($success, default);
+        }
+
+        &.soldr-icons-plug-o_16 {
+            color: map-get($error, default);
+        }
+    }
+}

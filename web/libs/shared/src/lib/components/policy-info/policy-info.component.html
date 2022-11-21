@@ -1,0 +1,113 @@
+<ng-container *ngIf="policy && { language: language$ | async } as data">
+    <ng-container *transloco="let t; read: 'policies'">
+        <soldr-accordion
+            soldrSaveState
+            [title]="t('Policies.PolicyView.Label.Parameters')"
+            [expanded]="state.parameters.opened"
+            [saveStateKey]="stateStorageKey + '.parameters.opened'"
+            [saveStateValue]="state.parameters.opened"
+            (stateChanged)="state.parameters.opened = $event">
+            <mc-dl [vertical]="true">
+                <ng-container *ngIf="canShowOs">
+                    <mc-dt>{{ t('Policies.PolicyView.Label.Os') }}</mc-dt>
+                    <mc-dd>
+                        <soldr-os [os]="policy?.info.os" [showLabels]="true"></soldr-os>
+                    </mc-dd>
+                </ng-container>
+
+                <mc-dt>{{ t('Policies.PolicyView.Label.Hash') }}</mc-dt>
+                <mc-dd>
+                    {{ policy?.hash | hash }}
+                    <soldr-copy [value]="policy?.hash"></soldr-copy>
+                </mc-dd>
+
+                <mc-dt>{{ t('Policies.PolicyView.Label.Created') }}</mc-dt>
+                <mc-dd>{{ policy?.created_date | toDateTime:(language$ | async) | absoluteLongDateTime }}</mc-dd>
+            </mc-dl>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="policy.details?.groups?.length > 0 && showGroups"
+            soldrSaveState
+            [title]="t('Policies.PolicyView.Label.Groups')"
+            [expanded]="state.groups.opened"
+            [saveStateKey]="stateStorageKey + '.groups.opened'"
+            [saveStateValue]="state.groups.opened"
+            (stateChanged)="state.groups.opened = $event">
+            <div
+                class="layout-row"
+                [class.layout-margin-bottom-s]="!isLast"
+                *ngFor="let group of policy.details?.groups | sort:sortGroups:data.language; last as isLast">
+                <soldr-text-overflow>
+                    <a
+                        *ngIf="permitted.ViewGroups; else linkText"
+                        mc-link
+                        e2e-id="lnkGroupPage"
+                        [routerLink]="['/groups', group.hash]">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ group.info.name[language$ | async] }}
+                    </ng-template>
+                </soldr-text-overflow>
+            </div>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="showModules && policy?.details?.modules?.length > 0"
+            soldrSaveState
+            [title]="t('Policies.PolicyView.Label.EnabledModules')"
+            [expanded]="state.modules.opened"
+            [saveStateKey]="stateStorageKey + '.modules.opened'"
+            [saveStateValue]="state.modules.opened"
+            (stateChanged)="state.modules.opened = $event">
+            <ng-container *transloco="let tShared; read: 'shared'">
+                <div
+                    class="layout-row layout-align-space-between"
+                    [class.layout-margin-bottom-s]="!isLast"
+                    *ngFor="let module of policy?.details?.modules | sort:sortModules:data.language; last as isLast">
+                    <div class="flex">
+                        <soldr-text-overflow>
+                            <a
+                                mc-link
+                                e2e-id="lnkPolicyModule"
+                                [routerLink]="['/policies', policy.hash, 'modules', module.info.name]">
+                                {{ module.locale.module[language$ | async].title }}
+                            </a>
+                        </soldr-text-overflow>
+                    </div>
+                    <i
+                        *ngIf="modulesUpgradesByName[module.info.name]"
+                        mc-icon="soldr-icons-info_16"
+                        class="soldr-icons layout-margin-left-s"
+                        [color]="themePalette.Default"
+                        [mcTooltip]="tShared('Shared.ModuleView.TooltipText.CanUpgrade')">
+                    </i>
+                    <soldr-consistency-icon
+                        *ngIf="!modulesConsistencyByName[module.info.name]"
+                        class="layout-margin-left-s"
+                        [viewMode]="viewModeEnum.Policies"
+                        [isModuleInstance]="true">
+                    </soldr-consistency-icon>
+                </div>
+            </ng-container>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="policy?.info?.tags.length > 0"
+            soldrSaveState
+            [title]="t('Policies.PolicyView.Label.Tags')"
+            [expanded]="state.tags.opened"
+            [saveStateKey]="stateStorageKey + '.tags.opened'"
+            [saveStateValue]="state.tags.opened"
+            (stateChanged)="state.tags.opened = $event">
+            <soldr-tag
+                *ngFor="let tag of policy?.info?.tags | sort:sortTags:data.language"
+                class="policy-info__tag"
+                e2e-id="lnkFilterPoliciesByTag"
+                (click)="selectTag.emit(tag)">
+                {{ tag }}
+            </soldr-tag>
+        </soldr-accordion>
+    </ng-container>
+</ng-container>

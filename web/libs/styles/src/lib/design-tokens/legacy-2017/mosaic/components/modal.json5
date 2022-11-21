@@ -1,0 +1,7 @@
+{
+    'modal-body': {
+        size: {
+            padding: { value: '{size.l} {size.l} {size.l}' }
+        }
+    }
+}

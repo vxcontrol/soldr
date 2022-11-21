@@ -1,0 +1,53 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "go build vxapi",
+            "type": "shell",
+            "command": "bash",
+            "args": ["build/package/api/build-local.sh"],
+            "options": {
+                "cwd": "${workspaceFolder}",
+            }
+        },
+        {
+            "label": "build vxapi",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "go build vxapi"
+            ]
+        },
+        {
+            "label": "go build vxserver",
+            "type": "shell",
+            "command": "bash",
+            "args": ["build/package/server/build-local.sh"],
+            "options": {
+                "cwd": "${workspaceFolder}",
+            }
+        },
+        {
+            "label": "build vxserver",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "go build vxserver"
+            ]
+        },
+        {
+            "label": "go build vxagent",
+            "type": "shell",
+            "command": "bash",
+            "args": ["build/package/agent/build-local.sh"],
+            "options": {
+                "cwd": "${workspaceFolder}",
+            }
+        },
+        {
+            "label": "build vxagent",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "go build vxagent"
+            ]
+        }
+    ]
+}

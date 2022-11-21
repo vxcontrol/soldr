@@ -1,0 +1,13 @@
+:host {
+    display: block;
+    padding: 24px 16px;
+}
+
+.dependencies--info__section:not(:last-child) {
+    margin-bottom: 16px;
+}
+
+.dependencies--info__label,
+.dependencies--info__item:not(:last-child) {
+    margin-bottom: 8px;
+}

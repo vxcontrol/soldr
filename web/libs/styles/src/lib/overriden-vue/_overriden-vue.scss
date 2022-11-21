@@ -1,0 +1,36 @@
+div.__array-form-item.__ncform-control > div.list-item > div.list-item-label > label {
+    padding-right: 10px;
+    font-weight: bold;
+}
+
+div.__array-form-item.__ncform-control > div.list-item > div.list-item-label > div {
+    padding-top: 0px;
+    float: right;
+}
+
+div.__array-form-item.__ncform-control > div.el-button-group {
+    padding-top: 6px;
+    padding-left: 10px;
+}
+
+div.__array-table-form-item.__ncform-control .table thead th {
+    font-size: 14px;
+    font-weight: inherit;
+}
+
+div.__object-form-item > legend,
+div.__array-tabs-form-item > legend,
+div.__array-form-item > legend {
+    display: flex;
+    background-color: transparent;
+    margin-top: 8px;
+}
+
+.el-button.el-button--primary {
+    background-color: #1e87e0;
+}
+
+.el-collapse-item .el-collapse-item__header {
+    font-size: 14px;
+    font-weight: 500;
+}

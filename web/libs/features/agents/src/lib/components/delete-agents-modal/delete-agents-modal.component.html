@@ -1,0 +1,30 @@
+<div class="delete-agents-modal" (click)="open(content, footer)">
+    <ng-content>
+    </ng-content>
+</div>
+
+<ng-template #content>
+    <div *transloco="let t; read: 'agents'">
+        {{ t('Agents.DeleteAgent.Text.OnDeletingAgents', { count: agents.length }) }}
+    </div>
+</ng-template>
+
+<ng-template #footer>
+    <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+        <button
+            mc-button
+            e2e-id="btnDeleteAgents"
+            [color]="themePalette.Primary"
+            [class.mc-progress]="isDeletingAgent$ | async"
+            (click)="delete()">
+            {{ tCommon('Common.Pseudo.ButtonText.Delete') }}
+        </button>
+
+        <button
+            mc-button
+            e2e-id="btnCancelDeleteAgents"
+            (click)="cancel()">
+            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+        </button>
+    </div>
+</ng-template>

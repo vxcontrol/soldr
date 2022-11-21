@@ -1,0 +1,66 @@
+<div class="edit-group-modal" (click)="open(content, footer)">
+    <ng-content></ng-content>
+</div>
+
+<ng-template #content>
+    <soldr-progress-container [loadingFlag]="isLoading$ | async">
+        <form
+            id="editGroupForm"
+            class="edit-group-modal__form mc-form-vertical"
+            novalidate
+            [formGroup]="form"
+            (ngSubmit)="save()"
+            *transloco="let t; read: 'groups'">
+            <div class="mc-form__row mc-form-row_margin">
+                <label class="mc-form__label">{{ t('Groups.EditGroup.Label.Name') }}</label>
+                <mc-form-field class="mc-form__control flex-100" *transloco="let tShared; read: 'shared'">
+                    <input
+                        e2e-id="txtGroupName"
+                        autocomplete="off"
+                        name="input"
+                        mcInput
+                        formControlName="name"
+                        [placeholder]="group?.info.name[language$ | async] || ''">
+                    <mc-hint *ngIf="form.controls.name.errors?.entityNameExists">
+                        {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists') }}
+                    </mc-hint>
+                    <mc-hint *ngIf="form.controls.name.errors?.maxlength">
+                        {{ tShared('Shared.Pseudo.ValidationText.MaxLengthEntityName') }}
+                    </mc-hint>
+                    <mc-hint *ngIf="form.controls.name.errors?.required">
+                        {{ tShared('Shared.Pseudo.ValidationText.Required') }}
+                    </mc-hint>
+                </mc-form-field>
+            </div>
+
+            <div class="mc-form__row mc-form-row_margin">
+                <label class="mc-form__label">{{ t('Groups.EditGroup.Label.Tags') }}</label>
+                <div class="mc-form__control flex-100">
+                    <soldr-autocomplete-tags
+                        e2e-id="selGroupTags"
+                        formControlName="tags"
+                        [allTags]="tags$ | async">
+                    </soldr-autocomplete-tags>
+                </div>
+            </div>
+        </form>
+    </soldr-progress-container>
+</ng-template>
+<ng-template #footer>
+    <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+        <button
+            e2e-id="btnDoSaveGroup"
+            mc-button
+            form="editGroupForm"
+            [disabled]="(form.pristine && !isCopy) || form.invalid || (this.isLoading$ | async) === true"
+            [color]="themePalette.Primary"
+            [class.mc-progress]="(isProcessingGroup$ | async) === true">
+            <span *ngIf="group && !isCopy">{{ tCommon('Common.Pseudo.ButtonText.Save') }}</span>
+            <span *ngIf="!group || isCopy">{{ tCommon('Common.Pseudo.ButtonText.Create') }}</span>
+        </button>
+
+        <button e2e-id="btnDoCancelSaveGroup" mc-button (click)="cancel()">
+            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+        </button>
+    </div>
+</ng-template>

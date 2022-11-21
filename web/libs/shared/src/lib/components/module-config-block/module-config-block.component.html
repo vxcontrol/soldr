@@ -1,0 +1,66 @@
+<ng-container *ngIf="{
+    canShowActions: canShowActions$ | async,
+    canShowConfig: canShowConfig$ | async,
+    policyLink: policyLink$ | async
+} as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <div
+            *ngIf="isReadOnly && data.policyLink"
+            class="mc-alert mc-alert_dismissible"
+            [innerHTML]="tShared('Shared.ModuleConfig.Text.ModuleIsConfiguredInPolicy', {
+                policyLink: data.policyLink
+            })">
+        </div>
+
+        <soldr-accordion
+            *ngIf="data.canShowConfig"
+            [onlyHide]="true"
+            [expanded]="true"
+            [large]="true"
+            [title]="tShared('Shared.ModuleConfig.Label.Module')">
+            <soldr-secure-module-config
+                *ngIf="viewMode === viewModeEnum.Policies"
+                class="layout-margin-left-m"
+                [isReadOnly]="isReadOnly"
+                [module]="module"
+                [policyHash]="policyHash">
+            </soldr-secure-module-config>
+            <soldr-module-config
+                [isReadOnly]="isReadOnly"
+                [module]="module">
+            </soldr-module-config>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="module?.info.events.length > 0"
+            [onlyHide]="true"
+            [expanded]="true"
+            [large]="true"
+            [title]="tShared('Shared.ModuleConfig.Label.Events')">
+            <soldr-module-events
+                [module]="module"
+                [isReadOnly]="isReadOnly"
+                (saveModuleEventConfig)="save($event)">
+            </soldr-module-events>
+        </soldr-accordion>
+
+        <soldr-accordion
+            *ngIf="data.canShowActions"
+            [onlyHide]="true"
+            [expanded]="true"
+            [large]="true"
+            [title]="tShared('Shared.ModuleConfig.Label.Actions')">
+            <soldr-module-actions
+                [module]="module"
+                [isReadOnly]="isReadOnly"
+                (saveModule)="save($event)">
+            </soldr-module-actions>
+        </soldr-accordion>
+
+        <ng-container *ngIf="!(data.canShowConfig || module?.info.events.length > 0 || data.canShowActions)">
+            <div class="layout layout-align-center-center flex-auto">
+                <span class="text_second">{{ tShared('Shared.ModuleConfig.Text.NoAdditionalConfiguration') }}</span>
+            </div>
+        </ng-container>
+    </ng-container>
+</ng-container>

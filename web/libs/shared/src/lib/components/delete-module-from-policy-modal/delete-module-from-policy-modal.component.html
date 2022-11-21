@@ -1,0 +1,36 @@
+<ng-container *transloco="let t; read: 'policies'">
+    <div class="delete-module-from-policy-modal__button" (click)="open(content, footer)">
+        <ng-content>
+        </ng-content>
+    </div>
+
+    <ng-template #content>
+        {{ t('Policies.DeleteModule.Text.DeleteModuleFromPolicy') }}
+    </ng-template>
+
+    <ng-template #footer>
+        <div class="layout-row layout-align-space-between-center">
+            <button
+                mc-button
+                [color]="themePalette.Default"
+                [class.mc-progress]="isDisablingModule$ | async"
+                (click)="disable()">
+                {{ t('Policies.ModuleView.ButtonText.Disable') }}
+            </button>
+
+            <ng-container *transloco="let tCommon; read: 'common'">
+                <button
+                    mc-button
+                    [color]="themePalette.Primary"
+                    [class.mc-progress]="isDeletingModule$ | async"
+                    (click)="delete()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Delete') }}
+                </button>
+
+                <button mc-button (click)="cancel()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                </button>
+            </ng-container>
+        </div>
+    </ng-template>
+</ng-container>

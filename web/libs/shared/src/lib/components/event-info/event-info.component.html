@@ -1,0 +1,71 @@
+<ng-container *ngIf="{ language: language$ | async } as data">
+    <div *ngIf="event; else empty" class="layout-fill layout-column">
+        <header class="mc-subheading flex-none event-info__header">
+            {{ event?.date }}
+        </header>
+
+        <mc-dl [vertical]="true" *transloco="let tShared; read: 'shared'">
+            <ng-container *ngIf="viewMode !== viewModeEnum.Agents">
+                <mc-dt>{{ tShared('Shared.EventsView.Label.Agent') }}</mc-dt>
+                <mc-dd>
+                    <a
+                        *ngIf="permitted.ViewAgents; else linkText"
+                        mc-link [routerLink]="['/agents', event.agent.hash]">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ event.agent.description }}
+                    </ng-template>
+                </mc-dd>
+            </ng-container>
+
+            <ng-container *ngIf="viewMode === viewModeEnum.Policies">
+                <mc-dt>{{ tShared('Shared.EventsView.Label.Group') }}</mc-dt>
+                <mc-dd>
+                    <a
+                        *ngIf="permitted.ViewGroups; else linkText"
+                        mc-link
+                        [routerLink]="['/groups', event.group.hash]">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ event.group.info.name[data.language] }}
+                    </ng-template>
+                </mc-dd>
+            </ng-container>
+
+            <ng-container *ngIf="moduleLink">
+                <mc-dt>{{ tShared('Shared.EventsView.Label.Module') }}</mc-dt>
+                <mc-dd>
+                    <ng-container
+                        [ngTemplateOutlet]="moduleLink"
+                        [ngTemplateOutletContext]="{ module: event.module }">
+                    </ng-container>
+                </mc-dd>
+            </ng-container>
+
+            <mc-dt>{{ tShared('Shared.EventsView.Label.EventTitle') }}</mc-dt>
+            <mc-dd>{{ event.module?.locale.events[event.info.name]?.[data.language]?.title || event.info.name }}</mc-dd>
+
+            <mc-dt>{{ tShared('Shared.EventsView.Label.Description') }}</mc-dt>
+            <mc-dd>
+                <ng-container *ngIf="event.module?.locale.events[event.info.name]; else noLocalizedDescription">
+                    {{ event.module?.locale.events[event.info.name]?.[data.language]?.description | hb: event.info.data }}
+                </ng-container>
+                <ng-template #noLocalizedDescription>
+                    {{ tShared('Shared.EventsView.Text.NoDescription') }}
+                </ng-template>
+            </mc-dd>
+        </mc-dl>
+
+        <soldr-event-data-block
+            class="flex-auto"
+            [data]="event.info.data | json">
+        </soldr-event-data-block>
+    </div>
+    <ng-template #empty>
+        <div class="layout-fill layout-row layout-align-center-center" *transloco="let tCommon; read: 'common'">
+            {{ tCommon('Common.Pseudo.Text.NoData') }}
+        </div>
+    </ng-template>
+</ng-container>

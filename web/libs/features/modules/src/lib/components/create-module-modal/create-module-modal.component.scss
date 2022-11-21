@@ -1,0 +1,19 @@
+.create-module-modal {
+    padding: 24px 16px 48px;
+
+    .create-module-modal__legend {
+        padding-bottom: 20px;
+    }
+
+    .create-module-modal__label {
+        text-align: left;
+    }
+
+    .create-module-modal__os {
+        margin-top: 8px;
+
+        .mc-checkbox:not(:last-child) {
+            margin-bottom: 8px;
+        }
+    }
+}

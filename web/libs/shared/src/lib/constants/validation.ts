@@ -1,0 +1,1 @@
+export const ENTITY_NAME_MAX_LENGTH = 255;

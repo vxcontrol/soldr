@@ -1,0 +1,59 @@
+.scrollable {
+    overflow: auto;
+}
+
+.scrollable-y {
+    overflow-y: auto;
+}
+
+.ellipsis {
+    @include ellipsis();
+
+    display: block !important;
+}
+
+.white-space_pre {
+    white-space: pre;
+}
+
+.white-space_nowrap {
+    white-space: nowrap;
+}
+
+.display-none {
+    display: none;
+}
+
+.text_center {
+    text-align: center;
+}
+
+.display-flex {
+    display: flex;
+}
+
+.empty-text {
+    margin-top: 72px;
+    text-align: center;
+}
+
+.tab-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.dark-theme .distributions-page__os-card .os-img-macos {
+    filter: invert(1);
+}
+
+// for support of modules interactivity
+.overflow-hidden {
+    overflow: hidden;
+}
+
+.limit-length {
+    max-width: 600px;
+}

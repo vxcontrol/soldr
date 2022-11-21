@@ -1,0 +1,32 @@
+:host {
+    display: block;
+}
+
+:host:not(:first-child) {
+    margin-top: 16px;
+}
+
+:host:not(:last-child) {
+    margin-bottom: 16px;
+}
+
+.accordion__header {
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.accordion__header_large {
+    margin: 14px 0;
+}
+
+.accordion__header_compact .accordion__header-text {
+    margin-left: 4px;
+}
+
+.accordion__content_clip {
+    overflow: hidden;
+}
+
+.accordion__content_compact {
+    padding-left: 21px;
+}

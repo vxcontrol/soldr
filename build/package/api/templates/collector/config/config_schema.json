@@ -1,0 +1,45 @@
+{
+    "type": "object",
+    "properties": {
+        "receivers": {
+            "items": {
+                "rules": {
+                    "required": {
+                        "value": true,
+                        "errMsg": "Common.Pseudo.ValidationText.Required"
+                    },
+                    "minLength": {
+                        "value": 3,
+                        "errMsg": "Common.Pseudo.ValidationText.MinLength"
+                    },
+                    "maxLength": {
+                        "value": 255,
+                        "errMsg": "Common.Pseudo.ValidationText.MaxLengthEntityName"
+                    },
+                    "customRule": [
+                        {
+                            "script": "dx: !!({{$root.receivers[i]}}.match(/^[a-z0-9_]*$/))",
+                            "errMsg": "Modules.EditSystemModulePage.ValidationText.NameValidationOnAdding"
+                        }
+                    ]
+                },
+                "type": "string",
+                "ui": {
+                    "label": "dx: {{$root.receivers[i]}} ? {{$root.receivers[i]}} : 'module_' + (parseInt(idxChain)+1)",
+                    "placeholder": "module_id"
+                }
+            },
+            "rules": {},
+            "type": "array",
+            "ui": {
+                "showIdxLabel": false,
+                "widgetConfig": {
+                    "collapsed": true,
+                    "disableReorder": true
+                }
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": []
+}

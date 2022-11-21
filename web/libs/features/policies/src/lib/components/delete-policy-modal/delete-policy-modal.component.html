@@ -1,0 +1,36 @@
+<div class="delete-policies-modal" (click)="open(content, footer)">
+    <ng-content>
+    </ng-content>
+</div>
+
+<ng-template #content>
+    <ng-container *transloco="let t; read: 'policies'">
+        <span
+            *ngIf="policy.details?.groups?.length > 0; else emptyPolicy"
+            [innerHTML]="t('Policies.DeletePolicy.Text.OnDeletingPolicyWithGroups',{ policy: policy.info.name[language$ | async] })">
+        </span>
+        <ng-template #emptyPolicy>
+            {{ t('Policies.DeletePolicy.Text.OnDeletingEmptyPolicy') }}
+        </ng-template>
+    </ng-container>
+</ng-template>
+
+<ng-template #footer>
+    <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+        <button
+            mc-button
+            e2e-id="btnDeletePolicy"
+            [color]="themePalette.Primary"
+            [class.mc-progress]="isDeletingPolicy$ | async"
+            (click)="delete()">
+            {{ tCommon('Common.Pseudo.ButtonText.Delete') }}
+        </button>
+
+        <button
+            mc-button
+            e2e-id="btnCancelDeletePolicy"
+            (click)="cancel()">
+            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+        </button>
+    </div>
+</ng-template>

@@ -1,0 +1,14 @@
+{
+    "{{placeholder}}": {
+        "ru": {
+            "date": "{{placeholder}}",
+            "title": "Базовая функциональность",
+            "description": "Добавлено <...>\nИменено <...>\nИсправлено <...>\nУдалено <...>"
+        },
+        "en": {
+            "date": "{{placeholder}}",
+            "title": "Base functionality",
+            "description": "Added <...>\nChanged <...>\nFixed <...>\nRemoved <...>"
+        }
+    }
+}

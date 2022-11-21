@@ -1,0 +1,25 @@
+<div class="delete-groups-modal" (click)="open(content, footer)">
+    <ng-content>
+    </ng-content>
+</div>
+
+<ng-template #content>
+    <span *transloco="let t; read: 'groups'" [innerHTML]="t('Groups.DeleteGroup.Text.OnDeletingGroup', { group: group.info?.name[language$ | async] })"></span>
+</ng-template>
+
+<ng-template #footer>
+    <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+        <button
+            e2e-id="btnDoDeleteGroup"
+            mc-button
+            [color]="themePalette.Primary"
+            [class.mc-progress]="isDeletingGroup$ | async"
+            (click)="delete()">
+            {{ tCommon('Common.Pseudo.ButtonText.Delete') }}
+        </button>
+
+        <button e2e-id="btnDoCancelDeleteGroup" mc-button (click)="cancel()">
+            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+        </button>
+    </div>
+</ng-template>

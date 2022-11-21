@@ -1,0 +1,141 @@
+<ng-container *ngIf="{
+    canCreateGroup: canCreateGroup$ | async,
+    foundGroups: foundGroups$ | async,
+    language: language$ | async
+} as data">
+    <ng-container *transloco="let t; read: 'agents'">
+        <div
+            #popover="mcPopover"
+            mcPopover
+            mcPopoverClass="move-to-group__popover"
+            [mcPopoverDisabled]="button.disabled"
+            [mcPopoverContent]="popoverContent"
+            [mcPopoverFooter]="popoverFooter"
+            (mcPopoverVisibleChange)="onChangeVisiblePopover($event)">
+            <ng-content>
+            </ng-content>
+        </div>
+
+        <ng-template #popoverContent>
+            <soldr-progress-container
+                [loadingFlag]="isMovingAgents">
+
+                <div class="layout-fill layout-column layout-align-space-between">
+
+                    <div class="move-to-group__container">
+                        <div class="mc-alert mc-alert_info">
+                            {{ t('Agents.MoveAgent.Text.OnMoveAgents') }}
+                        </div>
+
+                        <mc-form-field class="move-to-group__search-field">
+                            <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+
+                            <input
+                                #searchInput
+                                soldrAutofocus
+                                type="text"
+                                placeholder="{{ t('Agents.AgentsList.InputPlaceholder.FilterByGroup') }}"
+                                mcInput
+                                autocomplete="off"
+                                e2e-id="txtFilterByGroup"
+                                [(ngModel)]="searchValue"
+                                (ngModelChange)="groupSearch.next(searchInput.value)">
+
+                            <mc-cleaner></mc-cleaner>
+                        </mc-form-field>
+                    </div>
+
+                    <mc-divider></mc-divider>
+
+                    <div class="flex-auto" style="overflow: hidden">
+                        <soldr-progress-container
+                            [loadingFlag]="isLoading">
+                            <div class="scrollable-y layout-fill">
+                                <mc-list-selection
+                                    e2e-id="selGroup"
+                                    *ngIf="allGroups.length > 0 || data.canCreateGroup; else groupsNotExist"
+                                    [(ngModel)]="selectedGroupId"
+                                    [autoSelect]="false">
+                                    <mc-list-option *ngIf="creatingGroup"
+                                                    [value]="-1">{{ creatingGroup }}</mc-list-option>
+                                    <ng-container
+                                        *ngFor="let group of data.foundGroups | sort:sortGroups:data.language">
+                                        <mc-list-option
+                                            [disabled]="group.id === currentGroupId"
+                                            [value]="group.id">
+                                            <div class="ellipsis">{{ group.info.name[data.language] }}</div>
+                                        </mc-list-option>
+                                    </ng-container>
+                                    <mc-list-option
+                                        *ngIf="data.canCreateGroup && permitted.CreateGroups"
+                                        class="move-to-group__add-group-item"
+                                        (click)="addGroupToList(searchInput.value)">
+                                        <div class="layout-row">
+                                            <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                                            <span
+                                                [innerHTML]="t('Agents.MoveAgent.ButtonText.CreateGroup', { group: searchInput.value })">
+                                    </span>
+                                        </div>
+                                    </mc-list-option>
+                                </mc-list-selection>
+
+                                <ng-container *ngIf="!data.foundGroups?.length && !permitted.CreateGroups">
+                                    <div class="layout-row layout-align-center-center layout-fill">
+                                        <span class="text_second">{{ t('Agents.MoveAgent.Text.NoGroups') }}</span>
+                                    </div>
+                                </ng-container>
+                                <ng-template #groupsNotExist>
+                                    <div class="layout-column layout-align-center-center text_center layout-fill">
+                                        <ng-container *ngIf="permitted.CreateGroups; else withoutPermission">
+                                            <span>{{ t('Agents.MoveAgent.Text.GroupsNotExist') }}</span>
+                                            <span class="text_second">
+                                                {{ t('Agents.MoveAgent.Text.HowCreateNewGroup') }}
+                                            </span>
+                                        </ng-container>
+                                        <ng-template #withoutPermission>
+                                            <span>{{ t('Agents.MoveAgent.Text.NoGroups') }}</span>
+                                            <span class="text_second">
+                                                {{ t('Agents.MoveAgent.Text.WithoutPermissionToCreate') }}
+                                            </span>
+                                        </ng-template>
+                                    </div>
+                                </ng-template>
+                            </div>
+                        </soldr-progress-container>
+                    </div>
+                </div>
+            </soldr-progress-container>
+        </ng-template>
+
+        <ng-template #popoverFooter>
+            <div class="layout-row layout-align-space-between">
+                <button
+                    mc-button
+                    e2e-id="btnDeleteAgentsFromGroup"
+                    [disabled]="!isAgentsInGroup"
+                    (click)="deleteFromGroup()">
+                    {{ t('Agents.MoveAgent.ButtonText.DeleteAgentsFromGroup') }}
+                </button>
+
+                <div class="layout-row">
+                    <button
+                        mc-button
+                        e2e-id="btnMoveAgentsToGroup"
+                        [color]="themePalette.Primary"
+                        [disabled]="selectedGroupId?.length !== 1"
+                        [class.mc-progress]="isMovingAgents === true"
+                        (click)="moveToGroup()">
+                        {{ t('Agents.MoveAgent.ButtonText.MoveAgentsToGroup') }}
+                    </button>
+                    <button
+                        mc-button
+                        e2e-id="btnCancelMoveAgentsToGroup"
+                        (click)="cancel()"
+                        *transloco="let tCommon; read: 'common'">
+                        {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                    </button>
+                </div>
+            </div>
+        </ng-template>
+    </ng-container>
+</ng-container>

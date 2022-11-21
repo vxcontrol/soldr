@@ -1,0 +1,294 @@
+syntax = "proto2";
+
+package agent;
+
+option go_package = "./agent";
+
+// Used following communication schema for main module:
+// --------------------------------
+// Agent   -(AUTHENTICATION_REQUEST)-> Server
+// Server  -(AUTHENTICATION_RESPONSE)-> Agent
+// Agent   -(INFORMATION_RESULT)-> Server
+// --------------------------------
+// Server  -(GET_INFORMATION)-> Agent
+// Agent   -(INFORMATION_RESULT)-> Server
+// --------------------------------
+// Server  -(GET_STATUS_MODULES)-> Agent
+// Agent   -(STATUS_MODULES_RESULT)-> Server
+// --------------------------------
+// Browser -(GET_STATUS_MODULES)-> Server
+// Server  -(STATUS_MODULES_RESULT)-> Browser
+// --------------------------------
+// Server  -(START_MODULES)-> Agent
+// Agent   -(STATUS_MODULES_RESULT)-> Server
+// --------------------------------
+// Server  -(STOP_MODULES)-> Agent
+// Agent   -(STATUS_MODULES_RESULT)-> Server
+// --------------------------------
+// Server  -(UPDATE_CONFIG_MODULES)-> Agent
+// Agent   -(STATUS_MODULES_RESULT)-> Server
+// --------------------------------
+// Server  -(UPDATE_MODULES)-> Agent
+// Agent   -(STATUS_MODULES_RESULT)-> Server
+// --------------------------------
+// Agent   <-(AGENT_UPGRADE_EXEC_PUSH)- Server
+// Agent   -(AGENT_UPGRADE_SUCCESS_PULL)-> Server
+// --------------------------------
+// Agent   -(PUT_OBSERVABILITY_PACKET)-> Server
+// --------------------------------
+//
+// Notes: Sending of information also will be used on connection callback
+// Notes: For GET_INFORMATION command payload should be empty
+// Notes: For GET_STATUS_MODULES command payload should be empty
+// Notes: For *_MODULES command payload should be ModuleList message
+//
+
+// Common message protocol
+message Message {
+  enum Type {
+    UNKNOWN = 0;
+    GET_INFORMATION = 1;
+    INFORMATION_RESULT = 2;
+    GET_STATUS_MODULES = 3;
+    STATUS_MODULES_RESULT = 4;
+    START_MODULES = 5;
+    STOP_MODULES = 6;
+    UPDATE_MODULES = 7;
+    UPDATE_CONFIG_MODULES = 8;
+    AUTHENTICATION_REQUEST = 9;
+    AUTHENTICATION_RESPONSE = 10;
+    AGENT_UPGRADE_EXEC_PUSH = 11;
+    AGENT_UPGRADE_EXEC_PUSH_RESULT = 12;
+    INIT_CONNECTION = 13;
+    CONNECTION_CHALLENGE_REQUEST = 14;
+    CONNECTION_REQUEST = 15;
+    TUNNEL_RESET_REQUEST = 16;
+    PUT_OBSERVABILITY_PACKET = 17;
+  }
+
+  required Type type = 1 [default = UNKNOWN];
+  optional bytes payload = 2;
+}
+
+// Communication message for INFORMATION_RESULT command
+message Information {
+  message OS {
+    required string type = 1;
+    optional string name = 2;
+    required string arch = 3;
+  }
+
+  message User {
+    required string name = 1;
+    repeated string groups = 2;
+  }
+
+  message Net {
+    required string hostname = 1;
+    repeated string ips = 2;
+  }
+
+  required OS os = 1;
+  required Net net = 2;
+  repeated User users = 3;
+}
+
+// Struct of authentication request for handshake
+// atoken means agent token which is last stored value on agent side
+message AuthenticationRequest {
+  required int64 timestamp = 1;
+  required string atoken = 2;
+  required string aversion = 3;
+  optional Information ainfo = 4;
+}
+
+// Struct of authentication request for handshake
+// atoken means agent token which will use for send API function from server
+// stoken means server token which will use for send API function from agent
+message AuthenticationResponse {
+  required string atoken = 1;
+  required string stoken = 2;
+  required string sversion = 3;
+  required string status = 4;
+}
+
+// Config is structure that contains information about module
+message Config {
+  message OS {
+    required string type = 1;
+    repeated string arch = 2;
+  }
+
+  required string group_id = 1;
+  required string policy_id = 2;
+  repeated OS os = 3;
+  required string name = 4;
+  required string version = 5;
+  repeated string actions = 6;
+  repeated string events = 7;
+  repeated string fields = 8;
+  required string state = 9;
+  required string template = 10;
+  required string last_module_update = 11;
+  required string last_update = 12;
+}
+
+// ConfigItem is structure that contains information about config module
+message ConfigItem {
+  required string default_config = 1;
+  required string config_schema = 2;
+  required string current_config = 3;
+  required string static_dependencies = 4;
+  required string dynamic_dependencies = 5;
+  required string fields_schema = 6;
+  required string action_config_schema = 7;
+  required string default_action_config = 8;
+  required string current_action_config = 9;
+  required string event_config_schema = 10;
+  required string default_event_config = 11;
+  required string current_event_config = 12;
+  required string secure_config_schema = 13;
+  required string secure_default_config = 14;
+  required string secure_current_config = 15;
+}
+
+// Struct of module for loading into agent
+message Module {
+  message File {
+    optional string path = 1;
+    required bytes data = 2;
+  }
+
+  message Arg {
+    required string key = 1;
+    repeated string value = 2;
+  }
+
+  required string name = 1;
+  optional Config config = 2;
+  repeated File files = 3;
+  repeated Arg args = 4;
+  optional ConfigItem config_item = 5;
+}
+
+// Communication message for (START_MODULES | STOP_MODULES | UPDATE_MODULES) commands
+message ModuleList {
+  repeated Module list = 1;
+}
+
+// Struct of status module for sending to server
+message ModuleStatus {
+  required string name = 1;
+  required Config config = 2;
+  required ConfigItem config_item = 3;
+
+  enum Status {
+    UNKNOWN = 0;
+    LOADED = 1;
+    RUNNING = 2;
+    STOPPED = 3;
+    FREED = 4;
+  }
+
+  required Status status = 4 [default = UNKNOWN];
+}
+
+// Communication message for STATUS_MODULES_RESULT command
+message ModuleStatusList {
+  repeated ModuleStatus list = 1;
+}
+
+// Struct of module action for sending event between main modules
+message ActionPushEvent {
+  required string module_name = 1;
+  required string group_id = 2;
+  required string policy_id = 3;
+  required string event_info = 4;
+}
+
+// Server push to start the update process
+message AgentUpgradeExecPush {
+  required bytes thumbprint = 1;
+}
+
+message AgentUpgradeExecPushResult {
+  required bool success = 1;
+  optional string hint = 2;
+}
+
+message AgentReadinessReport {
+  required AgentReadinessReportHeader header = 1;
+  repeated AgentReadinessReportCheck checks = 2;
+  required AgentReadinessReportStatus status = 3;
+}
+
+message AgentReadinessReportHeader {
+  required int32 pid = 1;
+}
+
+message AgentReadinessReportCheck {
+  required string type = 1;
+  required bool passed = 2;
+}
+
+enum AgentReadinessReportStatus {
+  SUCCESS = 1;
+  FAILURE = 2;
+}
+
+message AgentBinaryID {
+  required string version = 1;
+  required string os = 2;
+  required string arch = 3;
+}
+
+message InitConnectionRequest {
+  required bytes csr = 1;
+  required bytes abh = 2;
+  required bytes agentID = 3;
+  required AgentBinaryID agentBinaryID = 4;
+  required Information info = 5;
+}
+
+message InitConnectionResponse {
+  required bytes ltac = 1;
+  required bytes ssa = 2;
+  required bytes sbh = 3;
+}
+
+message ConnectionChallengeRequest {
+  required bytes nonce = 1;
+}
+
+message ConnectionChallengeResponse {
+  required bytes ct = 1;
+}
+
+message ConnectionStartRequest {
+  required TunnelConfig tunnel_config = 1;
+  required bytes sbh = 2;
+}
+
+message ConnectionStartResponse {}
+
+message TunnelConfig {
+  message TunnelConfigSimple {
+    required uint32 key = 1;
+  }
+  message TunnelConfigScript {
+    required bytes body = 1;
+  }
+  oneof config {
+    TunnelConfigSimple simple = 1;
+    TunnelConfigScript script = 2;
+  }
+}
+
+message TunnelResetRequest {
+  required TunnelConfig tunnel_config = 1;
+}
+
+message ObsPacket {
+  repeated bytes metrics = 1;
+  repeated bytes traces = 2;
+}

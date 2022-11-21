@@ -1,0 +1,8 @@
+<ng-container *transloco="let tShared; read: 'shared'">
+    <i
+        mc-icon="soldr-icons-error_16"
+        class="soldr-icons mc-icon_light consistency-icon_{{viewMode}}"
+        [color]="viewMode !== viewModeEnum.Policies ? themePalette.Error : themePalette.Empty"
+        [mcTooltip]="tShared(isModuleInstance ? 'Shared.ModuleView.TooltipText.Inconsistency' : 'Shared.Consistency.TooltipText.Inconsistency')">
+    </i>
+</ng-container>

@@ -1,0 +1,23 @@
+.related-list {
+    height: 100%;
+    overflow: hidden;
+}
+
+.related-list__list {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+
+    & > *:last-child {
+        min-width: 0;
+        overflow: hidden;
+    }
+}
+
+.related-list__popover-item:not(:last-child) {
+    margin-bottom: 6px;
+}
+
+.hidden {
+    display: none;
+}

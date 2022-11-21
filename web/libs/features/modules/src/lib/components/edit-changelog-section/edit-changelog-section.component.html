@@ -1,0 +1,97 @@
+<ng-container *transloco="let t; read 'modules'">
+    <form #formElement class="layout-padding-l layout-row" [formGroup]="form" (ngSubmit)="onSubmitForm()">
+        <soldr-toggle-list
+            *ngrxLet="currentVersion$; let currentVersion"
+            class="flex-50"
+            formArrayName="records">
+            <soldr-toggle-item
+                e2e-id="tiChangelogRecord"
+                *ngFor="let record of records.controls; let index = index; let first = first"
+                [isExpanded]="first"
+                [title]="record.get('version').value + (currentVersion === record.get('version').value ? ' - ' + t('Modules.ModuleEdit.Text.CurrentVersion'): '')"
+                [canDelete]="!first"
+                (delete)="deleteRecord(record.get('version').value)">
+
+                <div class="mc-form-horizontal" [formGroupName]="index">
+                    <div class="mc-form__row">
+                        <label class="mc-form__label flex-20">{{ t('Modules.ModuleEdit.Label.Date') }}</label>
+                        <mc-form-field
+                            #tooltip="mcWarningTooltip"
+                            class="mc-form__control"
+                            [mcWarningTooltip]="t('Modules.ModuleEdit.TooltipText.OnlyNumbers')"
+                            (click)="myDatepicker.toggle()">
+                            <input
+                                e2e-id="txtChangelogRecordDate"
+                                formControlName="date"
+                                [placeholder]="t('Modules.ModuleEdit.InputPlaceholder.Date')"
+                                [mcDatepicker]="myDatepicker"
+                                [mcValidationTooltip]="tooltip">
+                            <i mc-icon="mc-calendar_16" mcSuffix></i>
+                            <mc-datepicker #myDatepicker></mc-datepicker>
+                        </mc-form-field>
+                    </div>
+
+                    <div formGroupName="locales">
+
+                        <div class="mc-form__fieldset" formGroupName="ru">
+                            <div class="mc-form__legend">{{ t('Modules.ModuleEdit.Label.Russian') }}</div>
+
+                            <div class="mc-form__row mc-form-row_margin">
+                                <label class="mc-form__label flex-20">
+                                    {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                </label>
+                                <mc-form-field class="mc-form__control flex-80">
+                                    <input e2e-id="txtChangelogRecordTitle" mcInput formControlName="title">
+                                </mc-form-field>
+                            </div>
+
+                            <div class="mc-form__row mc-form-row_margin">
+                                <label
+                                    class="mc-form__label flex-20">
+                                    {{ t('Modules.ModuleEdit.Label.Description') }} *
+                                </label>
+                                <mc-form-field class="mc-form__control flex-80">
+                                    <textarea
+                                        e2e-id="txtChangelogRecordDescription"
+                                        mcTextarea
+                                        rows="7"
+                                        formControlName="description"
+                                        [canGrow]="true">
+                                    </textarea>
+                                </mc-form-field>
+                            </div>
+                        </div>
+
+                        <div class="mc-form__fieldset" formGroupName="en">
+                            <div class="mc-form__legend">{{ t('Modules.ModuleEdit.Label.English') }}</div>
+
+                            <div class="mc-form__row mc-form-row_margin">
+                                <label class="mc-form__label flex-20">
+                                    {{ t('Modules.ModuleEdit.Label.Title') }} *
+                                </label>
+                                <mc-form-field class="mc-form__control flex-80">
+                                    <input e2e-id="txtChangelogRecordTitle" mcInput formControlName="title">
+                                </mc-form-field>
+                            </div>
+
+                            <div class="mc-form__row mc-form-row_margin">
+                                <label class="mc-form__label flex-20">
+                                    {{ t('Modules.ModuleEdit.Label.Description') }} *
+                                </label>
+                                <mc-form-field class="mc-form__control flex-80">
+                                    <textarea
+                                        e2e-id="txtChangelogRecordDescription"
+                                        mcTextarea
+                                        rows="7"
+                                        formControlName="description"
+                                        [canGrow]="true">
+                                    </textarea>
+                                </mc-form-field>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </soldr-toggle-item>
+        </soldr-toggle-list>
+    </form>
+</ng-container>

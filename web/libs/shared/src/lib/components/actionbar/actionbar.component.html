@@ -1,0 +1,20 @@
+<div class="actionbar__container">
+
+    <div class="actionbar__left layout-row layout-align-start-center">
+
+        <div #header class="actionbar__header layout-margin-right-s">
+            <ng-content select="[actionbar-header]"></ng-content>
+        </div>
+
+        <soldr-divider *ngIf="header.innerHTML.length > 0 && left.children.length > 0"></soldr-divider>
+
+        <div #left class="layout-row layout-align-start-center">
+            <ng-content select="[actionbar-left]"></ng-content>
+        </div>
+
+    </div>
+
+    <div class="actionbar__right layout-row layout-align-end-center">
+        <ng-content select="[actionbar-right]"></ng-content>
+    </div>
+</div>

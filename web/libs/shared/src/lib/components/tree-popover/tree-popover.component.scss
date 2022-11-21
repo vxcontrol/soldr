@@ -1,0 +1,28 @@
+.tree-popover__popover {
+    .tree-popover__content {
+        width: 400px;
+    }
+
+    .mc-popover__content {
+        padding: 0;
+    }
+
+    .mc-popover__footer {
+        margin-top: 0;
+
+        & .mc-button:not(:first-child) {
+            margin-left: 8px;
+        }
+    }
+
+    .tree-popover__list {
+        min-height: 300px;
+        max-height: 300px;
+        overflow: auto;
+    }
+
+    .tree-popover__not-found {
+        min-height: 300px;
+        padding: 10px 16px;
+    }
+}

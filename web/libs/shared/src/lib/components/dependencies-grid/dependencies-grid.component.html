@@ -1,0 +1,126 @@
+<ng-container *ngIf="{
+    processedDependencies: processedDependencies$ | async,
+    language: language$ | async,
+    search: search$ | async
+} as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <soldr-grid
+            class="layout-fill"
+            [data]="data.processedDependencies"
+            [footerTemplate]="gridFooter"
+            [isLoading]="false"
+            [placeholder]="searchPlaceholder"
+            [storageKey]="viewMode + 'dependencies-list'"
+            [total]="dependencies?.length"
+            [searchString]="data.search"
+            (search)="onSearch($event)">
+
+            <ng-template #statusCell let-node="params.data">
+                <soldr-dependency-status
+                    [status]="node.status"
+                    [viewMode]="viewMode">
+                </soldr-dependency-status>
+            </ng-template>
+
+            <ng-template #sourceModuleCell let-node="params.data">
+                <soldr-text-overflow>
+                    <a
+                        *ngIf="permitted.EditModules; else linkText"
+                        mc-link
+                        [routerLink]="['/modules', node.sourceModule?.info.name, 'edit']">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ node.sourceModule?.locale.module[data.language].title }}
+                    </ng-template>
+                </soldr-text-overflow>
+            </ng-template>
+
+            <ng-template #moduleCell let-node="params.data">
+                <soldr-text-overflow>
+                    <ng-container *ngIf="node.type !== DependencyType.AgentVersion; else agentVersionDependency">
+                        <a
+                            *ngIf="permitted.EditModules && node.module; else linkText"
+                            mc-link
+                            [routerLink]="['/modules', node.module?.info.name, 'edit']">
+                            <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                        </a>
+                        <ng-template #linkText>
+                            {{ node.module?.locale.module[data.language].title || node.moduleName }}
+                        </ng-template>
+                    </ng-container>
+                    <ng-template #agentVersionDependency>
+                        {{ tShared('Shared.DependenciesView.Text.Agent') }}
+                    </ng-template>
+                </soldr-text-overflow>
+            </ng-template>
+
+            <ng-template #policyCell let-node="params.data">
+                <soldr-text-overflow>
+                    <a
+                        *ngIf="permitted.ViewPolicies; else linkText"
+                        mc-link
+                        [routerLink]="['/policies', node.policy?.hash]">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ node.policy?.info.name[data.language] }}
+                    </ng-template>
+                </soldr-text-overflow>
+            </ng-template>
+
+            <ng-template #descriptionCell let-node="params.data">
+                <soldr-text-overflow>{{ node.description }}</soldr-text-overflow>
+            </ng-template>
+
+            <soldr-column
+                field="status"
+                [displayName]="''"
+                [template]="statusCell"
+                [width]="32"
+                [default]="true"
+                [headerComponentParams]="{ template: '' }">
+            </soldr-column>
+            <soldr-column
+                field="source_module_name"
+                [headerName]="tShared('Shared.DependenciesView.GridColumnsTitle.Object')"
+                [template]="sourceModuleCell"
+                [width]="200"
+                [default]="true"
+                [required]="true"
+                [resizable]="true">
+            </soldr-column>
+            <soldr-column
+                *ngIf="viewMode !== viewModeEnum.Policies"
+                field="policy"
+                [headerName]="tShared('Shared.DependenciesView.GridColumnsTitle.Policy')"
+                [template]="policyCell"
+                [width]="200"
+                [default]="true"
+                [resizable]="true">
+            </soldr-column>
+            <soldr-column
+                field="module_name"
+                [headerName]="tShared('Shared.DependenciesView.GridColumnsTitle.Dependency')"
+                [template]="moduleCell"
+                [flex]="1"
+                [default]="true"
+                [required]="true"
+                [resizable]="true">
+            </soldr-column>
+            <soldr-column
+                field="description"
+                [headerName]="tShared('Shared.DependenciesView.GridColumnsTitle.Description')"
+                [template]="descriptionCell"
+                [flex]="2"
+                [default]="true"
+                [required]="true"
+                [resizable]="true"
+                [autoSize]="true">
+            </soldr-column>
+        </soldr-grid>
+        <ng-template #gridFooter let-total="total" let-selected="selected">
+            <span>{{ tShared('Shared.DependenciesView.Text.TotalDependencies', { total }) }}</span>
+        </ng-template>
+    </ng-container>
+</ng-container>

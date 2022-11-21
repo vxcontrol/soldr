@@ -1,0 +1,10 @@
+<ng-container *ngIf="status; else error">
+    <i mc-icon="soldr-icons-check_16" class="mc-icon_light soldr-icons dependency-status__icon_success"></i>
+</ng-container>
+<ng-template #error>
+    <i
+        mc-icon="soldr-icons-error_16"
+        class="soldr-icons mc-icon_light dependency-status__icon_{{viewMode}}"
+        [color]="viewMode !== viewModeEnum.Policies ? themePalette.Error : themePalette.Empty">
+    </i>
+</ng-template>

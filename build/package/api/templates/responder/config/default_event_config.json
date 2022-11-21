@@ -1,0 +1,44 @@
+{
+    "{{placeholder}}": {
+        "type": "atomic",
+        "fields": [],
+        "actions": [
+            {
+                "name": "log_to_db",
+                "module_name": "this",
+                "priority": 10,
+                "fields": []
+            }
+        ]
+    },
+    "{{module_name}}_action_exec_failed": {
+        "actions": [
+            {
+                "fields": [],
+                "module_name": "this",
+                "name": "log_to_db",
+                "priority": 10
+            }
+        ],
+        "fields": [
+            "reason",
+            "result"
+        ],
+        "type": "atomic"
+    },
+    "{{module_name}}_action_exec_success": {
+        "actions": [
+            {
+                "fields": [],
+                "module_name": "this",
+                "name": "log_to_db",
+                "priority": 10
+            }
+        ],
+        "fields": [
+            "reason",
+            "result"
+        ],
+        "type": "atomic"
+    }
+}

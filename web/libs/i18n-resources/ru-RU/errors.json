@@ -1,0 +1,5 @@
+{
+    "Errors.Forbidden.PageTitle.NoAccess": "Нет доступа к странице",
+    "Errors.Forbidden.Title.NoAccess": "Нет доступа к странице",
+    "Errors.Pseudo.Text.NoRights": "Недостаточно прав. Обратитесь к администратору."
+}

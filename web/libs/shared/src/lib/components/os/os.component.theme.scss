@@ -1,0 +1,8 @@
+@mixin os-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+
+    .os__icon_disable {
+        color: map-get($foreground, icon);
+        opacity: 30%;
+    }
+}

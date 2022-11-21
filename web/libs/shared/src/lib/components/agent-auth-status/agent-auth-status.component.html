@@ -1,0 +1,28 @@
+<div class="layout-row layout-align-start-center layout-fill" *transloco="let tShared; read: 'shared'">
+    <ng-container *ngIf="status === 'authorized'">
+        <i
+            mc-icon="soldr-icons-user_16"
+            class="soldr-icons"
+            [mcTooltip]="tShared('Shared.AgentAuthStatus.TooltipText.Authorized')"
+            [mcTooltipDisabled]="view === 'detailed'"></i>
+        <span *ngIf="view === 'detailed'">{{ tShared('Shared.AgentAuthStatus.TooltipText.Authorized') }}</span>
+    </ng-container>
+
+    <ng-container *ngIf="status === 'unauthorized'">
+        <i
+            mc-icon="soldr-icons-user-o_16"
+            class="soldr-icons"
+            [mcTooltip]="tShared('Shared.AgentAuthStatus.TooltipText.Unauthorized')"
+            [mcTooltipDisabled]="view === 'detailed'"></i>
+        <span *ngIf="view === 'detailed'">{{ tShared('Shared.AgentAuthStatus.TooltipText.Unauthorized') }}</span>
+    </ng-container>
+
+    <ng-container *ngIf="status === 'blocked'">
+        <i
+            mc-icon="soldr-icons-lock-locked_16"
+            class="soldr-icons"
+            [mcTooltip]="tShared('Shared.AgentAuthStatus.TooltipText.Blocked')"
+            [mcTooltipDisabled]="view === 'detailed'"></i>
+        <span *ngIf="view === 'detailed'">{{ tShared('Shared.AgentAuthStatus.TooltipText.Blocked') }}</span>
+    </ng-container>
+</div>

@@ -1,0 +1,162 @@
+<div class="layout-row layout-fill" *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <div class="flex-50 layout-column">
+            <div class="flex-none layout-row layout-align-space-between-start layout-padding-l">
+                <div class="mc-subheading flex-auto">{{ t('Modules.ModuleEdit.Label.Schema') }}</div>
+
+                <button *ngIf="!readOnly" e2e-id="btnAddParamToConfig" mc-button (click)="addParamToConfig()">
+                    <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                    {{ tCommon('Common.Pseudo.ButtonText.Add') }}
+                </button>
+
+                <div *ngIf="!readOnly" class="layout-margin-left-s">
+                    <button
+                        e2e-id="btnRemoveAllParamsFromConfig"
+                        mc-button
+                        [disabled]="params.length === 0"
+                        (click)="removeAllParamsFromConfig()">
+                        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                        {{ tCommon('Common.Pseudo.ButtonText.DeleteAll') }}
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-auto edit-config-section__form">
+                <form class="layout-fill" #formElement [formGroup]="form" (ngSubmit)="onSubmitForm()">
+                    <ng-container formArrayName="params">
+                        <mc-tab-group
+                            e2e-id="tbsModuleParams"
+                            #paramsTabs class="layout-fill" [(selectedIndex)]="activeTabIndex">
+                            <mc-tab
+                                *ngFor="let param of params.controls; let index = index"
+                                [formGroupName]="index">
+                                <ng-template mc-tab-label>
+                                    <div
+                                        class="tab-overlay"
+                                        (mouseenter)="highlightedTabIndex = index"
+                                        (mouseleave)="highlightedTabIndex = -1">
+                                    </div>
+                                    <div
+                                        class="layout-row layout-align-start-center"
+                                        (mouseenter)="highlightedTabIndex = index"
+                                        (mouseleave)="highlightedTabIndex = -1">
+                                        <div class="layout-margin-right-s">
+                                            {{ param.value.name }}
+                                            <ng-container *ngIf="param.value.required">*</ng-container>
+                                        </div>
+                                            <button
+                                                e2e-id="btnRemoveParamFromConfig"
+                                                mc-button
+                                                type="button"
+                                                class="mc-button_transparent"
+                                                [style.visibility]="(readOnly || (paramsTabs.selectedIndex !== index && highlightedTabIndex !== index)) ? 'hidden': undefined"
+                                                (click)="$event.stopPropagation(); removeParamFromConfig(param.value.name)">
+                                                <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                            </button>
+                                    </div>
+                                </ng-template>
+
+                                <div class="layout-padding-l">
+                                    <div class="mc-form-vertical layout-margin-left-xxs layout-margin-right-xxs">
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <label class="mc-form__label">
+                                                {{ t('Modules.ModuleEdit.Label.Required') }}
+                                            </label>
+                                            <mc-checkbox e2e-id="cbRequiredParam" formControlName="required">
+                                                {{ tCommon('Common.Pseudo.CheckboxText.Yes') }}
+                                            </mc-checkbox>
+                                        </div>
+
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <label class="mc-form__label">
+                                                {{ t('Modules.ModuleEdit.Label.ConfigurationItemName') }} *
+                                            </label>
+                                            <mc-form-field class="mc-form__control">
+                                                <input e2e-id="txtParamName" mcInput formControlName="name" required>
+                                                <mc-hint
+                                                    [color]="param.get('name').errors?.formItemName ? themePalette.Error : themePalette.Default">
+                                                    {{ t('Modules.ModuleEdit.HintText.ItemName') }}
+                                                </mc-hint>
+                                                <mc-hint
+                                                    *ngIf="param.get('name').errors?.overlapping"
+                                                    [color]="themePalette.Error">
+                                                    {{ t('Modules.ModuleEdit.ValidationText.OverlappedConfigItemName') }}
+                                                </mc-hint>
+                                            </mc-form-field>
+                                        </div>
+
+                                        <div>
+                                            <div class="mc-form__row mc-form-row_margin">
+                                                <label
+                                                    class="mc-form__label">
+                                                    {{ t('Modules.ModuleEdit.Label.PropertyType') }} *
+                                                </label>
+                                                <mc-form-field
+                                                    class="mc-form__control">
+                                                    <mc-select e2e-id="selParamType" formControlName="type">
+                                                        <mc-option
+                                                            e2e-id="optParamType"
+                                                            *ngFor="let type of propertiesTypes"
+                                                            [value]="type">
+                                                            {{ type }}
+                                                        </mc-option>
+                                                    </mc-select>
+                                                </mc-form-field>
+                                            </div>
+
+                                            <div class="mc-form__row mc-form-row_margin">
+                                                <label class="mc-form__label">
+                                                    {{ t('Modules.ModuleEdit.Label.ConfigFields') }} *
+                                                </label>
+                                                <mc-form-field class="mc-form__control">
+                                                    <textarea
+                                                        e2e-id="txtParamFields"
+                                                        mcTextarea
+                                                        class="mc-textarea-resizable"
+                                                        rows="7"
+                                                        formControlName="fields">
+                                                    </textarea>
+                                                    <mc-hint>{{ t('Modules.ModuleEdit.HintText.ConfigFields') }}</mc-hint>
+                                                </mc-form-field>
+                                                <mc-hint
+                                                    *ngIf="param.get('fields').errors?.formItemFields"
+                                                    [color]="themePalette.Error">
+                                                    {{ t('Modules.ModuleEdit.ValidationText.JsonFieldsValidation') }}
+                                                </mc-hint>
+                                                <mc-hint
+                                                    *ngIf="param.errors?.correctDefaultValue"
+                                                    [color]="themePalette.Error">
+                                                    {{ t('Modules.ModuleEdit.ValidationText.FieldsValidation') }}
+                                                </mc-hint>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </mc-tab>
+                        </mc-tab-group>
+                    </ng-container>
+                </form>
+            </div>
+        </div>
+
+        <div class="flex-none">
+            <mc-divider [vertical]="true"></mc-divider>
+        </div>
+
+        <div class="flex-50 layout-padding-top-l layout-column">
+            <div class="mc-subheading flex-none layout-padding-left-l layout-padding-right-l">
+                {{ t('Modules.ModuleEdit.Label.Default') }}
+            </div>
+
+            <div class="flex-auto layout-padding-bottom-l scrollable-y">
+                <soldr-ncform-wrapper
+                    [model]="defaultModel"
+                    [schema]="defaultSchema"
+                    [isReadOnly]="readOnly"
+                    (registerApi)="onRegisterApiDefaultConfigForm($event)"
+                    (modelChange)="onChangeDefaultConfig($event)">
+                </soldr-ncform-wrapper>
+            </div>
+        </div>
+    </ng-container>
+</div>

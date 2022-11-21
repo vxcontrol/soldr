@@ -1,0 +1,13 @@
+{
+    'description-list': {
+        size: {
+            horizontal: {
+                'column-gap': { value: '{size.s}' },
+                'row-gap': { value: '{size.s}' }
+            },
+            vertical: {
+                'dd-margin-bottom': { value: '{size.xxs}' }
+            }
+        }
+    }
+}

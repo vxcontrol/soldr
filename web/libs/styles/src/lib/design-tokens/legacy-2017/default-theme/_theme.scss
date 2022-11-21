@@ -1,0 +1,23 @@
+@import '@ptsecurity/mosaic/theming';
+@import 'tokens';
+
+$light: mc-light-theme();
+$custom-light: (
+    page-background: mc-color(map-get($light, second), 60),
+    navbar-dropdown: #206ea1,
+    navbar-dropdown-hover: #277bb3,
+    row-gradient: #f2f2f2,
+    selected-server-text: white
+);
+
+$legacy-2017-typography: mc-typography-config();
+
+:root {
+    --loading-bar-color: #{$palette-blue-500};
+    --foreground-text: #{$light-color-scheme-foreground-text};
+    --foreground-text-less-contrast: #{$light-color-scheme-foreground-text-less-contrast};
+    --monaco-background: #{$light-color-scheme-background-background};
+    --typography-subheading-font-size: #{$typography-subheading-font-size};
+    --tooltip-size-max-width: #{$tooltip-size-max-width};
+    --tooltip-size-padding: #{$tooltip-size-padding};
+}

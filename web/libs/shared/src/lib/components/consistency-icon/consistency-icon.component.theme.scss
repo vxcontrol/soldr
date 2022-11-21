@@ -1,0 +1,7 @@
+@mixin consistency-icon-theme($mosaic-theme) {
+    $warning: map-get($mosaic-theme, warning);
+
+    .soldr-icons.consistency-icon_policies {
+        color: mc-color($warning, 400);
+    }
+}

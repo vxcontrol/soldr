@@ -1,0 +1,7 @@
+@mixin multiple-selection-panel-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+
+    .multiple-selection-panel__header {
+        color: map-get($foreground, text-less-contrast);
+    }
+}

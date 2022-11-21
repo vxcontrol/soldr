@@ -1,0 +1,333 @@
+<ng-container
+    *ngIf="({
+        agents: agents$ | async,
+        agentsGridFiltrationByFields: agentsGridFiltrationByFields$ | async,
+        agentsPage : agentsPage$ | async,
+        agentsSearchValue: agentsSearchValue$ | async,
+        agentsTotal: agentsTotal$ | async,
+        dependencies: dependencies$ | async,
+        events: events$ | async,
+        eventsGridFiltrationByFields: eventsGridFiltrationByFields$ | async,
+        eventsPage: eventsPage$ | async,
+        eventsSearchValue: eventsSearchValue$ | async,
+        eventsTotal: eventsTotal$ | async,
+        agentGridColumnFilterItems: agentGridColumnFilterItems$ | async,
+        eventGridColumnFilterItems: eventGridColumnFilterItems$ | async,
+        gridGroupColumnFilterItems: gridGroupColumnFilterItems$ | async,
+        groups: groups$ | async,
+        groupsGridFiltrationByFields: groupsGridFiltrationByFields$ | async,
+        groupsPage : groupsPage$ | async,
+        groupsSearchValue: groupsSearchValue$ | async,
+        groupsTotal: groupsTotal$ | async,
+        isCancelUpgradingAgent: isCancelUpgradingAgent$ | async,
+        isLoadingAgents: isLoadingAgents$ | async,
+        isLoadingEvents: isLoadingEvents$ | async,
+        isLoadingGroups: isLoadingGroups$ | async,
+        isLoadingLatestBinary: isLoadingLatestBinary$ | async,
+        isLoadingModules: isLoadingModules$ | async,
+        isLoadingPolicy: isLoadingPolicy$ | async,
+        isLoadingPolicyModules: isLoadingPolicyModules$ | async,
+        isUpgradingAgents: isUpgradingAgents$ | async,
+        lang: language$ | async,
+        modules: modules$ | async,
+        policy: policy$ | async,
+        selectedAgent: selectedAgent$ | async,
+        selectedGroup: selectedGroup$ | async
+    }) as data">
+    <ng-container *transloco="let t; read: 'policies'">
+        <div class="page-layout layout-column layout-align-space-between" *transloco="let tCommon; read: 'common'">
+            <soldr-actionbar class="flex-none">
+                <ng-container actionbar-left>
+                    <soldr-breadcrumbs
+                        [items]="[
+                        { link: ['/policies'], text: t('Policies.PolicyView.LinkText.Policies') },
+                        { text: data.policy?.info.name[data.lang] }
+                    ]">
+                    </soldr-breadcrumbs>
+                </ng-container>
+
+                <ng-container actionbar-right>
+                    <soldr-edit-policy-modal
+                        *ngIf="permitted.EditPolicies"
+                        [policy]="data.policy"
+                        (afterSave)="refreshData()">
+                        <button
+                            mc-button
+                            class="actionbar__button mc-button mc-button_transparent"
+                            e2e-id="btnEditPolicy"
+                            [disabled]="!data.policy || data.policy.info?.system"
+                            [mcTooltip]="tCommon('Common.Pseudo.ButtonText.Edit')">
+                            <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                        </button>
+                    </soldr-edit-policy-modal>
+
+                    <soldr-link-group-to-policy
+                        *ngIf="permitted.LinkPolicies"
+                        [title]="t('Policies.LinkToGroup.SidebarTitle.LinkToGroup')"
+                        [placeholder]="t('Policies.LinkToGroup.InputPlaceHolder.SearchGroup')"
+                        [linkedLabel]="t('Policies.LinkToGroup.Label.LinkedGroups')"
+                        [conflictTitle]="linkGroupLinkedConflictTitle">
+                        <button
+                            mc-button
+                            class="actionbar__button mc-button mc-button_transparent"
+                            e2e-id="btnLinkPolicyToGroup"
+                            [disabled]="!data.policy || data.policy?.info?.system"
+                            [mcTooltip]="t('Policies.PoliciesList.ButtonText.LinkToGroup')">
+                            <i mc-icon="soldr-icons-link_16" class="soldr-icons"></i>
+                        </button>
+                    </soldr-link-group-to-policy>
+                    <ng-template #linkGroupLinkedConflictTitle>
+                        {{ t('Policies.LinkToGroup.ModalTitle.PolicyIncompatibleWithGroup') }}
+                    </ng-template>
+
+                    <soldr-edit-policy-modal
+                        *ngIf="permitted.CreatePolicies"
+                        [policy]="data.policy"
+                        [isCopy]="true"
+                        [redirect]="true">
+                        <button
+                            mc-button
+                            class="actionbar__button mc-button mc-button_transparent"
+                            e2e-id="btnCopyPolicy"
+                            [disabled]="!data.policy"
+                            [mcTooltip]="t('Policies.PoliciesList.ButtonText.Copy')">
+                            <i mc-icon="soldr-icons-copy_16" class="soldr-icons"></i>
+                        </button>
+                    </soldr-edit-policy-modal>
+
+                    <soldr-delete-policy-modal
+                        *ngIf="permitted.DeletePolicies"
+                        [policy]="data.policy"
+                        [mcTooltip]="t('Policies.DeletePolicy.TooltipText.CanNotDeletePolicyWithGroups')"
+                        [mcTooltipDisabled]="!(data.policy?.details.groups?.length > 0) "
+                        (afterDelete)="onAfterDelete()">
+                        <button
+                            mc-button
+                            class="actionbar__button mc-button mc-button_transparent"
+                            e2e-id="btnDeletePolicy"
+                            [disabled]="data.policy?.info.system || data.policy?.details.groups?.length > 0"
+                            [mcTooltip]="tCommon('Common.Pseudo.ButtonText.Delete')">
+                            <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                        </button>
+                    </soldr-delete-policy-modal>
+                </ng-container>
+            </soldr-actionbar>
+
+            <mc-splitter
+                class="flex-auto layout-row"
+                [direction]="direction.Horizontal"
+                [hideGutters]="!pageState.leftSidebar.opened"
+                *transloco="let tShared; read: 'shared'">
+                <mc-sidebar
+                    #leftSidebar="mcSidebar"
+                    class="sidebar_left"
+                    mc-splitter-area
+                    soldrSaveState
+                    [position]="sidebarPositions.Left"
+                    [opened]="pageState.leftSidebar.opened"
+                    [saveStateKey]="'policy.view.leftSidebar'"
+                    [saveStateValue]="pageState.leftSidebar"
+                    (stateChanged)="saveLeftSidebarState($event)"
+                    (soldrWidthChange)="saveLeftSidebarWidth($event)">
+
+                    <div
+                        mc-sidebar-opened
+                        class="sidebar_opened page-layout__panel layout-column"
+                        [width]="pageState.leftSidebar.width"
+                        [minWidth]="'265px'"
+                        [maxWidth]="'400px'">
+                        <header class="sidebar-header flex-none">
+                            <button
+                                mc-button
+                                class="mc-button_transparent sidebar-toggle"
+                                e2e-id="btnPolicyCollapseSidebar"
+                                [mcTooltip]="tShared('Shared.Pseudo.TooltipText.CollapseSidebar')"
+                                (click)="leftSidebar.toggle()">
+                                <i mc-icon="soldr-icons-double-angle-left_16" class="soldr-icons"></i>
+                            </button>
+
+                            <div class="sidebar-title">{{ t('Policies.PolicyView.SidebarTitle.Info') }}</div>
+                        </header>
+
+                        <mc-divider class="flex-none"></mc-divider>
+
+                        <div
+                            class="sidebar-content flex-auto"
+                            soldrProgressSpinner
+                            [loadingFlag]="data.isLoadingPolicy || data.isLoadingLatestBinary">
+                            <soldr-policy-info
+                                [policy]="data.policy"
+                                [state]="pageState.leftSidebar"
+                                [stateStorageKey]="'policy.view.leftSidebar'"
+                                (selectTag)="selectTag($event)">
+                            </soldr-policy-info>
+                        </div>
+                    </div>
+
+                    <div
+                        mc-sidebar-closed
+                        class="sidebar-closed layout-column layout-align-start-center"
+                        (click)="leftSidebar.toggle()">
+
+                        <header class="sidebar-header">
+                            <button
+                                mc-button
+                                class="mc-button_transparent sidebar-toggle"
+                                e2e-id="btnPolicyExpandSidebar"
+                                [mcTooltip]="tShared('Shared.Pseudo.TooltipText.ExpandSidebar')">
+                                <i mc-icon="soldr-icons-double-angle-right_16" class="soldr-icons"></i>
+                            </button>
+                        </header>
+
+                        <section class="flex">
+                            <span class="sidebar-title">{{ t('Policies.PolicyView.SidebarTitle.Info') }}</span>
+                        </section>
+                    </div>
+                </mc-sidebar>
+
+                <div mc-splitter-area class="flex layout-column page-layout__panel policy-page__content">
+                    <mc-tab-group
+                        #tabs
+                        class="layout-fill"
+                        e2e-id="tbsPolicyModuleInfo"
+                        [(selectedIndex)]="tabIndex"
+                        (selectedTabChange)="onSelectTab()">
+                        <mc-tab [label]="t('Policies.ModuleView.LinkText.Modules')" [tabId]="'modules'">
+                            <soldr-progress-container [loadingFlag]="data.isLoadingPolicyModules">
+                                <soldr-modules-config
+                                    [viewMode]="viewModeEnum.Policies"
+                                    [dependencies]="data.policy?.details.dependencies"
+                                    [modules]="data.modules"
+                                    [moduleInstanceLinkTemplate]="moduleInstanceLink"
+                                    [policy]="data.policy"
+                                    [selectModuleName]="selectedModuleName"
+                                    (selectModule)="onSelectModule($event)"
+                                    (refresh)="refreshModules()"
+                                    (afterChangeModuleState)="refreshAfterChangeModuleState()">
+                                </soldr-modules-config>
+                                <ng-template #moduleInstanceLink let-moduleName="moduleName">
+                                    <a
+                                        mc-button
+                                        class="mc-button_transparent"
+                                        e2e-id="lnkPolicyModule"
+                                        [mcTooltip]="tShared('Shared.ModulesConfig.ButtonTooltip.GeneralParams')"
+                                        [routerLink]="['/policies', data.policy?.hash, 'modules', moduleName]">
+                                        <i mc-icon="soldr-icons-gear_16" class="soldr-icons"></i>
+                                    </a>
+                                </ng-template>
+                            </soldr-progress-container>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngIf="permitted.ViewModulesEvents"
+                            [label]="t('Policies.PolicyView.TabTitle.Events')"
+                            [tabId]="'events'">
+                            <soldr-events-grid
+                                e2e-id="grPolicyEvents"
+                                [storageKey]="'agent-events-list'"
+                                [events]="data.events"
+                                [gridFilters]="data.eventGridColumnFilterItems"
+                                [gridFiltrationByFields]="data.eventsGridFiltrationByFields"
+                                [isLoading]="data.isLoadingPolicy || data.isLoadingModules || data.isLoadingEvents"
+                                [searchValue]="data.eventsSearchValue"
+                                [total]="data.eventsTotal"
+                                [viewMode]="viewModeEnum.Policies"
+                                [moduleLink]="moduleLink"
+                                (search)="eventsSearch($event)"
+                                (filter)="eventsFilter($event)"
+                                (resetFiltration)="eventsResetFiltration()"
+                                (loadNextPage)="loadNextEventsPage(data.policy.id, data.eventsPage + 1)"
+                                (sort)="eventsSort($event)">
+                            </soldr-events-grid>
+                            <ng-template #moduleLink let-module="module">
+                                <a
+                                    mc-link
+                                    e2e-id="lnkPolicyModule"
+                                    [routerLink]="['/policies', data.policy?.hash, 'modules', module?.info.name]">
+                                    {{ module?.locale.module[data.lang].title }}
+                                </a>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngIf="permitted.ViewModules"
+                            [label]="t('Policies.PolicyView.TabTitle.Dependencies')"
+                            [tabId]="'dependencies'">
+                            <soldr-progress-container [loadingFlag]="data.isLoadingPolicy || data.isLoadingModules">
+                                <soldr-dependencies-grid
+                                    e2e-id="grPolicyDependencies"
+                                    [dependencies]="data.dependencies"
+                                    [viewMode]="viewModeEnum.Policies">
+                                </soldr-dependencies-grid>
+                            </soldr-progress-container>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngIf="permitted.ViewGroups"
+                            [label]="t('Policies.PolicyView.TabTitle.Groups')"
+                            [tabId]="'groups'">
+                            <soldr-progress-container [loadingFlag]="data.isLoadingPolicy || data.isLoadingAgents">
+                                <soldr-groups-grid
+                                    e2e-id="grPolicyGroups"
+                                    [gridFilters]="data.gridGroupColumnFilterItems"
+                                    [gridFiltrationByFields]="data.groupsGridFiltrationByFields"
+                                    [groups]="data.groups"
+                                    [isLoading]="data.isLoadingGroups"
+                                    [modules]="data.modules"
+                                    [searchValue]="data.groupsSearchValue"
+                                    [selectedGroup]="data.selectedGroup"
+                                    [stateStorageKey]="'policy.view.groupsTab'"
+                                    [stateStorageValue]="pageState.groupsTab"
+                                    [storageGridKey]="'policy.view.groupsGrid'"
+                                    [total]="data.groupsTotal"
+                                    [viewMode]="viewModeEnum.Policies"
+                                    (changeSelection)="groupsSelect($event)"
+                                    (search)="groupsSearch($event)"
+                                    (filter)="groupsFilter($event)"
+                                    (resetFiltration)="resetGroupsFiltration()"
+                                    (loadNextPage)="loadNextGroupsPage(data.policy.id, data.groupsPage + 1)"
+                                    (setTag)="onSetGroupsTag($event)"
+                                    (sort)="groupsSort($event)">
+                                </soldr-groups-grid>
+                            </soldr-progress-container>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngIf="permitted.ViewAgents"
+                            [label]="t('Policies.PolicyView.TabTitle.Agents')"
+                            [tabId]="'agents'">
+                            <soldr-progress-container [loadingFlag]="data.isLoadingPolicy || data.isLoadingAgents">
+                                <soldr-agents-grid
+                                    e2e-id="grPolicyAgents"
+                                    [storageGridKey]="'policy.view.agentsGrid'"
+                                    [stateStorageKey]="'policy.view.agentsTab'"
+                                    [stateStorageValue]="pageState.agentsTab"
+                                    [agents]="data.agents"
+                                    [gridFilters]="data.agentGridColumnFilterItems"
+                                    [gridFiltrationByFields]="data.agentsGridFiltrationByFields"
+                                    [isCancelUpgradingAgent]="data.isCancelUpgradingAgent"
+                                    [isUpgradingAgents]="data.isUpgradingAgents"
+                                    [isLoading]="data.isLoadingAgents"
+                                    [searchValue]="data.agentsSearchValue"
+                                    [total]="data.agentsTotal"
+                                    [viewMode]="viewModeEnum.Policies"
+                                    [selectedAgent]="data.selectedAgent"
+                                    (changeSelection)="agentsSelect($event)"
+                                    (search)="agentsSearch($event)"
+                                    (filter)="agentsFilter($event)"
+                                    (resetFiltration)="resetAgentsFiltration()"
+                                    (loadNextPage)="loadNextAgentsPage(data.policy.id, data.agentsPage + 1)"
+                                    (setTag)="onSetAgentsTag($event)"
+                                    (sort)="agentsSort($event)"
+                                    (updateRow)="afterUpgradeAgent($event)"
+                                    (upgradeAgents)="upgradeAgents($event)"
+                                    (cancelUpgradeAgent)="cancelUpgradeAgent($event)">
+                                </soldr-agents-grid>
+                            </soldr-progress-container>
+                        </mc-tab>
+                    </mc-tab-group>
+                </div>
+            </mc-splitter>
+        </div>
+    </ng-container>
+</ng-container>

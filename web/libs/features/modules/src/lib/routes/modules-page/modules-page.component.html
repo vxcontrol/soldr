@@ -1,0 +1,208 @@
+<ng-container
+    *ngIf="({
+        gridFiltration: gridFiltration$ | async,
+        isLoading: isLoading$ | async,
+        language: language$ | async,
+        modules: modules$ | async,
+        page: page$ | async,
+        searchString: searchString$ | async,
+        selected: selected$ | async,
+        selectedModuleVersions: selectedModuleVersions$ | async,
+        sorting: sorting$ | async,
+        total: total$ | async,
+        gridFiltrationByField: gridFiltrationByField$ | async
+    }) as data">
+    <div
+        class="page-layout layout-column layout-align-space-between"
+        *transloco="let t; read: 'modules'">
+        <soldr-actionbar class="flex-none">
+            <ng-container actionbar-header>{{ t('Modules.ModulesList.ActionBarTitle.Modules') }}</ng-container>
+            <ng-container actionbar-left>
+                <soldr-create-module-modal *ngIf="permitted.CreateModules"></soldr-create-module-modal>
+                <soldr-import-module-modal *ngIf="permitted.ImportModules" (afterImport)="afterImport()">
+                </soldr-import-module-modal>
+                <soldr-divider *ngIf="permitted.ExportModules || permitted.DeleteModules"></soldr-divider>
+                <button
+                    *ngIf="permitted.EditModules"
+                    mc-button
+                    class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                    [disabled]="!data.selected"
+                    [routerLink]="['/modules', data.selected?.info.name, 'edit']">
+                    <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                    <span *transloco="let tCommon; read: 'common'">{{ tCommon('Common.Pseudo.ButtonText.Edit') }}</span>
+                </button>
+                <soldr-export-module *ngIf="permitted.ExportModules" [selectedModule]="data.selected">
+                </soldr-export-module>
+                <soldr-delete-module
+                    *ngIf="permitted.DeleteModules || permitted.EditModules"
+                    [selectedModule]="data.selected"
+                    [availableVersions]="data.selectedModuleVersions">
+                </soldr-delete-module>
+            </ng-container>
+        </soldr-actionbar>
+        <div class="flex page-layout__panel modules-page__content">
+            <soldr-grid
+                class="layout-fill"
+                [data]="data.modules"
+                [exportSelectedTemplate]="exportSelected"
+                [exportAllTemplate]="exportAll"
+                [filtration]="data.gridFiltration"
+                [footerTemplate]="gridFooter"
+                [isLoading]="data.isLoading"
+                [placeholder]="t('Modules.ModulesList.InputPlaceholder.FieldsForSearch')"
+                [searchString]="data.searchString"
+                [selected]="[data.selected]"
+                [sorting]="data.sorting"
+                [storageKey]="'modules-list'"
+                [total]="data.total"
+                (export)="onExport($event)"
+                (search)="onGridSearch($event)"
+                (sortChanged)="onGridSort($event)"
+                (selectRows)="onGridSelectRows($event)"
+                (resetFiltration)="onResetFiltration()"
+                (nextPage)="loadNextPage(data.page + 1)"
+                *transloco="let tShared; read 'shared'">
+
+                <ng-template #nameCell let-node="params.data">
+                    <soldr-text-overflow>
+                        <a
+                            *ngIf="permitted.EditModules; else linkText"
+                            mc-link
+                            [routerLink]="['/modules', node.info.name, 'edit']">
+                            <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                        </a>
+                        <ng-template #linkText>
+                            {{ node.locale.module[data.language].title }}
+                        </ng-template>
+                    </soldr-text-overflow>
+                </ng-template>
+
+                <ng-template #versionCell let-node="params.data">
+                    <span soldrTextOverflow>{{ node.info.version | moduleVersion}}</span>
+                </ng-template>
+
+                <ng-template #osCell let-node="params.data">
+                    <soldr-os [os]="node.info?.os"></soldr-os>
+                </ng-template>
+
+                <ng-template #descriptionCell let-node="params.data">
+                    <span soldrTextOverflow>{{node.locale.module[data.language].description}}</span>
+                </ng-template>
+
+                <ng-template #tagsCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.info?.tags | sort:sortTags:data.language"
+                        [itemTemplate]="tagItem"
+                        [popoverItemTemplate]="tagPopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #tagItem let-tag="item">
+                    <a mc-link
+                       [mcTooltip]="tag"
+                       [mcPlacement]="placement.TopLeft"
+                       (click)="setTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <ng-template #tagPopoverItem let-tag="item">
+                    <a mc-link (click)="setTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <soldr-column
+                    field="info.name"
+                    [template]="nameCell"
+                    [headerName]="t('Modules.ModulesList.GridColumnsTitle.Name')"
+                    [default]="true"
+                    [required]="true"
+                    [resizable]="true"
+                    [sortable]="true"
+                    [sortField]="'localizedName'">
+                </soldr-column>
+
+                <soldr-column
+                    field="version"
+                    [template]="versionCell"
+                    [headerName]="t('Modules.ModulesList.GridColumnsTitle.Version')"
+                    [width]="80"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="os"
+                    [template]="osCell"
+                    [headerName]="t('Modules.ModulesList.GridColumnsTitle.Os')"
+                    [width]="80"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="description"
+                    [template]="descriptionCell"
+                    [headerName]="t('Modules.ModulesList.GridColumnsTitle.Description')"
+                    [width]="450"
+                    [default]="true"
+                    [required]="true"
+                    [resizable]="true"
+                    [sortable]="true"
+                    [sortField]="'localizedDescription'">
+                </soldr-column>
+
+                <soldr-column
+                    field="info.tags"
+                    filtrationField="tags"
+                    [template]="tagsCell"
+                    [headerName]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                    [minWidth]="100"
+                    [width]="320"
+                    [default]="false"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-filter
+                    [field]="'os'"
+                    [title]="t('Modules.ModulesList.GridColumnsTitle.Os')"
+                    [placeholder]="t('Modules.ModulesList.InputPlaceholder.FilterByOs')"
+                    [multiple]="true"
+                    [selectedValues]="data.gridFiltrationByField.os?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.os"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'tags'"
+                    [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                    [placeholder]="t('Modules.ModulesList.InputPlaceholder.FilterByTag')"
+                    [selectedValues]="data.gridFiltrationByField.tags?.value"
+                    [multiple]="true"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.tags"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+            </soldr-grid>
+            <ng-template #gridFooter let-total="total">
+                <span>{{ t('Modules.ModulesList.Text.Total', { total }) }}</span>
+            </ng-template>
+            <ng-template #exportSelected let-selected="selected">
+                {{ t('Modules.ExportModules.DropdownButtonText.ExportSelected', { selected }) }}
+            </ng-template>
+            <ng-template #exportAll let-total="total">
+                {{ t('Modules.ExportModules.DropdownButtonText.ExportAll', { total }) }}
+            </ng-template>
+        </div>
+    </div>
+</ng-container>

@@ -1,0 +1,3 @@
+@mixin events-grid-theme($mosaic-theme) {
+    $popup: map-get(map-get($mosaic-theme, components), popup);
+}

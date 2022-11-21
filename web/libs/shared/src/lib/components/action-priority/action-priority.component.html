@@ -1,0 +1,34 @@
+<ng-container *transloco="let tShared; read 'shared'">
+    <div *ngIf="mini; else normal" class="layout-row layout-align-start-center">
+        <div class="layout-margin-right-xxs">{{ priority }}</div>
+
+        <ng-container *ngIf="level === actionPriorityLevel.High" [ngTemplateOutlet]="highIcon"></ng-container>
+        <ng-container *ngIf="level === actionPriorityLevel.Medium" [ngTemplateOutlet]="mediumIcon"></ng-container>
+        <ng-container *ngIf="level === actionPriorityLevel.Low" [ngTemplateOutlet]="lowIcon"></ng-container>
+    </div>
+    <ng-template #normal>
+        <div class="action-priority__box layout-column layout-align-center-center">
+            <ng-container *ngIf="level === actionPriorityLevel.High" [ngTemplateOutlet]="highIcon"></ng-container>
+            <ng-container *ngIf="level === actionPriorityLevel.Medium" [ngTemplateOutlet]="mediumIcon"></ng-container>
+            <ng-container *ngIf="level === actionPriorityLevel.Low" [ngTemplateOutlet]="lowIcon"></ng-container>
+
+            <div class="mc-extra-small-text action-priority__label">
+                {{ tShared('Shared.ModuleConfig.Label.ActionPriority') }}
+            </div>
+
+            <div class="mc-display-3 action-priority__label">{{ priority }}</div>
+        </div>
+    </ng-template>
+
+    <ng-template #highIcon>
+        <i class="action-priority__icon action-priority__icon_high"></i>
+    </ng-template>
+
+    <ng-template #mediumIcon>
+        <i class="action-priority__icon action-priority__icon_medium"></i>
+    </ng-template>
+
+    <ng-template #lowIcon>
+        <i class="action-priority__icon action-priority__icon_low"></i>
+    </ng-template>
+</ng-container>

@@ -1,0 +1,71 @@
+<ng-container *ngIf="{
+    agentDependency: agentDependency$ | async,
+    receiveDataDependencies: receiveDataDependencies$ | async,
+    sendDataDependencies: sendDataDependencies$ | async,
+    language: language$ | async
+} as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <section class="dependencies--info__section">
+            <header class="mc-subheading dependencies--info__label">
+                <ng-container *ngIf="data.agentDependency?.min_agent_version; else noAgentDependency">
+                    {{ tShared('Shared.ModuleView.Label.AgentVersionDependency', { version: data.agentDependency.min_agent_version }) }}
+                </ng-container>
+                <ng-template #noAgentDependency>
+                    {{ tShared('Shared.ModuleView.Label.NoAgentDependency') }}
+                </ng-template>
+            </header>
+        </section>
+
+        <section
+            *ngIf="(data.receiveDataDependencies?.length > 0 && modules?.length > 0) || data.receiveDataDependencies?.length === 0"
+            class="dependencies--info__section">
+            <header class="mc-subheading dependencies--info__label">
+                {{ tShared('Shared.ModuleView.Label.ReceiveDataDependency') }}
+            </header>
+            <ng-container *ngIf="data.receiveDataDependencies?.length > 0; else noDependencies">
+                <div *ngFor="let item of data.receiveDataDependencies" class="dependencies--info__item">
+                    <ng-container [ngTemplateOutlet]="moduleItem" [ngTemplateOutletContext]="{ item }"></ng-container>
+                </div>
+            </ng-container>
+        </section>
+
+        <section
+            *ngIf="(data.sendDataDependencies?.length > 0 && modules?.length > 0) || data.sendDataDependencies?.length === 0"
+            class="dependencies--info__section">
+            <header class="mc-subheading dependencies--info__label">
+                {{ tShared('Shared.ModuleView.Label.SendDataDependency') }}
+            </header>
+            <ng-container *ngIf="data.sendDataDependencies?.length > 0; else noDependencies">
+                <div *ngFor="let item of data.sendDataDependencies" class="dependencies--info__item">
+                    <ng-container [ngTemplateOutlet]="moduleItem" [ngTemplateOutletContext]="{ item }"></ng-container>
+                </div>
+            </ng-container>
+        </section>
+
+        <ng-template #noDependencies>
+            <span class="text_second">
+                {{ tShared('Shared.ModuleView.Label.NoDependencies') }}
+            </span>
+        </ng-template>
+
+        <ng-template #moduleItem let-item="item">
+            <ng-container *ngIf="modulesByName[item.module_name]; else notExistedModule">
+                <a
+                    *ngIf="permitted.EditModules; else linkText"
+                    mc-link
+                    [routerLink]="['/modules', item.module_name, 'edit']">
+                    <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                </a>
+                <ng-template #linkText>
+                    {{ modulesByName[item.module_name]?.locale.module[data.language].title }}
+                </ng-template>
+            </ng-container>
+            <ng-template #notExistedModule>
+                {{ item.module_name }}
+            </ng-template>
+            <ng-container *ngIf="item.min_module_version">
+                ≥ {{item.min_module_version}}
+            </ng-container>
+        </ng-template>
+    </ng-container>
+</ng-container>

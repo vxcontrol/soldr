@@ -1,0 +1,6 @@
+{
+    "debug": ["true"],
+    "handshake": ["true"],
+    "ping_pong": ["true"],
+    "print_stats": ["false"]
+}

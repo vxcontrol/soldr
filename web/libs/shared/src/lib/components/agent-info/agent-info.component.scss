@@ -1,0 +1,19 @@
+:host {
+    display: block;
+    overflow-y: auto;
+    white-space: normal;
+}
+
+.agent-info__tag {
+    max-width: 100%;
+
+    &:not(:first-child) {
+        margin-left: 8px;
+    }
+}
+
+.agent-info__description-list {
+    .dl__icon {
+        margin-right: 4px;
+    }
+}

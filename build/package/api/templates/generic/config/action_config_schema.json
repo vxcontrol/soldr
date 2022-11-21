@@ -1,0 +1,38 @@
+{
+    "type": "object",
+    "properties": {
+        "{{placeholder}}": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/base.action"
+                },
+                {
+                    "type": "object",
+                    "required": [
+                        "priority",
+                        "fields"
+                    ],
+                    "properties": {
+                        "fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "default": [],
+                            "minItems": 0,
+                            "maxItems": 0
+                        },
+                        "priority": {
+                            "default": 10,
+                            "maximum": 10,
+                            "minimum": 10,
+                            "type": "integer"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "required": []
+}

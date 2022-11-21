@@ -1,0 +1,119 @@
+<ng-container
+    *ngIf="{
+        policy: policy$ | async,
+        lang: language$ | async,
+        module: module$ | async,
+        moduleEventsGridColumnFilterItems: moduleEventsGridColumnFilterItems$ | async,
+        moduleVersions: moduleVersions$ | async,
+        isEnablingModule: isEnablingModule$ | async,
+        isLoadingModule: isLoadingModule$ | async,
+        isUpdatingModule: isUpdatingModule$ | async,
+        isDeletingModule: isDeletingModule$ | async,
+        isDisablingModule: isDisablingModule$ | async,
+        isLoadingPolicy: isLoadingPolicy$ | async,
+        isChangingModuleVersion: isChangingModuleVersion$ | async
+    } as data">
+    <ng-container *transloco="let t; read: 'policies'">
+        <soldr-progress-container [loadingFlag]="data.isLoadingModule || data.isLoadingPolicy">
+            <div class="page-layout layout-column layout-align-space-between">
+                <soldr-actionbar class="flex-none">
+                    <ng-container actionbar-left>
+                        <soldr-breadcrumbs
+                            *ngIf="data.policy && data.module"
+                            [items]="[
+                        { link: ['/policies'], text: t('Policies.ModuleView.LinkText.Policies') },
+                        {
+                            link: ['/policies', data.policy?.hash],
+                            text: data.policy?.info.name[data.lang]
+                        },
+                        { link: ['/policies', data.policy?.hash], text: t('Policies.ModuleView.LinkText.Modules'), query: { tab: 'modules'} },
+                        { text: data.module?.locale.module[data.lang].title }
+                    ]">
+                        </soldr-breadcrumbs>
+                    </ng-container>
+
+                    <ng-container *ngIf="permitted.EditPolicies" actionbar-right>
+                        <button
+                            *ngIf="data.module?.status !== moduleStatusEnum.Joined"
+                            mc-button
+                            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                            e2e-id="btnEnableModule"
+                            [mcTooltip]="t('Policies.ModuleView.ButtonText.Enable')"
+                            [disabled]="data.policy?.info?.system"
+                            [class.mc-progress]="data.isEnablingModule"
+                            (click)="doEnableModule(data.policy?.hash, data.module?.info.name)">
+                            <i mc-icon="soldr-icons-play_16" class="soldr-icons"></i>
+                            {{ t('Policies.ModuleView.ButtonText.Enable') }}
+                        </button>
+
+                        <button
+                            *ngIf="data.module?.status === moduleStatusEnum.Joined"
+                            mc-button
+                            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                            e2e-id="btnDisableModule"
+                            [mcTooltip]="t('Policies.ModuleView.ButtonText.Disable')"
+                            [disabled]="data.policy?.info?.system"
+                            [class.mc-progress]="data.isDisablingModule"
+                            (click)="doDisableModule(data.policy?.hash, data.module?.info.name)">
+                            <i mc-icon="soldr-icons-stop_16" class="soldr-icons"></i>
+                            {{ t('Policies.ModuleView.ButtonText.Disable') }}
+                        </button>
+
+                        <button
+                            *ngIf="data.moduleVersions?.length > 1"
+                            mc-button
+                            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                            e2e-id="btnChangeModuleVersion"
+                            [mcTooltip]="t('Policies.ModuleView.ButtonText.ChangeVersion')"
+                            [disabled]="data.policy?.info?.system"
+                            [class.mc-progress]="data.isChangingModuleVersion"
+                            (click)="openChangeVersionPanel()">
+                            <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
+                            {{ t('Policies.ModuleView.ButtonText.ChangeVersion') }}
+                        </button>
+
+                        <soldr-delete-module-from-policy-modal
+                            [module]="data.module"
+                            [policy]="data.policy">
+                            <button
+                                mc-button
+                                class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                                e2e-id="btnDeleteModule"
+                                [disabled]="data.policy?.info?.system"
+                                [mcTooltip]="tCommon('Common.Pseudo.ButtonText.Delete')"
+                                [class.mc-progress]="data.isDeletingModule"
+                                *transloco="let tCommon; read: 'common'">
+                                <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                            </button>
+                        </soldr-delete-module-from-policy-modal>
+                    </ng-container>
+                </soldr-actionbar>
+
+                <soldr-module-page
+                    class="flex-auto"
+                    [entity]="data.policy"
+                    [eventsGridFilter]="data.moduleEventsGridColumnFilterItems"
+                    [viewMode]="viewModeEnum.Policies"
+                    [state]="pageState"
+                    [stateStorageKey]="'policyModule.view'"
+                    (update)="doUpdateModule($event)"
+                    (seeVersions)="openChangeVersionPanel()">
+                </soldr-module-page>
+            </div>
+        </soldr-progress-container>
+
+        <ng-template #changeModuleVersionPanel>
+            <mc-sidepanel-header [closeable]="true">
+                {{ t('Policies.ChangeModuleVersion.SidePanelTitle.InstallModuleVersion') }}
+            </mc-sidepanel-header>
+            <mc-sidepanel-body class="layout-padding">
+                <soldr-changelog
+                    [module]="data.module"
+                    [versions]="data.moduleVersions"
+                    (install)="doChangeVersion($event)">
+                </soldr-changelog>
+            </mc-sidepanel-body>
+            <mc-sidepanel-footer></mc-sidepanel-footer>
+        </ng-template>
+    </ng-container>
+</ng-container>

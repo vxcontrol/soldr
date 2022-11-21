@@ -1,0 +1,21 @@
+<div class="layout-column layout-align-center-center">
+    <span *ngIf="title" class="layout-margin-bottom-xxs">
+        {{ title }}
+    </span>
+    <span
+        *ngIf="description"
+        class="text_second layout-margin-bottom-s"
+        [innerHTML]="description">
+    </span>
+    <button
+        *ngIf="isActionPermitted"
+        mc-button
+        class="mc-button mc-button_transparent"
+        e2e-id="btnActionFromGrid"
+        [color]="themePalette.Primary"
+        [class.mc-progress]="isActionInProgress"
+        (click)="emptyGridAction.emit()">
+        <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+        <span>{{ actionButtonText }}</span>
+    </button>
+</div>

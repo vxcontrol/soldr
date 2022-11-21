@@ -1,0 +1,7 @@
+@mixin text-overflow-theme($mosaic-theme) {
+    .soldr-text-overflow .mc-link {
+        @include ellipsis();
+
+        display: block !important;
+    }
+}

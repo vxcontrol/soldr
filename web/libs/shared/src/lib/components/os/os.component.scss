@@ -1,0 +1,13 @@
+:host {
+    display: inline-block;
+}
+
+.os__icon {
+    &.os__icon_with_tooltip:not(.os__icon_disable) {
+        cursor: help;
+    }
+
+    &:not(:last-child) {
+        margin-right: 4px;
+    }
+}

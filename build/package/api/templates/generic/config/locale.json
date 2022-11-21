@@ -1,0 +1,72 @@
+{
+    "module": {
+        "ru": {
+            "title": "Модуль основанный на generic",
+            "description": "Экземпляр модуля для дальнейшей настройки"
+        },
+        "en": {
+            "title": "Module based on generic",
+            "description": "Module instance for following customization"
+        }
+    },
+    "config": {
+    },
+    "secure_config": {
+    },
+    "actions": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Некоторое описание действия"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Some action description"
+            }
+        }
+    },
+    "action_config": {
+        "{{placeholder}}": {
+        }
+    },
+    "events": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Проверка шаблонизатора {{{ json . }}}"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Check templater {{{ json . }}}"
+            }
+        }
+    },
+    "event_config": {
+        "{{placeholder}}": {
+        }
+    },
+    "fields": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Содержит какое-то значение"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Contains some kind of value"
+            }
+        }
+    },
+    "tags": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Проверка функциональности по отображению тегов"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Testing display of tags function"
+            }
+        }
+    }
+}

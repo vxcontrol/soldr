@@ -1,0 +1,30 @@
+.mc-button-wrapper {
+    align-items: center;
+}
+
+[mc-button] {
+    .mc-badge {
+        position: absolute;
+        top: -7px;
+        right: -10px;
+    }
+}
+
+.mc-tab-group .mc-tab-body__wrapper {
+    flex-grow: 1;
+    text-align: left;
+}
+
+.mc-divider.panel-divider {
+    display: block;
+    width: 100%;
+    margin: 8px 0;
+}
+
+.mc-tag__text {
+    margin-right: calc(var(--mc-tags-size-text-margin, 8px) - var(--mc-tags-size-border-width, 1px));
+}
+
+.mc-confirm .mc-confirm-btns button {
+    margin: 16px;
+}

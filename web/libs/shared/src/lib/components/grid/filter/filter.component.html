@@ -1,0 +1,130 @@
+<ng-container *ngIf="{
+    filterItems: filterItems$ | async,
+    selectedFilterValues: normalizedSelectedFilterValues$ | async,
+    foundFilterItems: foundFilterItems$ | async,
+    labels: labels$ | async
+} as data">
+    <ng-container
+        *ngIf="multiple; else filterHasSingleValues"
+        [ngTemplateOutlet]="filterWithMultipleValues">
+    </ng-container>
+    <ng-template #filterHasSingleValues>
+        <ng-container
+            [ngTemplateOutlet]="filterWithSingleValue">
+        </ng-container>
+    </ng-template>
+
+    <ng-template #filterWithSingleValue>
+        <button
+            e2e-id="btnShowFilterDropdownList"
+            mc-button
+            class="mc-button_transparent grid__filter-button"
+            [mcDropdownTriggerFor]="statusDropdown">
+            <span>{{ title }}</span>
+            <span *ngIf="data.labels?.length > 0">: {{ data.labels[0] }}
+        </span>
+            <i mc-icon="soldr-icons-angle-down-S_16" class="soldr-icons"></i>
+        </button>
+
+        <mc-dropdown #statusDropdown="mcDropdown">
+            <button
+                e2e-id="btnSetFilterValue"
+                mc-dropdown-item
+                *ngFor="let option of data.filterItems"
+                (click)="setFiltration(option.value)">
+                {{ option.label }}
+            </button>
+        </mc-dropdown>
+    </ng-template>
+
+    <ng-template #filterWithMultipleValues>
+        <ng-container *transloco="let tCommon; read: 'common'">
+            <button
+                e2e-id="btnShowFilterSelectList"
+                mc-button
+                mcPopover
+                #filterPopover="mcPopover"
+                class="mc-button_transparent grid__filter-button"
+                mcPopoverClass="grid__filter-popover"
+                [mcPopoverContent]="popoverContent"
+                [mcPopoverFooter]="popoverFooter"
+                (mcPopoverVisibleChange)="popoverVisibleChange($event)">
+                <span>{{ title }}</span>
+                <span *ngIf="data.labels?.length === 1">: {{ data.labels[0] }}</span>
+                <span *ngIf="data.labels?.length > 1">: {{ data.labels.length }}</span>
+                <i mc-icon="soldr-icons-angle-down-S_16" class="soldr-icons"></i>
+            </button>
+
+            <ng-template #popoverContent>
+                <div
+                    class="grid__filter-popover-content">
+                    <mc-form-field mcFormFieldWithoutBorders>
+                        <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+                        <input
+                            #searchInput
+                            e2e-id="txtSearchFilterValues"
+                            type="text"
+                            mcInput
+                            autocomplete="off"
+                            [(ngModel)]="searchValue"
+                            [placeholder]="placeholder"
+                            (ngModelChange)="filterItemSearch.next(searchInput.value)">
+                        <mc-cleaner></mc-cleaner>
+                    </mc-form-field>
+
+                    <mc-divider></mc-divider>
+
+                    <ng-container>
+                        <mc-list-selection
+                            e2e-id="selFilterValues"
+                            *ngIf="data.foundFilterItems?.length > 0; else notFound"
+                            class="grid__filter-popover-list"
+                            multiple
+                            (selectionChange)="onChangeSelectedFilterItems(data.selectedFilterValues, $event.option.value, $event.option.selected)">
+                            <ng-container
+                                *ngFor="let filterItem of data.foundFilterItems">
+                                <mc-list-option
+                                    [value]="filterItem.value"
+                                    [selected]="getSelectedValues(data.selectedFilterValues, filterItem.value)">
+                                    <div class="ellipsis">
+                                        {{ filterItem.label }}
+                                    </div>
+                                </mc-list-option>
+                            </ng-container>
+                        </mc-list-selection>
+
+                        <ng-template #notFound>
+                            <div class="grid__filter-popover-not-found layout-row layout-align-center-center">
+                                <span>{{ tCommon('Common.Pseudo.Text.NotFound') }}</span>
+                            </div>
+                        </ng-template>
+                    </ng-container>
+                </div>
+            </ng-template>
+
+            <ng-template #popoverFooter>
+                <div
+                    class="layout-row layout-align-space-between-center grid__column-filter-popover-footer"
+                    cdkTrapFocus="true"
+                    cdkTrapFocusAutoCapture="true">
+                    <button e2e-id="btnResetFilter" mc-button (click)="reset()">
+                        {{ tCommon('Common.Pseudo.ButtonText.Reset') }}
+                    </button>
+
+                    <div class="layout-row">
+                        <button
+                            e2e-id="btnApplyFilter"
+                            mc-button
+                            [color]="themePalette.Primary"
+                            (click)="apply(data.selectedFilterValues)">
+                            {{ tCommon('Common.Pseudo.ButtonText.Apply') }}
+                        </button>
+                        <button e2e-id="btnCancelFilter" mc-button (click)="cancel()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                        </button>
+                    </div>
+                </div>
+            </ng-template>
+        </ng-container>
+    </ng-template>
+</ng-container>

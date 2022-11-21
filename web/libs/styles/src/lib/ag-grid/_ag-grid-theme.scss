@@ -1,0 +1,207 @@
+/*
+Стилизация сделана по новому, но неполному, макету https://zpl.io/VDnrG3g
+Частично, стили взяты из старого макета https://zpl.io/2EmLXGy
+*/
+@import '../utils/map-deep-get';
+@import 'ag-grid-community/dist/styles/ag-grid';
+@import 'ag-grid-community/dist/styles/ag-theme-balham/sass/ag-theme-balham-mixin';
+@import 'ag-grid-theme-custom-compiled-icons';
+@import '@ptsecurity/mosaic/theming';
+
+@mixin ag-grid-theme($mosaic-theme) {
+    $grid-size: 4px;
+    $icon-size: 16px;
+    $header-height: $grid-size * 8;
+    $row-height: $grid-size * 9;
+    $cell-horizontal-padding: $grid-size * 3;
+    $list-item-height: $grid-size * 9;
+    $header-icon-size: 14px;
+    $cell-horizontal-border: 0;
+
+    $column-select-indent-size: $grid-size + $icon-size;
+    $row-group-indent-size: $grid-size * 3 + $icon-size;
+
+    $params: (
+        grid-size: $grid-size,
+        icon-size: $icon-size,
+        row-height: $row-height,
+        // column header color
+        secondary-foreground-color: map-deep-get($mosaic-theme, foreground, text-less-contrast),
+        header-height: $header-height,
+        cell-horizontal-padding: $cell-horizontal-padding,
+        row-group-indent-size: $row-group-indent-size,
+        background-color: map-deep-get($mosaic-theme, background, background),
+        odd-row-background-color: map-deep-get($mosaic-theme, background, background),
+        border-color: transparent,
+        cell-horizontal-border: $cell-horizontal-border,
+        card-shadow: map-deep-get($mosaic-theme, siem, grid, card, shadow),
+        list-item-height: $list-item-height,
+        column-select-indent-size: $column-select-indent-size,
+        selected-row-background-color: map-deep-get($mosaic-theme, states, selected-color),
+        row-hover-color: map-deep-get($mosaic-theme, background, overlay-hover),
+        header-background-color: map-deep-get($mosaic-theme, background, background)
+    );
+
+    ag-grid-angular {
+        @include ag-theme-balham($params);
+
+        color: mc-color(map-get($mosaic-theme, foreground), text);
+
+        .ag-tab {
+            display: inline-block;
+            margin: $grid-size $grid-size 0;
+            padding: $grid-size $grid-size * 2;
+            border: 1px solid transparent;
+            border-bottom-width: 0;
+        }
+
+        .ag-tab-selected {
+            background-color: map-deep-get($mosaic-theme, background, overlay-hover);
+            border-color: transparent;
+            border-bottom: 2px solid map-deep-get($mosaic-theme, background, overlay-hover) !important;
+        }
+
+        .ag-root-wrapper {
+            border: none;
+
+            @include ag-grid-custom-icons();
+        }
+
+        .ag-overlay .mc-button {
+            pointer-events: all;
+        }
+
+        .ag-header {
+            border-bottom: 1px solid map-deep-get($mosaic-theme, foreground, divider);
+        }
+
+        .ag-header-container {
+            color: map-deep-get($mosaic-theme, foreground, text);
+        }
+
+        .ag-header-cell {
+            padding-right: 0;
+            padding-left: 0;
+            border-right: 0;
+
+            .ag-cell-label-container {
+                padding-right: 10px;
+                padding-left: 10px;
+                transition-timing-function: ease-out;
+                transition-duration: 0.33s;
+                transition-property: background-color;
+            }
+
+            &:hover {
+                .ag-cell-label-container {
+                    background-color: map-deep-get($mosaic-theme, background, overlay-hover);
+                }
+            }
+
+            &::after {
+                display: none;
+            }
+        }
+
+        .ag-header-cell::after,
+        .ag-header-group-cell::after {
+            position: static;
+        }
+
+        .ag-header-row {
+            &:hover {
+                .ag-header-cell::after {
+                    display: block;
+                    background-color: map-deep-get($mosaic-theme, foreground, divider);
+                }
+            }
+        }
+
+        .ag-keyboard-focus .ag-header-row .ag-header-cell:focus::after {
+            background: transparent;
+        }
+
+        .ag-header-cell-menu-button .ag-icon-menu {
+            display: flex;
+        }
+
+        .ag-header-cell-label {
+            .ag-sort-order {
+                color: map-deep-get($mosaic-theme, foreground, text-less-contrast);
+            }
+        }
+
+        .ag-cell-wrapper {
+            align-items: baseline;
+        }
+
+        .ag-cell {
+            padding-right: 8px;
+            padding-left: 8px;
+            border: 0;
+            outline: none;
+        }
+
+        .ag-center-cols-clipper {
+            .ag-grid-focused & {
+                .ag-row-focus {
+                    border: 2px solid map-deep-get($mosaic-theme, states, focused-color) !important;
+                }
+            }
+        }
+
+        .ag-row {
+            color: map-deep-get($mosaic-theme, foreground, text);
+
+            &.ag-row-focus {
+                border: 2px solid map-deep-get($mosaic-theme, states, focused-color) !important;
+            }
+
+            &:not(.ag-row-selected):hover {
+                background-color: map-deep-get($mosaic-theme, background, overlay-hover);
+            }
+        }
+
+        .ag-ltr .ag-has-focus .ag-cell-focus,
+        .ag-rtl .ag-has-focus .ag-cell-focus {
+            border: 0 !important;
+            outline: none !important;
+        }
+
+        // context menu spacing
+        .ag-menu-option {
+            height: $grid-size * 7;
+            line-height: $grid-size * 7;
+        }
+
+        .ag-column-select {
+            .ag-column-select-column-group,
+            .ag-column-select-column {
+                height: $grid-size * 5;
+                line-height: $grid-size * 5;
+            }
+        }
+
+        .ag-icon {
+            color: map-deep-get($mosaic-theme, foreground, icon);
+        }
+    }
+}
+
+@mixin ag-grid-typography($typography) {
+    ag-grid-angular {
+        @include mc-typography-level-to-styles($typography, body);
+
+        .ag-header-container {
+            @include mc-typography-level-to-styles($typography, caption);
+        }
+
+        .ag-header-row {
+            font-weight: normal;
+        }
+
+        .ag-row {
+            @include mc-typography-level-to-styles($typography, body);
+        }
+    }
+}

@@ -1,0 +1,24 @@
+<div *ngIf="loadingFlag"
+     class="loader loader-backdrop"
+     [ngClass]="{
+        'panel-bg': color === progressContainerColor.Panel,
+        'page-bg': color === progressContainerColor.Page,
+        'loader_under-cdk-overlay':
+            overlap === progressContainerOverlap.UnderCdkOverlay,
+        'loader_over-cdk-overlay':
+            overlap === progressContainerOverlap.OverCdkOverlay
+     }">
+    <ng-content select="[soldrProgressSpinner]"></ng-content>
+
+    <div class="layout-row layout-align-center-center">
+        <mc-progress-spinner *ngIf="!progressSpinner"
+                             [mode]="'indeterminate'"
+                             [value]="30"
+                             [color]="themePalette.Primary">
+        </mc-progress-spinner>
+
+        <span class="layout-left-margin_8" *ngIf="text">{{text}}</span>
+    </div>
+</div>
+
+<ng-content select=":not([soldrProgressSpinner]"></ng-content>

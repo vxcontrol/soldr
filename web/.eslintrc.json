@@ -1,0 +1,15 @@
+{
+    "root": true,
+    "settings": {
+        "import/resolver": {
+            "typescript": {
+                "alwaysTryTypes": true,
+                "project": [
+                    "libs/*/tsconfig.json",
+                    "../*/tsconfig.json",
+                    "tsconfig.base.json"
+                ]
+            }
+        }
+    }
+}

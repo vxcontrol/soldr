@@ -1,0 +1,88 @@
+<ng-container *ngIf="!isHidden">
+    <ng-container *transloco="let t; read: 'agents'">
+        <div *ngIf="canShowNewVersion" class="mc-alert mc-alert_info mc-alert_dismissible layout-margin-bottom-l">
+            <div>
+                <div>
+                    {{ latestBinaryVersion
+                    ? t('Agents.Pseudo.Text.AvailableUpgrade', { version: latestBinaryVersion | agentVersion })
+                    : t('Agents.Pseudo.Text.AvailableUpgradeToLatest') }}
+                </div>
+                <a
+                    *ngIf="permitted.EditAgents"
+                    mc-link
+                    class="upgrade-status-message__link"
+                    e2e-id="btnUpgradeAgent"
+                    [noUnderline]="true"
+                    (click)="upgrade()">
+                    {{ t('Agents.Pseudo.ButtonText.Upgrade') }}
+                </a>
+            </div>
+
+            <button class="mc-alert__close" (click)="hide()">
+                <i class="mc-icon_light" mc-icon="mc-close-M_16" [color]="themePalette.Second"></i>
+            </button>
+        </div>
+        <div *ngIf="canShowInProgress" class="mc-alert mc-alert_info mc-alert_dismissible layout-margin-bottom-l">
+            <div *transloco="let tCommon; read: 'common'">
+                <div>
+                    {{ task?.version && task?.version !== latestVersion
+                    ? t('Agents.Pseudo.Text.UpgradeInProcess', { version: task?.version | agentVersion })
+                    : t('Agents.Pseudo.Text.UpgradeToLatestInProcess') }}
+                </div>
+                <mc-progress-bar
+                    class="upgrade-status-message__progress"
+                    mode="indeterminate">
+                    [color]="themePalette.Primary"
+                </mc-progress-bar>
+                <a
+                    *ngIf="permitted.EditAgents"
+                    mc-link
+                    class="upgrade-status-message__link"
+                    e2e-id="btnCancelUpgradeAgent"
+                    [noUnderline]="true"
+                    (click)="cancel()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                </a>
+            </div>
+
+            <button
+                class="mc-alert__close"
+                e2e-id="btnHideUpgradeAgentInfo"
+                (click)="hide()">
+                <i class="mc-icon_light" mc-icon="mc-close-M_16" [color]="themePalette.Second"></i>
+            </button>
+        </div>
+        <div *ngIf="canShowSuccess" class="mc-alert mc-alert_success mc-alert_dismissible layout-margin-bottom-l">
+            <div>
+                {{ task?.version && task?.version !== latestVersion
+                ? t('Agents.Pseudo.Text.UpgradeIsSuccessful', { version: task?.version | agentVersion })
+                : t('Agents.Pseudo.Text.UpgradeToLatestIsSuccessful') }}
+            </div>
+            <button
+                class="mc-alert__close"
+                e2e-id="btnHideUpgradeAgentInfo"
+                (click)="hide()">
+                <i class="mc-icon_light" mc-icon="mc-close-M_16" [color]="themePalette.Second"></i>
+            </button>
+        </div>
+        <div *ngIf="canShowFailure" class="mc-alert mc-alert_error mc-alert_dismissible layout-margin-bottom-l">
+            <div>
+                <div>{{ t('Agents.Pseudo.Text.UpgradeIsFailed') }}</div>
+                <a
+                    mc-link
+                    class="upgrade-status-message__link"
+                    e2e-id="btnRepeatUpgradeAgent"
+                    [noUnderline]="true"
+                    (click)="repeat()">
+                    {{ t('Agents.Pseudo.ButtonText.Repeat') }}
+                </a>
+            </div>
+            <button
+                class="mc-alert__close"
+                e2e-id="btnHideUpgradeAgentInfo"
+                (click)="hide()">
+                <i class="mc-icon_light" mc-icon="mc-close-M_16" [color]="themePalette.Second"></i>
+            </button>
+        </div>
+    </ng-container>
+</ng-container>

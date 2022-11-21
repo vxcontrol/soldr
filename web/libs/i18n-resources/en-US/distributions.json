@@ -1,0 +1,9 @@
+{
+    "Distributions.DistributionsPage.ErrorText.DownloadAgentError": "Error downloading agent",
+    "Distributions.DistributionsPage.Title.Distributions": "Agent distributions",
+
+    "Distributions.PageTitle.Text.Distributions": "Agent distributions",
+
+    "Distributions.Pseudo.Text.LatestVersion": "Version {version} issued on {date}",
+    "Distributions.Pseudo.Text.Supports": "Supported by the server:"
+}

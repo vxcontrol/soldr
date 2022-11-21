@@ -1,0 +1,16 @@
+<ng-container *transloco="let tShared; read: 'shared'">
+    <i
+        *ngIf="status === 'connected'"
+        mc-icon="soldr-icons-plug_16"
+        class="soldr-icons"
+        [class.agent-connection-status__colored]="colored"
+        [mcTooltip]="tShared('Shared.AgentConnectionStatus.TooltipText.Connected')"
+        [mcTooltipDisabled]="hideTooltip"></i>
+    <i
+        *ngIf="status === 'disconnected'"
+        mc-icon="soldr-icons-plug-o_16"
+        class="soldr-icons"
+        [class.agent-connection-status__colored]="colored"
+        [mcTooltip]="tShared('Shared.AgentConnectionStatus.TooltipText.Disconnected')"
+        [mcTooltipDisabled]="hideTooltip"></i>
+</ng-container>

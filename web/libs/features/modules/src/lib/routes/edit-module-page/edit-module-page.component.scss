@@ -1,0 +1,15 @@
+.edit-module-page__section {
+    width: 50%;
+}
+
+.edit-module-page-section_hidden {
+    display: block;
+    max-height: 0;
+    height: 0;
+    visibility: hidden;
+    overflow: hidden;
+}
+
+.edit-module-page__content {
+    overflow: hidden;
+}

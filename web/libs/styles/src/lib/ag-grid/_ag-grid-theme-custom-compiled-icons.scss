@@ -1,0 +1,27 @@
+@mixin ag-grid-custom-icons() {
+    .ag-icon {
+        @extend .mc;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .ag-icon-asc {
+        @extend .mc-angle-up-S_16;
+
+        background-image: none !important;
+    }
+
+    .ag-icon-desc {
+        @extend .mc-angle-down-S_16;
+
+        background-image: none !important;
+    }
+
+    .ag-icon-menu {
+        @extend .mc-gear_16;
+
+        background-image: none !important;
+    }
+}

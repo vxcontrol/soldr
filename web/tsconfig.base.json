@@ -1,0 +1,50 @@
+{
+    "compileOnSave": false,
+    "compilerOptions": {
+        "rootDir": ".",
+        "sourceMap": true,
+        "declaration": false,
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "target": "es2015",
+        "module": "esnext",
+        "lib": ["es2017", "dom"],
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": true,
+        "strictNullChecks": false,
+        "baseUrl": ".",
+        "paths": {
+            "@soldr/api": ["libs/api/src/index.ts"],
+            "@soldr/core": ["libs/core/src/index.ts"],
+            "@soldr/environments": ["libs/environments/src/index.ts"],
+            "@soldr/features/agents": ["libs/features/agents/src/index.ts"],
+            "@soldr/features/distributions": ["libs/features/distributions/src/index.ts"],
+            "@soldr/features/errors": ["libs/features/errors/src/index.ts"],
+            "@soldr/features/groups": ["libs/features/groups/src/index.ts"],
+            "@soldr/features/login": ["libs/features/login/src/index.ts"],
+            "@soldr/features/modules": ["libs/features/modules/src/index.ts"],
+            "@soldr/features/modules-interactivity": ["libs/features/modules-interactivity/src/index.ts"],
+            "@soldr/features/policies": ["libs/features/policies/src/index.ts"],
+            "@soldr/i18n": ["libs/i18n/src/index.ts"],
+            "@soldr/models": ["libs/models/src/index.ts"],
+            "@soldr/shared": ["libs/shared/src/index.ts"],
+            "@soldr/store/agents": ["libs/store/agents/src/index.ts"],
+            "@soldr/store/groups": ["libs/store/groups/src/index.ts"],
+            "@soldr/store/modules": ["libs/store/modules/src/index.ts"],
+            "@soldr/store/modules-instances": ["libs/store/modules-instances/src/index.ts"],
+            "@soldr/store/policies": ["libs/store/policies/src/index.ts"],
+            "@soldr/store/shared": ["libs/store/shared/src/index.ts"],
+            "@soldr/store/tags": ["libs/store/tags/src/index.ts"],
+            "@soldr/styles": ["libs/styles/src/index.ts"],
+            "@soldr/testing": ["libs/testing/src/index.ts"],
+            "vue": ["node_modules/vue/dist/vue.esm.js"]
+        }
+    },
+    "exclude": ["node_modules", "tmp"],
+    "angularCompilerOptions": {
+        "strictTemplates": false
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "{{placeholder}}": {
+        "type": "atomic",
+        "fields": [],
+        "actions": [
+            {
+                "name": "log_to_db",
+                "module_name": "this",
+                "priority": 10,
+                "fields": []
+            }
+        ]
+    }
+}

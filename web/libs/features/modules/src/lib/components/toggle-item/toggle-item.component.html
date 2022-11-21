@@ -1,0 +1,16 @@
+<div class="toggle-item__header layout-row layout-align-space-between-center" (click)="toggle()">
+    <div class="toggle-item__title flex">{{ title }}</div>
+    <button
+        *ngIf="canDelete && delete.observed"
+        mc-button
+        type="button"
+        class="mc-button_transparent"
+        (click)="$event.stopPropagation(); delete.emit()">
+        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+    </button>
+    <i *ngIf="isExpanded" mc-icon="soldr-icons-angle-up-L_16" class="soldr-icons layout-margin-left-s"></i>
+    <i *ngIf="!isExpanded" mc-icon="soldr-icons-angle-down-L_16" class="soldr-icons layout-margin-left-s"></i>
+</div>
+<div *ngIf="isExpanded" class="toggle-item__content">
+    <ng-content></ng-content>
+</div>

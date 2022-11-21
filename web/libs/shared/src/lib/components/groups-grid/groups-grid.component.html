@@ -1,0 +1,264 @@
+<ng-container *ngIf="{
+    groups: groups$ | async,
+    language: language$ | async,
+    search: search$ | async
+} as data">
+    <ng-container *transloco="let t; read: 'groups'">
+        <div class="layout-fill layout-row layout-align-space-between-stretch" *transloco="let tShared; read: 'shared'">
+            <soldr-grid
+                class="flex-auto"
+                [data]="data.groups"
+                [footerTemplate]="gridFooter"
+                [isLoading]="isLoading"
+                [placeholder]="t('Groups.GroupsList.InputPlaceholder.FieldsForSearchInCard')"
+                [storageKey]="storageGridKey"
+                [total]="total"
+                [searchString]="data.search"
+                [filtration]="gridFiltration"
+                (search)="onSearch($event)"
+                (nextPage)="nextPage()"
+                (selectRows)="onGridSelectRows($event)"
+                (sortChanged)="onGridSort($event)"
+                (resetFiltration)="onResetFiltration()">
+                <ng-template #consistencyCell let-node="params.data">
+                    <soldr-consistency-icon
+                        *ngIf="!node.details.consistency"
+                        [viewMode]="viewMode">
+                    </soldr-consistency-icon>
+                </ng-template>
+
+                <ng-template #nameCell let-node="params.data">
+                    <a mc-link [routerLink]="['/groups', node.hash]">{{ node.info.name[data.language] }}</a>
+                </ng-template>
+
+                <ng-template #modulesCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.details?.modules | sort:sortModules:data.language"
+                        [itemTemplate]="moduleItem"
+                        [popoverItemTemplate]="modulePopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #moduleItem let-module="item" let-group="base">
+                    <a mc-link
+                       [routerLink]="['/groups', group.hash, 'modules', module.info.name]"
+                       [mcTooltip]="module.locale.module[data.language].title"
+                       [mcPlacement]="placement.TopLeft">
+                        {{ module.locale.module[data.language].title}}
+                    </a>
+                </ng-template>
+
+                <ng-template #modulePopoverItem let-module="item" let-group="base">
+                    <a mc-link
+                       [routerLink]="['/groups', group.hash, 'modules', module.info.name]">
+                        {{ module.locale.module[data.language].title}}
+                    </a>
+                </ng-template>
+
+                <ng-template #policiesCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.details?.policies | sort:sortPolicies:data.language"
+                        [itemTemplate]="policyItem"
+                        [popoverItemTemplate]="policyPopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #policyItem let-policy="item">
+                    <a mc-link
+                       [routerLink]="['/policies', policy.hash]"
+                       [mcTooltip]="policy.info.name[data.language]"
+                       [mcPlacement]="placement.TopLeft">
+                        {{ policy.info.name[data.language] }}
+                    </a>
+                </ng-template>
+
+                <ng-template #policyPopoverItem let-policy="item">
+                    <a mc-link
+                       [routerLink]="['/policies', policy.hash]">
+                        {{ policy.info.name[data.language] }}
+                    </a>
+                </ng-template>
+
+                <ng-template #tagsCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.info?.tags | sort:sortTags:data.language"
+                        [itemTemplate]="tagItem"
+                        [popoverItemTemplate]="tagPopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #tagItem let-tag="item">
+                    <a mc-link
+                       [mcTooltip]="tag"
+                       [mcPlacement]="placement.TopLeft"
+                       (click)="onSetTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <ng-template #tagPopoverItem let-tag="item">
+                    <a mc-link (click)="onSetTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <soldr-column
+                    field="details.consistency"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Consistency')"
+                    [displayName]="''"
+                    [template]="consistencyCell"
+                    [width]="32"
+                    [default]="true"
+                    [headerComponentParams]="{ template: '' }">
+                </soldr-column>
+
+                <soldr-column
+                    field="info.name"
+                    [template]="nameCell"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Name')"
+                    [width]="200"
+                    [default]="true"
+                    [required]="true"
+                    [resizable]="true"
+                    [sortable]="true"
+                    [sortField]="'name'">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.agents"
+                    [sortField]="'agent_count'"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.AgentsCount')"
+                    [width]="60"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.modules"
+                    filtrationField="module_name"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Modules')"
+                    [template]="modulesCell"
+                    [minWidth]="100"
+                    [width]="240"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.policies"
+                    filtrationField="policy_id"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Policies')"
+                    [template]="policiesCell"
+                    [minWidth]="100"
+                    [width]="400"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="info.tags"
+                    filtrationField="tags"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Tags')"
+                    [template]="tagsCell"
+                    [minWidth]="100"
+                    [width]="240"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="created_date"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Created')"
+                    [width]="200"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="hash"
+                    [headerName]="t('Groups.GroupsList.GridColumnsTitle.Hash')"
+                    [width]="260"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-filter
+                    [field]="'module_name'"
+                    [title]="t('Groups.GroupsList.GridColumnsTitle.Modules')"
+                    [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByModule')"
+                    [multiple]="true"
+                    [selectedValues]="gridFiltrationByFields.module_name?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.modules"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'policy_id'"
+                    [title]="t('Groups.GroupsList.GridColumnsTitle.Policies')"
+                    [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByPolicy')"
+                    [multiple]="true"
+                    [selectedValues]="gridFiltrationByFields.policy_id?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.policies"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'tags'"
+                    [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                    [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByTag')"
+                    [selectedValues]="gridFiltrationByFields.tags?.value"
+                    [multiple]="true"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.tags"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+            </soldr-grid>
+
+            <mc-divider [vertical]="true"></mc-divider>
+
+            <div class="sidebar-content">
+                <ng-container *ngIf="selectedGroup; else noSelectedGroup">
+                    <div class="sidebar-title">
+                        <soldr-text-overflow>
+                            <a mc-link [routerLink]="['/groups', selectedGroup.hash]">
+                                {{ selectedGroup?.info.name[data.language] }}
+                            </a>
+                        </soldr-text-overflow>
+                    </div>
+
+                    <soldr-group-info
+                        [state]="stateStorageValue.rightSidebar"
+                        [stateStorageKey]="stateStorageKey + '.rightSidebar'"
+                        [group]="selectedGroup"
+                        [modules]="modules"
+                        (selectTag)="onSetTag($event)">
+                    </soldr-group-info>
+                </ng-container>
+
+                <ng-template #noSelectedGroup>
+                    <div class="layout-fill layout-column layout-align-center-center" *transloco="let tCommon; read: 'common'">
+                        {{ tCommon('Common.Pseudo.Text.NoInformation') }}
+                    </div>
+                </ng-template>
+            </div>
+        </div>
+
+        <ng-template #gridFooter let-total="total">
+            <span>{{ t('Groups.GroupsList.Text.Total', { total }) }}</span>
+        </ng-template>
+    </ng-container>
+</ng-container>

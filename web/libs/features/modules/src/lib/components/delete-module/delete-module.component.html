@@ -1,0 +1,52 @@
+<ng-container *transloco="let t; read: 'modules'">
+    <ng-container *ngIf="hasMultipleVersions; else singleVersion">
+        <button
+            e2e-id="btnSelectScopeForDeleteModule"
+            *transloco="let tCommon; read: 'common'"
+            mc-button
+            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+            [mcTooltip]="tCommon('Common.Pseudo.ButtonText.Delete')"
+            [mcTooltipDisabled]="!compact"
+            [mcDropdownTriggerFor]="appDropdown"
+            [openByArrowDown]="true"
+            [disabled]="!selectedModule || !(hasMultipleVersions && permitted.EditModules || permitted.DeleteModules)">
+            <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+            <span *ngIf="!compact">{{tCommon('Common.Pseudo.ButtonText.Delete')}}</span>
+            <i mc-icon="mc-angle-down-S_16"></i>
+        </button>
+
+        <mc-dropdown #appDropdown="mcDropdown">
+            <button
+                e2e-id="btnDeleteSelectedVersionModule"
+                *ngIf="hasMultipleVersions && permitted.EditModules"
+                mc-dropdown-item
+                (click)="confirmDeleteVersion(true)">
+                <div class="layout-row">
+                    <span>{{t('Modules.ModulesList.ButtonText.OnlyVersion', {selectedVersion})}}</span>
+                </div>
+            </button>
+            <button
+                e2e-id="btnDeleteAllVersionModule"
+                *ngIf="permitted.DeleteModules"
+                mc-dropdown-item
+                (click)="confirmDeleteVersion()">
+                <span>{{t('Modules.ModulesList.ButtonText.EntireModule')}}</span>
+            </button>
+        </mc-dropdown>
+    </ng-container>
+
+    <ng-template #singleVersion>
+        <button
+            e2e-id="btnDeleteSingleVersionModule"
+            *transloco="let tCommon; read: 'common'"
+            mc-button
+            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+            [mcTooltip]="tCommon('Common.Pseudo.ButtonText.Delete')"
+            [mcTooltipDisabled]="!compact"
+            [disabled]="!selectedModule || !(hasMultipleVersions && permitted.EditModules || permitted.DeleteModules)"
+            (click)="confirmDeleteVersion()">
+            <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+            <span *ngIf="!compact">{{tCommon('Common.Pseudo.ButtonText.Delete')}}</span>
+        </button>
+    </ng-template>
+</ng-container>

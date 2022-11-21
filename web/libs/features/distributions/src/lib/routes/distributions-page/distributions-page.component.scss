@@ -1,0 +1,76 @@
+.distributions-page__content {
+    $margin-8: 8px;
+    $margin-24: 24px;
+
+    min-height: 100%;
+    padding-top: $margin-8 * 8;
+    padding-bottom: $margin-8 * 8;
+
+    .distributions-page__subtitle {
+        margin-top: $margin-8;
+    }
+
+    .distributions-page__versions {
+        margin-top: $margin-24;
+
+        .versions-text {
+            margin-right: $margin-8;
+        }
+    }
+
+    .distributions-page__container {
+        width: 800px;
+    }
+
+    .distributions-page__os {
+        margin-top: $margin-24;
+        border-radius: 4px;
+
+        .distributions-page__os-card {
+            padding: $margin-24 * 2 $margin-24;
+
+            .os-img-windows,
+            .os-img-macos {
+                height: 128px;
+            }
+
+            .os-img-linux {
+                height: 133px;
+            }
+
+            .os-title {
+                margin-top: $margin-24;
+            }
+
+            .os-title-linux {
+                margin-top: 20px;
+            }
+        }
+    }
+
+    .distributions-page__divider {
+        border-right-width: 1px;
+        border-right-style: solid;
+    }
+
+    .distributions-page__os-action {
+        width: 100%;
+        margin-top: $margin-8 * 9;
+        outline: none;
+
+        .os-action-button {
+            height: 48px;
+            padding: 10px 12px;
+            border: none;
+
+            &:focus {
+                outline-width: 2px;
+                outline-style: solid;
+            }
+
+            &:not(:last-child) {
+                margin-right: $margin-8;
+            }
+        }
+    }
+}

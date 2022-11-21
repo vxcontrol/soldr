@@ -1,0 +1,15 @@
+@mixin secure-module-config-theme($mosaic-theme) {
+    .mc-icon.icon_secure {
+        color: map-deep-get($mosaic-theme, components, alert, success, icon);
+    }
+}
+
+@mixin secure-module-config-typography($typography) {
+    .mc-icon.icon_in-popover {
+        font-size: 56px;
+    }
+
+    .mc-icon.icon_in-modal {
+        font-size: 28px;
+    }
+}

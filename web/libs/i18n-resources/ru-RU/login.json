@@ -1,0 +1,10 @@
+{
+    "Login.LoginForm.InputPlaceholder.Login": "Логин",
+    "Login.LoginForm.InputPlaceholder.Password": "Пароль",
+    "Login.LoginForm.ButtonText.Login": "Войти",
+    "Login.LoginForm.ErrorText.InvalidCredentials": "Неверный email-адрес или пароль",
+    "Login.LoginForm.ErrorText.UserInactive": "Пользователь не активирован",
+    "Login.LoginForm.ErrorText.ConnectionError": "Ошибка соединения",
+
+    "Login.PageTitle.Text.Login": "Вход"
+}

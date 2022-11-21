@@ -1,0 +1,24 @@
+{
+    "type": "object",
+    "required": [],
+    "properties": {
+        "{{placeholder}}": {
+            "type": "string"
+        },
+        "reason": {
+            "rules": {},
+            "type": "string",
+            "ui": {
+                "widgetConfig": {}
+            }
+        },
+        "result": {
+            "rules": {},
+            "type": "boolean",
+            "ui": {
+                "widgetConfig": {}
+            }
+        }
+    },
+    "additionalProperties": true
+}

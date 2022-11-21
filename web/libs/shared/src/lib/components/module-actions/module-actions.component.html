@@ -1,0 +1,54 @@
+<ng-container *ngIf="{ actions: sortedActions$ | async } as data">
+    <ng-container *transloco="let tShared; read 'shared'">
+        <soldr-grid
+            [storageKey]="'module-actions-config-grid'"
+            [autoHeight]="true"
+            [data]="data.actions"
+            [identityField]="'name'"
+            (sortChanged)="actionsSorting$.next($event)">
+            <div soldrGridActionBar></div>
+            <div soldrGridFooter></div>
+            <soldr-column
+                field="id"
+                [autoHeight]="true"
+                [cellStyle]="{'word-break': 'break-word'}"
+                [headerName]="tShared('Shared.ModuleConfig.GridColumnsTitle.ActionId')"
+                [resizable]="true"
+                [sortable]="true"
+                [flex]="4"
+                [template]="nameTemplate"
+                [wrapText]="true">
+            </soldr-column>
+            <soldr-column
+                field="description"
+                [autoHeight]="true"
+                [headerName]="tShared('Shared.ModuleConfig.GridColumnsTitle.ActionDescription')"
+                [resizable]="true"
+                [flex]="6"
+                [template]="descriptionTemplate">
+            </soldr-column>
+        </soldr-grid>
+        <ng-template #nameTemplate let-node="params.data">
+            <span
+                mc-link
+                class="module-actions__actions-grid-content"
+                [noUnderline]="true"
+                (click)="actionDetailsPanel.open(node.name)">
+                <span class="mc-link__text">{{ node.localizedName }}</span>
+                <i *ngIf="node.hasParams" mc-icon="soldr-icons-gear_16" class="soldr-icons"></i>
+            </span>
+        </ng-template>
+        <ng-template #descriptionTemplate let-node="params.data">
+            <span class="module-actions__actions-grid-content">
+                {{ node.localizedDescription }}
+            </span>
+        </ng-template>
+    </ng-container>
+</ng-container>
+
+<soldr-action-details-panel
+    #actionDetailsPanel
+    [module]="module"
+    [isReadOnly]="isReadOnly"
+    (saveActionConfig)="saveActionConfig($event)">
+</soldr-action-details-panel>

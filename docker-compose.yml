@@ -1,0 +1,78 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:5.7
+    container_name: vx_mysql
+    hostname: mysql.local
+    restart: unless-stopped
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8
+      - --collation-server=utf8_general_ci
+    ports:
+    - "3306:3306"
+    volumes:
+    - vx-mysql-data:/var/lib/mysql
+    networks:
+      - vx-stand
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_USER: ${DB_ROOT_USER}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+
+  minio:
+    image: rancher/minio-minio:RELEASE.2020-07-13T18-09-56Z
+    container_name: vx_minio
+    hostname: minio.local
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    command:
+      - server
+      - /data
+    volumes:
+      - vx-minio-data:/data
+    networks:
+      - vx-stand
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+
+  modules:
+    image: vxcontrol/soldr-modules
+    container_name: vx_modules
+    hostname: modules.local
+    restart: unless-stopped
+    links:
+    - minio:minio.local
+    - mysql:mysql.local
+    networks:
+      - vx-stand
+    environment:
+      DB_HOST: mysql.local
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_ENDPOINT: http://minio.local:9000
+    depends_on:
+      minio:
+        condition: service_started
+      mysql:
+        condition: service_started
+
+networks:
+  vx-stand:
+    driver: bridge
+
+volumes:
+  vx-mysql-data:
+    driver: local
+  vx-minio-data:
+    driver: local

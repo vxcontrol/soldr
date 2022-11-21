@@ -1,0 +1,39 @@
+<ng-container
+    *ngIf="{
+        group: group$ | async,
+        lang: language$ | async,
+        module: module$ | async,
+        isLoadingModule: isLoadingModule$ | async,
+        isLoadingGroup: isLoadingGroup$ | async,
+        moduleEventsGridColumnFilterItems: moduleEventsGridColumnFilterItems$ | async
+    } as data">
+    <soldr-progress-container [loadingFlag]="data.isLoadingModule || data.isLoadingGroup">
+        <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read: 'groups'">
+            <soldr-actionbar class="flex-none">
+                <ng-container actionbar-left>
+                    <soldr-breadcrumbs
+                        *ngIf="data.group && data.module"
+                        [items]="[
+                            { link: ['/groups'], text: t('Groups.ModuleView.LinkText.Groups') },
+                            {
+                                link: ['/groups', data.group?.hash],
+                                text: data.group?.info.name[data.lang]
+                            },
+                            { link: ['/groups', data.group?.hash], text: t('Groups.ModuleView.LinkText.Modules'), query: { tab: 'modules'} },
+                            { text: data.module?.locale.module[data.lang].title }
+                        ]">
+                    </soldr-breadcrumbs>
+                </ng-container>
+            </soldr-actionbar>
+
+            <soldr-module-page
+                class="flex-auto"
+                [entity]="data.group"
+                [eventsGridFilter]="data.moduleEventsGridColumnFilterItems"
+                [viewMode]="viewModeEnum.Groups"
+                [state]="pageState"
+                [stateStorageKey]="'groupModule.view'">
+            </soldr-module-page>
+        </div>
+    </soldr-progress-container>
+</ng-container>

@@ -1,0 +1,344 @@
+<ng-container *ngIf="{
+    agents: agents$ | async,
+    language: language$ | async,
+    search: search$ | async,
+    latestAgentBinaryVersion: latestAgentBinaryVersion$ | async
+} as data">
+    <ng-container *transloco="let t; read: 'agents'">
+        <div class="layout-fill layout-row layout-align-space-between-stretch">
+            <soldr-grid
+                class="flex-auto"
+                [data]="data.agents"
+                [footerTemplate]="gridFooter"
+                [isLoading]="isLoading"
+                [placeholder]="t('Agents.AgentsList.InputPlaceholder.FieldsForSearchInCard')"
+                [storageKey]="storageGridKey"
+                [total]="total"
+                [searchString]="data.search"
+                [filtration]="gridFiltration"
+                (search)="onSearch($event)"
+                (nextPage)="nextPage()"
+                (selectRows)="onGridSelectRows($event)"
+                (sortChanged)="onGridSort($event)"
+                (resetFiltration)="onResetFiltration()"
+                *transloco="let tShared; read: 'shared'">
+                <ng-template #descriptionCell let-node="params.data">
+                    <a mc-link [routerLink]="['/agents', node.hash]">{{ node.description }}</a>
+                </ng-template>
+
+                <ng-template #connectionStatusCell let-node="params.data">
+                    <soldr-agent-connection-status [status]="node.status"></soldr-agent-connection-status>
+                </ng-template>
+
+                <ng-template #authStatusCell let-node="params.data">
+                    <soldr-agent-auth-status [status]="node.auth_status"></soldr-agent-auth-status>
+                </ng-template>
+
+                <ng-template #osCell let-node="params.data">
+                    <soldr-os [os]="node.info?.os" [isOnlyAvailable]="true"></soldr-os>
+                </ng-template>
+
+                <ng-template #groupCell let-node="params.data">
+                    <soldr-group-link [group]="node.details?.group"></soldr-group-link>
+                </ng-template>
+
+                <ng-template #tagsCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.info?.tags | sort:sortTags:data.language"
+                        [itemTemplate]="tagItem"
+                        [popoverItemTemplate]="tagPopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #tagItem let-tag="item">
+                    <a mc-link
+                       [mcTooltip]="tag"
+                       [mcPlacement]="placement.TopLeft"
+                       (click)="onSetTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <ng-template #tagPopoverItem let-tag="item">
+                    <a mc-link (click)="onSetTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <ng-template #versionCell let-node="params.data">
+                    <soldr-agent-version
+                        [agent]="node"
+                        [latestVersion]="data.latestAgentBinaryVersion">
+                    </soldr-agent-version>
+                </ng-template>
+
+                <ng-template #modulesCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.details?.modules | sort:sortModules:data.language"
+                        [itemTemplate]="moduleItem"
+                        [popoverItemTemplate]="modulePopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #moduleItem let-module="item" let-agent="base">
+                    <a
+                        *ngIf="permitted.ViewPolicies; else linkText"
+                        mc-link
+                        [routerLink]="['/agents', agent.hash, 'modules', module.info.name]"
+                        [mcTooltip]="module.locale.module[data.language].title"
+                        [mcPlacement]="placement.TopLeft">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ module.locale.module[data.language].title}}
+                    </ng-template>
+                </ng-template>
+
+                <ng-template #modulePopoverItem let-module="item" let-agent="base" let-last="last">
+                    <a
+                        *ngIf="permitted.ViewPolicies; else linkText"
+                        mc-link
+                        [routerLink]="['/agents', agent.hash, 'modules', module.info.name]">
+                        <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                    </a>
+                    <ng-template #linkText>
+                        {{ module.locale.module[data.language].title}}
+                    </ng-template>
+                </ng-template>
+
+                <soldr-column
+                    field="description"
+                    [template]="descriptionCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Name')"
+                    [default]="true"
+                    [required]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="ip"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Ip')"
+                    [width]="100"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="status"
+                    filtrationField="status"
+                    [template]="connectionStatusCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Connection')"
+                    [width]="32"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="os"
+                    filtrationField="os"
+                    [template]="osCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Os')"
+                    [width]="32"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="auth_status"
+                    [template]="authStatusCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Authorization')"
+                    [width]="32"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.upgrade_task"
+                    sortField="version"
+                    filtrationField="version"
+                    [template]="versionCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Version')"
+                    [width]="60"
+                    [default]="true"
+                    [resizable]="true"
+                    [sortable]="true"
+                    [sortField]="'version'">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.modules"
+                    filtrationField="module_name"
+                    [template]="modulesCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Modules')"
+                    [minWidth]="100"
+                    [width]="240"
+                    [default]="false"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.group"
+                    filtrationField="group_id"
+                    [template]="groupCell"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Group')"
+                    [width]="200"
+                    [default]="false"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="info.tags"
+                    filtrationField="tags"
+                    [template]="tagsCell"
+                    [headerName]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                    [minWidth]="100"
+                    [width]="240"
+                    [default]="false"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="connected_date"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.LastConnection')"
+                    [default]="false"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="hash"
+                    [headerName]="t('Agents.AgentsList.GridColumnsTitle.Id')"
+                    [default]="false"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-filter
+                    [field]="'status'"
+                    [title]="t('Agents.AgentsList.GridColumnsTitle.Connection')"
+                    [selectedValues]="gridFiltrationByFields.status?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters.status"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'os'"
+                    [title]="t('Agents.AgentsList.GridColumnsTitle.Os')"
+                    [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByOs')"
+                    [multiple]="true"
+                    [selectedValues]="gridFiltrationByFields.os?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.os"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'auth_status'"
+                    [title]="t('Agents.AgentsList.GridColumnsTitle.Authorization')"
+                    [selectedValues]="gridFiltrationByFields.auth_status?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.auth_status"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'module_name'"
+                    [title]="t('Agents.AgentsList.GridColumnsTitle.Modules')"
+                    [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByModule')"
+                    [multiple]="true"
+                    [selectedValues]="gridFiltrationByFields.module_name?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.modules"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'group_id'"
+                    [title]="t('Agents.AgentsList.GridColumnsTitle.Group')"
+                    [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByGroup')"
+                    [selectedValues]="gridFiltrationByFields.group_id?.value"
+                    [multiple]="true"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.groups"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'tags'"
+                    [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                    [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByTag')"
+                    [selectedValues]="gridFiltrationByFields.tags?.value"
+                    [multiple]="true"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.tags"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+            </soldr-grid>
+
+            <mc-divider [vertical]="true"></mc-divider>
+
+            <div class="sidebar-content">
+                <ng-container *ngIf="selectedAgent; else noSelectedAgent">
+                    <div class="sidebar-title">
+                        <soldr-text-overflow>
+                            <a mc-link [routerLink]="['/agents', selectedAgent.hash]">
+                                {{ selectedAgent?.description }}
+                            </a>
+                        </soldr-text-overflow>
+                    </div>
+
+                    <soldr-agent-info
+                        [agent]="selectedAgent"
+                        [latestBinaryVersion]="data.latestAgentBinaryVersion"
+                        [state]="stateStorageValue.rightSidebar"
+                        [stateStorageKey]="stateStorageKey + '.rightSidebar'"
+                        [modules]="selectedAgentModules"
+                        [showModules]="true"
+                        [isUpgradingAgents]="isUpgradingAgents"
+                        [isCancelUpgradingAgent]="isCancelUpgradingAgent"
+                        (upgradeAgents)="upgrade($event)"
+                        (cancelUpgradeAgent)="cancelUpgrade($event)"
+                        (selectTag)="onSetTag($event)"
+                        (refresh)="afterUpgradeAgent()">
+                    </soldr-agent-info>
+                </ng-container>
+
+                <ng-template #noSelectedAgent>
+                    <div class="layout-fill layout-column layout-align-center-center"
+                         *transloco="let tCommon; read: 'common'">
+                        <span class="text_second">{{ tCommon('Common.Pseudo.Text.NoInformation') }}</span>
+                    </div>
+                </ng-template>
+            </div>
+        </div>
+
+        <ng-template #gridFooter let-total="total" let-selected="selected">
+            <span>{{ t('Agents.AgentsList.Text.Total', {total}) }}</span>
+        </ng-template>
+    </ng-container>
+</ng-container>

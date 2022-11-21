@@ -1,0 +1,9 @@
+@mixin related-list-theme($mosaic-theme) {
+    .related-list__separator {
+        color: map-deep-get($mosaic-theme, components, link, text);
+    }
+
+    .related-list__mask {
+        color: map-deep-get($mosaic-theme, components, link, text);
+    }
+}

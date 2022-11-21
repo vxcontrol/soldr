@@ -1,0 +1,21 @@
+@mixin group-info-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+
+    .group-info__modules {
+        .provisioner-type.mc-progress-bar .mc-progress-bar__line {
+            background-color: mc-color(map-get($mosaic-theme, error), 500);
+        }
+
+        .collector-type.mc-progress-bar .mc-progress-bar__line {
+            background-color: mc-color(map-get($mosaic-theme, warning), 500);
+        }
+
+        .detector-type.mc-progress-bar .mc-progress-bar__line {
+            background-color: mc-color(map-get($mosaic-theme, success), 500);
+        }
+
+        .modules-info-count {
+            color: map-get($foreground, text-less-contrast);
+        }
+    }
+}

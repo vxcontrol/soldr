@@ -1,0 +1,17 @@
+@mixin autocomplete-tags-theme($mosaic-theme) {
+    $error: map-get($mosaic-theme, error);
+
+    .form-field-error {
+        mc-hint {
+            color: map-get($error, default);
+        }
+
+        .mc-form-field__container {
+            border-color: map-get($error, default) !important;
+        }
+
+        &.mc-focused .mc-form-field__container {
+            box-shadow: 0 0 0 1px map-get($error, default) !important;
+        }
+    }
+}

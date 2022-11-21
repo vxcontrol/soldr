@@ -1,0 +1,130 @@
+<ng-container *transloco="let t; read 'shared'">
+    <mc-navbar
+        *ngIf="{
+        info: info$ | async,
+        isAuthorized: isAuthorized$ | async,
+        selectedServiceName: selectedServiceName$ | async,
+        selectedServiceUrl: selectedServiceUrl$ | async,
+        services: services$ | async
+        } as data">
+        <mc-navbar-container>
+            <a href="/" mc-navbar-brand>
+                <mc-navbar-title>{{ t('Shared.NavBar.ItemText.Brand') }}</mc-navbar-title>
+            </a>
+
+            <ng-container *ngIf="data.isAuthorized">
+                <div *ngIf="data.services.length > 1" class="layout-margin-right-xxl">
+                    <button
+                        mc-button
+                        class="navbar__service-dropdown"
+                        #serviceDropdownTrigger="mcDropdownTrigger"
+                        [mcDropdownTriggerFor]="serviceDropdown"
+                        [class.mc-active]="serviceDropdownTrigger.opened">
+
+                        <div class="navbar__service-dropdown_selected layout-row layout-align-space-between">
+                            <div class="layout-row">
+                                <i class="soldr-icons" mc-icon="soldr-icons-asset-server_16"></i>
+                                <span class="ellipsis layout-margin-left-xxs layout-margin-right-xxs">
+                                    {{ data.selectedServiceName }}
+                                </span>
+                            </div>
+
+                            <i mc-icon="mc-angle-down-S_16"></i>
+                        </div>
+                    </button>
+
+                    <mc-dropdown #serviceDropdown="mcDropdown">
+                        <a
+                            *ngFor="let service of data.services"
+                            mc-dropdown-item
+                            routerLinkActive="mc-selected"
+                            class="navbar__dropdown-item navbar__dropdown-item-service"
+                            [routerLink]="[service.path, currentFeaturePath ? currentFeaturePath : '']">
+                            <span>{{ service.name }}</span>
+                        </a>
+                    </mc-dropdown>
+                </div>
+
+                <a *ngIf="hasAccessTo.Agents"
+                   mc-navbar-item
+                   routerLinkActive="mc-active"
+                   [routerLink]="[data.selectedServiceUrl, 'agents']">
+                    <mc-navbar-title>{{ t('Shared.NavBar.ItemText.Agents') }}</mc-navbar-title>
+                </a>
+
+                <a *ngIf="hasAccessTo.Policies"
+                   mc-navbar-item
+                   routerLinkActive="mc-active"
+                   [routerLink]="[data.selectedServiceUrl, 'policies']">
+                    <mc-navbar-title>{{ t('Shared.NavBar.ItemText.Policies') }}</mc-navbar-title>
+                </a>
+
+                <a *ngIf="hasAccessTo.Groups"
+                   mc-navbar-item
+                   routerLinkActive="mc-active"
+                   [routerLink]="[data.selectedServiceUrl, 'groups']">
+                    <mc-navbar-title>{{ t('Shared.NavBar.ItemText.Groups') }}</mc-navbar-title>
+                </a>
+
+                <a *ngIf="hasAccessTo.Modules"
+                   mc-navbar-item
+                   routerLinkActive="mc-active"
+                   [routerLink]="[data.selectedServiceUrl, 'modules']">
+                    <mc-navbar-title>{{ t('Shared.NavBar.ItemText.Modules') }}</mc-navbar-title>
+                </a>
+
+                <a *ngIf="hasAccessTo.Downloads"
+                   mc-navbar-item
+                   routerLinkActive="mc-active"
+                   [routerLink]="[data.selectedServiceUrl, 'downloads']">
+                    <mc-navbar-title>{{ t('Shared.NavBar.DropdownItem.Distributions') }}</mc-navbar-title>
+                </a>
+            </ng-container>
+
+        </mc-navbar-container>
+
+        <mc-navbar-container>
+            <ng-container *ngIf="data.info && data.isAuthorized">
+                <mc-navbar-item
+                    #profileDropdownTrigger="mcDropdownTrigger"
+                    [mcDropdownTriggerFor]="profileDropdown"
+                    [class.mc-active]="profileDropdownTrigger.opened">
+                    <i class="soldr-icons soldr-icons-user_16"></i>
+                </mc-navbar-item>
+
+                <mc-dropdown
+                    #profileDropdown="mcDropdown"
+                    [overlapTriggerY]="false"
+                    [overlapTriggerX]="true">
+
+                    <button mc-dropdown-item [mcDropdownTriggerFor]="localesDropdown">
+                        <i mc-icon="soldr-icons-globe_16" class="soldr-icons"></i>
+                        <span>{{ t('Shared.NavBar.ItemText.Language') }}</span>
+                        <div class="mc-dropdown-item__caption">
+                            {{ t(currentLocale === locales.en_US ? 'Shared.NavBar.ItemText.English' : 'Shared.NavBar.ItemText.Russian') }}
+                        </div>
+                    </button>
+
+                    <mc-dropdown #localesDropdown="mcDropdown" class="mc-dropdown-item_with-icon">
+                        <button *ngFor="let locale of availableLocales" mc-dropdown-item (click)="setLocale(locale)">
+                            <i
+                                mc-icon="soldr-icons-circle-6_16"
+                                class="soldr-icons"
+                                [ngStyle]="{'visibility' : locale === currentLocale ? 'visible' : 'hidden'}">
+                            </i>
+                            {{ t(locale === locales.en_US ? 'Shared.NavBar.ItemText.English' : 'Shared.NavBar.ItemText.Russian') }}
+                        </button>
+                    </mc-dropdown>
+
+                    <div class="mc-dropdown__divider"></div>
+
+                    <button mc-dropdown-item (click)="logout()">
+                        <i mc-icon="soldr-icons-export_16" class="soldr-icons"></i>
+                        {{ t('Shared.NavBar.ItemText.Logout') }}
+                    </button>
+                </mc-dropdown>
+            </ng-container>
+        </mc-navbar-container>
+    </mc-navbar>
+</ng-container>
+

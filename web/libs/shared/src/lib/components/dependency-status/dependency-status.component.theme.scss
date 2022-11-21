@@ -1,0 +1,12 @@
+@mixin dependency-status-theme($mosaic-theme) {
+    $success: map-get($mosaic-theme, success);
+    $warning: map-get($mosaic-theme, warning);
+
+    .dependency-status__icon_success {
+        color: map-get($success, default);
+    }
+
+    .soldr-icons.dependency-status__icon_policies {
+        color: mc-color($warning, 400);
+    }
+}

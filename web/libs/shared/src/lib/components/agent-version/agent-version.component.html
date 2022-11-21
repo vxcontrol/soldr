@@ -1,0 +1,14 @@
+<span class="layout-row layout-align-start-center" [ngClass]="{ 'agent-version_has-new-version': hasNewVersion }">
+    <mc-progress-spinner
+        *ngIf="isRunning"
+        class="agent-version__indicator"
+        mode="indeterminate"
+        [color]="themePalette.Second">
+    </mc-progress-spinner>
+    <span
+        class="agent-version__current-version"
+        soldrTextOverflow
+        [ngClass]="{'indeterminate-state': isRunning}">
+        {{ agentVersionText }}
+    </span>
+</span>

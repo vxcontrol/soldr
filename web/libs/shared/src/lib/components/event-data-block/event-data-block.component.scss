@@ -1,0 +1,20 @@
+:host {
+    position: relative;
+    display: block;
+}
+
+.event-data-block__editor {
+    height: 100%;
+    min-height: 300px;
+}
+
+.event-data-block__editor_bordered {
+    border-style: solid;
+    border-width: 1px;
+}
+
+.event-data-block__button_copy {
+    position: absolute;
+    top: 6px;
+    right: 18px;
+}

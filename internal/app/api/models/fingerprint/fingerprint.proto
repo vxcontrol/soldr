@@ -1,0 +1,22 @@
+syntax = "proto2";
+
+package protocol;
+
+option go_package = "./models/fingerprint";
+
+message Fingerprint {
+  message Feature {
+    required int64 feature = 1;
+    required string value = 2;
+  }
+
+  repeated Feature features = 1;
+  required string hash = 2;
+  required bool is_virtual_env = 3;
+  repeated int64 virtual_env = 4;
+  repeated int64 env_sources = 5;
+}
+
+message Fingerprints {
+  repeated Fingerprint fps = 1;
+}

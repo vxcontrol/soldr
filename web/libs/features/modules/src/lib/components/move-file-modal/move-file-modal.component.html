@@ -1,0 +1,8 @@
+<div *transloco="let t; read 'modules'">
+    <mc-form-field>
+        <input mcInput [(ngModel)]="path">
+        <mc-hint>
+            {{ t('Modules.ModuleEdit.Text.MoveText', {prefix: this.prefix, path: oldPath }) }}
+        </mc-hint>
+    </mc-form-field>
+</div>

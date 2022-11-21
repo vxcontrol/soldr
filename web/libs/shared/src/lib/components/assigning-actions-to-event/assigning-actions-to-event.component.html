@@ -1,0 +1,117 @@
+<ng-template #sidePanel>
+    <ng-container *ngIf="{
+        actionsWithModulesTree: actionsWithModulesTree$ | async,
+        focusedAction: focusedAction$ | async,
+        isLoading: isLoading$ | async,
+        language: language$ | async
+    } as data">
+        <ng-container *transloco="let tShared; read 'shared'">
+            <ng-container *transloco="let tCommon; read 'common'">
+
+                <mc-sidepanel-header [closeable]="true">
+                    {{ tShared('Shared.ModuleConfig.SidePanelTitle.AssigningActions') }}
+                </mc-sidepanel-header>
+
+                <mc-sidepanel-body>
+                    <div class="layout-fill layout-row layout-align-space-between">
+                        <div class="flex-50 layout-column layout-align-space-between">
+                            <mc-loader-overlay fixed-top *ngIf="data.isLoading; else list">
+                                <mc-progress-spinner
+                                    mc-loader-overlay-indicator
+                                    [mode]="'indeterminate'">
+                                </mc-progress-spinner>
+                            </mc-loader-overlay>
+                            <ng-template #list>
+                                <div class="flex-none">
+                                    <mc-form-field mcFormFieldWithoutBorders (keydown.escape)="$event.stopPropagation()">
+                                        <i mcPrefix mc-icon="soldr-icons-search_16" class="soldr-icons"></i>
+                                        <input
+                                            #search
+                                            mcInput
+                                            autocomplete="off"
+                                            [placeholder]="tShared('Shared.ModuleConfig.InputPlaceholder.SearchActions')"
+                                            (ngModelChange)="searchActions$.next(search.value)"
+                                            [(ngModel)]="searchActions"/>
+                                        <mc-cleaner></mc-cleaner>
+                                    </mc-form-field>
+                                    <mc-divider></mc-divider>
+                                </div>
+                                <mc-list-selection
+                                    #list
+                                    class="flex-auto layout-margin-top-xs scrollable-y"
+                                    multiple="checkbox"
+                                    (selectionChange)="changeSelected($event)">
+                                    <ng-container *ngFor="let moduleItem of data.actionsWithModulesTree">
+                                        <mc-optgroup
+                                            *ngIf="moduleItem.actions.length > 0"
+                                            class="ellipsis"
+                                            [label]="moduleItem.label || moduleItem.module.locale.module[data.language].title">
+                                            <mc-list-option
+                                                *ngFor="let actionItem of moduleItem.actions"
+                                                class="action-item"
+                                                soldrUnavailableActionForEvent
+                                                [selected]="isSelected(actionItem.action.name)"
+                                                [class.action-item_disabled]="actionItem.unavailable"
+                                                [value]="actionItem.action.name"
+                                                (focus)="focusedAction$.next(actionItem)">
+                                                <div class="layout-row">
+                                                    <span soldrTextOverflow class="action-item__text">
+                                                        {{ actionItem.action.locale[data.language].title }}
+                                                    </span>
+
+                                                    <soldr-action-priority
+                                                        class="flex-none layout-margin-left-s"
+                                                        [mini]="true"
+                                                        [priority]="actionItem.action.config.priority">
+                                                    </soldr-action-priority>
+                                                </div>
+                                            </mc-list-option>
+                                        </mc-optgroup>
+                                    </ng-container>
+                                </mc-list-selection>
+
+                                <div class="flex-none">
+                                    <mc-divider></mc-divider>
+
+                                    <div class="layout-padding-s layout-padding-left-l">
+                                        {{ tShared('Shared.ModuleConfig.Text.ActionsSelected', {selected: selected?.length || 0}) }}
+                                    </div>
+                                </div>
+                            </ng-template>
+                        </div>
+
+                        <mc-divider [vertical]="true"></mc-divider>
+
+                        <div class="flex-50 layout-padding-l scrollable-y">
+                            <soldr-action-info
+                                *ngIf="data.focusedAction"
+                                [module]="data.focusedAction.module"
+                                [action]="data.focusedAction.action"
+                                [fields]="data.focusedAction.neededFields"
+                                [unavailable]="data.focusedAction.unavailable">
+                            </soldr-action-info>
+                        </div>
+                    </div>
+                </mc-sidepanel-body>
+
+                <mc-sidepanel-footer>
+                    <mc-sidepanel-actions align="left">
+                        <button mc-button (click)="resetToDefault()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Default') }}
+                        </button>
+                    </mc-sidepanel-actions>
+
+                    <mc-sidepanel-actions align="right">
+                        <button cdkFocusInitial mc-button [color]="themePalette.Primary" (click)="save()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                        </button>
+
+                        <button mc-button (click)="cancel()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                        </button>
+                    </mc-sidepanel-actions>
+                </mc-sidepanel-footer>
+            </ng-container>
+        </ng-container>
+    </ng-container>
+</ng-template>

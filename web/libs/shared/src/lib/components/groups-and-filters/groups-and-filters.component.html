@@ -1,0 +1,82 @@
+<ng-container *ngIf="{
+    language: language$ | async
+} as data">
+    <div class="layout-column layout-align-space-between layout-fill" *transloco="let tShared; read: 'shared'">
+
+        <mc-form-field mcFormFieldWithoutBorders class="flex-none">
+            <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+            <input
+                #search
+                type="text"
+                mcInput
+                autocomplete="off"
+                e2e-id="txtFilterAndGroupName"
+                [placeholder]="tShared('Shared.Pseudo.InputPlaceholder.QuickSearch')"
+                [(ngModel)]="searchValue"
+                (ngModelChange)="searchValue$.next(search.value)">
+            <mc-cleaner></mc-cleaner>
+        </mc-form-field>
+
+        <mc-divider class="flex-none"></mc-divider>
+
+        <soldr-progress-container class="scrollable-y" [loadingFlag]="isLoadingGroups$ | async">
+            <div
+                class="flex-auto groups-ang-filter__list"
+                *ngIf="(foundFilters$ | async)?.length > 0 || (filtersByGroup$ | async)?.length > 0; else notFound">
+
+                <mc-list-selection
+                    e2e-id="selGroupsAndFilters"
+                    [autoSelect]="true"
+                    [noUnselectLast]="true"
+                    (selectionChange)="onSelectItem($event)"
+                    [(ngModel)]="currentSelectedFilterId">
+
+                    <mc-list-option
+                        *ngFor="let filter of foundFilters$ | async"
+                        [value]="filter.id">
+                        <div class="layout-row">
+                            <div class="flex-auto groups-ang-filter__label" soldrTextOverflow>{{ filter.label }}</div>
+                            <div class="flex-none groups-ang-filter__count"
+                                 *ngIf="filter.count > 0">{{ filter.count }}</div>
+                        </div>
+                    </mc-list-option>
+
+                    <mc-divider
+                        *ngIf="(foundFilters$ | async)?.length > 0 && (filtersByGroup$ | async).length > 0"></mc-divider>
+
+                    <ng-container *ngIf="(isLoadingGroups$ | async) === false">
+                        <mc-list-option
+                            class="groups-ang-filter__group"
+                            *ngFor="let group of (filtersByGroup$ | async)"
+                            [value]="group.id">
+                            <div class="layout-row">
+                                <div class="flex-auto groups-ang-filter__label"
+                                     soldrTextOverflow>{{ group.label[language$ | async] }}</div>
+
+                                <div class="flex-none groups-ang-filter__count" [class.groups-ang-filter__display-count]="permitted.ViewGroups"
+                                     *ngIf="group.count > 0">{{ group.count }}</div>
+                                <a
+                                    *ngIf="permitted.ViewGroups"
+                                    class="groups-ang-filter__view mc-hover"
+                                    e2e-id="lnkGroupPage"
+                                    [routerLink]="['/groups', group.hash]"
+                                    [mcTooltip]="tShared('Shared.Pseudo.TooltipText.Open')"
+                                    (click)="$event.stopPropagation()">
+                                    <i mc-icon="soldr-icons-eye_16" class="soldr-icons"></i>
+                                </a>
+                            </div>
+                        </mc-list-option>
+                    </ng-container>
+
+                </mc-list-selection>
+            </div>
+            <ng-template #notFound>
+                <div class="layout-column layout-fill layout-align-center-center" *transloco="let tCommon; read: 'common'">
+                    <span *ngIf="search.value" class="mc-small-text groups-ang-filter__not-found">
+                        {{ tCommon('Common.Pseudo.Text.NotFound') }}
+                    </span>
+                </div>
+            </ng-template>
+        </soldr-progress-container>
+    </div>
+</ng-container>

@@ -1,0 +1,66 @@
+<ng-container *ngIf="{ language: language$ | async} as data">
+    <ng-container *transloco="let tShared; read 'shared'">
+        <div
+            *ngIf="canUpdate"
+            class="mc-alert mc-alert_info mc-alert_dismissible module-info__new-version-alert">
+            <div *transloco="let t; read 'policies'">
+                <div class="module-info__new-version-text">
+                    {{ t('Policies.ModuleView.Text.NewVersion', { version: versions[0]?.info.version | moduleVersion }) }}
+                </div>
+                <a mc-link class="module-info__link" [noUnderline]="true" (click)="doUpdate()">
+                    {{ t('Policies.ModuleView.Text.LinkUpdate') }}
+                </a>
+                <a mc-link class="module-info__link" [noUnderline]="true" (click)="doSeeVersions()">
+                    {{ t('Policies.ModuleView.Text.LinkWhatIsNew') }}
+                </a>
+            </div>
+        </div>
+
+        <span class="mc-badge mc-badge_default mc-badge_solid mc-badge_primary layout-margin-bottom-s">
+            <ng-container *ngIf="module?.info.system; else custom">
+                {{ tShared('Shared.ModuleView.Label.ModuleTypeSystem') }}
+            </ng-container>
+            <ng-template #custom>
+              {{ tShared('Shared.ModuleView.Label.ModuleTypeCustom') }}
+            </ng-template>
+        </span>
+
+        <mc-dl [vertical]="true">
+            <mc-dt>{{ tShared('Shared.ModuleView.Label.InstalledVersion') }}</mc-dt>
+            <mc-dd>{{ module?.info.version | moduleVersion }}</mc-dd>
+
+            <mc-dt>{{ tShared('Shared.ModuleView.Label.Os') }}</mc-dt>
+            <mc-dd>
+                <soldr-os [os]="module?.info.os" [showLabels]="true"></soldr-os>
+            </mc-dd>
+
+            <mc-dt>{{ tShared('Shared.ModuleView.Label.Type') }}</mc-dt>
+            <mc-dd>
+                <soldr-module-type [tags]="module?.info.tags"></soldr-module-type>
+            </mc-dd>
+
+            <ng-container *ngIf="module?.info.tags.length > 0">
+                <mc-dt>{{ tShared('Shared.ModuleView.Label.Tags') }}</mc-dt>
+                <mc-dd>
+                    <ng-container *ngFor="let tag of module.info.tags | sort:sortTags:data.language">
+                        <a
+                            *ngIf="permitted.ViewModules; else linkText"
+                            mc-link
+                            class="module-info__tag"
+                            [routerLink]="['/modules']"
+                            [queryParams]="{ filtration: getFiltrationByTag(tag)}">
+                            <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                        </a>
+                        <ng-template #linkText>
+                            {{ tag }}
+                        </ng-template>
+                    </ng-container>
+
+                </mc-dd>
+            </ng-container>
+
+            <mc-dt>{{ tShared('Shared.ModuleView.Label.Description') }}</mc-dt>
+            <mc-dd>{{module?.locale.module[data.language].description}}</mc-dd>
+        </mc-dl>
+    </ng-container>
+</ng-container>

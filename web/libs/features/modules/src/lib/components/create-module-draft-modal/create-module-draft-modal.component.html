@@ -1,0 +1,123 @@
+<ng-container *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <div (click)="open(title, content, footer)">
+            <ng-content></ng-content>
+        </div>
+
+        <ng-template #title>
+            <div
+                soldrTextOverflow
+                *ngrxLet="module$; let module"
+                [innerHTML]="t('Modules.ModuleEdit.ModalTitle.NewDraft', { module:  module?.locale.module[lang].title})">
+            </div>
+        </ng-template>
+
+        <ng-template #content>
+            <ng-container *ngrxLet="error$; let error">
+                <div class="mc-alert layout-margin-bottom-s" *ngIf="error">
+                    {{ t('Modules.SystemModulePage.NotificationText.CreateDraftError') }}
+                </div>
+            </ng-container>
+            <form
+                id="createModuleDraftForm"
+                class="mc-form-horizontal"
+                novalidate
+                [formGroup]="form"
+                (ngSubmit)="createDraft()">
+                <div class="mc-form__row">
+                    <label class="mc-form__label flex-20">{{ t('Modules.ModuleEdit.Label.Version') }}</label>
+                    <mc-form-field class="mc-form__control flex-80">
+                        <input e2e-id="txtDraftVersion" mcInput formControlName="version">
+                        <mc-hint
+                            *ngIf="form.get('version').errors?.draftVersion"
+                            [color]="themePalette.Error">
+                            {{ t('Modules.ModuleEdit.ValidationText.DraftVersion') }}
+                        </mc-hint>
+                    </mc-form-field>
+                </div>
+
+                <ng-container formGroupName="locales">
+                    <div class="mc-form__fieldset" formGroupName="ru">
+                        <div class="mc-form__legend">{{ t('Modules.ModuleEdit.Label.Russian') }}</div>
+
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20">
+                                {{ t('Modules.ModuleEdit.Label.Title') }} *
+                            </label>
+                            <mc-form-field class="mc-form__control flex-80">
+                                <input e2e-id="txtDraftTitleRu" mcInput formControlName="title">
+                            </mc-form-field>
+                        </div>
+
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label
+                                class="mc-form__label flex-20">
+                                {{ t('Modules.ModuleEdit.Label.Description') }} *
+                            </label>
+                            <mc-form-field class="mc-form__control flex-80">
+                                <textarea
+                                    e2e-id="txtDraftDescriptionRu"
+                                    mcTextarea
+                                    rows="7"
+                                    formControlName="description"
+                                    [canGrow]="true">
+                                </textarea>
+                            </mc-form-field>
+                        </div>
+                    </div>
+
+                    <div class="mc-form__fieldset" formGroupName="en">
+                        <div class="mc-form__legend">{{ t('Modules.ModuleEdit.Label.English') }}</div>
+
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20">
+                                {{ t('Modules.ModuleEdit.Label.Title') }} *
+                            </label>
+                            <mc-form-field class="mc-form__control flex-80">
+                                <input e2e-id="txtDraftTitleEn" mcInput formControlName="title">
+                            </mc-form-field>
+                        </div>
+
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label
+                                class="mc-form__label flex-20">
+                                {{ t('Modules.ModuleEdit.Label.Description') }} *
+                            </label>
+                            <mc-form-field class="mc-form__control flex-80">
+                                <textarea
+                                    e2e-id="txtDraftDescriptionEn"
+                                    mcTextarea
+                                    rows="7"
+                                    formControlName="description"
+                                    [canGrow]="true">
+                                </textarea>
+                            </mc-form-field>
+                        </div>
+                    </div>
+                </ng-container>
+            </form>
+        </ng-template>
+
+        <ng-template #footer>
+            <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+                <button
+                    e2e-id="btnDoCreateDraft"
+                    *ngrxLet="isCreatingDraft$; let isCreatingDraft"
+                    form="createModuleDraftForm"
+                    mc-button
+                    [color]="themePalette.Primary"
+                    [class.mc-progress]="isCreatingDraft">
+                    <span>{{ t('Modules.ModuleEdit.ButtonText.CreateDraft') }}</span>
+                </button>
+
+                <button
+                    e2e-id="txtCancelCreateDraft"
+                    mc-button
+                    e2e-id="btnCancelEditPolicy"
+                    (click)="cancel()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                </button>
+            </div>
+        </ng-template>
+    </ng-container>
+</ng-container>

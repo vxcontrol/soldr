@@ -1,0 +1,9 @@
+{
+    "Distributions.DistributionsPage.ErrorText.DownloadAgentError": "Ошибка скачивания агента",
+    "Distributions.DistributionsPage.Title.Distributions": "Дистрибутивы агентов",
+
+    "Distributions.PageTitle.Text.Distributions": "Дистрибутивы агентов",
+
+    "Distributions.Pseudo.Text.LatestVersion": "Версия {version} от {date}",
+    "Distributions.Pseudo.Text.Supports": "Поддерживаются сервером:"
+}

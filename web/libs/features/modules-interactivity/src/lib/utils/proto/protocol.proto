@@ -1,0 +1,46 @@
+syntax = "proto2";
+
+package protocol;
+
+option go_package = "./protocol";
+
+message Packet {
+  required string module = 1;
+  required string source = 2;
+  required string destination = 3;
+  required int64 timestamp = 4;
+
+  message Content {
+    message Part {
+      required int32 number = 1;
+      required int32 total = 2;
+    }
+
+    enum Type {
+      DATA = 0;
+      FILE = 1;
+      TEXT = 2;
+      MSG = 3;
+      ACT = 4;
+    }
+
+    enum MsgType {
+      DEBUG = 0;
+      INFO = 1;
+      WARNING = 2;
+      ERROR = 3;
+    }
+
+    required Type type = 1 [default = DATA];
+    required bytes data = 2;
+
+    optional string name = 3;
+    optional Part part = 4;
+    optional string uniq = 5;
+    optional MsgType msg_type = 6;
+  }
+
+  required Content content = 5;
+  optional string trace_id = 6;
+  optional string pspan_id = 7;
+}

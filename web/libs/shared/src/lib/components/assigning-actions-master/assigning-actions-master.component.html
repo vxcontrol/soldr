@@ -1,0 +1,458 @@
+<ng-container *ngIf="{
+    actionsFilter: actionsFilter$ | async,
+    actionsGrouping: actionsGrouping$ | async,
+    isLoading: isLoading$ | async,
+    language: language$ | async,
+    lastSelectedEvent: lastSelectedEvent$ | async,
+    lastSelectedEventActions: lastSelectedEventActions$ | async,
+    processedAvailableEvents: processedAvailableEvents$ | async,
+    processedUnavailableEvents: processedUnavailableEvents$ | async,
+    selectedEvents: processedSelectedEvents$ | async,
+    unavailableEvents: unavailableEvents$ | async
+} as data">
+    <ng-container *transloco="let tShared; read 'shared'">
+        <ng-container *transloco="let tCommon; read: 'common'">
+
+            <ng-template #body>
+                <div class="layout-column assigning-actions-master__body">
+                    <div class="flex-none layout-padding-l assigning-actions-master__header">
+                        <div>
+                            {{ tShared('Shared.ModuleConfig.ModalTitle.AssigningActionsMaster', {step}) }}
+                        </div>
+                        <ng-container *ngIf="step === 1; else selectEventsHeader">
+                            <div class="layout-margin-top-s">
+                                {{ tShared('Shared.ModuleConfig.ModalTitle.SelectAction') }}
+                            </div>
+                        </ng-container>
+                        <ng-template #selectEventsHeader>
+                            <div class="layout-margin-top-s layout-margin-right-7xl mc-title ellipsis">
+                                {{
+                                tShared('Shared.ModuleConfig.ModalTitle.EventsForAction',
+                                    {action: selectedActionTreeNode.data.action.locale[data.language].title})
+                                }}
+                            </div>
+                        </ng-template>
+                    </div>
+
+                    <mc-divider class="flex-none"></mc-divider>
+
+                    <div class="flex-auto layout-row layout-align-space-between-stretch">
+                        <ng-container *ngIf="step === 1; else selectEventsBody">
+                            <div class="flex-50 layout-column layout-align-space-between">
+                                <div
+                                    class="flex-none layout-row layout-align-space-between layout-padding-left-l layout-padding-right-s layout-padding-top-m layout-padding-bottom-m">
+                                    <mc-form-field (keydown.escape)="$event.stopPropagation()">
+                                        <i mcPrefix mc-icon="soldr-icons-search_16" class="soldr-icons"></i>
+                                        <input
+                                            autocomplete="off"
+                                            soldrAutofocus
+                                            mcInput
+                                            [placeholder]="tShared('Shared.ModuleConfig.InputSearch.SearchAction')"
+                                            (ngModelChange)="searchActions$.next($event)"
+                                            [ngModel]="searchActions">
+                                        <mc-cleaner></mc-cleaner>
+                                    </mc-form-field>
+
+                                    <div class="layout-margin-left-3xl">
+                                        <ng-container [ngTemplateOutlet]="actionsFilter"></ng-container>
+                                    </div>
+                                </div>
+
+                                <mc-divider class="flex-none"></mc-divider>
+
+                                <div class="flex-auto scrollable-y">
+                                    <mc-loader-overlay fixed-top *ngIf="data.isLoading; else tree">
+                                        <mc-progress-spinner
+                                            mc-loader-overlay-indicator
+                                            [mode]="'indeterminate'">
+                                        </mc-progress-spinner>
+                                    </mc-loader-overlay>
+                                    <ng-template #tree>
+                                        <mc-tree-selection
+                                            [autoSelect]="true"
+                                            [dataSource]="actionsDataSource"
+                                            [treeControl]="actionsTreeControl"
+                                            (selectionChange)="onSelectAction()"
+                                            [(ngModel)]="selectedActionTreeNode">
+
+                                            <mc-tree-option
+                                                *mcTreeNodeDef="let node"
+                                                mcTreeNodePadding
+                                                class="actions-tree-option">
+                                                <div class="layout-row layout-align-space-between-start">
+                                                    <div
+                                                        class="actions-tree-option__text"
+                                                        [class.text_second]="node.unavailable"
+                                                        [innerHTML]="actionsTreeControl.getViewValue(node)">
+                                                    </div>
+                                                    <soldr-action-priority
+                                                        [mini]="true"
+                                                        [priority]="node.data.action.config.priority">
+                                                    </soldr-action-priority>
+                                                </div>
+                                            </mc-tree-option>
+
+                                            <mc-tree-option
+                                                *mcTreeNodeDef="let node; when: hasChildInActionTree"
+                                                mcTreeNodePadding
+                                                class="actions-tree-option">
+                                                <mc-tree-node-toggle [node]="node"></mc-tree-node-toggle>
+                                                <div
+                                                    class="actions-tree-option__text"
+                                                    [innerHTML]="actionsTreeControl.getViewValue(node)">
+                                                </div>
+                                            </mc-tree-option>
+                                        </mc-tree-selection>
+                                    </ng-template>
+                                </div>
+                            </div>
+                            <div class="flex-none">
+                                <mc-divider [vertical]="true"></mc-divider>
+                            </div>
+                            <div class="flex-50 layout-padding-l">
+                                <soldr-action-info
+                                    *ngIf="selectedActionTreeNode"
+                                    [action]="selectedActionTreeNode.data.action"
+                                    [module]="selectedActionTreeNode.data.module"
+                                    [unavailable]="selectedActionTreeNode.unavailable">
+                                </soldr-action-info>
+                            </div>
+                        </ng-container>
+
+                        <ng-template #selectEventsBody>
+
+                            <div class="flex-33 layout-column">
+                                <div class="flex-none">
+                                    <div class="mc-subheading layout-padding-l">
+                                        {{ tShared('Shared.ModuleConfig.Label.AllEvents') }}
+                                    </div>
+                                    <mc-divider></mc-divider>
+                                    <mc-form-field mcFormFieldWithoutBorders (keydown.escape)="$event.stopPropagation()">
+                                        <i mcPrefix mc-icon="soldr-icons-search_16" class="soldr-icons"></i>
+                                        <input
+                                            autocomplete="off"
+                                            mcInput
+                                            [placeholder]="tShared('Shared.Pseudo.InputPlaceholder.QuickSearch')"
+                                            (ngModelChange)="searchEvents$.next($event)"
+                                            [(ngModel)]="searchEvents">
+                                        <mc-cleaner></mc-cleaner>
+                                    </mc-form-field>
+                                    <mc-divider></mc-divider>
+                                </div>
+                                <mc-list-selection
+                                    #test
+                                    class="flex-auto scrollable-y assigning-actions-master__list"
+                                    multiple="keyboard"
+                                    (selectionChange)="onSelectEventsFromNotSelected($event)"
+                                    [(ngModel)]="eventsNodeFromNotSelected">
+                                    <ng-container *ngIf="data.processedAvailableEvents.length > 0">
+                                        <mc-list-option
+                                            *ngFor="let eventName of data.processedAvailableEvents"
+                                            class="event-list-item"
+                                            [showCheckbox]="false"
+                                            [value]="eventName">
+                                            <div class="layout-row layout-align-space-between-center">
+                                                <span
+                                                    class="event-list-item__text"
+                                                    [tooltipPlacement]="popUpPlacements.Right"
+                                                    soldrTextOverflow>
+                                                    {{ module.locale.events[eventName][data.language].title }}
+                                                </span>
+                                                <button
+                                                    mc-button
+                                                    class="mc-button_transparent layout-margin-left-s"
+                                                    (click)="selectEvents(eventName); $event.stopPropagation()">
+                                                    <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                                                </button>
+                                            </div>
+                                        </mc-list-option>
+                                        <mc-divider></mc-divider>
+                                    </ng-container>
+                                    <mc-list-option
+                                        *ngFor="let eventName of data.processedUnavailableEvents"
+                                        class="event-list-item"
+                                        [showCheckbox]="false"
+                                        [value]="eventName">
+                                        <div class="layout-row layout-align-space-between-center">
+                                            <span
+                                                class="event-list-item__text text_second"
+                                                [tooltipPlacement]="popUpPlacements.Right"
+                                                soldrTextOverflow>
+                                                {{ module.locale.events[eventName][data.language].title }}
+                                            </span>
+                                        </div>
+                                    </mc-list-option>
+                                </mc-list-selection>
+                            </div>
+
+                            <div class="flex-none">
+                                <mc-divider [vertical]="true"></mc-divider>
+                            </div>
+
+                            <div class="flex-33 layout-column">
+                                <div class="flex-none">
+                                    <div class="mc-subheading layout-padding-l">
+                                        {{ tShared('Shared.ModuleConfig.Label.SelectedEvents') }}
+                                    </div>
+                                    <mc-divider></mc-divider>
+                                    <mc-form-field mcFormFieldWithoutBorders (keydown.escape)="$event.stopPropagation()">
+                                        <i mcPrefix mc-icon="soldr-icons-search_16" class="soldr-icons"></i>
+                                        <input
+                                            autocomplete="off"
+                                            mcInput
+                                            [placeholder]="tShared('Shared.Pseudo.InputPlaceholder.QuickSearch')"
+                                            (ngModelChange)="searchSelectedEvents$.next($event)"
+                                            [(ngModel)]="searchSelectedEvents">
+                                        <mc-cleaner></mc-cleaner>
+                                    </mc-form-field>
+                                    <mc-divider></mc-divider>
+                                </div>
+                                <mc-list-selection
+                                    class="flex-auto scrollable-y assigning-actions-master__list"
+                                    multiple="keyboard"
+                                    (selectionChange)="onSelectEventsFromSelected($event)"
+                                    [(ngModel)]="eventsNodeFromSelected">
+                                    <mc-list-option
+                                        *ngFor="let eventName of data.selectedEvents"
+                                        class="event-list-item"
+                                        [showCheckbox]="false"
+                                        [value]="eventName">
+                                        <div class="layout-row layout-align-space-between-center">
+                                            <span
+                                                class="event-list-item__text"
+                                                [tooltipPlacement]="popUpPlacements.Right"
+                                                soldrTextOverflow>
+                                                {{ module.locale.events[eventName][data.language].title }}
+                                            </span>
+                                            <button
+                                                mc-button
+                                                class="mc-button_transparent layout-margin-left-s"
+                                                (click)="unselectEvent(eventName); $event.stopPropagation()">
+                                                <i mc-icon="soldr-icons-minus-circle_16" class="soldr-icons"></i>
+                                            </button>
+                                        </div>
+                                    </mc-list-option>
+                                </mc-list-selection>
+                            </div>
+                            <div class="flex-none">
+                                <mc-divider [vertical]="true"></mc-divider>
+                            </div>
+                            <div class="flex-33 layout-column">
+                                <ng-container
+                                    *ngIf="data.lastSelectedEvent">
+                                    <div class="flex-none layout-padding-left-l layout-padding-right-l">
+                                        <div
+                                            class="mc-body_caps text_error layout-padding-top-l layout-padding-bottom-xl event-info__unavailable-text"
+                                            [style.visibility]="data.unavailableEvents.includes(data.lastSelectedEvent) ? 'visible' : undefined ">
+                                            {{ tShared('Shared.ModuleConfig.Text.UnavailableForSelection') }}
+                                        </div>
+                                        <div class="mc-title">
+                                            {{ module.locale.events[data.lastSelectedEvent][data.language].title}}
+                                        </div>
+                                        <div class="layout-margin-top-xxs layout-margin-bottom-l">
+                                            {{ data.lastSelectedEvent }}
+                                        </div>
+                                    </div>
+                                    <mc-tab-group class="flex-auto overflow-hidden scrollable-y">
+                                        <mc-tab
+                                            [empty]="!module.locale.events[data.lastSelectedEvent][data.language].description"
+                                            [tooltipTitle]="tShared('Shared.ModuleConfig.Text.NoDescription')"
+                                            [tooltipPlacement]="popUpPlacements.Top">
+                                            <ng-template mc-tab-label>
+                                                {{ tShared('Shared.ModuleConfig.TabTitle.Description') }}
+                                            </ng-template>
+
+                                            <ng-container
+                                                *ngIf="module.locale.events[data.lastSelectedEvent][data.language].description; else emptyDescription">
+                                                <div class="layout-padding-l">
+                                                    {{ module.locale.events[data.lastSelectedEvent][data.language].description }}
+                                                </div>
+                                            </ng-container>
+                                            <ng-template #emptyDescription>
+                                                <div class="empty-text">
+                                                    {{ tShared('Shared.ModuleConfig.Text.NoDescription') }}
+                                                </div>
+                                            </ng-template>
+                                        </mc-tab>
+
+                                        <mc-tab
+                                            [empty]="data.lastSelectedEventActions.length === 0"
+                                            [tooltipTitle]="tShared('Shared.ModuleConfig.Text.ActionsNotAssigned')"
+                                            [tooltipPlacement]="popUpPlacements.Top">
+                                            <ng-template mc-tab-label>
+                                                {{ tShared('Shared.ModuleConfig.TabTitle.Actions') }}
+                                            </ng-template>
+
+                                            <ng-container
+                                                *ngIf="data.lastSelectedEventActions.length > 0; else emptyActions">
+                                                <div class="layout-padding-l scrollable-y">
+                                                    <div
+                                                        *ngFor="let actionItem of data.lastSelectedEventActions"
+                                                        class="layout-row layout-align-space-between-start layout-margin-bottom-s">
+
+                                                        <i mc-icon="soldr-icons-bolt_16" class="soldr-icons layout-margin-right-xxs"></i>
+
+                                                        <div class="flex-auto">
+                                                            <div>
+                                                                {{ actionItem.name === logToDbActionName
+                                                                    ? tShared('Shared.ModuleConfig.Text.LogToDbAction')
+                                                                    : actionItem.action?.locale[data.language].title
+                                                                }}
+                                                            </div>
+                                                            <div class="layout-margin-top-xxs text_second">
+                                                                {{ actionItem.module.locale.module[data.language].title }}
+                                                            </div>
+                                                        </div>
+
+                                                        <soldr-action-priority [priority]="actionItem.priority" [mini]="true">
+                                                        </soldr-action-priority>
+                                                    </div>
+                                                </div>
+                                            </ng-container>
+                                            <ng-template #emptyActions>
+                                                <div class="empty-text">
+                                                    {{ tShared('Shared.ModuleConfig.Text.NoActions') }}
+                                                </div>
+                                            </ng-template>
+                                        </mc-tab>
+
+                                        <mc-tab
+                                            [empty]="module.default_event_config[data.lastSelectedEvent].fields.length === 0"
+                                            [tooltipTitle]="tShared('Shared.ModuleConfig.Text.NoVariables')"
+                                            [tooltipPlacement]="popUpPlacements.Top">
+                                            <ng-template mc-tab-label>
+                                                {{ tShared('Shared.ModuleConfig.TabTitle.Variables') }}
+                                            </ng-template>
+
+                                            <ng-container
+                                                *ngIf="module.default_event_config[data.lastSelectedEvent].fields.length > 0; else emptyVariables">
+                                                <div class="layout-padding-l">
+                                                    <div
+                                                        *ngIf="data.unavailableEvents.includes(data.lastSelectedEvent)"
+                                                        class="text_error">
+                                                        {{ tShared('Shared.ModuleConfig.Text.UnavailableEvent') }}
+                                                    </div>
+                                                    <ng-container
+                                                        *ngFor="let fieldName of module.default_event_config[data.lastSelectedEvent].fields">
+                                                        <div class="layout-margin-top-s">{{ fieldName }}</div>
+                                                        <div class="text_second">
+                                                            {{ module.locale.fields[fieldName][data.language].description }}
+                                                        </div>
+                                                    </ng-container>
+                                                </div>
+                                            </ng-container>
+                                            <ng-template #emptyVariables>
+                                                <div class="empty-text">
+                                                    {{ tShared('Shared.ModuleConfig.Text.NoVariables') }}
+                                                </div>
+                                            </ng-template>
+                                        </mc-tab>
+                                    </mc-tab-group>
+                                </ng-container>
+                            </div>
+                        </ng-template>
+                    </div>
+                </div>
+            </ng-template>
+
+            <ng-template #footer>
+                <div *ngIf="step === 1; else eventsStepFooter" class="layout-row layout-align-end-center">
+                    <button
+                        mc-button
+                        [color]="themePalette.Primary"
+                        [disabled]="!selectedActionTreeNode || selectedActionTreeNode.unavailable"
+                        (click)="next()">
+                        {{ tShared('Shared.ModuleConfig.ButtonText.EventSetup') }}
+                    </button>
+
+                    <button
+                        mc-button
+                        [mcDropdownTriggerFor]="moreActions"
+                        [disabled]="!selectedActionTreeNode || selectedActionTreeNode.unavailable">
+                        {{ tShared('Shared.ModuleConfig.DropdownButtonText.MoreActions') }}
+                        <i mc-icon="soldr-icons-angle-down-S_16" class="soldr-icons"></i>
+                    </button>
+                    <mc-dropdown #moreActions>
+                        <mc-dropdown-item (click)="assignToAvailableEvents()">
+                            {{ tShared('Shared.ModuleConfig.DropdownItemText.AssignToAllAvailableEvents') }}
+                        </mc-dropdown-item>
+                        <mc-dropdown-item [disabled]="!hasEventsWithSelectedAction" (click)="removeFromAllEvents()">
+                            {{ tShared('Shared.ModuleConfig.DropdownItemText.DeleteFromAllEvents') }}
+                        </mc-dropdown-item>
+                    </mc-dropdown>
+
+                    <div class="layout-margin-left-l">
+                        <button mc-button (click)="cancel()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                        </button>
+                    </div>
+                </div>
+                <ng-template #eventsStepFooter>
+                    <div class="layout-fill layout-row layout-align-space-between-center">
+                        <button mc-button (click)="back()">
+                            {{ tShared('Shared.ModuleConfig.ButtonText.SelectOtherAction') }}
+                        </button>
+
+                        <div>
+                            <button mc-button [color]="themePalette.Primary" (click)="save()">
+                                {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                            </button>
+
+                            <button mc-button (click)="cancel()">
+                                {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                            </button>
+                        </div>
+                    </div>
+                </ng-template>
+            </ng-template>
+
+            <ng-template #actionsFilter>
+                <button
+                    mc-button
+                    class="mc-button_transparent"
+                    [mcDropdownTriggerFor]="filterActions">
+                    <i mc-icon="soldr-icons-filter_16" class="soldr-icons"></i>
+                </button>
+
+                <mc-dropdown #filterActions>
+                    <div class="mc-dropdown__group-header">
+                        {{ tShared('Shared.ModuleConfig.DropdownItemText.ShowAction') }}
+                    </div>
+                    <mc-dropdown-item (click)="actionsFilter$.next(actionsFilterKind.All)">
+                        <i
+                            mc-icon="soldr-icons-circle-6_16"
+                            class="soldr-icons"
+                            [style.visibility]="data.actionsFilter === actionsFilterKind.AvailableForAssigning ? 'hidden' : undefined">
+                        </i>
+                        {{ tShared('Shared.ModuleConfig.DropdownItemText.AllActions') }}
+                    </mc-dropdown-item>
+                    <mc-dropdown-item (click)="actionsFilter$.next(actionsFilterKind.AvailableForAssigning)">
+                        <i
+                            mc-icon="soldr-icons-circle-6_16"
+                            class="soldr-icons"
+                            [style.visibility]="data.actionsFilter === actionsFilterKind.All ? 'hidden' : undefined">
+                        </i>
+                        {{ tShared('Shared.ModuleConfig.DropdownItemText.AvailableForAssigning') }}
+                    </mc-dropdown-item>
+                    <div class="mc-dropdown__group-header">
+                        {{ tShared('Shared.ModuleConfig.DropdownItemText.Grouping') }}
+                    </div>
+                    <mc-dropdown-item (click)="actionsGrouping$.next(actionGroupingKind.ByModule)">
+                        <i
+                            mc-icon="soldr-icons-circle-6_16"
+                            class="soldr-icons"
+                            [style.visibility]="data.actionsGrouping === actionGroupingKind.No ? 'hidden' : undefined"></i>
+                        {{ tShared('Shared.ModuleConfig.DropdownItemText.ByModule') }}
+                    </mc-dropdown-item>
+                    <mc-dropdown-item (click)="actionsGrouping$.next(actionGroupingKind.No)">
+                        <i
+                            mc-icon="soldr-icons-circle-6_16"
+                            class="soldr-icons"
+                            [style.visibility]="data.actionsGrouping === actionGroupingKind.ByModule ? 'hidden' : undefined"></i>
+                        {{ tShared('Shared.ModuleConfig.DropdownItemText.WithoutGrouping') }}
+                    </mc-dropdown-item>
+                </mc-dropdown>
+            </ng-template>
+        </ng-container>
+    </ng-container>
+</ng-container>

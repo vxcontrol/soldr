@@ -1,0 +1,162 @@
+<ng-container *ngIf="{
+    events: events$ | async,
+    selectedEvent: selectedEvent$ | async
+} as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+
+        <soldr-grid
+            [storageKey]="'module-events-config-grid'"
+            [autoHeight]="true"
+            [data]="data.events"
+            [identityField]="'name'"
+            (sortChanged)="eventsSorting$.next($event)"
+            (selectRows)="selectedEventName$.next($event[0]?.name)">
+            <div soldrGridActionBar>
+                <div
+                    class="layout-row layout-align-end-center layout-margin-bottom-s">
+                    <div *ngIf="!isReadOnly"
+                         class="flex layout-row layout-align-start-center">
+                        <button
+                            mc-button
+                            class="mc-button_transparent"
+                            [disabled]="!module"
+                            (click)="assigningActionsMaster.open()">
+                            <i mc-icon="soldr-icons-bolt_16" class="soldr-icons"></i>
+                            {{ tShared('Shared.ModuleConfig.ButtonText.AssignEventsToAction')}}
+                        </button>
+
+                        <mc-divider
+                            class="module-events__button-divider"
+                            [vertical]="true"></mc-divider>
+
+                        <button
+                            mc-button
+                            class="mc-button_transparent"
+                            [mcTooltip]="tShared('Shared.ModuleConfig.ButtonTooltip.Edit')"
+                            [disabled]="!data.selectedEvent"
+                            (click)="eventDetailsPanel.open()">
+                            <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                        </button>
+
+                        <button
+                            mc-button
+                            class="mc-button_transparent"
+                            [disabled]="!data.selectedEvent"
+                            [class.mc-progress]="inProgress"
+                            [mcTooltip]="tShared('Shared.ModuleConfig.ButtonTooltip.Reset')"
+                            (click)="resetEvent(module, data.selectedEvent.name)">
+                            <i mc-icon="soldr-icons-undo_16" class="soldr-icons"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex-none layout-padding-3xs">
+                        <mc-form-field
+                            class="mc-form__control module-events__search-events">
+                            <i
+                                mcPrefix
+                                mc-icon="soldr-icons-search_16"
+                                class="soldr-icons">
+                            </i>
+
+                            <input
+                                autocomplete="off"
+                                mcInput
+                                type="text"
+                                [placeholder]="tShared('Shared.ModuleConfig.InputPlaceholder.SearchByEventsAndActions')"
+                                [(ngModel)]="eventsSearch"
+                                (ngModelChange)="eventsSearch$.next($event)">
+
+                            <mc-cleaner></mc-cleaner>
+                        </mc-form-field>
+                    </div>
+                </div>
+            </div>
+            <div soldrGridFooter></div>
+            <soldr-column
+                field="event"
+                [autoHeight]="true"
+                [cellStyle]="{'word-break': 'break-word'}"
+                [headerName]="tShared('Shared.ModuleConfig.GridColumnsTitle.Event')"
+                [resizable]="true"
+                [sortable]="true"
+                [flex]="2"
+                [template]="eventTemplate"
+                [wrapText]="true">
+            </soldr-column>
+            <soldr-column
+                field="actions"
+                [autoHeight]="true"
+                [headerName]="tShared('Shared.ModuleConfig.GridColumnsTitle.Actions')"
+                [resizable]="true"
+                [flex]="3"
+                [template]="actionEventTemplate">
+            </soldr-column>
+            <soldr-column
+                *ngIf="!isReadOnly"
+                field="operations"
+                [displayName]="''"
+                [autoHeight]="true"
+                [headerName]="''"
+                [resizable]="false"
+                [width]="56"
+                [template]="eventOperationsTemplate">
+            </soldr-column>
+        </soldr-grid>
+        <ng-template #eventTemplate let-node="params.data">
+            <span
+                mc-link
+                class="module-events__events-grid-content"
+                [noUnderline]="true"
+                (click)="eventDetailsPanel.open()">
+                <span class="mc-link__text">{{ node.localizedName }}</span>
+                <i *ngIf="node.hasParams" mc-icon="soldr-icons-gear_16"
+                   class="soldr-icons"></i>
+            </span>
+        </ng-template>
+        <ng-template #actionEventTemplate let-node="params.data">
+            <div class="module-events__events-grid-content">
+                <div
+                    *ngFor="let action of node.actions; last as last"
+                    class="mc-body"
+                    [ngClass]="{ 'layout-margin-bottom-xxs': !last }">
+                    <div>{{ action.localizedName }}</div>
+                    <div
+                        *ngIf="action.localizedDescription"
+                        class="layout-margin-top-3xs text_second">
+                        {{ action.localizedDescription }}
+                    </div>
+                </div>
+            </div>
+        </ng-template>
+        <ng-template #eventOperationsTemplate let-node="params.data">
+            <button
+                mc-button
+                class="mc-button_transparent"
+                [mcTooltip]="tShared('Shared.ModuleConfig.ButtonTooltip.EditEventActions')"
+                (click)="assigningActionsToEvent.open(node.name)">
+                <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+            </button>
+        </ng-template>
+
+        <soldr-event-details-panel
+            #eventDetailsPanel
+            [isReadOnly]="isReadOnly"
+            [module]="module"
+            [selectedEvent]="data.selectedEvent"
+            [assigningActionsToEvent]="assigningActionsToEvent"
+            (saveCurrentConfig)="saveConfig($event)">
+        </soldr-event-details-panel>
+
+        <soldr-assigning-actions-to-event
+            #assigningActionsToEvent
+            [module]="module"
+            (saveModule)="saveConfig($event)">
+        </soldr-assigning-actions-to-event>
+
+        <soldr-assigning-actions-master
+            #assigningActionsMaster
+            [module]="module"
+            (saveModule)="saveConfig($event)">
+        </soldr-assigning-actions-master>
+    </ng-container>
+</ng-container>

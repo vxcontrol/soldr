@@ -1,0 +1,98 @@
+<div class="layout-row layout-fill layout-align-space-between-stretch" *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <div class="flex-33 layout-column layout-align-space-between">
+            <div
+                class="flex-none mc-subheading layout-margin-left-l layout-margin-right-l layout-margin-top-s layout-margin-bottom-s">
+                {{ t('Modules.ModuleEdit.Label.AgentModule') }}
+            </div>
+
+            <div class="flex-none layout-margin-left-l layout-margin-right-l layout-margin-bottom-l">
+                <mc-form-field>
+                    <input
+                        e2e-id="txtAgentFilesTreeFilterText"
+                        type="text"
+                        mcInput
+                        [placeholder]="t('Modules.ModuleEdit.InputPlaceholder.FileNameOrPath')"
+                        [(ngModel)]="agentTreeFilterText"/>
+                    <mc-cleaner></mc-cleaner>
+                </mc-form-field>
+            </div>
+            <mc-divider class="flex-none"></mc-divider>
+
+            <soldr-files-tree
+                class="flex-auto"
+                [files]="files"
+                [filter]="agentTreeFilterText"
+                [moduleName]="module.info.name"
+                [moduleVersion]="module.info.version | moduleVersion"
+                [readOnly]="readOnly"
+                [section]="ModuleFolderSection.Agent"
+                (openFile)="openFile($event)">
+            </soldr-files-tree>
+        </div>
+        <mc-divider [vertical]="true"></mc-divider>
+        <div class="flex-33 layout-column layout-align-space-between">
+            <div
+                class="flex-none mc-subheading layout-margin-left-l layout-margin-right-l layout-margin-top-s layout-margin-bottom-s">
+                {{ t('Modules.ModuleEdit.Label.ServerModule') }}
+            </div>
+
+            <div class="flex-none layout-margin-left-l layout-margin-right-l layout-margin-bottom-l">
+                <mc-form-field>
+                    <input
+                        e2e-id="txtServerFilesTreeFilterText"
+                        type="text"
+                        mcInput
+                        [placeholder]="t('Modules.ModuleEdit.InputPlaceholder.FileNameOrPath')"
+                        [(ngModel)]="serverTreeFilterText"/>
+                    <mc-cleaner></mc-cleaner>
+                </mc-form-field>
+            </div>
+            <mc-divider class="flex-none"></mc-divider>
+
+            <soldr-files-tree
+                class="flex-auto"
+                [files]="files"
+                [filter]="serverTreeFilterText"
+                [moduleName]="module.info.name"
+                [moduleVersion]="module.info.version | moduleVersion"
+                [readOnly]="readOnly"
+                [section]="ModuleFolderSection.Server"
+                (openFile)="openFile($event)">
+            </soldr-files-tree>
+        </div>
+        <mc-divider [vertical]="true"></mc-divider>
+        <div class="flex-33 layout-column layout-align-space-between">
+            <div
+                class="flex-none mc-subheading layout-margin-left-l layout-margin-right-l layout-margin-top-s layout-margin-bottom-s">
+                {{ t('Modules.ModuleEdit.Label.BrowserModule') }}
+            </div>
+
+            <div class="flex-none layout-margin-left-l layout-margin-right-l layout-margin-bottom-l">
+                <mc-form-field>
+                    <input
+                        e2e-id="txtBrowserFilesTreeFilterText"
+                        type="text"
+                        mcInput
+                        [placeholder]="t('Modules.ModuleEdit.InputPlaceholder.FileNameOrPath')"
+                        [(ngModel)]="browserTreeFilterText"/>
+                    <mc-cleaner></mc-cleaner>
+                </mc-form-field>
+            </div>
+            <mc-divider class="flex-none"></mc-divider>
+
+            <soldr-files-tree
+                class="flex-auto"
+                [files]="files"
+                [filter]="browserTreeFilterText"
+                [moduleName]="module.info.name"
+                [moduleVersion]="module.info.version | moduleVersion"
+                [readOnly]="readOnly"
+                [section]="ModuleFolderSection.Browser"
+                [hideClibs]="true"
+                (openFile)="openFile($event)">
+            </soldr-files-tree>
+        </div>
+    </ng-container>
+</div>
+<soldr-edit-file-modal [files]="files" [module]="module" [readOnly]="readOnly"></soldr-edit-file-modal>

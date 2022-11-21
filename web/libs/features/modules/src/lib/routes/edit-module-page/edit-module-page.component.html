@@ -1,0 +1,341 @@
+<ng-container
+    *ngrxLet="module$; let module">
+
+    <div *transloco="let t; read: 'modules'" class="page-layout layout-column layout-align-space-between">
+        <ng-container *ngrxLet="readOnly$; let readOnly">
+            <soldr-actionbar class="flex-none" *ngrxLet="language$; let lang">
+                <ng-container *ngIf="module" actionbar-left>
+                    <soldr-breadcrumbs
+                        [items]="[
+                            { link: ['/modules'], text: t('Modules.ModuleView.LinkText.Modules') },
+                            { text: module?.locale.module[lang].title }
+                        ]">
+                    </soldr-breadcrumbs>
+                </ng-container>
+
+                <ng-container *ngIf="module" actionbar-right>
+                    <ng-container *ngrxLet="canRelease$; let canRelease">
+
+                        <ng-container *ngrxLet="versions$; let versions">
+                            <button
+                                e2e-id="btnSelectVersions"
+                                mc-button
+                                class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                                [mcDropdownTriggerFor]="versionsDropdown">
+                                <ng-container *ngIf="module.state === ModuleState.Draft; else version">
+                                    {{ t('Modules.ModuleEdit.DropdownButtonText.Draft') }}
+                                </ng-container>
+                                <ng-template #version>
+                                    {{ module?.info.version | moduleVersion }}
+                                </ng-template>
+                                <i mc-icon="mc-angle-down-S_16"></i>
+                            </button>
+
+                            <mc-dropdown #versionsDropdown="mcDropdown">
+                                <button
+                                    e2e-id="dlSelectVersionsItem"
+                                    *ngFor="let moduleVersion of versions"
+                                    mc-dropdown-item
+                                    (click)="selectVersion(moduleVersion.info.version)">
+                                    {{ moduleVersion.info.version | moduleVersion }}
+                                    <span
+                                        *ngIf="moduleVersion.state === ModuleState.Draft">
+                                        - {{ t('Modules.ModuleEdit.DropdownButtonText.CurrentVersionIsDraftLabel') }}
+                                    </span>
+                                </button>
+                            </mc-dropdown>
+                        </ng-container>
+
+                        <ng-container>
+                            <soldr-release-module-modal *ngIf="canRelease && permitted.EditModules">
+                                <button
+                                    e2e-id="btnReleaseModule"
+                                    mc-button
+                                    class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.Release')">
+                                    <i mc-icon="soldr-icons-join_16" class="soldr-icons"></i>
+                                </button>
+                            </soldr-release-module-modal>
+                        </ng-container>
+
+                        <ng-container *ngrxLet="canCreateDraft$; let canCreateDraft">
+                            <soldr-create-module-draft-modal *ngIf="canCreateDraft && permitted.EditModules">
+                                <button
+                                    e2e-id="btnCreateDraft"
+                                    mc-button
+                                    class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.CreateDraft')">
+                                    <i mc-icon="soldr-icons-branch_16" class="soldr-icons"></i>
+                                </button>
+                            </soldr-create-module-draft-modal>
+                        </ng-container>
+
+                        <div
+                            *ngrxLet="canUpdateModuleInPolicies$; let canUpdateModuleInPolicies"
+                            [mcTooltip]="t('Modules.ModuleEdit.TooltipText.ModulesIsNotInAnyPolicy')"
+                            [mcTooltipDisabled]="canUpdateModuleInPolicies">
+                            <ng-container *ngrxLet="isUpdatingInPolicies$; let isUpdatingInPolicies">
+                                <button
+                                    e2e-id="btnUpdateModuleInPolicies"
+                                    mc-button
+                                    class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+                                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.UpdateInPolicies')"
+                                    [class.mc-progress]="isUpdatingInPolicies"
+                                    [disabled]="!canUpdateModuleInPolicies"
+                                    (click)="updateInPolicies()">
+                                    <i mc-icon="soldr-icons-policies_16" class="soldr-icons"></i>
+                                </button>
+                            </ng-container>
+                        </div>
+
+                        <soldr-export-module *ngIf="permitted.ExportModules" [selectedModule]="module">
+                        </soldr-export-module>
+
+                        <ng-container *ngrxLet="availableVersions$; let availableVersions">
+                            <soldr-delete-module
+                                *ngIf="permitted.DeleteModules || permitted.EditModules"
+                                [compact]="true"
+                                [selectedModule]="module"
+                                [availableVersions]="availableVersions"
+                                (afterDeleteModule)="goToList()"
+                                (afterDeleteVersion)="goLatestVersion()">
+                            </soldr-delete-module>
+                        </ng-container>
+                    </ng-container>
+                </ng-container>
+            </soldr-actionbar>
+
+            <div
+                *transloco="let tShared; read: 'shared'"
+                class="flex layout-column page-layout__panel layout-margin-left-s layout-margin-right-s">
+
+                <ng-container *ngrxLet="isLoading$; let isLoading">
+                    <mc-loader-overlay *ngIf="isLoading; else loaded"></mc-loader-overlay>
+                </ng-container>
+
+                <ng-template #loaded>
+                    <mc-tab-group
+                        e2e-id="tbsModuleSections"
+                        #tabs
+                        class="flex-none"
+                        [(selectedIndex)]="tabIndex"
+                        (selectedTabChange)="onSelectTab()">
+                        <mc-tab
+                            *ngrxLet="isValidGeneral$; let isValidGeneral"
+                            [tabId]="'general'">
+                            <ng-template mc-tab-label>
+                                <span [class.mc-error]="!isValidGeneral">
+                                    {{ t('Modules.ModuleView.TabTitle.General') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isEmptyConfiguration$; let isEmptyConfiguration"
+                            [tabId]="'configuration'"
+                            [tooltipTitle]="t('Modules.ModuleEdit.Text.NoConfiguration')"
+                            [tooltipPlacement]="popUpPlacements.Top"
+                            [empty]="isEmptyConfiguration">
+                            <ng-template mc-tab-label>
+                                <span
+                                    *ngrxLet="isValidConfiguration$; let isValidConfiguration"
+                                    [class.mc-error]="!isValidConfiguration">
+                                    {{ t('Modules.ModuleView.TabTitle.Configuration') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isEmptySecureConfiguration$; let isEmptySecureConfiguration"
+                            [tabId]="'secure_configuration'"
+                            [tooltipTitle]="t('Modules.ModuleEdit.Text.NoSecureConfiguration')"
+                            [tooltipPlacement]="popUpPlacements.Top"
+                            [empty]="isEmptySecureConfiguration">
+                            <ng-template mc-tab-label>
+                                <span
+                                    *ngrxLet="isValidSecureConfiguration$; let isValidSecureConfiguration"
+                                    [class.mc-error]="!isValidSecureConfiguration">
+                                    {{ t('Modules.ModuleView.TabTitle.SecureConfiguration') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isEmptyEvents$; let isEmptyEvents"
+                            [tabId]="'events'"
+                            [tooltipTitle]="t('Modules.ModuleEdit.Text.NoEvents')"
+                            [tooltipPlacement]="popUpPlacements.Top"
+                            [empty]="isEmptyEvents">
+                            <ng-template mc-tab-label>
+                                <span
+                                    *ngrxLet="isValidEvents$; let isValidEvents"
+                                    [class.mc-error]="!isValidEvents">
+                                    {{ t('Modules.ModuleView.TabTitle.Events') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isEmptyActions$; let isEmptyActions"
+                            [tabId]="'actions'"
+                            [tooltipTitle]="t('Modules.ModuleEdit.Text.NoActions')"
+                            [tooltipPlacement]="popUpPlacements.Top"
+                            [empty]="isEmptyActions">
+                            <ng-template mc-tab-label>
+                                <span
+                                    *ngrxLet="isValidActions$; let isValidActions"
+                                    [class.mc-error]="!isValidActions">
+                                    {{ t('Modules.ModuleView.TabTitle.Actions') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isEmptyFields$; let isEmptyFields"
+                            [tabId]="'fields'"
+                            [tooltipTitle]="t('Modules.ModuleEdit.Text.NoFields')"
+                            [tooltipPlacement]="popUpPlacements.Top"
+                            [empty]="isEmptyFields">
+                            <ng-template mc-tab-label>
+                                <span
+                                    *ngrxLet="isValidFields$; let isValidFields"
+                                    [class.mc-error]="!isValidFields">
+                                    {{ t('Modules.ModuleView.TabTitle.Fields') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isEmptyDependencies$; let isEmptyDependencies"
+                            [tabId]="'dependencies'"
+                            [tooltipTitle]="t('Modules.ModuleEdit.Text.NoDependencies')"
+                            [tooltipPlacement]="popUpPlacements.Top"
+                            [empty]="isEmptyDependencies">
+                            <ng-template mc-tab-label>
+                                <span
+                                    *ngrxLet="isValidDependencies$; let isValidDependencies"
+                                    [class.mc-error]="!isValidDependencies">
+                                    {{ t('Modules.ModuleView.TabTitle.Dependencies') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            *ngrxLet="isValidLocalization$; let isValidLocalization"
+                            [tabId]="'localization'">
+                            <ng-template mc-tab-label>
+                                <span [class.mc-error]="!isValidLocalization">
+                                    {{ t('Modules.ModuleView.TabTitle.Localization') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+
+                        <mc-tab
+                            [label]="t('Modules.ModuleView.TabTitle.Files')"
+                            [tabId]="'files'">
+                        </mc-tab>
+
+                        <mc-tab *ngrxLet="isValidChangelog$; let isValidChangelog" [tabId]="'changelog'">
+                            <ng-template mc-tab-label>
+                                <span [class.mc-error]="!isValidChangelog">
+                                    {{ t('Modules.ModuleView.TabTitle.Changelog') }}
+                                </span>
+                            </ng-template>
+                        </mc-tab>
+                    </mc-tab-group>
+
+                    <div class="flex-auto edit-module-page__content">
+                        <soldr-edit-general-section
+                            #generalSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.General, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.General }">
+                        </soldr-edit-general-section>
+
+                        <soldr-edit-config-section
+                            #configSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Config, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Config }">
+                        </soldr-edit-config-section>
+
+                        <soldr-edit-secure-config-section
+                            #secureConfigSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.SecureConfig, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.SecureConfig }">
+                        </soldr-edit-secure-config-section>
+
+                        <soldr-edit-events-section
+                            #eventsSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Events, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Events }">
+                        </soldr-edit-events-section>
+
+                        <soldr-edit-actions-section
+                            #actionsSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Actions, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Actions }">
+                        </soldr-edit-actions-section>
+
+                        <soldr-edit-fields-section
+                            #fieldsSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Fields, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Fields }">
+                        </soldr-edit-fields-section>
+
+                        <soldr-edit-dependencies-section
+                            #dependenciesSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Dependencies, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Dependencies }">
+                        </soldr-edit-dependencies-section>
+
+                        <soldr-edit-localization-section
+                            #localizationSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Localization, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Localization }">
+                        </soldr-edit-localization-section>
+
+                        <soldr-edit-files-section
+                            #filesSection
+                            *ngrxLet="files$; let files"
+                            [files]="files"
+                            [module]="module"
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Files, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Files }">
+                        </soldr-edit-files-section>
+
+                        <soldr-edit-changelog-section
+                            #changelogSection
+                            [readOnly]="readOnly"
+                            [class]="{ 'layout-fill': tabIndex === TabsIndexes.Changelog, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Changelog }">
+                        </soldr-edit-changelog-section>
+                    </div>
+                </ng-template>
+            </div>
+
+            <ng-container *ngrxLet="isSaving$; let isSaving">
+                <ng-container *ngIf="!readOnly && permitted.EditModules">
+                    <div
+                        *transloco="let tCommon; read: 'common'"
+                        class="layout-row layout-align-end-center layout-margin-top-s layout-padding-left-s layout-padding-right-s">
+
+                        <button
+                            *ngrxLet="isDirty$; let isDirty"
+                            e2e-id="btnSaveModule"
+                                mc-button
+                                [class.mc-progress]="isSaving"
+                                [color]="themePalette.Primary"
+                                [disabled]="!isDirty"
+                                (click)="save()">
+                            {{ tCommon('Common.Pseudo.ButtonText.Save')}}
+                        </button>
+
+                        <div class="layout-margin-left-s">
+                            <a e2e-id="btnCancelEditModule" mc-button [routerLink]="['/modules']">
+                                {{ tCommon('Common.Pseudo.ButtonText.Cancel')}}
+                            </a>
+                        </div>
+                    </div>
+                </ng-container>
+            </ng-container>
+        </ng-container>
+    </div>
+</ng-container>

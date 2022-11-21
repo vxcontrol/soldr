@@ -1,0 +1,19 @@
+.module-info__new-version-alert {
+    margin-bottom: 16px;
+}
+
+.module-info__new-version-text {
+    margin-bottom: 8px;
+}
+
+.module-info__link + .module-info__link {
+    margin-left: 8px;
+}
+
+.module-info__tag {
+    max-width: 100%;
+
+    &:not(:first-child) {
+        margin-left: 8px;
+    }
+}

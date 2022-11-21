@@ -1,0 +1,39 @@
+.link-group-to-policy__overlay {
+    .mc-sidepanel-container {
+        width: 400px !important;
+    }
+
+    .mc-list-option .mc-option-action {
+        display: flex;
+    }
+
+    .mc-list-selection {
+        padding-top: 8px;
+    }
+
+    .mc-list-selection .mc-divider {
+        margin: 8px 0;
+    }
+
+    .link-group-to-policy__conflicted-policy_one-module {
+        cursor: help;
+    }
+}
+
+.link-group-to-policy__modal {
+    .mc-modal-footer {
+        display: none;
+    }
+
+    .link-group-to-policy__grouping-buttons {
+        margin: 8px 0;
+    }
+
+    .link-group-to-policy__module-item:not(:last-child) {
+        margin-bottom: 4px;
+    }
+}
+
+.link-group-to-policy__table-column_with-sort {
+    cursor: pointer;
+}

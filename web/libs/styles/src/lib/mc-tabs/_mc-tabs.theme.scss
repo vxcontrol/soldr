@@ -1,0 +1,5 @@
+@mixin mc-tabs($theme) {
+    .mc-tab-list__content::after {
+        background-color: map-deep-get($theme, foreground, divider);
+    }
+}

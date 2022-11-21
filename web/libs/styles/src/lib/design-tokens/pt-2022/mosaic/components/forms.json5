@@ -1,0 +1,18 @@
+{
+    forms: {
+        size: {
+            vertical: {
+                row: {
+                    'margin-bottom': { value: '{size.xl}' }
+                },
+                label: {
+                    'padding-bottom': { value: '{size.xxs}' }
+                },
+                legend: {
+                    'margin-top': { value: '{size.xl}' },
+                    'margin-bottom': { value: '{size.xl}' }
+                }
+            }
+        }
+    }
+}

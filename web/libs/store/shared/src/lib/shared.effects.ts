@@ -1,0 +1,290 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { Store } from '@ngrx/store';
+import { catchError, from, map, of, switchMap } from 'rxjs';
+
+import {
+    AgentsService,
+    allListQuery,
+    BinariesService,
+    defaultListQuery,
+    ErrorResponse,
+    GroupsService,
+    OptionsService,
+    PoliciesService,
+    Permission,
+    PrivateAgents,
+    PrivateBinaries,
+    PrivateGroups,
+    PrivateOptionsActions,
+    PrivateOptionsEvents,
+    PrivateOptionsTags,
+    PrivatePolicies,
+    PrivateServices,
+    PublicInfo,
+    PublicService,
+    ServicesService,
+    SuccessResponse,
+    PrivateSystemModules,
+    ModulesService
+} from '@soldr/api';
+import { ModalInfoService, saveFile } from '@soldr/shared';
+
+import * as SharedActions from './shared.actions';
+import { State } from './shared.reducer';
+
+@Injectable()
+export class SharedEffects {
+    fetchAllGroups$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchAllGroups),
+            switchMap(() =>
+                this.groupsService.fetchList(allListQuery({ sort: { prop: 'name', order: 'ascending' } })).pipe(
+                    map((response: SuccessResponse<PrivateGroups>) =>
+                        SharedActions.fetchAllGroupsSuccess({ data: response.data })
+                    ),
+                    catchError(() => of(SharedActions.fetchAllGroupsFailure()))
+                )
+            )
+        )
+    );
+
+    fetchAllAgents$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchAllAgents),
+            switchMap(() =>
+                this.agentsService.fetchList(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateAgents>) =>
+                        SharedActions.fetchAllAgentsSuccess({ data: response.data })
+                    ),
+                    catchError(() => of(SharedActions.fetchAllAgentsFailure()))
+                )
+            )
+        )
+    );
+
+    fetchAllPolicies$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchAllPolicies),
+            switchMap(() =>
+                this.policiesService.fetchList(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivatePolicies>) =>
+                        SharedActions.fetchAllPoliciesSuccess({ data: response.data })
+                    ),
+                    catchError(() => of(SharedActions.fetchAllPoliciesFailure()))
+                )
+            )
+        )
+    );
+
+    fetchAllServices$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchAllServices),
+            switchMap(() =>
+                this.servicesService.fetchServiceList(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateServices>) =>
+                        SharedActions.fetchAllServicesSuccess({ data: response.data })
+                    ),
+                    catchError((error: ErrorResponse) => of(SharedActions.fetchAllServicesFailure({ error })))
+                )
+            )
+        )
+    );
+
+    fetchAllModules$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchAllModules),
+            switchMap(() =>
+                this.modulesService.fetchList(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateSystemModules>) =>
+                        SharedActions.fetchAllModulesSuccess({ data: response.data })
+                    ),
+                    catchError(() => of(SharedActions.fetchAllModulesFailure()))
+                )
+            )
+        )
+    );
+
+    exportBinaryFile$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.exportBinaryFile),
+            switchMap(({ os, arch, version }) =>
+                this.binariesService.getBinaryFile(os, arch, version).pipe(
+                    map((response) => {
+                        saveFile(response);
+
+                        return SharedActions.exportBinaryFileSuccess();
+                    }),
+                    catchError(({ error }: HttpErrorResponse) => of(SharedActions.exportBinaryFileFailure({ error })))
+                )
+            )
+        )
+    );
+
+    fetchInfo$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchInfo),
+            switchMap(({ refreshCookie }) =>
+                this.publicService.getUserInfo(refreshCookie).pipe(
+                    map((response: SuccessResponse<PublicInfo>) => {
+                        const data = response?.data;
+                        if (!data?.privileges?.includes(Permission.ViewServices) && data?.service) {
+                            const info = {
+                                ...data,
+                                service: {
+                                    ...data?.service,
+                                    name: data?.service?.hash
+                                },
+                                services: data?.services?.map((service) => ({ ...service, name: service.hash }))
+                            };
+
+                            return SharedActions.fetchInfoSuccess({ info });
+                        }
+
+                        return SharedActions.fetchInfoSuccess({ info: data });
+                    })
+                )
+            )
+        )
+    );
+
+    fetchLatestVersion$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchLatestAgentBinary),
+            switchMap(() =>
+                this.binariesService
+                    .getBinaries({
+                        ...defaultListQuery({
+                            sort: {
+                                prop: 'ver_build',
+                                order: 'descending'
+                            },
+                            page: 1,
+                            pageSize: 1
+                        })
+                    })
+                    .pipe(
+                        map((response: SuccessResponse<PrivateBinaries>) =>
+                            SharedActions.fetchLatestAgentBinarySuccess({
+                                binaries: response?.data
+                            })
+                        ),
+                        catchError(() => of(SharedActions.fetchLatestAgentBinaryFailure()))
+                    )
+            )
+        )
+    );
+
+    fetchVersions$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchAgentBinaries),
+            switchMap(() =>
+                this.binariesService
+                    .getBinaries({
+                        ...defaultListQuery({
+                            sort: {
+                                prop: 'version',
+                                order: 'descending'
+                            },
+                            page: 1,
+                            pageSize: -1
+                        })
+                    })
+                    .pipe(
+                        map((response: SuccessResponse<PrivateBinaries>) =>
+                            SharedActions.fetchAgentBinariesSuccess({
+                                binaries: response?.data
+                            })
+                        ),
+                        catchError(() => of(SharedActions.fetchAgentBinariesFailure()))
+                    )
+            )
+        )
+    );
+
+    logout$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.logout),
+            switchMap(() => this.publicService.logout().pipe(catchError(() => of(SharedActions.logoutFailure())))),
+            switchMap(() =>
+                from(this.router.navigate(['/login'], { queryParams: { nextUrl: window.location.pathname } })).pipe(
+                    map(() => SharedActions.logoutSuccess()),
+                    catchError(() => of(SharedActions.logoutFailure()))
+                )
+            )
+        )
+    );
+
+    fetchOptionsActions$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchOptionsActions),
+            switchMap(() =>
+                this.optionsService.fetchOptionsActions(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateOptionsActions>) =>
+                        SharedActions.fetchOptionsActionsSuccess({ data: response.data })
+                    ),
+                    catchError((error: ErrorResponse) => of(SharedActions.fetchOptionsActionsFailure({ error })))
+                )
+            )
+        )
+    );
+
+    fetchOptionsEvents$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchOptionsEvents),
+            switchMap(() =>
+                this.optionsService.fetchOptionsEvents(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateOptionsEvents>) =>
+                        SharedActions.fetchOptionsEventsSuccess({ data: response.data })
+                    ),
+                    catchError((error: ErrorResponse) => of(SharedActions.fetchOptionsEventsFailure({ error })))
+                )
+            )
+        )
+    );
+
+    fetchOptionsFields$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchOptionsFields),
+            switchMap(() =>
+                this.optionsService.fetchOptionsFields(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateOptionsEvents>) =>
+                        SharedActions.fetchOptionsFieldsSuccess({ data: response.data })
+                    ),
+                    catchError((error: ErrorResponse) => of(SharedActions.fetchOptionsFieldsFailure({ error })))
+                )
+            )
+        )
+    );
+
+    fetchOptionsTags$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.fetchOptionsTags),
+            switchMap(() =>
+                this.optionsService.fetchOptionsTags(allListQuery()).pipe(
+                    map((response: SuccessResponse<PrivateOptionsTags>) =>
+                        SharedActions.fetchOptionsTagsSuccess({ data: response.data })
+                    ),
+                    catchError((error: ErrorResponse) => of(SharedActions.fetchOptionsTagsFailure({ error })))
+                )
+            )
+        )
+    );
+
+    constructor(
+        private actions$: Actions,
+        private agentsService: AgentsService,
+        private binariesService: BinariesService,
+        private groupsService: GroupsService,
+        private modalInfoService: ModalInfoService,
+        private modulesService: ModulesService,
+        private optionsService: OptionsService,
+        private policiesService: PoliciesService,
+        private publicService: PublicService,
+        private router: Router,
+        private servicesService: ServicesService,
+        private store: Store<State>
+    ) {}
+}

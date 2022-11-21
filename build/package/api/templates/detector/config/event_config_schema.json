@@ -1,0 +1,31 @@
+{
+    "type": "object",
+    "properties": {
+        "{{placeholder}}": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/events.atomic"
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "fields": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "default": [],
+                            "minItems": 0,
+                            "maxItems": 0
+                        }
+                    },
+                    "required": [
+                        "fields"
+                    ]
+                }
+            ]
+        }
+    },
+    "additionalProperties": false,
+    "required": []
+}

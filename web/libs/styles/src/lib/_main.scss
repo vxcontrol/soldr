@@ -1,0 +1,15 @@
+@import '@ptsecurity/mosaic/theming';
+
+@import 'design-tokens/legacy-2017/default-theme/theme';
+@import 'design-tokens/pt-2022/default-theme/theme';
+@import 'themes/theme';
+
+.light-theme {
+    @include soldr-typography($legacy-2017-typography);
+    @include soldr-theme($light, $custom-light);
+}
+
+.dark-theme {
+    @include soldr-typography($pt-2022-typography);
+    @include soldr-theme($dark, $custom-dark);
+}

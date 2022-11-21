@@ -1,0 +1,36 @@
+$roboto-font-path: '/assets/fonts/roboto';
+
+@mixin roboto-font($variant, $type, $fontFamilyName, $weight, $style) {
+    $font-full-path: '#{$roboto-font-path}/#{$variant}';
+
+    @font-face {
+        font-weight: $weight;
+        font-family: '#{$fontFamilyName}';
+        font-style: $style;
+        src: local('#{$fontFamilyName} #{$type}'), local('#{$variant}-#{$type}'),
+            url('#{$font-full-path}-#{$type}.woff') format('woff');
+    }
+}
+
+@include roboto-font('Roboto', 'Black', 'Roboto', 900, normal);
+@include roboto-font('Roboto', 'BlackItalic', 'Roboto', 900, italic);
+@include roboto-font('Roboto', 'Bold', 'Roboto', 700, normal);
+@include roboto-font('Roboto', 'BoldItalic', 'Roboto', 700, italic);
+@include roboto-font('Roboto', 'Medium', 'Roboto', 500, normal);
+@include roboto-font('Roboto', 'MediumItalic', 'Roboto', 500, italic);
+@include roboto-font('Roboto', 'Regular', 'Roboto', 400, normal);
+@include roboto-font('Roboto', 'RegularItalic', 'Roboto', 400, italic);
+@include roboto-font('Roboto', 'Light', 'Roboto', 300, normal);
+@include roboto-font('Roboto', 'LightItalic', 'Roboto', 300, italic);
+@include roboto-font('Roboto', 'Thin', 'Roboto', 100, normal);
+@include roboto-font('Roboto', 'ThinItalic', 'Roboto', 100, italic);
+@include roboto-font('RobotoMono', 'Bold', 'Roboto Mono', 700, normal);
+@include roboto-font('RobotoMono', 'BoldItalic', 'Roboto Mono', 700, italic);
+@include roboto-font('RobotoMono', 'Medium', 'Roboto Mono', 500, normal);
+@include roboto-font('RobotoMono', 'MediumItalic', 'Roboto Mono', 500, italic);
+@include roboto-font('RobotoMono', 'Regular', 'Roboto Mono', 400, normal);
+@include roboto-font('RobotoMono', 'Italic', 'Roboto Mono', 400, italic);
+@include roboto-font('RobotoMono', 'Light', 'Roboto Mono', 300, normal);
+@include roboto-font('RobotoMono', 'LightItalic', 'Roboto Mono', 300, italic);
+@include roboto-font('RobotoMono', 'Thin', 'Roboto Mono', 100, normal);
+@include roboto-font('RobotoMono', 'ThinItalic', 'Roboto Mono', 100, italic);

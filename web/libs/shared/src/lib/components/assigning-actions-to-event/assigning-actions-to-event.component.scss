@@ -1,0 +1,13 @@
+.action-item {
+    align-items: start;
+    height: auto;
+    padding: 6px 4px 6px 12px;
+}
+
+.action-item__text {
+    min-width: 0;
+}
+
+.action-item_disabled {
+    opacity: 0.5;
+}

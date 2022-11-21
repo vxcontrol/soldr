@@ -1,0 +1,12 @@
+:host {
+    display: flex;
+    white-space: nowrap;
+}
+
+.breadcrumbs__divider {
+    padding: 0 8px;
+}
+
+.breadcrumbs__appendix {
+    overflow: hidden;
+}

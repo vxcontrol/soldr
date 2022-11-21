@@ -1,0 +1,140 @@
+<div class="layout-fill layout-column" *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <div class="flex-none layout-row">
+            <div class="flex-50 layout-row layout-align-space-between-start layout-padding-left-l layout-padding-top-l layout-padding-bottom-l">
+                <div class="mc-subheading flex-auto">{{ t('Modules.ModuleEdit.Label.Schema') }}</div>
+
+                <button *ngIf="!readOnly" e2e-id="btnAddFieldToModule" mc-button (click)="addField()">
+                    <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                    {{ tCommon('Common.Pseudo.ButtonText.Add') }}
+                </button>
+
+                <div *ngIf="!readOnly" class="layout-margin-left-s">
+                    <button
+                        e2e-id="btnRemoveAllFieldsFromModule"
+                        mc-button
+                        [disabled]="fields.length === 0"
+                        (click)="removeAllFields()">
+                        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                        {{ tCommon('Common.Pseudo.ButtonText.DeleteAll') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-auto edit-fields-section__fields">
+            <form #formElement class="layout-fill" [formGroup]="form" (ngSubmit)="onSubmitForm()">
+                <ng-container formArrayName="fields">
+                    <mc-tab-group e2e-id="tbsModuleFields" #paramsTabs class="layout-fill" [(selectedIndex)]="activeTabIndex">
+                        <mc-tab
+                            *ngFor="let field of fields.controls; let index = index"
+                            [formGroupName]="index">
+                            <ng-template mc-tab-label>
+                                <div
+                                    class="tab-overlay"
+                                    (mouseenter)="highlightedTabIndex = index"
+                                    (mouseleave)="highlightedTabIndex = -1">
+                                </div>
+                                <div
+                                    class="layout-row layout-align-start-center"
+                                    (mouseenter)="highlightedTabIndex = index"
+                                    (mouseleave)="highlightedTabIndex = -1">
+                                    <div class="layout-margin-right-s">
+                                        {{ field.value.name }}
+                                        <ng-container *ngIf="field.value.required">*</ng-container>
+                                    </div>
+                                    <button
+                                        e2e-id="btnRemoveFieldFromModule"
+                                        mc-button
+                                        type="button"
+                                        class="mc-button_transparent"
+                                        [style.visibility]="(readOnly || (paramsTabs.selectedIndex !== index && highlightedTabIndex !== index)) ? 'hidden': undefined"
+                                        (click)="$event.stopPropagation(); removeField(field.value.name)">
+                                        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                    </button>
+                                </div>
+                            </ng-template>
+
+                            <div class="layout-row scrollable-y layout-padding-l">
+                                <div class="flex-50 mc-form-vertical layout-margin-left-xxs layout-margin-right-xxs">
+                                    <div class="mc-form__row mc-form-row_margin">
+                                        <label class="mc-form__label">
+                                            {{ t('Modules.ModuleEdit.Label.Required') }}
+                                        </label>
+                                        <mc-checkbox e2e-id="cbRequiredModuleField" formControlName="required">
+                                            {{ tCommon('Common.Pseudo.CheckboxText.Yes') }}
+                                        </mc-checkbox>
+                                    </div>
+
+                                    <div class="mc-form__row mc-form-row_margin">
+                                        <label class="mc-form__label">
+                                            {{ t('Modules.ModuleEdit.Label.ConfigurationItemName') }} *
+                                        </label>
+                                        <mc-form-field class="mc-form__control">
+                                            <input e2e-id="txtModuleFieldName" mcInput formControlName="name">
+                                            <mc-hint
+                                                *ngIf="field.get('name').errors?.overlapping"
+                                                [color]="themePalette.Error">
+                                                {{ t('Modules.ModuleEdit.ValidationText.OverlappedFieldName') }}
+                                            </mc-hint>
+                                            <mc-hint
+                                                [color]="field.get('name').errors?.formItemName ? themePalette.Error : themePalette.Default">
+                                                {{ t('Modules.ModuleEdit.HintText.ItemNameWithDot') }}
+                                            </mc-hint>
+                                        </mc-form-field>
+                                    </div>
+
+                                    <div>
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <label
+                                                class="mc-form__label">
+                                                {{ t('Modules.ModuleEdit.Label.PropertyType') }} *
+                                            </label>
+                                            <mc-form-field
+                                                class="mc-form__control">
+                                                <mc-select e2e-id="selModuleFieldType" formControlName="type">
+                                                    <mc-option
+                                                        e2e-id="optModuleFieldType"
+                                                        *ngFor="let type of propertiesTypes"
+                                                        [value]="type">
+                                                        {{ type }}
+                                                    </mc-option>
+                                                </mc-select>
+                                            </mc-form-field>
+                                        </div>
+
+                                        <div class="mc-form__row mc-form-row_margin">
+                                            <label class="mc-form__label">
+                                                {{ t('Modules.ModuleEdit.Label.ConfigFields') }} *
+                                            </label>
+                                            <mc-form-field class="mc-form__control">
+                                                <textarea
+                                                    e2e-id="txtModuleFieldConfigFields"
+                                                    mcTextarea
+                                                    class="mc-textarea-resizable"
+                                                    rows="7"
+                                                    formControlName="fields">
+                                                </textarea>
+                                                <mc-hint>{{ t('Modules.ModuleEdit.HintText.ConfigFields') }}</mc-hint>
+                                            </mc-form-field>
+                                            <mc-hint
+                                                *ngIf="field.get('fields').errors?.formItemFields"
+                                                [color]="themePalette.Error">
+                                                {{ t('Modules.ModuleEdit.ValidationText.JsonFieldsValidation') }}
+                                            </mc-hint>
+                                            <mc-hint
+                                                *ngIf="field.errors?.correctDefaultValue"
+                                                [color]="themePalette.Error">
+                                                {{ t('Modules.ModuleEdit.ValidationText.FieldsValidation') }}
+                                            </mc-hint>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </mc-tab>
+                    </mc-tab-group>
+                </ng-container>
+            </form>
+        </div>
+    </ng-container>
+</div>

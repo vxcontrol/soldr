@@ -1,0 +1,208 @@
+<ng-template #sidePanel>
+    <ng-container *transloco="let tShared; read 'shared'">
+        <ng-container *transloco="let tCommon; read 'common'">
+            <mc-sidepanel-header
+                class="event-details-panel__fixed-header"
+                [closeable]="true"
+                [@showHeaderOnScroll]="scrolled ? 'showed' : 'hidden'">
+                {{ eventDetails?.localizedName }}
+            </mc-sidepanel-header>
+            <mc-sidepanel-body (scroll)="onScrollBody($event)" [style]="{ marginTop: scrolled ? '56px' : 0 }">
+                <div class="layout-padding-l">
+                    <div class="event-details-panel__close-button-wrapper">
+                        <button
+                            mc-button
+                            mcSidepanelClose
+                            class="mc-button_transparent event-details-panel__close-button">
+                            <i
+                                mc-icon="mc-close-L_16"
+                                class="mc-icon mc-icon_light"
+                                [color]="themePalette.Second"></i>
+                        </button>
+                    </div>
+
+                    <div class="mc-body_caps layout-margin-bottom-xxs" (click)="scrolled = true">
+                        {{ tShared('Shared.ModuleConfig.PanelTitle.Event') }} · {{ eventDetails?.type }}
+                    </div>
+                    <div class="mc-title layout-margin-bottom-xxs">
+                        {{ eventDetails?.localizedName }}
+                    </div>
+                    <div>{{ eventDetails?.name }}</div>
+                    <div class="layout-row layout-margin-top-l">
+                        <div
+                            *ngIf="eventDetails?.localizedDescription"
+                            class="layout-row layout-margin-right-l">
+                            <span mc-link [noUnderline]="true" (click)="description.scrollIntoView()">
+                                {{tShared('Shared.ModuleConfig.LinkText.Description')}}
+                            </span>
+                        </div>
+                        <div
+                            *ngIf="eventDetails?.actions.length || !isReadOnly"
+                            class="layout-row layout-margin-right-l">
+                            <span mc-link [noUnderline]="true" (click)="actions.scrollIntoView()">
+                                {{tShared('Shared.ModuleConfig.LinkText.Actions')}}
+                            </span>
+                            <span>&nbsp;{{ eventDetails?.actions?.length || 0 }}</span>
+                        </div>
+                        <div *ngIf="eventDetails?.hasParams" class="layout-row layout-margin-right-l">
+                            <span mc-link [noUnderline]="true" (click)="parameters.scrollIntoView()">
+                                {{tShared('Shared.ModuleConfig.LinkText.Parameters')}}
+                            </span>
+                            <span>&nbsp;{{ parametersNumber }}</span>
+                        </div>
+                        <div
+                            *ngIf="eventDetails?.fields?.length"
+                            class="layout-row layout-margin-right-l"
+                            (click)="variables.scrollIntoView()">
+                            <span mc-link [noUnderline]="true">
+                                {{tShared('Shared.ModuleConfig.LinkText.Variables')}}
+                            </span>
+                            <span>&nbsp;{{ eventDetails?.fields.length }}</span>
+                        </div>
+                    </div>
+
+                    <section #description>
+                        <ng-container *ngIf="eventDetails?.localizedDescription">
+                            <ng-container [ngTemplateOutlet]="divider"></ng-container>
+                            <header class="mc-subheading layout-margin-bottom-s">
+                                {{ tShared('Shared.ModuleConfig.Label.EventDescription') }}
+                            </header>
+                            <section>
+                                {{ eventDetails?.localizedDescription }}
+                            </section>
+                        </ng-container>
+                    </section>
+
+                    <section #actions>
+                        <ng-container *ngIf="eventDetails?.actions.length || !isReadOnly">
+                            <ng-container [ngTemplateOutlet]="divider"></ng-container>
+
+                            <div class="layout-row layout-align-space-between">
+                                <header class="mc-subheading layout-margin-bottom-s">
+                                    {{ tShared('Shared.ModuleConfig.Label.EventActions') }}
+                                </header>
+                                <div
+                                    *ngIf="!isReadOnly"
+                                    mc-link
+                                    [noUnderline]="true"
+                                    (click)="assigningActionsToEvent.open(eventDetails.name)">
+                                    <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                                    <span class="mc-link__text">
+                                        {{ tCommon('Common.Pseudo.ButtonText.Edit') }}
+                                    </span>
+                                </div>
+                            </div>
+                            <ng-container *ngIf="eventDetails?.actions?.length; else noActions">
+                                <div
+                                    class="layout-row layout-align-space-between-start"
+                                    *ngFor="let action of eventDetails.actions; first as first"
+                                    [class.layout-margin-top-s]="!first">
+                                    <i
+                                        mc-icon="soldr-icons-bolt_16"
+                                        class="soldr-icons flex-none layout-margin-right-xxs">
+                                    </i>
+                                    <div class="flex">
+                                        <div>{{ action.localizedName }}</div>
+                                        <div class="text_second">{{ action.localizedDescription }}</div>
+                                    </div>
+                                    <soldr-action-priority
+                                        class="flex-none"
+                                        [priority]="action.priority"
+                                        [mini]="true">
+                                    </soldr-action-priority>
+                                </div>
+                            </ng-container>
+                            <ng-template #noActions>
+                                <div class="layout-margin-top-s">
+                                    <span class="text_second">
+                                        {{ tShared('Shared.ModulesConfig.Text.NoEventActions') }}
+                                    </span>
+                                </div>
+                            </ng-template>
+                        </ng-container>
+                    </section>
+
+                    <section #parameters>
+                        <ng-container *ngIf="eventDetails?.hasParams">
+                            <ng-container [ngTemplateOutlet]="divider"></ng-container>
+
+                            <header class="mc-subheading layout-margin-bottom-s">
+                                {{ tShared('Shared.ModuleConfig.Label.Parameters') }}
+                            </header>
+                            <div class="event-details-panel__ncform-wrapper">
+                                <soldr-ncform-wrapper
+                                    [model]="eventDetails?.model"
+                                    [schema]="eventDetails?.schema"
+                                    [isReadOnly]="isReadOnly"
+                                    (registerApi)="onRegisterNcformApi($event)">
+                                </soldr-ncform-wrapper>
+                            </div>
+                        </ng-container>
+                    </section>
+
+                    <section #variables>
+                        <ng-container *ngIf="eventDetails?.fields?.length">
+                            <ng-container [ngTemplateOutlet]="divider"></ng-container>
+
+                            <header class="mc-subheading layout-margin-bottom-s">
+                                {{ tShared('Shared.ModuleConfig.Label.Variables') }}
+                            </header>
+                            <div>
+                                <table mc-table [width]="'100%'">
+                                    <thead>
+                                    <tr>
+                                        <th>{{ tShared('Shared.ModuleConfig.GridColumnsTitle.ActionVariableIdentifier') }}</th>
+                                        <th>{{ tShared('Shared.ModuleConfig.GridColumnsTitle.ActionVariableDescription') }}</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr *ngFor="let field of eventDetails?.fields">
+                                        <td>
+                                            <mc-tag class="mc-caption_mono">
+                                                {{ field.localizedName }}
+                                            </mc-tag>
+                                        </td>
+                                        <td>
+                                            <div class="mc-body">
+                                                {{ field.localizedDescription }}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </ng-container>
+                    </section>
+                </div>
+            </mc-sidepanel-body>
+
+            <mc-sidepanel-footer *ngIf="!isReadOnly">
+                <mc-sidepanel-actions align="left">
+                    <button mc-button (click)="resetToDefault()">
+                        {{ tCommon('Common.Pseudo.ButtonText.Default') }}
+                    </button>
+                </mc-sidepanel-actions>
+
+                <mc-sidepanel-actions align="right">
+                    <button
+                        cdkFocusInitial
+                        mc-button
+                        [color]="themePalette.Primary"
+                        [disabled]="!canSave"
+                        (click)="save()">
+                        {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                    </button>
+
+                    <button mc-button (click)="cancel()">
+                        {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                    </button>
+                </mc-sidepanel-actions>
+            </mc-sidepanel-footer>
+        </ng-container>
+    </ng-container>
+</ng-template>
+<ng-template #divider>
+    <div class="layout-margin-top-l layout-margin-bottom-l">
+        <mc-divider></mc-divider>
+    </div>
+</ng-template>

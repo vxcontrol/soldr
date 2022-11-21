@@ -1,0 +1,288 @@
+<ng-container *ngIf="{
+    consistencyByModuleName: consistencyByModuleName$ | async,
+    disabledModules: disabledModules$ | async,
+    enabledModules: enabledModules$ | async,
+    isChangingModuleVersion: isChangingModuleVersion$ | async,
+    isDeletingModule: isDeletingModule$ | async,
+    isDisablingModule: isDisablingModule$ | async,
+    isEnablingModule: isEnablingModule$ | async,
+    isLoading: isLoading$ | async,
+    isSavingModule: isSavingModule$ | async,
+    language: language$ | async,
+    modules: modules$ | async,
+    notInstalledModules: notInstalledModules$ | async,
+    selectedModule: selectedModule$ | async,
+    selectedModuleName: selectedModuleName$ | async,
+    selectedModuleVersions: selectedModuleVersions$ | async,
+    unavailableForInstallation: unavailableForInstallation$ | async
+} as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <div class="layout-row layout-align-space-between-stretch layout-fill">
+            <div class="flex-none modules-config__left-column scrollable-y">
+                <mc-list-selection
+                    e2e-id="selModuleConfig"
+                    *ngIf="data.modules?.length > 0; else empty"
+                    [autoSelect]="true"
+                    [noUnselectLast]="true"
+                    [ngModel]="[data.selectedModuleName]"
+                    (selectionChange)="onChangeSelectedModule($event)">
+                    <ng-container *ngIf="data.enabledModules.length > 0">
+                        <mc-optgroup
+                            *ngIf="viewMode === viewModeEnum.Policies; else enabledModules"
+                            [label]="tShared('Shared.ModulesConfig.Label.EnabledModules')">
+                            <ng-container *ngTemplateOutlet="enabledModules"></ng-container>
+                        </mc-optgroup>
+                        <ng-template #enabledModules>
+                            <mc-list-option *ngFor="let module of data.enabledModules" [value]="module.info.name">
+                                <div class="layout-row">
+                                    <span class="list-option__text" soldrTextOverflow>
+                                        {{ module.locale.module[data.language].title }}
+                                    </span>
+                                    <i
+                                        *ngIf="module.details.update"
+                                        mc-icon="soldr-icons-info_16"
+                                        class="soldr-icons modules-config__icon"
+                                        [color]="themePalette.Primary"
+                                        [mcTooltip]="tShared('Shared.ModuleView.TooltipText.CanUpgrade')">
+                                    </i>
+                                    <soldr-consistency-icon
+                                        class="modules-config__icon"
+                                        *ngIf="data.consistencyByModuleName[module.info.name] === false"
+                                        [viewMode]="viewMode"
+                                        [isModuleInstance]="true">
+                                    </soldr-consistency-icon>
+                                </div>
+                            </mc-list-option>
+                        </ng-template>
+                    </ng-container>
+                    <ng-container *ngIf="viewMode === viewModeEnum.Policies && data.disabledModules.length > 0">
+                        <mc-divider></mc-divider>
+                        <mc-optgroup [label]="tShared('Shared.ModulesConfig.Label.DisabledModules')">
+                            <mc-list-option *ngFor="let module of data.disabledModules" [value]="module.info.name">
+                                <soldr-text-overflow>{{ module.locale.module[data.language].title }}</soldr-text-overflow>
+                            </mc-list-option>
+                        </mc-optgroup>
+                    </ng-container>
+                    <ng-container
+                        *ngIf="viewMode === viewModeEnum.Policies && data.notInstalledModules.length > 0 && permitted.EditPolicies">
+                        <mc-divider></mc-divider>
+                        <mc-optgroup [label]="tShared('Shared.ModulesConfig.Label.NotInstalledModules')">
+                            <mc-list-option *ngFor="let module of data.notInstalledModules" [value]="module.info.name">
+                                <soldr-text-overflow>{{ module.locale.module[data.language].title }}</soldr-text-overflow>
+                            </mc-list-option>
+                        </mc-optgroup>
+                    </ng-container>
+                    <ng-container
+                        *ngIf="viewMode === viewModeEnum.Policies && data.unavailableForInstallation.length > 0 && permitted.EditPolicies">
+                        <mc-divider></mc-divider>
+                        <mc-optgroup [label]="tShared('Shared.ModulesConfig.Label.NotAvailableForAdding')">
+                            <mc-list-option *ngFor="let module of data.unavailableForInstallation"
+                                            [value]="module.info.name">
+                                <soldr-text-overflow>{{ module.locale.module[data.language].title }}</soldr-text-overflow>
+                            </mc-list-option>
+                        </mc-optgroup>
+                    </ng-container>
+                </mc-list-selection>
+            </div>
+            <mc-divider [vertical]="true"></mc-divider>
+            <div class="flex-auto layout-column modules-config__right-column">
+                <ng-container *ngIf="data.selectedModule; else empty">
+                    <div
+                        class="layout-row layout-align-space-between-start modules-config__header">
+                        <div class="flex-auto">
+                            <div class="mc-subheading modules-config__name">
+                                {{data.selectedModule?.locale?.module[data.language].title}}
+                            </div>
+                            <div>
+                                <span
+                                    *ngIf="data.selectedModule?.status === moduleStatusEnum.Joined"
+                                    class="mc-success">
+                                    {{ tShared('Shared.ModulesConfig.Text.StatusEnabled') }}
+                                </span>
+                                <span
+                                    *ngIf="data.selectedModule?.status === moduleStatusEnum.Inactive && data.selectedModule?.details.exists"
+                                    class="modules-config__status_warning">
+                                    {{ tShared('Shared.ModulesConfig.Text.StatusDisabled') }}
+                                </span>
+                                <span *ngIf="data.selectedModule?.details.exists === false">
+                                    {{ tShared('Shared.ModulesConfig.Text.StatusNotInstalled') }}
+                                </span>
+                                ·
+                                {{ tShared('Shared.ModulesConfig.Text.Version', {version: data.selectedModule?.info.version | moduleVersion}) }}
+                                ·
+                                <soldr-os [os]="data.selectedModule?.info.os"></soldr-os>
+                            </div>
+                        </div>
+                        <div class="flex-none layout-row">
+                            <ng-container *ngIf="viewMode === viewModeEnum.Policies && permitted.EditPolicies">
+                                <div
+                                    *ngIf="data.selectedModule?.status === moduleStatusEnum.Inactive && data.selectedModule?.details.exists"
+                                    [mcTooltip]="tShared('Shared.ModulesConfig.TooltipText.DuplicatedModuleInGroup')"
+                                    [mcTooltipDisabled]="!data.selectedModule.details.duplicate">
+                                    <button
+                                        mc-button
+                                        class="mc-button_transparent"
+                                        e2e-id="btnEnableModule"
+                                        [disabled]="policy?.info?.system || data.selectedModule.details.duplicate"
+                                        [class.mc-progress]="data.isEnablingModule"
+                                        (click)="doEnableModule(data.selectedModule)">
+                                        <i mc-icon="soldr-icons-play_16" class="soldr-icons"></i>
+                                        <span>{{ tShared('Shared.ModulesConfig.ButtonText.Enable') }}</span>
+                                    </button>
+                                </div>
+                                <button
+                                    *ngIf="data.selectedModule?.status === moduleStatusEnum.Joined"
+                                    mc-button
+                                    class="mc-button_transparent"
+                                    e2e-id="btnDisableModule"
+                                    [disabled]="policy.info?.system"
+                                    [class.mc-progress]="data.isDisablingModule"
+                                    (click)="doDisableModule(data.selectedModule)">
+                                    <i mc-icon="soldr-icons-stop_16" class="soldr-icons"></i>
+                                    <span>{{ tShared('Shared.ModulesConfig.ButtonText.Disable') }}</span>
+                                </button>
+                                <button
+                                    *ngIf="data.selectedModule?.details.exists"
+                                    mc-button
+                                    class="mc-button_transparent"
+                                    e2e-id="btnChangeModuleVersion"
+                                    [disabled]="policy.info?.system"
+                                    [class.mc-progress]="data.isChangingModuleVersion"
+                                    (click)="doOpenChangeModuleVersionPanel(data.selectedModule)">
+                                    <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
+                                    <span>{{ tShared('Shared.ModulesConfig.ButtonText.ChangeVersion') }}</span>
+                                </button>
+                                <div
+                                    *ngIf="!data.selectedModule?.details.exists"
+                                    [mcTooltip]="tShared('Shared.ModulesConfig.TooltipText.DuplicatedModuleInGroup')"
+                                    [mcTooltipDisabled]="!data.selectedModule.details.duplicate">
+                                    <button
+                                        mc-button
+                                        class="mc-button_transparent"
+                                        e2e-id="btnEnableModule"
+                                        [disabled]="policy?.info?.system || data.selectedModule.details.duplicate"
+                                        [class.mc-progress]="data.isEnablingModule"
+                                        (click)="doEnableModule(data.selectedModule)">
+                                        <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
+                                        <span>{{ tShared('Shared.ModulesConfig.ButtonText.Install') }}</span>
+                                    </button>
+                                </div>
+                            </ng-container>
+                            <ng-container
+                                *ngIf="(data.selectedModule?.details.exists || viewMode !== viewModeEnum.Policies) && permitted.ViewPolicies"
+                                [ngTemplateOutlet]="moduleInstanceLinkTemplate"
+                                [ngTemplateOutletContext]="{ moduleName: data.selectedModule?.info?.name }">
+                            </ng-container>
+                            <soldr-delete-module-from-policy-modal
+                                *ngIf="permitted.EditPolicies"
+                                [module]="data.selectedModule"
+                                [policy]="policy">
+                                <button
+                                    *ngIf="viewMode === viewModeEnum.Policies && data.selectedModule?.details.exists"
+                                    mc-button
+                                    class="mc-button_transparent"
+                                    e2e-id="btnDeleteModuleFromPolicy"
+                                    [class.mc-progress]="data.isDeletingModule"
+                                    [disabled]="policy.info?.system"
+                                    [mcTooltip]="tShared('Shared.ModulesConfig.ButtonTooltip.DeleteFromPolicy')">
+                                    <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                </button>
+                            </soldr-delete-module-from-policy-modal>
+                        </div>
+                    </div>
+
+                    <mc-divider></mc-divider>
+
+                    <ng-container
+                        *ngIf="(data.selectedModule?.status === moduleStatusEnum.Joined || data.selectedModule?.details.exists) && permitted.ViewModules">
+
+                        <soldr-progress-container [loadingFlag]="data.isLoading">
+                            <div class="layout-fill layout-column">
+                                <div class="flex-auto scrollable-y modules-config__content">
+                                    <div
+                                        *ngIf="viewMode === viewModeEnum.Policies
+                                        && permitted.EditPolicies
+                                        && canShowUpgradeModule
+                                        && data.selectedModule?.details.update
+                                        && data.selectedModuleVersions[0]?.info.version | moduleVersion as version"
+                                        class="flex-none mc-alert mc-alert_info mc-alert_dismissible">
+                                        <div>
+                                            <div>
+                                                {{ tShared('Shared.ModuleView.Text.CanUpgrade', {version}) }}
+                                            </div>
+                                            <div
+                                                mc-link
+                                                class="modules-config__upgrade-link"
+                                                e2e-id="btnUpgradeModule"
+                                                [noUnderline]="true"
+                                                (click)="doChangeVersion(data.selectedModuleVersions[0]?.info.name, version)">
+                                                {{ tShared('Shared.ModuleView.LinkText.CanUpgrade') }}
+                                            </div>
+                                        </div>
+                                        <button class="mc-alert__close" (click)="canShowUpgradeModule = false">
+                                            <i class="mc-icon_light" mc-icon="mc-close-M_16"
+                                               [color]="themePalette.Second"></i>
+                                        </button>
+                                    </div>
+
+                                    <soldr-module-config-block
+                                        #moduleConfig
+                                        [module]="data.selectedModule"
+                                        [policyHash]="policy?.hash"
+                                        [isReadOnly]="isReadOnly"
+                                        [viewMode]="viewMode"
+                                        (saveModuleConfig)="saveModuleEventConfig($event)">
+                                    </soldr-module-config-block>
+                                </div>
+                                <ng-container *ngIf="!isReadOnly">
+                                    <div class="flex-none" *transloco="let tCommon; read 'common'">
+                                        <mc-divider></mc-divider>
+                                        <div class="layout-row layout-align-end-center modules-config__footer">
+                                            <button
+                                                mc-button
+                                                [class.mc-progress]="data.isSavingModule"
+                                                [color]="themePalette.Primary"
+                                                [disabled]="!isDirtyConfig"
+                                                (click)="save(data.selectedModule)">
+                                                {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                                            </button>
+                                            <button
+                                                mc-button
+                                                [color]="themePalette.Second"
+                                                [disabled]="!isDirtyConfig"
+                                                (click)="cancel()">
+                                                {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </ng-container>
+                            </div>
+                        </soldr-progress-container>
+                    </ng-container>
+                </ng-container>
+            </div>
+        </div>
+
+        <ng-template #changeModuleVersionPanel>
+            <mc-sidepanel-header [closeable]="true" *transloco="let t; read: 'policies'">
+                {{ t('Policies.ChangeModuleVersion.SidePanelTitle.InstallModuleVersion') }}
+            </mc-sidepanel-header>
+            <mc-sidepanel-body class="layout-padding">
+                <soldr-changelog
+                    [module]="data.selectedModule"
+                    [versions]="data.selectedModuleVersions"
+                    (install)="doChangeVersion(data.selectedModuleName, $event)">
+                </soldr-changelog>
+            </mc-sidepanel-body>
+            <mc-sidepanel-footer></mc-sidepanel-footer>
+        </ng-template>
+
+        <ng-template #empty>
+            <div
+                class="layout-fill layout-row layout-align-center-center text_second"
+                *transloco="let tCommon; read: 'common'">
+                {{ tCommon('Common.Pseudo.Text.NoData') }}
+            </div>
+        </ng-template>
+    </ng-container>
+</ng-container>

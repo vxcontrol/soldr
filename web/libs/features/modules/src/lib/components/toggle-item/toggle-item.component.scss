@@ -1,0 +1,18 @@
+:host {
+    display: block;
+    margin-bottom: 16px;
+}
+
+.toggle-item__header {
+    min-height: 32px;
+    padding: 0 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    border-left-width: 2px;
+    border-left-style: solid;
+    border-left-color: transparent;
+}
+
+.toggle-item__content {
+    padding: 16px 16px 0;
+}

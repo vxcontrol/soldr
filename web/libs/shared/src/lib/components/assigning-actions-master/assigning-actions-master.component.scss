@@ -1,0 +1,38 @@
+.assigning-actions-master__header {
+    height: 78px;
+}
+
+.assigning-actions-master__body {
+    min-height: 430px;
+    max-height: inherit;
+}
+
+.actions-tree-option {
+    min-height: var(--mc-tree-size-node-height, 32px);
+    height: auto;
+    padding-top: 6px;
+    padding-bottom: 6px;
+
+    &.mc-tree-option[disabled] {
+        color: inherit;
+    }
+}
+
+.actions-tree-option__text {
+    white-space: normal;
+    margin-right: 6px;
+}
+
+.event-list-item__text {
+    min-width: 0;
+}
+
+.event-list-item {
+    &.mc-list-option .mc-icon {
+        margin-right: 0;
+    }
+}
+
+.event-info__unavailable-text {
+    visibility: hidden;
+}

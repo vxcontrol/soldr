@@ -1,0 +1,77 @@
+<ng-container *transloco="let tCommon; read: 'common'">
+    <div
+        #popover="mcPopover"
+        mcPopover
+        mcPopoverClass="tree-popover__popover"
+        [mcPopoverHeader]="headerText"
+        [mcPopoverContent]="popoverContent"
+        [mcPopoverFooter]="popoverFooter"
+        [mcPopoverPlacementPriority]="'bottom'"
+        (mcPopoverVisibleChange)="onPopoverVisibleChange($event)">
+        <ng-content></ng-content>
+    </div>
+
+    <ng-template #popoverContent>
+        <div
+            class="tree-popover__content">
+            <mc-form-field mcFormFieldWithoutBorders *transloco="let tShared; read: 'shared'">
+                <i mcPrefix mc-icon="mc-search_16" [color]="themePalette.Second"></i>
+                <input
+                    #searchInput
+                    type="text"
+                    mcInput
+                    autocomplete="off"
+                    [(ngModel)]="searchValue"
+                    [placeholder]="searchPlaceholder || tShared('Shared.Pseudo.InputPlaceholder.QuickSearch')"
+                    (ngModelChange)="searchValue$.next(searchInput.value)">
+                <mc-cleaner></mc-cleaner>
+            </mc-form-field>
+
+            <mc-divider></mc-divider>
+            <ng-container *ngIf="(foundItems$ | async) as foundItems">
+                <mc-list-selection
+                    *ngIf="foundItems?.length > 0; else notFound"
+                    class="tree-popover__list"
+                    multiple="true"
+                    [(ngModel)]="selectedItems">
+                    <ng-container *ngFor="let item of foundItems">
+                        <mc-list-option [value]="item.value">
+                            {{ item.label }}
+                        </mc-list-option>
+                    </ng-container>
+                </mc-list-selection>
+
+                <ng-template #notFound>
+                    <div class="tree-popover__not-found layout-row layout-align-center-center">
+                        <span class="mc-small-text">{{ tCommon('Common.Pseudo.Text.NotFound') }}</span>
+                    </div>
+                </ng-template>
+            </ng-container>
+        </div>
+    </ng-template>
+
+    <ng-template #popoverFooter>
+        <div
+            class="layout-row layout-align-space-between-center"
+            cdkTrapFocus="true"
+            cdkTrapFocusAutoCapture="true">
+            <button
+                mc-button
+                (click)="onReset()">
+                {{ resetText || tCommon('Common.Pseudo.ButtonText.Reset') }}
+            </button>
+
+            <div class="layout-row">
+                <button
+                    mc-button
+                    [color]="themePalette.Primary"
+                    (click)="onApply()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Apply') }}
+                </button>
+                <button mc-button (click)="onCancel()">
+                    {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                </button>
+            </div>
+        </div>
+    </ng-template>
+</ng-container>

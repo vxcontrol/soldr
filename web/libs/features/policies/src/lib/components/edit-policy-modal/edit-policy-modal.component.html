@@ -1,0 +1,70 @@
+<div class="edit-policy-modal" (click)="open(content, footer)">
+    <ng-content></ng-content>
+</div>
+
+<ng-template #content>
+    <soldr-progress-container [loadingFlag]="isLoading$ | async">
+        <form
+            id="editPolicyForm"
+            class="edit-policy-modal__form mc-form-vertical"
+            novalidate
+            [formGroup]="form"
+            (ngSubmit)="save()"
+            *transloco="let t; read: 'policies'">
+            <div class="mc-form__row mc-form-row_margin">
+                <label class="mc-form__label">{{ t('Policies.EditPolicy.Label.Name') }}</label>
+                <mc-form-field class="mc-form__control flex-100" *transloco="let tShared; read: 'shared'">
+                    <input
+                        autocomplete="off"
+                        name="input"
+                        mcInput
+                        formControlName="name"
+                        e2e-id="txtPolicyName"
+                        [placeholder]="policy?.info.name[language$ | async] || ''">
+                    <mc-hint *ngIf="form.controls.name.errors?.entityNameExists">
+                        {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists') }}
+                    </mc-hint>
+                    <mc-hint *ngIf="form.controls.name.errors?.maxlength">
+                        {{ tShared('Shared.Pseudo.ValidationText.MaxLengthEntityName') }}
+                    </mc-hint>
+                    <mc-hint *ngIf="form.controls.name.errors?.required">
+                        {{ tShared('Shared.Pseudo.ValidationText.Required') }}
+                    </mc-hint>
+                </mc-form-field>
+            </div>
+
+            <div class="mc-form__row mc-form-row_margin">
+                <label class="mc-form__label">{{ t('Policies.EditPolicy.Label.Tags') }}</label>
+                <div class="mc-form__control flex-100">
+                    <soldr-autocomplete-tags
+                        e2e-id="selPolicyTags"
+                        formControlName="tags"
+                        [allTags]="tags$ | async">
+                    </soldr-autocomplete-tags>
+                </div>
+            </div>
+        </form>
+    </soldr-progress-container>
+</ng-template>
+<ng-template #footer>
+    <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+        <button
+            type="submit"
+            mc-button
+            form="editPolicyForm"
+            e2e-id="btnEditPolicy"
+            [disabled]="(form.pristine && !isCopy) || form.invalid || (this.isLoading$ | async) === true"
+            [color]="themePalette.Primary"
+            [class.mc-progress]="(isProcessingPolicy$ | async) === true">
+            <span *ngIf="policy && !isCopy">{{ tCommon('Common.Pseudo.ButtonText.Save') }}</span>
+            <span *ngIf="!policy || isCopy">{{ tCommon('Common.Pseudo.ButtonText.Create') }}</span>
+        </button>
+
+        <button
+            mc-button
+            e2e-id="btnCancelEditPolicy"
+            (click)="cancel()">
+            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+        </button>
+    </div>
+</ng-template>

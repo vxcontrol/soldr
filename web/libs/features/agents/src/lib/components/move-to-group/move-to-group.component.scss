@@ -1,0 +1,32 @@
+.move-to-group__popover {
+    .mc-popover__container {
+        height: 480px;
+    }
+
+    .mc-popover__content {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 0;
+    }
+
+    .mc-popover__footer {
+        margin-top: 0;
+
+        & .mc-button:not(:first-child) {
+            margin-left: 8px;
+        }
+    }
+}
+
+.move-to-group__search-field {
+    margin-top: 16px;
+}
+
+.move-to-group__container {
+    padding: 16px;
+}
+
+.move-to-group__add-group-item .soldr-icons {
+    margin-right: 8px;
+}

@@ -1,0 +1,546 @@
+{
+    "actions": {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "ui": {},
+                    "rules": {}
+                },
+                "module_name": {
+                    "type": "string",
+                    "default": "this",
+                    "ui": {},
+                    "rules": {}
+                },
+                "priority": {
+                    "type": "integer",
+                    "default": 1,
+                    "ui": {},
+                    "rules": {}
+                }
+            },
+            "required": [
+                "name",
+                "module_name",
+                "priority"
+            ],
+            "additionalProperties": false,
+            "ui": {},
+            "rules": {}
+        },
+        "ui": {
+            "widget": "select",
+            "label": "Modules.ModuleEdit.Label.Actions",
+            "showIdxLabel": false,
+            "widgetConfig": {
+                "valueKey": "name",
+                "multiple": true,
+                "collapsed": true,
+                "itemCollapse": true,
+                "disableReorder": true,
+                "requiredDelConfirm": true,
+                "enumSource": [
+                    {
+                        "label": "Modules.ModuleEdit.Label.LogToDb",
+                        "value": {
+                            "fields": [],
+                            "name": "log_to_db",
+                            "module_name": "this",
+                            "priority": 10
+                        }
+                    }
+                ]
+            }
+        },
+        "rules": {}
+    },
+    "base.action": {
+        "additionalProperties": true,
+        "properties": {
+            "fields": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                },
+                "ui": {
+                    "label": "Modules.ModuleEdit.Label.Fields",
+                    "widget": "select",
+                    "widgetConfig": {
+                        "disabled": true,
+                        "multiple": true,
+                        "enumSource": []
+                    }
+                },
+                "uniqueItems": true
+            },
+            "priority": {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer",
+                "ui": {
+                    "label": "Modules.ModuleEdit.Label.Priority",
+                    "widgetConfig": {
+                        "disabled": true
+                    }
+                }
+            }
+        },
+        "required": [
+            "priority",
+            "fields"
+        ],
+        "ui": {
+            "showLabel": false,
+            "noLabelSpace": true,
+            "widgetConfig": {
+                "collapsed": true
+            }
+        },
+        "type": "object"
+    },
+    "fields": {
+        "type": "array",
+        "items": {
+            "type": "string"
+        },
+        "ui": {
+            "widget": "select",
+            "label": "Modules.ModuleEdit.Label.Fields",
+            "showIdxLabel": false,
+            "widgetConfig": {
+                "disabled": true,
+                "multiple": true,
+                "enumSource": []
+            }
+        },
+        "uniqueItems": true,
+        "rules": {}
+    },
+    "types.atomic": {
+        "type": "string",
+        "default": "atomic",
+        "enum": [
+            "atomic"
+        ],
+        "ui": {
+            "widget": "select",
+            "label": "Modules.ModuleEdit.Label.Type",
+            "readonly": true,
+            "widgetConfig": {
+                "clearable": false,
+                "enumSource": [
+                    {
+                        "value": "atomic"
+                    }
+                ]
+            }
+        },
+        "rules": {}
+    },
+    "types.aggregation": {
+        "type": "string",
+        "default": "aggregation",
+        "enum": [
+            "aggregation"
+        ],
+        "ui": {
+            "widget": "select",
+            "label": "Modules.ModuleEdit.Label.Type",
+            "readonly": true,
+            "widgetConfig": {
+                "clearable": false,
+                "enumSource": [
+                    {
+                        "value": "aggregation"
+                    }
+                ]
+            }
+        },
+        "rules": {}
+    },
+    "types.correlation": {
+        "type": "string",
+        "default": "correlation",
+        "enum": [
+            "correlation"
+        ],
+        "ui": {
+            "widget": "select",
+            "label": "Modules.ModuleEdit.Label.Type",
+            "readonly": true,
+            "widgetConfig": {
+                "clearable": false,
+                "enumSource": [
+                    {
+                        "value": "correlation"
+                    }
+                ]
+            }
+        },
+        "rules": {}
+    },
+    "events.atomic": {
+        "type": "object",
+        "properties": {
+            "type": {
+                "$ref": "#/definitions/types.atomic"
+            },
+            "actions": {
+                "$ref": "#/definitions/actions"
+            },
+            "fields": {
+                "$ref": "#/definitions/fields"
+            }
+        },
+        "required": [
+            "type",
+            "actions"
+        ],
+        "ui": {
+            "showLabel": false,
+            "noLabelSpace": true,
+            "widgetConfig": {
+                "collapsed": true
+            }
+        },
+        "rules": {}
+    },
+    "events.complex": {
+        "type": "object",
+        "properties": {
+            "type": {},
+            "seq": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "$ref": "#/definitions/events.ids",
+                            "ui": {
+                                "label": "Modules.ModuleEdit.Label.SeqName",
+                                "linkFields": [
+                                    {
+                                        "fieldPath": "dx: {{$path}}.split('[').slice(0,-1).join('[')",
+                                        "rules": [
+                                            "minItems",
+                                            "maxItems",
+                                            "customRule"
+                                        ]
+                                    }
+                                ]
+                            },
+                            "rules": {
+                                "required": {
+                                    "value": true,
+                                    "errMsg": "Common.Pseudo.ValidationText.Required"
+                                },
+                                "customRule": [
+                                    {
+                                        "script": "dx: !{{$path}}.includes(__get({{$root}}, {{$path}}))",
+                                        "errMsg": "Modules.ModuleEdit.ValidationText.EventIdInComplexEvent"
+                                    }
+                                ]
+                            }
+                        },
+                        "min_count": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "rules": {
+                                "minimum": {
+                                    "value": 1,
+                                    "errMsg": "Modules.ModuleEdit.ValidationText.PositiveMinCount"
+                                },
+                                "required": {
+                                    "value": true,
+                                    "errMsg": "Common.Pseudo.ValidationText.Required"
+                                }
+                            },
+                            "ui": {
+                                "label": "Modules.ModuleEdit.Label.SeqMinCount",
+                                "linkFields": [
+                                    {
+                                        "fieldPath": "dx: {{$path}}.split('.seq')[0] + '.max_count'",
+                                        "rules": [
+                                            "customRule"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "required": [
+                        "name",
+                        "min_count"
+                    ],
+                    "additionalProperties": false,
+                    "ui": {
+                        "label": "dx: __get({{$root}}, {{$path}} + '.name') ? __get({{$root}}, {{$path}} + '.name') : 'event_' + (parseInt(idxChain)+1)",
+                        "linkFields": [
+                            {
+                                "fieldPath": "dx: {{$path}}.split('[').slice(0,-1).join('[')",
+                                "rules": [
+                                    "minItems"
+                                ]
+                            }
+                        ]
+                    },
+                    "rules": {}
+                },
+                "ui": {
+                    "showIdxLabel": false,
+                    "showLabel": false,
+                    "noLabelSpace": true,
+                    "legend": "Modules.ModuleEdit.Label.EventsSequence",
+                    "widgetConfig": {
+                        "collapsed": true,
+                        "itemCollapse": true,
+                        "requiredDelConfirm": true
+                    }
+                },
+                "rules": {
+                    "minItems": {
+                        "value": 1,
+                        "errMsg": "Modules.ModuleEdit.ValidationText.EventsSequenceMinOneEvent"
+                    },
+                    "required": {
+                        "value": true,
+                        "errMsg": "Common.Pseudo.ValidationText.Required"
+                    },
+                    "customRule": [
+                        {
+                            "script": "dx: ((ids) => { return ids.length === new Set(ids).size })(__get({{$root}}, ({{$path}}.split('.seq')[0] + '.seq')).map(({ name }) => name))",
+                            "errMsg": "Modules.ModuleEdit.ValidationText.EventIdsUnique"
+                        }
+                    ]
+                }
+            },
+            "group_by": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                    "$ref": "#/definitions/events.keys",
+                    "enum": "dx: (() => { const fieldsArrays = (__get({{$root}}, {{$path}}.split('.group_by')[0] + '.seq') || []).map((v) => __get({{$root}}, v.name ) || {} ).map((e)=>e.fields || []); return (fieldsArrays.length > 1 ? fieldsArrays[0].filter((f) => fieldsArrays.slice(1).every((a) => a.includes(f))) : (fieldsArrays[0] || [])).map((f) => ({ value: f })) })()",
+                    "ui": {
+                        "linkFields": [
+                            {
+                                "fieldPath": "dx: {{$path}}.split('[').slice(0,-1).join('[')",
+                                "rules": [
+                                    "minItems",
+                                    "uniqueItems"
+                                ]
+                            }
+                        ],
+                        "widgetConfig": {
+                            "enumSource": "dx: (() => { const fieldsArrays =__get({{$root}}, {{$path}}.split('.group_by')[0] + '.seq').map((v) => __get({{$root}}, v.name ) || {} ).map((e)=>e.fields || []); return (fieldsArrays.length > 1 ? fieldsArrays[0].filter((f) => fieldsArrays.slice(1).every((a) => a.includes(f))) : (fieldsArrays[0] || [])).map((f) => ({ value: f })) })()"
+                        }
+                    },
+                    "rules": {
+                        "required": {
+                            "value": true,
+                            "errMsg": "Common.Pseudo.ValidationText.Required"
+                        }
+                    }
+                },
+                "ui": {
+                    "showIdxLabel": false,
+                    "showLabel": false,
+                    "noLabelSpace": true,
+                    "legend": "Modules.ModuleEdit.Label.GroupBy",
+                    "widgetConfig": {
+                        "collapsed": true,
+                        "itemCollapse": true,
+                        "disableReorder": true,
+                        "requiredDelConfirm": true
+                    }
+                },
+                "rules": {
+                    "minItems": {
+                        "value": 1,
+                        "errMsg": "Modules.ModuleEdit.ValidationText.GroupByMinOneEvent"
+                    },
+                    "required": {
+                        "value": true,
+                        "errMsg": "Common.Pseudo.ValidationText.Required"
+                    },
+                    "uniqueItems": {
+                        "value": true,
+                        "errMsg": "Modules.ModuleEdit.ValidationText.GroupByEventIdsUnique"
+                    }
+                }
+            },
+            "max_count": {
+                "type": "integer",
+                "minimum": 0,
+                "ui": {
+                    "label": "Modules.ModuleEdit.Label.MaxCount"
+                },
+                "rules": {
+                    "minimum": {
+                        "value": 0,
+                        "errMsg": "Modules.ModuleEdit.ValidationText.PositiveOrNullMaxCount"
+                    },
+                    "required": {
+                        "value": true,
+                        "errMsg": "Common.Pseudo.ValidationText.Required"
+                    },
+                    "customRule": [
+                        {
+                            "script": "dx: ((max_time, max_count) => max_time !== 0 || max_count !== 0)(__get({{$root}}, {{$path}}.split('.max_count')[0] + '.max_time'), __get({{$root}}, {{$path}}))",
+                            "errMsg": "Modules.ModuleEdit.ValidationText.MaxTimeAndMaxCountNotBeEqualNull",
+                            "linkItems": [
+                                {
+                                    "fieldPath": "dx: {{$path}}.split('.max_count')[0] + '.max_time'",
+                                    "customRuleIdx": 0
+                                }
+                            ]
+                        },
+                        {
+                            "script": "dx: ((max_count, seq) => { if({{$path}}.startsWith('data')) { return true }; return max_count >= (seq || []).reduce((acc, e) => acc + e.min_count, 0) || max_count === 0; })(__get({{$root}}, {{$path}}.includes('.min_count') ? {{$path}}.split('.seq')[0] + '.max_count' : {{$path}} ), __get({{$root}}, {{$path}}.includes('.min_count') ? {{$path}}.split('.seq')[0] + '.seq' : {{$path}}.split('.max_count')[0] + '.seq' ))",
+                            "errMsg": "Modules.ModuleEdit.ValidationText.MaxCountShouldBeNullOrGreatAndEqualMinCountSum"
+                        }
+                    ]
+                }
+            },
+            "max_time": {
+                "type": "integer",
+                "minimum": 0,
+                "ui": {
+                    "label": "Modules.ModuleEdit.Label.MaxTime"
+                },
+                "rules": {
+                    "minimum": {
+                        "value": 0,
+                        "errMsg": "Modules.ModuleEdit.ValidationText.PositiveMaxTime"
+                    },
+                    "required": {
+                        "value": true,
+                        "errMsg": "Common.Pseudo.ValidationText.Required"
+                    },
+                    "customRule": [
+                        {
+                            "script": "dx: ((max_time, max_count) => max_time !== 0 || max_count !== 0)(__get({{$root}}, {{$path}}), __get({{$root}}, {{$path}}.split('.max_time')[0] + '.max_count'))",
+                            "errMsg": "Modules.ModuleEdit.ValidationText.MaxTimeAndMaxCountNotBeEqualNull",
+                            "linkItems": [
+                                {
+                                    "fieldPath": "dx: {{$path}}.split('.max_time')[0] + '.max_count'",
+                                    "customRuleIdx": 0
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "actions": {
+                "$ref": "#/definitions/actions"
+            },
+            "fields": {
+                "$ref": "#/definitions/fields",
+                "valueTemplate": "dx: __get({{$root}}, {{$path}}.split('.fields')[0] + '.group_by')",
+                "ui": {
+                    "widgetConfig": {
+                        "enumSource": "dx: __get({{$root}}, {{$path}}.split('.fields')[0] + '.group_by')"
+                    }
+                }
+            }
+        },
+        "required": [
+            "type",
+            "seq",
+            "group_by",
+            "max_count",
+            "max_time",
+            "actions"
+        ],
+        "additionalProperties": false,
+        "ui": {
+            "showLabel": false,
+            "noLabelSpace": true,
+            "widgetConfig": {
+                "collapsed": true
+            }
+        },
+        "rules": {}
+    },
+    "events.aggregation": {
+        "allOf": [
+            {
+                "$ref": "#/definitions/events.complex"
+            },
+            {
+                "properties": {
+                    "type": {
+                        "$ref": "#/definitions/types.aggregation"
+                    },
+                    "seq": {
+                        "maxItems": 1,
+                        "rules": {
+                            "maxItems": {
+                                "value": 1,
+                                "errMsg": "Modules.ModuleEdit.ValidationText.AggregationOneEventOnly"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "type",
+                    "seq"
+                ]
+            }
+        ]
+    },
+    "events.correlation": {
+        "allOf": [
+            {
+                "$ref": "#/definitions/events.complex"
+            },
+            {
+                "properties": {
+                    "type": {
+                        "$ref": "#/definitions/types.correlation"
+                    },
+                    "seq": {
+                        "maxItems": 20,
+                        "rules": {
+                            "maxItems": {
+                                "value": 20,
+                                "errMsg": "Modules.ModuleEdit.ValidationText.CorrelationMaxEventsCount"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "type",
+                    "seq"
+                ]
+            }
+        ]
+    },
+    "events.ids": {
+        "type": "string",
+        "enum": [],
+        "ui": {
+            "widget": "select",
+            "widgetConfig": {
+                "clearable": false,
+                "enumSource": []
+            }
+        }
+    },
+    "events.keys": {
+        "type": "string",
+        "enum": [],
+        "ui": {
+            "widget": "select",
+            "label": "dx: ((key, idx) => key ? key : 'key_' + idx)(__get({{$root}}, {{$path}}), parseInt(idxChain)+1)",
+            "widgetConfig": {
+                "clearable": false,
+                "enumSource": "dx: []"
+            }
+        }
+    }
+}

@@ -1,0 +1,7 @@
+@mixin tree-popover-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+
+    .tree-popover__not-found {
+        color: map-get($foreground, text-disabled);
+    }
+}

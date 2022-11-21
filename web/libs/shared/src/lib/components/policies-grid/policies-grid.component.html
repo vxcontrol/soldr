@@ -1,0 +1,290 @@
+<ng-container *ngIf="{
+    policies: policies$ | async,
+    language: language$ | async,
+    search: search$ | async
+} as data">
+    <ng-container *transloco="let t; read: 'policies'">
+        <div class="layout-fill layout-row layout-align-space-between-stretch">
+            <soldr-grid
+                class="flex-auto"
+                [data]="data.policies"
+                [filtration]="gridFiltration"
+                [footerTemplate]="gridFooter"
+                [isLoading]="isLoading"
+                [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FieldsForSearch')"
+                [searchString]="data.search"
+                [storageKey]="storageGridKey"
+                [total]="total"
+                (search)="onSearch($event)"
+                (nextPage)="nextPage()"
+                (selectRows)="onGridSelectRows($event)"
+                (resetFiltration)="onResetFiltration()"
+                *transloco="let tShared; read: 'shared'">
+
+                <ng-template #consistencyCell let-node="params.data">
+                    <soldr-consistency-icon
+                        *ngIf="!node.details.consistency"
+                        [viewMode]="viewMode">
+                    </soldr-consistency-icon>
+                </ng-template>
+
+                <ng-template #nameCell let-node="params.data">
+                    <soldr-text-overflow>
+                        <a mc-link [routerLink]="['/policies', node.hash]">
+                            {{ node.info.name[data.language] }}
+                        </a>
+                    </soldr-text-overflow>
+                </ng-template>
+
+                <ng-template #modulesCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.details?.modules | sort:sortModules:data.language"
+                        [itemTemplate]="moduleItem"
+                        [popoverItemTemplate]="modulePopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #moduleItem let-module="item" let-policy="base">
+                    <a mc-link
+                       [routerLink]="['/policies', policy.hash, 'modules', module.info.name]"
+                       [mcTooltip]="module.locale.module[data.language].title"
+                       [mcPlacement]="placement.TopLeft">
+                        {{ module.locale.module[data.language].title}}
+                    </a>
+                </ng-template>
+
+                <ng-template #modulePopoverItem let-module="item" let-policy="base">
+                    <a mc-link
+                       [routerLink]="['/policies', policy.hash, 'modules', module.info.name]">
+                        {{ module.locale.module[data.language].title}}
+                    </a>
+                </ng-template>
+
+                <ng-template #osCell let-node="params.data">
+                    <soldr-os [os]="node.info.os"></soldr-os>
+                </ng-template>
+
+                <ng-template #groupsCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.details?.groups | sort:sortGroups:data.language"
+                        [itemTemplate]="groupItem"
+                        [popoverItemTemplate]="groupPopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #groupItem let-policy="item">
+                    <a mc-link
+                       [routerLink]="['/policies', policy.hash]"
+                       [mcTooltip]="policy.info.name[data.language]"
+                       [mcPlacement]="placement.TopLeft">
+                        {{ policy.info.name[data.language] }}
+                    </a>
+                </ng-template>
+
+                <ng-template #groupPopoverItem let-policy="item">
+                    <a mc-link
+                       [routerLink]="['/policies', policy.hash]">
+                        {{ policy.info.name[data.language] }}
+                    </a>
+                </ng-template>
+
+                <ng-template #tagsCell let-node="params.data">
+                    <soldr-related-list
+                        [base]="node"
+                        [list]="node.info?.tags | sort:sortTags:data.language"
+                        [itemTemplate]="tagItem"
+                        [popoverItemTemplate]="tagPopoverItem">
+                    </soldr-related-list>
+                </ng-template>
+
+                <ng-template #tagItem let-tag="item">
+                    <a mc-link
+                       [mcTooltip]="tag"
+                       [mcPlacement]="placement.TopLeft"
+                       (click)="onSetTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <ng-template #tagPopoverItem let-tag="item">
+                    <a mc-link (click)="onSetTag(tag)">
+                        {{ tag }}
+                    </a>
+                </ng-template>
+
+                <soldr-column
+                    field="details.consistency"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Consistency')"
+                    [displayName]="''"
+                    [template]="consistencyCell"
+                    [width]="32"
+                    [default]="false"
+                    [headerComponentParams]="{ template: '' }">
+                </soldr-column>
+
+                <soldr-column
+                    field="info.name"
+                    [template]="nameCell"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Name')"
+                    [width]="200"
+                    [default]="true"
+                    [required]="true"
+                    [resizable]="true"
+                    [sortable]="true"
+                    [sortField]="'name'">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.modules"
+                    filtrationField="module_name"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Modules')"
+                    [template]="modulesCell"
+                    [minWidth]="100"
+                    [width]="240"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="created_date"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Created')"
+                    [width]="200"
+                    [resizable]="true"
+                    [sortable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="os"
+                    filtrationField="module_os"
+                    [template]="osCell"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Os')"
+                    [width]="96"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="details.groups"
+                    filtrationField="group_id"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Groups')"
+                    [template]="groupsCell"
+                    [minWidth]="100"
+                    [width]="400"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="info.tags"
+                    filtrationField="tags"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Tags')"
+                    [template]="tagsCell"
+                    [minWidth]="100"
+                    [width]="240"
+                    [default]="true"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-column
+                    field="hash"
+                    [headerName]="t('Policies.PoliciesList.GridColumnsTitle.Hash')"
+                    [default]="false"
+                    [resizable]="true">
+                </soldr-column>
+
+                <soldr-filter
+                    [field]="'module_os'"
+                    [title]="t('Policies.PoliciesList.GridColumnsTitle.Os')"
+                    [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByOs')"
+                    [multiple]="true"
+                    [selectedValues]="gridFiltrationByFields.module_os?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.os"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'module_name'"
+                    [title]="t('Policies.PoliciesList.DropdownButtonText.Modules')"
+                    [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByModule')"
+                    [multiple]="true"
+                    [selectedValues]="gridFiltrationByFields.module_name?.value"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.modules"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    [field]="'tags'"
+                    [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                    [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByTag')"
+                    [selectedValues]="gridFiltrationByFields.tags?.value"
+                    [multiple]="true"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.tags"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+
+                <soldr-filter
+                    *ngIf="!hideGroupsColumn"
+                    [field]="'group_id'"
+                    [title]="t('Policies.PoliciesList.GridColumnsTitle.Groups')"
+                    [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByGroup')"
+                    [selectedValues]="gridFiltrationByFields.group_id?.value"
+                    [multiple]="true"
+                    (changeValue)="onGridFilter($event)">
+                    <soldr-filter-item
+                        *ngFor="let item of gridColumnsFilters?.groups"
+                        [label]="item.label"
+                        [value]="item.value">
+                    </soldr-filter-item>
+                </soldr-filter>
+            </soldr-grid>
+
+            <mc-divider [vertical]="true"></mc-divider>
+
+            <div class="sidebar-content">
+                <ng-container *ngIf="selectedPolicy; else noSelectedPolicy">
+                    <div class="sidebar-title">
+                        <soldr-text-overflow>
+                            <a mc-link [routerLink]="['/policies', selectedPolicy.hash]">
+                                {{ selectedPolicy.info.name[data.language] }}
+                            </a>
+                        </soldr-text-overflow>
+                    </div>
+
+                    <soldr-policy-info
+                        [stateStorageKey]="stateStorageKey + '.rightSidebar'"
+                        [state]="stateStorageValue.rightSidebar"
+                        [policy]="selectedPolicy"
+                        [showModules]="true"
+                        [modules]="modules"
+                        [showGroups]="true"
+                        (selectTag)="onSetTag($event)">
+                    </soldr-policy-info>
+                </ng-container>
+
+                <ng-template #noSelectedPolicy>
+                    <div class="layout-fill layout-column layout-align-center-center" *transloco="let tCommon; read: 'common'">
+                        <span class="text_second">{{ tCommon('Common.Pseudo.Text.NoInformation') }}</span>
+                    </div>
+                </ng-template>
+            </div>
+        </div>
+
+        <ng-template #gridFooter let-total="total">
+            <span>{{ t('Policies.PoliciesList.Text.Total', { total }) }}</span>
+        </ng-template>
+    </ng-container>
+</ng-container>

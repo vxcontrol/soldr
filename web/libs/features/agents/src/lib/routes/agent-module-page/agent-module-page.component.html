@@ -1,0 +1,40 @@
+<ng-container
+    *ngIf="{
+        agent: agent$ | async,
+        lang: language$ | async,
+        module: module$ | async,
+        isLoadingModule: isLoadingModule$ | async,
+        isLoadingAgent: isLoadingAgent$ | async,
+        isModuleSupportOS: isModuleSupportOS$ | async
+    } as data">
+    <soldr-progress-container [loadingFlag]="data.isLoadingModule || data.isLoadingAgent">
+        <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read: 'agents'">
+            <soldr-actionbar class="flex-none">
+                <ng-container actionbar-left>
+                    <soldr-breadcrumbs
+                        *ngIf="data.agent && data.module"
+                        [items]="[
+                            { link: ['/agents'], text: t('Agents.ModuleView.LinkText.Agents') },
+                            { link: ['/groups', data.agent.details.group?.hash], text: data.agent.details.group.info.name[data.lang], disabled: !permitted.ViewGroups },
+                            {
+                                link: ['/agents', data.agent?.hash],
+                                text: data.agent?.description
+                            },
+                            { link: ['/agents', data.agent?.hash], text: t('Agents.ModuleView.LinkText.Modules'), query: { tab: 'modules'} },
+                            { text: data.module?.locale.module[data.lang].title }
+                        ]">
+                    </soldr-breadcrumbs>
+                </ng-container>
+            </soldr-actionbar>
+
+            <soldr-module-page
+                class="flex-auto"
+                [entity]="data.agent"
+                [hasModuleOperations]="data.isModuleSupportOS"
+                [viewMode]="viewModeEnum.Agents"
+                [state]="pageState"
+                [stateStorageKey]="'agentModule.view'">
+            </soldr-module-page>
+        </div>
+    </soldr-progress-container>
+</ng-container>

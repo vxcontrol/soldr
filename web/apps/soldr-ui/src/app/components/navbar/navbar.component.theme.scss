@@ -1,0 +1,50 @@
+@mixin navbar-theme($mosaic-theme) {
+    $white: map-deep-get($mosaic-theme, background, background);
+
+    .mc-navbar {
+        min-height: $size-5xl;
+
+        .mc-navbar-brand {
+            padding-left: $size-xl;
+
+            &.mc-horizontal .mc-navbar-title {
+                padding-left: 0;
+            }
+        }
+    }
+
+    .mc-button.navbar__service-dropdown {
+        &,
+        &:active:not([disabled]),
+        &.mc-active:not([disabled]) {
+            background: map-get($mosaic-theme, custom, navbar-dropdown);
+            border-color: map-get($mosaic-theme, custom, navbar-dropdown);
+        }
+
+        &:hover {
+            background: map-deep-get($mosaic-theme, custom, navbar-dropdown-hover);
+            border-color: map-deep-get($mosaic-theme, custom, navbar-dropdown-hover);
+        }
+
+        .navbar__service-dropdown_selected,
+        &.mc-button.mc-second .mc-icon {
+            color: map-get($mosaic-theme, custom, selected-server-text);
+        }
+
+        .mc-button-wrapper {
+            width: 100%;
+            overflow: hidden;
+        }
+
+        &.mc-active {
+            border-bottom-right-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+    }
+
+    .navbar__dropdown-item-service {
+        .mc-dropdown-item-wrapper {
+            padding: 8px 16px;
+        }
+    }
+}

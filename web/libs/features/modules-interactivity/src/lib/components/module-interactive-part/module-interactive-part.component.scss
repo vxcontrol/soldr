@@ -1,0 +1,168 @@
+.module-interactivity-part {
+    display: block;
+    box-sizing: border-box;;
+}
+
+.module-interactivity-container {
+    height: 100%;
+    overflow: auto;
+
+    .drag-select {
+        .sortable-ghost {
+            opacity: 0.8;
+            color: #fff !important;
+            background: #909399 !important;
+        }
+
+        .el-tag {
+            cursor: pointer;
+        }
+    }
+
+    & > * {
+        height: 100%;
+    }
+
+    .el-tabs--left {
+        height: 100%;
+
+        & > .el-tabs__content {
+            height: 100%;
+
+            & > .el-tab-pane {
+                height: 100%;
+                overflow-y: auto;
+            }
+
+            & > .el-tab-pane > *:first-child:last-child {
+                height: 100%;
+
+                & > .el-tabs {
+                    height: 100%;
+
+                    & > .el-tabs__content {
+                        height: 100%;
+                        overflow-y: auto;
+                    }
+                }
+            }
+        }
+    }
+
+    .el-tabs--top {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+
+        & > .el-tabs__header {
+            flex: none;
+        }
+
+        & > .el-tabs__content {
+            height: 100%;
+            display: flex;
+            flex: auto;
+            align-items: stretch;
+            flex-direction: column;
+
+            & > .el-tab-pane {
+                height: 100%;
+                overflow-y: auto;
+            }
+
+            & > .el-tab-pane > * {
+                height: 100%;
+
+                & > .el-tabs {
+                    height: 100%;
+
+                    & > .el-tabs__content {
+                        height: 100%;
+                        overflow-y: auto;
+                    }
+                }
+            }
+        }
+    }
+
+    .el-table .el-table__row_selected {
+        background-color: #f0f7ff;
+    }
+
+    .el-pagination__selected {
+        font-weight: normal;
+        color: #606266;
+    }
+
+    .el-table .el-table__row .cell {
+        white-space: nowrap;
+    }
+
+    .el-table .cell .el-link {
+        display: block;
+        text-decoration: none;
+    }
+
+    .el-table .cell .el-link .el-link--inner {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .vue-grid__search-input .el-input-group__prepend {
+        width: 140px;
+        background-color: #fff;
+    }
+
+    .vue-grid__search-container_has-searchable-fields {
+        .vue-grid__search-input .el-input__inner {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+        }
+
+        .vue-grid__search-fields .el-input__inner {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            border-right: none;
+        }
+    }
+
+    .vue-grid__search-input .el-input__inner {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .vue-grid__search-select .el-input__inner {
+        border-radius: 0;
+    }
+
+    .vue-grid__search-button.el-button {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border-left: none;
+    }
+
+    .vue-grid__wrapper {
+        overflow: hidden;
+    }
+
+    .vue-grid__container {
+        position: relative;
+    }
+
+    .vue-grid_no-selectable {
+        user-select: none;
+    }
+
+    .vue-grid__rows-selector {
+        padding: 0 10px;
+        white-space: nowrap;
+    }
+
+    .vue-grid__settings {
+        position: absolute;
+        bottom: 6px;
+        right: 0;
+        padding: 0 10px;
+    }
+}

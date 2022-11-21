@@ -1,0 +1,24 @@
+@import '../utils/map-deep-get';
+
+@mixin base-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+    $success: map-get($mosaic-theme, success);
+
+    color: map-deep-get($mosaic-theme, foreground, text);
+
+    .text_second {
+        color: map-get($foreground, text-less-contrast);
+    }
+
+    .text_success {
+        color: map-deep-get($foreground, text-success);
+    }
+
+    .text_error {
+        color: map-get($foreground, text-error);
+    }
+
+    .empty-text {
+        color: map-get($foreground, text-less-contrast);
+    }
+}

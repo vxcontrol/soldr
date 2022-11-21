@@ -1,0 +1,11 @@
+@mixin groups-and-filters-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+
+    .groups-ang-filter__count {
+        color: map-get($foreground, text-less-contrast);
+    }
+
+    .groups-ang-filter__not-found {
+        color: map-get($foreground, text-disabled);
+    }
+}

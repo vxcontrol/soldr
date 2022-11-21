@@ -1,0 +1,66 @@
+<div class="edit-agent-modal" (click)="open(content, footer)">
+    <ng-content></ng-content>
+</div>
+
+<ng-template #content>
+    <form
+        id="editAgentForm"
+        class="edit-agent-modal__form mc-form-vertical"
+        novalidate
+        [formGroup]="form"
+        (ngSubmit)="save()"
+        *transloco="let t; read: 'agents'">
+        <div class="mc-form__row mc-form-row_margin">
+            <label class="mc-form__label">{{ t('Agents.EditAgent.Label.Name') }}</label>
+            <mc-form-field class="mc-form__control flex-100" *transloco="let tShared; read: 'shared'">
+                <input
+                    autocomplete="off"
+                    name="input"
+                    mcInput
+                    formControlName="description"
+                    e2e-id="txtEditAgentName"
+                    [placeholder]="this.agent.description">
+                <mc-hint *ngIf="form.controls.description.errors?.entityNameExists">
+                    {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists') }}
+                </mc-hint>
+                <mc-hint *ngIf="form.controls.description.errors?.maxlength">
+                    {{ tShared('Shared.Pseudo.ValidationText.MaxLengthEntityName') }}
+                </mc-hint>
+                <mc-hint *ngIf="form.controls.description.errors?.required">
+                    {{ tShared('Shared.Pseudo.ValidationText.Required') }}
+                </mc-hint>
+            </mc-form-field>
+        </div>
+
+        <div class="mc-form__row mc-form-row_margin">
+            <label class="mc-form__label">{{ t('Agents.EditAgent.Label.Tags') }}</label>
+            <div class="mc-form__control flex-100">
+                <soldr-autocomplete-tags
+                    formControlName="tags"
+                    [allTags]="tags$ | async">
+                </soldr-autocomplete-tags>
+            </div>
+        </div>
+    </form>
+</ng-template>
+
+<ng-template #footer>
+    <div class="layout-row layout-align-end-center" *transloco="let tCommon; read: 'common'">
+        <button
+            mc-button
+            form="editAgentForm"
+            e2e-id="btnSaveEditAgents"
+            [color]="themePalette.Primary"
+            [class.mc-progress]="(isUpdatingAgent$ | async) === true"
+            [disabled]="form.pristine || form.invalid">
+            {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+        </button>
+
+        <button
+            mc-button
+            e2e-id="btnCancelEditAgents"
+            (click)="cancel()">
+            {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+        </button>
+    </div>
+</ng-template>

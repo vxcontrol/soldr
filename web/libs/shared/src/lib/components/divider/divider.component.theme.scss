@@ -1,0 +1,7 @@
+@mixin divider-component-theme($mosaic-theme) {
+    .soldr-divider {
+        &::after {
+            background-color: mc-color(map-get($mosaic-theme, foreground), divider);
+        }
+    }
+}

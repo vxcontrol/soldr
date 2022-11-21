@@ -1,0 +1,32 @@
+:host {
+    display: block;
+}
+
+.action-priority__icon {
+    width: 16px;
+    height: 16px;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.action-priority__box {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border: 1px solid;
+    border-radius: 3px;
+    overflow: hidden;
+    opacity: 0.5;
+
+    .action-priority__icon {
+        position: absolute;
+        bottom: -50%;
+        left: 0;
+        width: 72px;
+        height: 72px;
+    }
+
+    .action-priority__label {
+        z-index: 1;
+    }
+}

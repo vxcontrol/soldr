@@ -1,0 +1,31 @@
+<ng-container *ngIf="large; else compact">
+    <mc-divider></mc-divider>
+    <div
+        class="accordion__header accordion__header_large layout-row layout-align-space-between-center"
+        (click)="toggle()">
+        <span class="accordion__header-text">{{ title }}</span>
+        <i class="mc-icon soldr-icons" [class]="{
+        'soldr-icons-angle-down-L_16': expanded,
+        'soldr-icons-angle-right-L_16': !expanded
+    }"></i>
+    </div>
+</ng-container>
+
+<ng-template #compact>
+    <div class="accordion__header accordion__header_compact" (click)="toggle()">
+        <i class="mc-icon soldr-icons" [class]="{
+            'soldr-icons-angle-down-M_16': expanded,
+            'soldr-icons-angle-right-M_16': !expanded
+        }"></i>
+        <span class="accordion__header-text">{{ title }}</span>
+    </div>
+</ng-template>
+
+<div
+    *ngIf="expanded || onlyHide"
+    [class.accordion__content_clip]="clip"
+    [class.accordion__content_compact]="!large"
+    [ngStyle]="{ display: !expanded && onlyHide ? 'none': 'block' }">
+    <ng-content>
+    </ng-content>
+</div>

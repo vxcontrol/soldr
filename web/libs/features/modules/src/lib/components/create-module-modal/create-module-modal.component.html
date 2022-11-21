@@ -1,0 +1,139 @@
+<ng-container *transloco="let t; read: 'modules'">
+    <button
+        mc-button
+        class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+        (click)="openSidePanel()">
+        <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+        <span>{{ t('Modules.ModulesList.ActionBarButtonText.Create') }}</span>
+    </button>
+
+    <ng-template #sidePanel>
+        <mc-sidepanel-header [closeable]="true">
+            <span>{{ t('Modules.CreateModule.Text.Header') }}</span>
+        </mc-sidepanel-header>
+        <mc-sidepanel-body [class]="'create-module-modal'">
+            <ng-container
+                *ngIf="({
+                tags: tags$ | async
+            }) as data">
+                <div *ngIf="isFailedCreateModule" class="mc-alert mc-alert_error layout-margin-bottom-xl">
+                    <span>{{errorText}}</span>
+                </div>
+                <form
+                    #editForm="ngForm"
+                    class="mc-form-horizontal"
+                    [formGroup]="form"
+                    (ngSubmit)="saveModule()">
+                    <div class="mc-form__fieldset" *transloco="let tShared; read: 'shared'">
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Name') }}</label>
+
+                            <div class="display-flex layout-column flex-80">
+                                <mc-form-field class="mc-form__control">
+                                    <input mcInput formControlName="name">
+                                    <mc-hint>{{ tShared('Shared.Pseudo.ValidationText.OnlyLatinLettersAndDash') }}</mc-hint>
+                                    <mc-hint *ngIf="form.get('name').errors?.minlength" [color]="themePalette.Error">
+                                        {{ tShared('Shared.Pseudo.ValidationText.MinLength', {minLength: 3}) }}
+                                    </mc-hint>
+                                    <mc-hint *ngIf="form.get('name').errors?.entityNameExists" [color]="themePalette.Error">
+                                        {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists')}}
+                                    </mc-hint>
+                                    <mc-cleaner></mc-cleaner>
+                                </mc-form-field>
+                            </div>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Template') }}</label>
+                            <mc-form-field class="mc-form__control">
+                                <mc-select formControlName="template">
+                                    <mc-option *ngFor="let template of moduleTemplates" [value]="template.value">
+                                        {{template.label}}
+                                    </mc-option>
+                                </mc-select>
+                            </mc-form-field>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Version') }}</label>
+                            <mc-form-field class="mc-form__control">
+                                <input class="flex-30" mcInput formControlName="version">
+
+                                <mc-hint>{{ t('Modules.CreateModule.Hint.Version') }}</mc-hint>
+                                <mc-hint *ngIf="form.get('version').errors?.pattern">{{ tShared('Shared.Pseudo.ValidationText.InvalidFormat') }}</mc-hint>
+                                <mc-cleaner></mc-cleaner>
+                            </mc-form-field>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Os') }}</label>
+                            <div class="mc-form__control layout-column create-module-modal__os" formGroupName="os">
+                                <mc-checkbox *ngFor="let os of osList" formControlName="{{os.value}}">{{tShared(os.label)}}</mc-checkbox>
+                            </div>
+                        </div>
+                        <div class="create-module-modal__legend mc-form__legend">{{ t('Modules.CreateModule.Text.Additionally') }}</div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Fields') }}</label>
+                            <div class="mc-form__control flex-80">
+                                <soldr-autocomplete-tags
+                                    formControlName="fields"
+                                    [allTags]="fieldList">
+                                </soldr-autocomplete-tags>
+                            </div>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label
+                                class="mc-form__label flex-20 create-module-modal__label">
+                                {{ t('Modules.CreateModule.Label.Events') }}
+                            </label>
+                            <div class="mc-form__control flex-80">
+                                <soldr-autocomplete-tags
+                                    formControlName="events"
+                                    [allTags]="eventList">
+                                </soldr-autocomplete-tags>
+                            </div>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">
+                                {{ t('Modules.CreateModule.Label.Actions') }}
+                            </label>
+                            <div class="mc-form__control flex-80">
+                                <soldr-autocomplete-tags
+                                    formControlName="actions"
+                                    [allTags]="actionList">
+                                </soldr-autocomplete-tags>
+                            </div>
+                        </div>
+                        <div class="mc-form__row mc-form-row_margin">
+                            <label class="mc-form__label flex-20 create-module-modal__label">
+                                {{ t('Modules.CreateModule.Label.Tags') }}
+                            </label>
+                            <div class="mc-form__control flex-80">
+                                <soldr-autocomplete-tags
+                                    formControlName="tags"
+                                    [allTags]="data.tags"
+                                    [tagMask]="tagNameMask"
+                                    [tagMaskForReplace]="tagNameMaskForReplace"
+                                    [tagMaskTooltipText]="tShared('Shared.Pseudo.ValidationText.OnlyLatinLettersDigitsAndSymbols')">
+                                </soldr-autocomplete-tags>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </ng-container>
+        </mc-sidepanel-body>
+        <mc-sidepanel-footer>
+            <mc-sidepanel-actions align="right" *transloco="let tCommon; read: 'common'">
+                <button
+                    cdkFocusInitial
+                    mc-button
+                    type="submit"
+                    [color]="themePalette.Primary"
+                    [disabled]="form?.invalid"
+                    (click)="editForm.ngSubmit.emit()">
+                    <span>{{ tCommon('Common.Pseudo.ButtonText.Create') }}</span>
+                </button>
+                <button mc-button (click)="closeSidePanel()">
+                    <span>{{ tCommon('Common.Pseudo.ButtonText.Cancel') }}</span>
+                </button>
+            </mc-sidepanel-actions>
+        </mc-sidepanel-footer>
+    </ng-template>
+</ng-container>

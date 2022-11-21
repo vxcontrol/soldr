@@ -1,0 +1,7 @@
+<ng-container *ngFor="let item of items; let last = last">
+    <a *ngIf="item.link && !item.disabled; else linkText" mc-link class="breadcrumbs__link" [routerLink]="item.link" [queryParams]="item.query">{{ item.text }}</a>
+    <ng-template #linkText>
+        <span class="breadcrumbs__appendix" soldrTextOverflow>{{ item.text }}</span>
+    </ng-template>
+    <span *ngIf="!last" class="breadcrumbs__divider">›</span>
+</ng-container>

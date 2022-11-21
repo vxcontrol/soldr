@@ -1,0 +1,137 @@
+<div class="scrollable-y layout-fill layout-column layout-align-space-between" *transloco="let t; read 'modules'">
+    <ng-container *ngrxLet="module$; let module">
+        <mc-tree-selection
+            e2e-id="trFiles"
+            #tree
+            [dataSource]="filesDataSource"
+            [treeControl]="filesTreeControl"
+            [(ngModel)]="selectedItem">
+
+            <mc-tree-option
+                e2e-id="optFile"
+                *mcTreeNodeDef="let node"
+                mcTreeNodePadding>
+
+                <div class="layout-row">
+                    <i mc-icon="soldr-icons-file-text_16" class="soldr-icons layout-margin-right-xxs"></i>
+
+                    <span
+                        *ngIf="canEdit(node); else text"
+                        mc-link
+                        [noUnderline]="true"
+                        [innerHTML]="filesTreeControl.getViewValue(node) | mcHighlight : filesTreeControl.filterValue.value"
+                        (click)="open(node)">
+                    </span>
+
+                    <ng-template #text>
+                        <span
+                            [innerHTML]="filesTreeControl.getViewValue(node) | mcHighlight : filesTreeControl.filterValue.value">
+                        </span>
+                    </ng-template>
+                </div>
+
+                <mc-option-action
+                    e2e-id="btnFilesActions"
+                    *ngIf="!readOnly"
+                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltip.FileActions')"
+                    [mcDropdownTriggerFor]="fileDropdown">
+                </mc-option-action>
+
+                <mc-dropdown #fileDropdown>
+                    <button
+                        e2e-id="btnDownloadFile"
+                        mc-dropdown-item
+                        (click)="downloadFile(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Download') }}
+                    </button>
+                    <button
+                        e2e-id="btnMoveFile"
+                        *ngIf="canMoveFile(node)"
+                        mc-dropdown-item
+                        (click)="moveObject(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Move') }}
+                    </button>
+                    <button
+                        e2e-id="btnDeleteFile"
+                        *ngIf="canDeleteFile(node)"
+                        mc-dropdown-item
+                        (click)="deleteObject(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Delete') }}
+                    </button>
+                </mc-dropdown>
+            </mc-tree-option>
+
+            <mc-tree-option
+                e2e-id="optFolder"
+                *mcTreeNodeDef="let node; when: hasChild"
+                mcTreeNodePadding>
+                <mc-tree-node-toggle [node]="node"></mc-tree-node-toggle>
+                <div class="layout-row">
+                    <i
+                        *ngIf="filesTreeControl.isExpanded(node); else collapsed"
+                        mc-icon="soldr-icons-folder-open_16"
+                        class="soldr-icons">
+                    </i>
+                    <ng-template #collapsed>
+                        <i
+                            *ngIf="!filesTreeControl.isExpanded(node)"
+                            mc-icon="soldr-icons-folder-closed_16"
+                            class="soldr-icons">
+                        </i>
+                    </ng-template>
+                    <div
+                        class="layout-margin-left-xxs"
+                        [class.mc-subheading]="node.type === FileTreeNodeType.Section"
+                        [innerHTML]="filesTreeControl.getViewValue(node)">
+                    </div>
+                </div>
+
+                <mc-option-action
+                    e2e-id="btnFolderActions"
+                    *ngIf="!readOnly"
+                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltip.FolderActions')"
+                    [mcDropdownTriggerFor]="folderDropdown">
+                </mc-option-action>
+
+                <mc-dropdown #folderDropdown>
+                    <button
+                        e2e-id="btnUploadFile"
+                        mc-dropdown-item
+                        (click)="uploadFile(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Upload') }}
+                    </button>
+                    <mc-divider></mc-divider>
+                    <button
+                        e2e-id="btnCreateFile"
+                        mc-dropdown-item
+                        (click)="createFile(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Create') }}
+                    </button>
+                    <button
+                        e2e-id="btnMoveFolder"
+                        *ngIf="canMoveFolder(node)"
+                        mc-dropdown-item
+                        (click)="moveObject(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Move') }}
+                    </button>
+                    <button
+                        e2e-id="btnDeleteFolder"
+                        *ngIf="canDeleteFolder(node)"
+                        mc-dropdown-item
+                        (click)="deleteObject(module, $any(node.data.path))">
+                        {{ t('Modules.ModuleEdit.DropdownItemText.Delete') }}
+                    </button>
+                </mc-dropdown>
+            </mc-tree-option>
+
+        </mc-tree-selection>
+
+
+        <div *ngIf="tree.isEmpty" class="layout-fill layout-column layout-align-center-center">
+            <span class="text_second" *transloco="let tCommon; read 'common'">
+                {{ tCommon('Common.Pseudo.Text.NotFound') }}
+            </span>
+        </div>
+
+    </ng-container>
+</div>

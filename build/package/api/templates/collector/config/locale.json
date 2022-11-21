@@ -1,0 +1,92 @@
+{
+    "module": {
+        "ru": {
+            "title": "Модуль основанный на collector",
+            "description": "Экземпляр модуля для дальнейшей настройки"
+        },
+        "en": {
+            "title": "Module based on collector",
+            "description": "Module instance for following customization"
+        }
+    },
+    "config": {
+        "receivers": {
+            "en": {
+                "title": "Receivers module list",
+                "description": "IDs of the modules that should receive the raw events from this module"
+            },
+            "ru": {
+                "title": "Список модулей получателей",
+                "description": "Идентификаторы модулей, которые должны получать сырые события данного модуля"
+            }
+        }
+    },
+    "secure_config": {
+    },
+    "actions": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Некоторое описание действия"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Some action description"
+            }
+        }
+    },
+    "action_config": {
+        "{{placeholder}}": {
+        }
+    },
+    "events": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Проверка шаблонизатора {{{ json . }}}"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Check templater {{{ json . }}}"
+            }
+        }
+    },
+    "event_config": {
+        "{{placeholder}}": {
+        }
+    },
+    "fields": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Содержит какое-то значение"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Contains some kind of value"
+            }
+        }
+    },
+    "tags": {
+        "{{placeholder}}": {
+            "ru": {
+                "title": "{{placeholder}}",
+                "description": "Проверка функциональности по отображению тегов"
+            },
+            "en": {
+                "title": "{{placeholder}}",
+                "description": "Testing display of tags function"
+            }
+        },
+        "collector": {
+            "ru": {
+                "title": "Сборщик",
+                "description": "Модуль отвечающий за сбор данных из системы"
+            },
+            "en": {
+                "title": "Collector",
+                "description": "Module that get data from the system"
+            }
+        }
+    }
+}

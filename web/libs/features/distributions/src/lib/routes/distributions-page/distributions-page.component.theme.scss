@@ -1,0 +1,59 @@
+@mixin distributions-page-theme($mosaic-theme) {
+    $primary: map-get($mosaic-theme, primary);
+    $foreground: map-get($mosaic-theme, foreground);
+    $background: map-get($mosaic-theme, background);
+    $second: map-get($mosaic-theme, second);
+
+    .distributions-page__content {
+        background-color: map-get($background, background-under);
+
+        .distributions-page__title,
+        .distributions-page__subtitle {
+            color: map-get($foreground, text);
+        }
+
+        .distributions-page__os {
+            background-color: map-get($background, background);
+            border-color: mc-color($second, 60);
+
+            .os-title {
+                color: map-get($foreground, text);
+            }
+        }
+
+        .distributions-page__divider {
+            border-color: map-get($foreground, divider);
+        }
+
+        .distributions-page__os-action {
+            .os-action-button {
+                background: mc-color($primary, 60);
+
+                &:focus {
+                    outline-color: map-deep-get($mosaic-theme, components, link, state-focused-outline);
+                }
+
+                .os-action-text {
+                    color: map-deep-get($mosaic-theme, components, link, text);
+                }
+            }
+        }
+
+        .distributions-page__versions {
+            color: map-get($foreground, text);
+        }
+    }
+}
+
+@mixin distributions-page-typography($typography) {
+    .distributions-page__os-action {
+        .os-action-text {
+            font-size: mc-font-size($typography, title);
+            line-height: mc-line-height($typography, title);
+        }
+    }
+
+    .distributions-page__versions {
+        line-height: mc-line-height($typography, subheading);
+    }
+}

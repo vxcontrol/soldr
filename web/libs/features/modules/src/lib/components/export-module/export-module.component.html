@@ -1,0 +1,53 @@
+<ng-container *transloco="let t; read: 'modules'">
+    <ng-container *ngIf="hasMultipleVersions; else singleVersion">
+        <button
+            e2e-id="btnSelectScopeForExportModule"
+            mc-button
+            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+            [mcDropdownTriggerFor]="appDropdown"
+            [openByArrowDown]="true"
+            [disabled]="!selectedModule">
+            <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
+            <span>{{ t('Modules.ModulesList.ActionBarButtonText.Export') }}</span>
+            <i mc-icon="mc-angle-down-S_16"></i>
+        </button>
+
+        <mc-dropdown #appDropdown="mcDropdown">
+            <button
+                e2e-id="btnExportSelectedVersionModule"
+                *ngIf="hasMultipleVersions"
+                mc-dropdown-item
+                (click)="export(selectedVersion)">
+                <div class="layout-row">
+                    <span>{{t('Modules.ModuleExport.DropdownItemText.ExportSelectedVersion', {version: selectedVersion})}}</span>
+                </div>
+            </button>
+            <button e2e-id="btnExportAllVersionsModule" mc-dropdown-item (click)="export()">
+                <span>{{t('Modules.ModuleExport.DropdownItemText.ExportAllVersions')}}</span>
+            </button>
+        </mc-dropdown>
+    </ng-container>
+
+    <ng-template #singleVersion>
+        <button
+            e2e-id="btnExportSingleVersion"
+            mc-button
+            class="mc-button mc-icon-button mc-button_transparent actionbar__button"
+            [disabled]="!selectedModule"
+            (click)="export()">
+            <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
+            <span>{{ t('Modules.ModulesList.ActionBarButtonText.Export') }}</span>
+        </button>
+    </ng-template>
+</ng-container>
+
+<ng-template #tplFooter>
+    <button
+        e2e-id="btnCloseErrorOnExportModule"
+        mc-button
+        [color]="themePalette.Second"
+        (click)="tplModal.destroy()"
+        *transloco="let tCommon; read: 'common'">
+        {{tCommon('Common.Pseudo.ButtonText.Close')}}
+    </button>
+</ng-template>

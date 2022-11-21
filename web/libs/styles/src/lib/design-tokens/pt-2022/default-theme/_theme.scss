@@ -1,0 +1,23 @@
+@import '@ptsecurity/mosaic/theming';
+@import 'tokens';
+
+$dark: mc-dark-theme();
+$custom-dark: (
+    page-background: mc-color(map-get($dark, second), 60),
+    navbar-dropdown: mc-color(map-get($dark, second), 600),
+    navbar-dropdown-hover: mc-color(map-get($dark, second), 560),
+    row-gradient: #28303A,
+    selected-server-text: mc-color(map-get($dark, second), 60)
+);
+
+$pt-2022-typography: mc-typography-config();
+
+:root {
+    --loading-bar-color: #{$palette-blue-500};
+    --foreground-text: #{$dark-color-scheme-foreground-text};
+    --foreground-text-less-contrast: #{$dark-color-scheme-foreground-text-less-contrast};
+    --monaco-background: #{$dark-color-scheme-background-background};
+    --typography-subheading-font-size: #{$typography-subheading-font-size};
+    --tooltip-size-max-width: #{$tooltip-size-max-width};
+    --tooltip-size-padding: #{$tooltip-size-padding};
+}

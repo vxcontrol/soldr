@@ -1,0 +1,212 @@
+<ng-container *transloco="let t; read 'modules'">
+    <ng-container *transloco="let tCommon; read 'common'">
+        <div class="layout-row">
+            <form #formElement class="flex-50 layout-padding-l" [formGroup]="form" (ngSubmit)="onSubmitForm()">
+                <div class="mc-form-horizontal layout-margin-bottom-l">
+                    <div class="mc-form__row">
+                        <label class="mc-form__label">{{ t('Modules.ModuleEdit.Label.AgentVersion') }}</label>
+
+                        <mc-form-field class="mc-form__control flex-20">
+                            <ng-container *ngrxLet="agentVersions$; let agentVersions">
+                                <input
+                                    e2e-id="txtDependencyAgentVersion"
+                                    type="text"
+                                    mcInput
+                                    formControlName="agentVersion"
+                                    [mcAutocomplete]="agentVersionList"/>
+
+                                <mc-autocomplete #agentVersionList="mcAutocomplete">
+                                    <mc-option
+                                        e2e-id="optDependencyAgentVersion"
+                                        *ngFor="let version of agentVersions" [value]="version">
+                                        {{ version }}
+                                    </mc-option>
+                                </mc-autocomplete>
+
+                                <mc-hint
+                                    *ngIf="form.get('agentVersion').errors?.mustBeAgentVersion"
+                                    [color]="themePalette.Error">
+                                    {{ t(' "Modules.ModuleEdit.ValidationText.AgentVersion') }}
+                                </mc-hint>
+                            </ng-container>
+                        </mc-form-field>
+                    </div>
+                </div>
+
+                <mc-divider></mc-divider>
+
+                <div class="mc-form__fieldset layout-margin-top-l layout-margin-bottom-l">
+                    <div class="mc-form__legend">{{ t('Modules.ModuleEdit.Label.ReceiveData') }}</div>
+                    <ng-container formGroupName="receiveData">
+                        <ng-container *ngrxLet="allModules$; let allModules">
+                            <ng-container
+                                *ngFor="let dep of receiveDataDependencies.controls; let index = index"
+                                [formGroupName]="index">
+                                <div class="layout-row layout-align-space-between-center layout-margin-top-s">
+                                    <mc-form-field class="mc-form__control flex-auto">
+                                        <input
+                                            e2e-id="txtReceiveDataDependencyModuleName"
+                                            #moduleFilter
+                                            type="text"
+                                            mcInput
+                                            formControlName="moduleName"
+                                            [mcAutocomplete]="moduleNameList"/>
+
+                                        <mc-autocomplete
+                                            #moduleNameList="mcAutocomplete"
+                                            (optionSelected)="loadModuleVersions($event)">
+                                            <mc-option
+                                                e2e-id="txtReceiveDataDependencyModuleName"
+                                                *ngFor="let module of allModules | search: moduleFilter.value:filterModuleByName"
+                                                [value]="module.info.name">
+                                                {{ module.info.name }}
+                                            </mc-option>
+                                        </mc-autocomplete>
+                                    </mc-form-field>
+
+                                    <div class="layout-margin-left-s">≥</div>
+
+                                    <ng-container *ngrxLet="moduleVersionsByName$; let moduleVersionsByName">
+                                        <mc-form-field class="mc-form__control flex-10 layout-margin-left-s">
+                                            <input
+                                                e2e-id="txtReceiveDataDependencyModuleVersion"
+                                                #versionFilter
+                                                type="text"
+                                                mcInput
+                                                formControlName="version"
+                                                [mcAutocomplete]="moduleVersionList"/>
+
+                                            <mc-autocomplete #moduleVersionList="mcAutocomplete">
+                                                <mc-option
+                                                    e2e-id="optReceiveDataDependencyModuleVersion"
+                                                    *ngFor="let version of (moduleVersionsByName[dep.get('moduleName')?.value] || []) | filter: versionFilter.value"
+                                                    [value]="version">
+                                                    {{ version }}
+                                                </mc-option>
+                                            </mc-autocomplete>
+                                        </mc-form-field>
+                                    </ng-container>
+
+                                    <div class="layout-margin-left-s">
+                                        <button
+                                            e2e-id="btnRemoveReceiveDataDependency"
+                                            *ngIf="!readOnly"
+                                            mc-button
+                                            type="button"
+                                            (click)="removeReceiveDataDependency(index)">
+                                            <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <mc-hint
+                                    *ngIf="dep.get('moduleName').errors?.mustBeModuleName"
+                                    [color]="themePalette.Error">
+                                    {{ t('Modules.ModuleEdit.ValidationText.ModuleName') }}
+                                </mc-hint>
+                                <mc-hint
+                                    *ngIf="dep.get('version').errors?.mustBeModuleVersion"
+                                    [color]="themePalette.Error">
+                                    {{ t('Modules.ModuleEdit.ValidationText.ModuleVersion') }}
+                                </mc-hint>
+                            </ng-container>
+                        </ng-container>
+                    </ng-container>
+
+                    <div class="layout-margin-top-l">
+                        <button
+                            e2e-id="btnAddReceiveDataDependency"
+                            *ngIf="!readOnly"
+                            mc-button
+                            type="button"
+                            (click)="addReceiveDataDependency()">
+                            <i mc-icon="product-icons-plus_16" class="product-icons"></i>
+                            {{tCommon('Common.Pseudo.ButtonText.Add') }}
+                        </button>
+                    </div>
+                </div>
+
+                <mc-divider></mc-divider>
+
+                <div class="mc-form__fieldset layout-margin-top-l">
+                    <div class="mc-form__legend">{{ t('Modules.ModuleEdit.Label.SendData') }}</div>
+                    <ng-container formGroupName="sendData">
+                        <ng-container *ngrxLet="allModules$; let allModules">
+                            <ng-container
+                                *ngFor="let dep of sendDataDependencies.controls; let index = index"
+                                [formGroupName]="index">
+                                <div class="layout-row layout-align-space-between-center layout-margin-top-s">
+                                    <mc-form-field class="mc-form__control flex-auto">
+                                        <input
+                                            e2e-id="txtSendDataDependencyModuleName"
+                                            #moduleFilter
+                                            type="text"
+                                            mcInput
+                                            formControlName="moduleName"
+                                            [mcAutocomplete]="moduleNameList"/>
+
+                                        <mc-autocomplete
+                                            #moduleNameList="mcAutocomplete"
+                                            (optionSelected)="loadModuleVersions($event)">
+                                            <mc-option
+                                                e2e-id="optSendDataDependencyModuleName"
+                                                *ngFor="let module of allModules | search: moduleFilter.value:filterModuleByName"
+                                                [value]="module.info.name">
+                                                {{ module.info.name }}
+                                            </mc-option>
+                                        </mc-autocomplete>
+                                    </mc-form-field>
+
+                                    <div class="layout-margin-left-s">≥</div>
+
+                                    <ng-container *ngrxLet="moduleVersionsByName$; let moduleVersionsByName">
+                                        <mc-form-field class="mc-form__control flex-10 layout-margin-left-s">
+                                            <input
+                                                e2e-id="txtSendDataDependencyModuleVersion"
+                                                #versionFilter
+                                                type="text"
+                                                mcInput
+                                                formControlName="version"
+                                                [mcAutocomplete]="moduleVersionList"/>
+
+                                            <mc-autocomplete #moduleVersionList="mcAutocomplete">
+                                                <mc-option
+                                                    e2e-id="optSendDataDependencyModuleVersion"
+                                                    *ngFor="let version of (moduleVersionsByName[dep.get('moduleName')?.value] || []) | filter: versionFilter.value"
+                                                    [value]="version">
+                                                    {{ version }}
+                                                </mc-option>
+                                            </mc-autocomplete>
+                                        </mc-form-field>
+                                    </ng-container>
+
+                                    <div class="layout-margin-left-s">
+                                        <button
+                                            e2e-id="btnRemoveSendDataDependency"
+                                            *ngIf="!readOnly"
+                                            type="button"
+                                            mc-button
+                                            (click)="removeSendDataDependency(index)">
+                                            <i mc-icon="product-icons-delete_16" class="product-icons"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </ng-container>
+                        </ng-container>
+                    </ng-container>
+
+                    <div class="layout-margin-top-l">
+                        <button
+                            e2e-id="btnAddSendDataDependency"
+                            *ngIf="!readOnly"
+                            mc-button
+                            type="button"
+                            (click)="addSendDataDependency()">
+                            <i mc-icon="product-icons-plus_16" class="product-icons"></i>
+                            {{tCommon('Common.Pseudo.ButtonText.Add') }}
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </ng-container>
+</ng-container>

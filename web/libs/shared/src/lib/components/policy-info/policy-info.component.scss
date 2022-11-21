@@ -1,0 +1,13 @@
+:host {
+    display: block;
+    overflow-y: auto;
+    white-space: normal;
+}
+
+.policy-info__tag {
+    max-width: 100%;
+
+    &:not(:first-child) {
+        margin-left: 8px;
+    }
+}

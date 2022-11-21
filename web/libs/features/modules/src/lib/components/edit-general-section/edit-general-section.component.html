@@ -1,0 +1,58 @@
+<div class="layout-fill scrollable-y layout-row">
+    <form
+        #formElement
+        *transloco="let t; read 'modules'"
+        class="flex-50 layout-padding-l mc-form-horizontal"
+        [formGroup]="form"
+        (ngSubmit)="onSubmitForm()">
+
+        <div class="mc-form__row mc-form-row_margin">
+            <label class="mc-form__label form-label">{{ t('Modules.ModuleEdit.Label.ID') }}</label>
+            <mc-form-field class="mc-form__control flex">
+                <input e2e-id="txtModuleName" mcInput formControlName="name">
+            </mc-form-field>
+        </div>
+
+        <div class="mc-form__row mc-form-row_margin">
+            <label class="mc-form__label form-label">{{ t('Modules.ModuleEdit.Label.Template') }}</label>
+            <mc-form-field class="mc-form__control flex">
+                <input e2e-id="txtModuleTemplate" mcInput formControlName="template">
+            </mc-form-field>
+        </div>
+
+        <div class="mc-form__row mc-form-row_margin">
+            <label class="mc-form__label form-label">{{ t('Modules.ModuleEdit.Label.Version') }}</label>
+            <mc-form-field class="mc-form__control flex">
+                <input e2e-id="txtModuleVersion" mcInput formControlName="version">
+            </mc-form-field>
+        </div>
+
+        <div class="mc-form__row mc-form-row_margin" *transloco="let tShared; read 'shared'">
+            <label class="mc-form__label form-label">{{ t('Modules.ModuleEdit.Label.Os') }} *</label>
+            <mc-form-field class="mc-form__control flex">
+                <mc-select e2e-id="selModuleOs" multiple formControlName="os">
+                    <mc-optgroup *ngFor="let group of moduleOsListGroupByOs" [label]="tShared(group.label)">
+                        <mc-option
+                            e2e-id="optModuleOs"
+                            *ngFor="let item of group.items"
+                            [value]="item.value">{{ tShared(item.label) }}</mc-option>
+                    </mc-optgroup>
+                </mc-select>
+            </mc-form-field>
+        </div>
+
+        <div class="mc-form__row" *ngrxLet="allTags$; let allTags">
+            <label class="mc-form__label form-label">{{ t('Modules.ModuleEdit.Label.Tags') }}</label>
+            <div class="mc-form__control flex" *transloco="let tShared; read 'shared'">
+                <soldr-autocomplete-tags
+                    e2e-id="selModuleTags"
+                    formControlName="tags"
+                    [allTags]="allTags"
+                    [tagMask]="tagNameMask"
+                    [tagMaskForReplace]="tagNameMaskForReplace"
+                    [tagMaskTooltipText]="tShared('Shared.Pseudo.ValidationText.OnlyLatinLettersDigitsAndSymbols')">
+                </soldr-autocomplete-tags>
+            </div>
+        </div>
+    </form>
+</div>

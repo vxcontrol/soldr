@@ -1,0 +1,470 @@
+<ng-container
+    *ngIf="({
+        language: language$ | async,
+        selected: selected$ | async,
+        isCreatingGroup: isCreatingGroup$ | async,
+        isUpdatingGroup: isUpdatingGroup$ | async,
+        isCopyingGroup: isCopyingGroup$ | async,
+        isDeletingGroup: isDeletingGroup$ | async,
+        page: page$ | async,
+        total: total$ | async,
+        group: group$ | async,
+        isLoadingGroup: isLoadingGroup$ | async,
+        groupModules: groupModules$ | async
+    }) as data">
+    <ng-container *transloco="let tShared; read: 'shared'">
+        <ng-container *transloco="let tCommon; read: 'common'">
+            <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read: 'groups'">
+
+                <soldr-actionbar class="flex-none">
+                    <ng-container actionbar-header>{{ t('Groups.GroupsList.ActionBarTitle.Groups') }}</ng-container>
+                    <ng-container actionbar-left>
+                        <soldr-edit-group-modal *ngIf="permitted.CreateGroups" (afterSave)="refreshData()">
+                            <button
+                                e2e-id="btnCreateGroup"
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent">
+                                <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
+                                <span>{{ t('Groups.GroupsList.ButtonText.CreateGroup') }}</span>
+                            </button>
+                        </soldr-edit-group-modal>
+
+                        <soldr-edit-group-modal
+                            *ngIf="permitted.EditGroups"
+                            [group]="data.selected[0]"
+                            (afterSave)="refreshData()">
+                            <button
+                                e2e-id="btnEditGroup"
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                [disabled]="!data.selected[0]">
+                                <i mc-icon="soldr-icons-edit_16" class="soldr-icons"></i>
+                                <span>{{ tCommon('Common.Pseudo.ButtonText.Edit') }}</span>
+                            </button>
+                        </soldr-edit-group-modal>
+
+                        <soldr-link-group-to-policy
+                            *ngIf="permitted.LinkPolicies"
+                            [title]="t('Groups.LinkGroupToPolicy.SidebarTitle.LinkToPolicy')"
+                            [placeholder]="t('Groups.LinkGroupToPolicy.InputPlaceholder.PolicyName')"
+                            [linkedLabel]="t('Groups.LinkGroupToPolicy.Label.Assigned')"
+                            [conflictTitle]="linkGroupLinkedConflictTitle">
+                            <button
+                                e2e-id="btnAssignPolicy"
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                [disabled]="!data.selected[0]">
+                                <i mc-icon="soldr-icons-link_16" class="soldr-icons"></i>
+                                <span>{{ t('Groups.LinkGroupToPolicy.ButtonText.AssignPolicy') }}</span>
+                            </button>
+                        </soldr-link-group-to-policy>
+                        <ng-template #linkGroupLinkedConflictTitle>
+                            {{ t('Groups.LinkGroupToPolicy.ModalTitle.GroupIncompatible') }}
+                        </ng-template>
+
+                        <soldr-edit-group-modal
+                            *ngIf="permitted.CreateGroups"
+                            [group]="data.selected[0]"
+                            [isCopy]="true"
+                            (afterSave)="refreshData()">
+                            <button
+                                e2e-id="btnCopyGroup"
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                [disabled]="!data.selected[0]">
+                                <i mc-icon="soldr-icons-copy_16" class="soldr-icons"></i>
+                                <span>{{ t('Groups.GroupsList.ButtonText.DoCopy') }}</span>
+                            </button>
+                        </soldr-edit-group-modal>
+
+                        <soldr-delete-group-modal
+                            *ngIf="permitted.DeleteGroups"
+                            [group]="data.selected[0]"
+                            [disabled]="!data.selected[0]">
+                            <button
+                                e2e-id="btnDeleteGroup"
+                                mc-button
+                                class="actionbar__button mc-button mc-button_transparent"
+                                [class.mc-progress]="data.isDeletingGroup"
+                                [disabled]="!data.selected[0]">
+                                <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                <span>{{ tCommon('Common.Pseudo.ButtonText.Delete') }}</span>
+                            </button>
+                        </soldr-delete-group-modal>
+                    </ng-container>
+                </soldr-actionbar>
+
+                <mc-splitter
+                    class="flex layout-row"
+                    [direction]="direction.Horizontal"
+                    [hideGutters]="!pageState.rightSidebar.opened">
+
+                    <div mc-splitter-area class="flex page-layout__panel groups-page__content">
+                        <soldr-grid
+                            #groupsGrid
+                            e2e-id="grGroups"
+                            class="layout-fill"
+                            [data]="dataGrid$ | async"
+                            [emptyText]="emptyText$ | async"
+                            [exportSelectedTemplate]="exportSelected"
+                            [exportAllTemplate]="exportAll"
+                            [filtration]="gridFiltration$ | async"
+                            [footerTemplate]="gridFooter"
+                            [isLoading]="isLoading$ | async"
+                            [placeholder]="t('Groups.GroupsList.InputPlaceholder.FieldsForSearch')"
+                            [searchString]="searchString$ | async"
+                            [selected]="data.selected"
+                            [sorting]="sorting$ | async"
+                            [storageKey]="'groups-list'"
+                            [total]="data.total"
+                            (addedNewRows)="refreshSelected()"
+                            (export)="onExport($event)"
+                            (search)="onGridSearch($event)"
+                            (sortChanged)="onGridSort($event)"
+                            (selectRows)="onGridSelectRows($event)"
+                            (resetFiltration)="onResetFiltration()"
+                            (nextPage)="loadNextPage(data.page + 1)">
+
+                            <ng-template #consistencyCell let-node="params.data">
+                                <soldr-consistency-icon
+                                    *ngIf="!node.details.consistency"
+                                    [viewMode]="viewModeEnum.Groups">
+                                </soldr-consistency-icon>
+                            </ng-template>
+
+                            <ng-template #nameCell let-node="params.data">
+                                <soldr-text-overflow>
+                                    <a e2e-id="lnkGroupPage" mc-link [routerLink]="['/groups', node.hash]">
+                                        {{ node.info.name[data.language] }}
+                                    </a>
+                                </soldr-text-overflow>
+                            </ng-template>
+
+                            <ng-template #modulesCell let-node="params.data">
+                                <soldr-related-list
+                                    e2e-id="dlGroupModules"
+                                    [base]="node"
+                                    [list]="node.details?.modules | sort:sortModules:data.language"
+                                    [itemTemplate]="moduleItem"
+                                    [popoverItemTemplate]="modulePopoverItem">
+                                </soldr-related-list>
+                            </ng-template>
+
+                            <ng-template #moduleItem let-module="item" let-group="base">
+                                <a
+                                    e2e-id="lnkGroupModule"
+                                    *ngIf="permitted.ViewPolicies; else linkText"
+                                    mc-link
+                                    [routerLink]="['/groups', group.hash, 'modules', module.info.name]"
+                                    [mcTooltip]="module.locale.module[data.language].title"
+                                    [mcPlacement]="placement.TopLeft">
+                                    <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                </a>
+                                <ng-template #linkText>
+                                    {{ module.locale.module[data.language].title}}
+                                </ng-template>
+                            </ng-template>
+
+                            <ng-template #modulePopoverItem let-module="item" let-group="base">
+                                <a
+                                    e2e-id="lnkGroupModule"
+                                    *ngIf="permitted.ViewPolicies; else linkText"
+                                    mc-link
+                                    [routerLink]="['/groups', group.hash, 'modules', module.info.name]">
+                                    <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                </a>
+                                <ng-template #linkText>
+                                    {{ module.locale.module[data.language].title}}
+                                </ng-template>
+                            </ng-template>
+
+                            <ng-template #policiesCell let-node="params.data">
+                                <soldr-related-list
+                                    e2e-id="dlGroupPolicies"
+                                    [base]="node"
+                                    [list]="node.details?.policies | sort:sortPolicies:data.language"
+                                    [itemTemplate]="policyItem"
+                                    [popoverItemTemplate]="policyPopoverItem">
+                                </soldr-related-list>
+                            </ng-template>
+
+                            <ng-template #policyItem let-policy="item">
+                                <a
+                                    e2e-id="lnkGroupPolicy"
+                                    *ngIf="permitted.ViewPolicies; else linkText"
+                                    mc-link
+                                    [routerLink]="['/policies', policy.hash]"
+                                    [mcTooltip]="policy.info.name[data.language]"
+                                    [mcPlacement]="placement.TopLeft">
+                                    <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                </a>
+                                <ng-template #linkText>
+                                    {{ policy.info.name[data.language] }}
+                                </ng-template>
+                            </ng-template>
+
+                            <ng-template #policyPopoverItem let-policy="item">
+                                <a
+                                    e2e-id="lnkGroupPolicy"
+                                    *ngIf="permitted.ViewPolicies; else linkText"
+                                    mc-link
+                                    [routerLink]="['/policies', policy.hash]">
+                                    <ng-container [ngTemplateOutlet]="linkText"></ng-container>
+                                </a>
+                                <ng-template #linkText>
+                                    {{ policy.info.name[data.language] }}
+                                </ng-template>
+                            </ng-template>
+
+                            <ng-template #tagsCell let-node="params.data">
+                                <soldr-related-list
+                                    e2e-id="dlGroupTags"
+                                    [base]="node"
+                                    [list]="node.info?.tags | sort:sortTags:data.language"
+                                    [itemTemplate]="tagItem"
+                                    [popoverItemTemplate]="tagPopoverItem">
+                                </soldr-related-list>
+                            </ng-template>
+
+                            <ng-template #tagItem let-tag="item">
+                                <a
+                                    e2e-id="lnkFilterGroupsByTag"
+                                    mc-link
+                                    [mcTooltip]="tag"
+                                    [mcPlacement]="placement.TopLeft"
+                                    (click)="setTag(tag)">
+                                    {{ tag }}
+                                </a>
+                            </ng-template>
+
+                            <ng-template #tagPopoverItem let-tag="item">
+                                <a e2e-id="lnkFilterGroupsByTag" mc-link (click)="setTag(tag)">
+                                    {{ tag }}
+                                </a>
+                            </ng-template>
+
+                            <soldr-column
+                                field="details.consistency"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Consistency')"
+                                [displayName]="''"
+                                [template]="consistencyCell"
+                                [width]="32"
+                                [default]="true"
+                                [headerComponentParams]="{ template: '' }">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="info.name"
+                                [template]="nameCell"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Name')"
+                                [width]="200"
+                                [default]="true"
+                                [required]="true"
+                                [resizable]="true"
+                                [sortable]="true"
+                                [sortField]="'name'">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="details.agents"
+                                [sortField]="'agent_count'"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.AgentsCount')"
+                                [width]="60"
+                                [default]="true"
+                                [resizable]="true"
+                                [sortable]="true">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="details.modules"
+                                filtrationField="module_name"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Modules')"
+                                [template]="modulesCell"
+                                [minWidth]="100"
+                                [width]="240"
+                                [default]="true"
+                                [resizable]="true">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="details.policies"
+                                filtrationField="policy_id"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Policies')"
+                                [template]="policiesCell"
+                                [minWidth]="100"
+                                [width]="400"
+                                [default]="true"
+                                [resizable]="true">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="info.tags"
+                                filtrationField="tags"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Tags')"
+                                [template]="tagsCell"
+                                [minWidth]="100"
+                                [width]="240"
+                                [default]="true"
+                                [resizable]="true">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="created_date"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Created')"
+                                [width]="200"
+                                [resizable]="true"
+                                [sortable]="true">
+                            </soldr-column>
+
+                            <soldr-column
+                                field="hash"
+                                [headerName]="t('Groups.GroupsList.GridColumnsTitle.Hash')"
+                                [width]="260"
+                                [resizable]="true">
+                            </soldr-column>
+
+                            <soldr-filter
+                                e2e-id="grfFilterGroupsByPolicies"
+                                [field]="'policy_id'"
+                                [title]="t('Groups.GroupsList.GridColumnsTitle.Policies')"
+                                [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByPolicy')"
+                                [multiple]="true"
+                                [selectedValues]="(gridFiltrationByField$ | async).policy_id?.value"
+                                (changeValue)="onGridFilter($event)">
+                                <soldr-filter-item
+                                    *ngFor="let item of gridColumnsFilters?.policies"
+                                    [label]="item.label"
+                                    [value]="item.value">
+                                </soldr-filter-item>
+                            </soldr-filter>
+
+                            <soldr-filter
+                                e2e-id="grfFilterGroupsByModules"
+                                [field]="'module_name'"
+                                [title]="t('Groups.GroupsList.GridColumnsTitle.Modules')"
+                                [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByModule')"
+                                [multiple]="true"
+                                [selectedValues]="(gridFiltrationByField$ | async).module_name?.value"
+                                (changeValue)="onGridFilter($event)">
+                                <soldr-filter-item
+                                    *ngFor="let item of gridColumnsFilters?.modules"
+                                    [label]="item.label"
+                                    [value]="item.value">
+                                </soldr-filter-item>
+                            </soldr-filter>
+
+                            <soldr-filter
+                                e2e-id="grfFilterGroupsByTags"
+                                [field]="'tags'"
+                                [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
+                                [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByTag')"
+                                [selectedValues]="(gridFiltrationByField$ | async).tags?.value"
+                                [multiple]="true"
+                                (changeValue)="onGridFilter($event)">
+                                <soldr-filter-item
+                                    *ngFor="let item of gridColumnsFilters?.tags"
+                                    [label]="item.label"
+                                    [value]="item.value">
+                                </soldr-filter-item>
+                            </soldr-filter>
+
+                        </soldr-grid>
+                        <ng-template #gridFooter let-total="total">
+                            <span>{{ t('Groups.GroupsList.Text.Total', {total}) }}</span>
+                        </ng-template>
+                        <ng-template #exportSelected let-selected="selected">
+                            {{ t('Groups.ExportGroups.DropdownButtonText.ExportSelected', {selected}) }}
+                        </ng-template>
+                        <ng-template #exportAll let-total="total">
+                            {{ t('Groups.ExportGroups.DropdownButtonText.ExportAll', {total}) }}
+                        </ng-template>
+                    </div>
+
+                    <mc-sidebar
+                        class="sidebar_right"
+                        mc-splitter-area
+                        soldrSaveState
+                        #rightSidebar="mcSidebar"
+                        [position]="sidebarPositions.Right"
+                        [opened]="pageState.rightSidebar.opened"
+                        [saveStateKey]="'groups.list.rightSidebar'"
+                        [saveStateValue]="pageState.rightSidebar"
+                        (stateChanged)="saveRightSidebarState($event)"
+                        (soldrWidthChange)="saveRightSidebarWidth($event)">
+                        <div
+                            mc-sidebar-opened
+                            class="sidebar_opened page-layout__panel layout-column"
+                            [width]="pageState.rightSidebar.width"
+                            [minWidth]="'265px'"
+                            [maxWidth]="'400px'">
+
+                            <header class="sidebar-header">
+                                <button
+                                    e2e-id="btnCollapseSidebar"
+                                    mc-button
+                                    class="mc-button_transparent sidebar-toggle"
+                                    [mcTooltip]="tShared('Shared.Pseudo.TooltipText.CollapseSidebar')"
+                                    (click)="rightSidebar.toggle()">
+                                    <span mc-icon="soldr-icons-double-angle-right_16" class="soldr-icons"></span>
+                                </button>
+
+                                <div class="sidebar-title layout-right-padding_16">
+                                    <a
+                                        e2e-id="lnkGroupPage"
+                                        *ngIf="data.selected[0]"
+                                        mc-link
+                                        [noUnderline]="true"
+                                        [routerLink]="['/groups', data.selected[0]?.hash]">
+                                        <span
+                                            class="mc-link__text">{{ data.selected[0]?.info.name[data.language] }}</span>
+                                    </a>
+                                </div>
+
+                            </header>
+
+                            <mc-divider></mc-divider>
+
+                            <div class="sidebar-content flex-auto" soldrProgressSpinner [loadingFlag]="data.isLoadingGroup">
+                                <soldr-group-info
+                                    *ngIf="data.selected[0]"
+                                    [stateStorageKey]="'groups.list.rightSidebar'"
+                                    [state]="pageState.rightSidebar"
+                                    [group]="data.group"
+                                    [modules]="data.groupModules"
+                                    (selectTag)="setTag($event)">
+                                </soldr-group-info>
+
+                                <div
+                                    *ngIf="data.selected.length === 0"
+                                    class="layout-fill layout-column layout-align-center-center">
+                                    <span class="text_second">{{ tCommon('Common.Pseudo.Text.NoInformation') }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            mc-sidebar-closed
+                            class="sidebar-closed layout-column layout-align-start-center"
+                            (click)="rightSidebar.toggle()">
+                            <header class="sidebar-header layout-row">
+                                <button
+                                    e2e-id="btnExpandSidebar"
+                                    mc-button
+                                    class="mc-button_transparent sidebar-toggle"
+                                    [mcTooltip]="tShared('Shared.Pseudo.TooltipText.ExpandSidebar')">
+                                    <i mc-icon="soldr-icons-double-angle-left_16" class="soldr-icons"></i>
+                                </button>
+                            </header>
+
+                            <section class="flex">
+                                <div class="sidebar-title">
+                                    {{ data.selected[0]?.info.name[data.language] }}
+                                </div>
+                            </section>
+                        </div>
+                    </mc-sidebar>
+                </mc-splitter>
+            </div>
+        </ng-container>
+    </ng-container>
+</ng-container>

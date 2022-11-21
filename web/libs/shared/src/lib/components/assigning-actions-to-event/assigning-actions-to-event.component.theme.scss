@@ -1,0 +1,31 @@
+@mixin assigning-actions-to-event-theme($mosaic-theme) {
+    $foreground: map-get($mosaic-theme, foreground);
+    $background: map-get($mosaic-theme, background);
+
+    $checkbox: map-get(map-get($mosaic-theme, components), checkbox);
+
+    .action-item_disabled {
+        &.mc-list-option {
+            & {
+                background: transparent;
+                color: map-get($foreground, text-disabled);
+            }
+        }
+
+        .mc-pseudo-checkbox {
+            border-color: map-get($checkbox, border);
+
+            &,
+            &.mc-primary,
+            &.mc-error {
+                border-color: map-get($foreground, border);
+                background-color: map-get($background, background-disabled);
+
+                & .mc-checkbox-checkmark,
+                & .mc-checkbox-mixedmark {
+                    color: map-get($foreground, text-disabled);
+                }
+            }
+        }
+    }
+}

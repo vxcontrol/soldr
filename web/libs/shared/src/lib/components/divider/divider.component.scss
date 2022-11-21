@@ -1,0 +1,21 @@
+:host(.soldr-divider) {
+    $width: 32px;
+
+    position: relative;
+    min-width: $width;
+    max-width: $width;
+    height: 28px;
+
+    &::after {
+        position: absolute;
+        top: 0;
+        left: 15px;
+        width: 1px;
+        height: 100%;
+        content: '';
+    }
+
+    & + .actionbar__item {
+        margin-left: 0;
+    }
+}

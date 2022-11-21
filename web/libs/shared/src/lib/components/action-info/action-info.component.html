@@ -1,0 +1,30 @@
+<ng-container *ngIf="{ language: language$ | async } as data">
+    <ng-container *transloco="let tShared; read 'shared'">
+        <div>
+            <soldr-action-priority
+                class="action-priority layout-padding-left-l layout-padding-bottom-l"
+                [priority]="action.config.priority">
+            </soldr-action-priority>
+            <div class="mc-caption_caps">
+                {{ module?.locale.module[data.language].title }}
+            </div>
+            <div class="mc-subheading layout-margin-top-s">
+                {{ action.locale[data.language].title }}
+            </div>
+            <div class="layout-margin-top-s">
+                {{ action.locale[data.language].description }}
+            </div>
+        </div>
+        <div *ngIf="unavailable" class="mc-body_strong text_error layout-margin-top-l">
+            {{ tShared('Shared.ModuleConfig.Text.UnavailableAction') }}
+        </div>
+        <div *ngIf="fields" class="layout-margin-top-l">
+            <div class="layout-margin-top-s" *ngFor="let field of fields">
+                <div>{{ field.name }}</div>
+                <div class="text_second">
+                    {{ field.locale[data.language].description }}
+                </div>
+            </div>
+        </div>
+    </ng-container>
+</ng-container>

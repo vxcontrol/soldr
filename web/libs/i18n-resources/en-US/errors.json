@@ -1,0 +1,5 @@
+{
+    "Errors.Forbidden.PageTitle.NoAccess": "No access to the page",
+    "Errors.Forbidden.Title.NoAccess": "No access to the page",
+    "Errors.Pseudo.Text.NoRights": "Not enough rights. Contact the administrator."
+}

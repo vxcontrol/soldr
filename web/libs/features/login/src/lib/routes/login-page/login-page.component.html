@@ -1,0 +1,51 @@
+<div class="flex layout-column layout-align-center-center login-page" *transloco="let t; read: 'login'">
+    <form class="login-form mc-form-vertical" novalidate [formGroup]="form">
+        <div class="mc-alert mc-alert_error" *ngIf="form.invalid">
+            <i mc-icon="mc-info_16" [color]="themePalette.Error" class="mc-alert__icon"></i>
+            <div class="mc-body">
+                <span *ngIf="form.errors?.inactiveUser">
+                    {{ t('Login.LoginForm.ErrorText.UserInactive') }}
+                </span>
+                <span *ngIf="form.errors?.invalidCredentials">
+                    {{ t('Login.LoginForm.ErrorText.InvalidCredentials') }}
+                </span>
+                <span *ngIf="form.errors?.defaultError">
+                    {{ t('Login.LoginForm.ErrorText.ConnectionError') }}
+                </span>
+            </div>
+        </div>
+
+        <div class="mc-form__row mc-form-row_margin">
+            <mc-form-field class="mc-form__control flex-100">
+                <i mcPrefix mc-icon="soldr-icons-user_16" class="soldr-icons"></i>
+                <input
+                    name="login"
+                    mcInput
+                    formControlName="mail"
+                    [placeholder]="t('Login.LoginForm.InputPlaceholder.Login')">
+            </mc-form-field>
+        </div>
+
+        <div class="mc-form__row mc-form-row_margin">
+            <mc-form-field class="mc-form__control flex-100">
+                <i mcPrefix mc-icon="soldr-icons-lock-locked_16" class="soldr-icons"></i>
+                <input
+                    name="password"
+                    type="password"
+                    mcInput
+                    formControlName="password"
+                    [placeholder]="t('Login.LoginForm.InputPlaceholder.Password')">
+            </mc-form-field>
+        </div>
+
+        <div class="layout-row layout-align-space-between-center">
+            <button
+                mc-button
+                [color]="themePalette.Primary"
+                [class.mc-progress]="isSignInProcess"
+                (click)="login()">
+                {{ t('Login.LoginForm.ButtonText.Login') }}
+            </button>
+        </div>
+    </form>
+</div>
