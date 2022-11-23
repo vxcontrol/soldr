@@ -21,6 +21,7 @@ type Config struct {
 	UseSSL          bool
 	CertFile        string
 	KeyFile         string
+	UIDarkMode      bool
 	GracefulTimeout time.Duration
 }
 

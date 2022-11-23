@@ -9514,6 +9514,9 @@ const docTemplate = `{
                 "type": {
                     "type": "string"
                 },
+                "ui_dark_mode": {
+                    "type": "boolean"
+                },
                 "user": {
                     "$ref": "#/definitions/models.User"
                 }

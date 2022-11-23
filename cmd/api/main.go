@@ -21,6 +21,7 @@ import (
 	"soldr/internal/app"
 	"soldr/internal/app/api/server"
 	srvevents "soldr/internal/app/api/server/events"
+	"soldr/internal/app/api/server/public"
 	"soldr/internal/app/api/storage/mem"
 	"soldr/internal/app/api/utils/meter"
 	"soldr/internal/app/api/worker"
@@ -41,6 +42,7 @@ type Config struct {
 	PublicAPI        PublicAPIConfig
 	EventWorker      EventWorkerConfig
 	UserActionWorker UserActionWorkerConfig
+	UI               UIConfig
 }
 
 type LogConfig struct {
@@ -78,6 +80,10 @@ type UserActionWorkerConfig struct {
 	MaxMessages uint `config:"user_action_worker_max_messages"`
 }
 
+type UIConfig struct {
+	DarkMode bool `config:"ui_dark_mode"`
+}
+
 func defaultConfig() Config {
 	return Config{
 		Log: LogConfig{
@@ -96,6 +102,9 @@ func defaultConfig() Config {
 		},
 		UserActionWorker: UserActionWorkerConfig{
 			MaxMessages: 100,
+		},
+		UI: UIConfig{
+			DarkMode: true,
 		},
 	}
 }
@@ -265,7 +274,14 @@ func main() {
 	signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE)
 	runGroup.Add(run.SignalHandler(ctx, syscall.SIGINT, syscall.SIGTERM))
 
+	routerCfg := server.RouterConfig{
+		Debug: cfg.Debug,
+		PublicAPI: public.Config{
+			UIDarkMode: cfg.UI.DarkMode,
+		},
+	}
 	router := server.NewRouter(
+		routerCfg,
 		dbWithORM,
 		exchanger,
 		serviceDBConnectionStorage,

@@ -30,6 +30,12 @@ import (
 	"soldr/internal/app/api/utils"
 )
 
+type RouterConfig struct {
+	Debug     bool
+	LogDir    string
+	PublicAPI public.Config
+}
+
 // @title SOLDR Swagger API
 // @version 1.0
 // @description Swagger API for VXControl SOLDR backend product.
@@ -46,14 +52,14 @@ import (
 
 // @BasePath /api/v1
 func NewRouter(
+	cfg RouterConfig,
 	db *gorm.DB,
 	exchanger *srvevents.Exchanger,
 	serviceDBConns *mem.ServiceDBConnectionStorage,
 	serviceS3Conns *mem.ServiceS3ConnectionStorage,
-
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
-	if _, exists := os.LookupEnv("DEBUG"); exists {
+	if cfg.Debug {
 		gin.SetMode(gin.DebugMode)
 	}
 
@@ -131,6 +137,7 @@ func NewRouter(
 	}
 
 	// services
+	publicAPIService := public.NewPublicAPIService(db, public.Config{UIDarkMode: cfg.PublicAPI.UIDarkMode})
 	agentsService := private.NewAgentService(
 		db,
 		serviceDBConns,
@@ -141,7 +148,7 @@ func NewRouter(
 	api := router.Group(utils.PrefixPathAPI)
 	api.Use(setGlobalDB(db))
 	{
-		setPublicGroup(api)
+		setPublicGroup(api, publicAPIService)
 
 		setSwaggerGroup(api)
 
@@ -186,10 +193,10 @@ func NewRouter(
 	return router
 }
 
-func setPublicGroup(parent *gin.RouterGroup) {
+func setPublicGroup(parent *gin.RouterGroup, service *public.PublicAPIService) {
 	publicGroup := parent.Group("/")
 	{
-		publicGroup.GET("/info", public.Info)
+		publicGroup.GET("/info", service.Info)
 		authGroup := publicGroup.Group("/auth")
 		{
 			authGroup.POST("/login", public.AuthLogin)

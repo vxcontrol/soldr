@@ -16,14 +16,31 @@ import (
 )
 
 type info struct {
-	Type     string            `json:"type"`
-	Service  *models.Service   `json:"service"`
-	Develop  bool              `json:"develop"`
-	User     models.User       `json:"user"`
-	Role     models.Role       `json:"role"`
-	Tenant   models.Tenant     `json:"tenant"`
-	Privs    []string          `json:"privileges"`
-	Services []*models.Service `json:"services"`
+	Type       string            `json:"type"`
+	Service    *models.Service   `json:"service"`
+	Develop    bool              `json:"develop"`
+	User       models.User       `json:"user"`
+	Role       models.Role       `json:"role"`
+	Tenant     models.Tenant     `json:"tenant"`
+	Privs      []string          `json:"privileges"`
+	Services   []*models.Service `json:"services"`
+	UIDarkMode bool              `json:"ui_dark_mode"`
+}
+
+type Config struct {
+	UIDarkMode bool
+}
+
+type PublicAPIService struct {
+	db  *gorm.DB
+	cfg Config
+}
+
+func NewPublicAPIService(db *gorm.DB, cfg Config) *PublicAPIService {
+	return &PublicAPIService{
+		db:  db,
+		cfg: cfg,
+	}
 }
 
 func refreshCookie(c *gin.Context, resp *info, privs []string) error {
@@ -74,21 +91,15 @@ func refreshCookie(c *gin.Context, resp *info, privs []string) error {
 // @Failure 404 {object} utils.errorResp "user not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting information about system and config"
 // @Router /info [get]
-func Info(c *gin.Context) {
+func (s *PublicAPIService) Info(c *gin.Context) {
 	var (
 		err   error
 		expt  int64
 		gtmt  int64
-		gDB   *gorm.DB
 		ok    bool
 		privs []string
 		resp  info
 	)
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
 
 	nowt := time.Now().Unix()
 	session := sessions.Default(c)
@@ -97,6 +108,7 @@ func Info(c *gin.Context) {
 	gtm := session.Get("gtm")
 	svc := session.Get("svc")
 	resp.Develop = version.IsDevelop == "true"
+	resp.UIDarkMode = s.cfg.UIDarkMode
 
 	if privs := session.Get("prm"); privs != nil {
 		if resp.Privs, ok = privs.([]string); !ok || resp.Privs == nil {
@@ -114,7 +126,7 @@ func Info(c *gin.Context) {
 		resp.Privs = make([]string, 0)
 	} else {
 		resp.Type = "user"
-		err = gDB.Take(&resp.User, "id = ?", uid).
+		err = s.db.Take(&resp.User, "id = ?", uid).
 			Related(&resp.Role).Related(&resp.Tenant).Error
 		if err != nil {
 			utils.HTTPError(c, srverrors.ErrInfoUserNotFound, err)
@@ -125,13 +137,13 @@ func Info(c *gin.Context) {
 			return
 		}
 
-		if err = gDB.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
+		if err = s.db.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
 			utils.HTTPError(c, srverrors.ErrInfoInvalidUserData, err)
 			return
 		}
 
-		if err = gDB.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
+		if err = s.db.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
 			utils.HTTPError(c, srverrors.ErrInfoInvalidServiceData, err)
 			return
