@@ -159,17 +159,15 @@ s3-upload-vxagent: $(GOMINIO_BIN)
 	@mysql --host=$(DB_HOST) --user=$(DB_ROOT_USER) --password=$(DB_ROOT_PASS) --port=$(DB_PORT) --database=vx_global --execute="SET @hash = MD5('$(VERSION)'), @info = '{\"files\": [\"vxagent/$(VERSION)/$(GOOS)/$(GOARCH)/vxagent\"], \"chksums\": {\"vxagent/$(VERSION)/$(GOOS)/$(GOARCH)/vxagent\": {\"md5\": \"$(BINARY_MD5)\", \"sha256\": \"$(BINARY_SHA256)\"}}, \"version\": {\"rev\": \"$(VERSION_REV)\", \"build\": 0, \"major\": $(VERSION_MAJ), \"minor\": $(VERSION_MIN), \"patch\": $(VERSION_PATCH)}}'; INSERT INTO \`binaries\` (\`hash\`, \`tenant_id\`, \`type\`, \`info\`) VALUES (@hash, 0, 'vxagent', @info) ON DUPLICATE KEY UPDATE hash = @hash;"
 
 .PHONY: clean-all
-clean-all: clean clean-web
+clean-all: clean-build clean-web clean-sec
 
-.PHONY: clean
-clean:
+.PHONY: clean-build
+clean-build:
 	rm -rf \
 		build/artifacts/* \
 		build/bin/* \
 		build/data/* \
-		build/logs/* \
-		build/ssl/* \
-		security/certs
+		build/logs/*
 
 .PHONY: clean-web
 clean-web:
@@ -177,3 +175,12 @@ clean-web:
 		web/node_modules/* \
 		web/dist/* \
 		web/.angular/cache
+
+.PHONY: clean-sec
+clean-sec:
+	rm -rf \
+		build/ssl/* \
+		security/certs \
+		security/vconf/hardening/abh.json \
+		security/vconf/lic/sbh.json \
+		internal/app/api/utils/dbencryptor/sec-store-key.txt

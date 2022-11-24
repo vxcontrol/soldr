@@ -80,7 +80,7 @@ make s3-init
 
 Generate certificates and other crypto materials:
 
-**Attention**: Regeneration of crypto configuration can lead to communication breakage for already stored modules and running agents.
+**Attention**: Regeneration of crypto configuration will lead to communication breakage for already stored modules and running agents after rebuild the server components.
 
 ```bash
 make generate-all
@@ -189,3 +189,31 @@ Launch on of the available debug tasks:
 - launch vxserver
 - launch vxagent
 - launch web ui
+
+### Clean up the project
+
+Remove all build files and other security keys:
+
+**Attention**: Removing of crypto configuration and keys will lead to communication breakage for already stored modules and running agents after rebuild the server components.
+
+```bash
+make clean-all
+```
+
+Only artefacts from build directory (golang services binaries):
+
+```bash
+make clean-build
+```
+
+Only artefacts from web directory (node-modules and result of building frontend):
+
+```bash
+make clean-web
+```
+
+Dangerous step to remove security files (use it in edge case):
+
+```bash
+make clean-sec
+```
