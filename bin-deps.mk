@@ -10,7 +10,7 @@ $(GOLANGCI_BIN):
 GOSWAGGER_BIN=$(LOCAL_BIN)/swag
 .PHONY: $(GOSWAGGER_BIN)
 $(GOSWAGGER_BIN):
-	GOBIN=$(LOCAL_BIN) go install github.com/swaggo/swag/cmd/swag@latest
+	GOBIN=$(LOCAL_BIN) go install github.com/swaggo/swag/cmd/swag@v1.8.7
 
 GOMINIO_BIN=$(LOCAL_BIN)/mc
 .PHONY: $(GOMINIO_BIN)

@@ -1,7 +1,7 @@
 ### Install Swagger
 
 ```
-go get github.com/swaggo/swag@v1.7.8
+go get github.com/swaggo/swag@v1.8.7
 go install github.com/swaggo/swag/cmd/swag
 ```
 
