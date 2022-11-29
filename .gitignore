@@ -35,6 +35,7 @@ build/data/*
 build/logs/*
 build/ssl/*
 build/package/agent/_tmp/*
+build/package/agent/*.syso
 web/node_modules/*
 web/dist/*
 web/tmp/*

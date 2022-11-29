@@ -6,9 +6,10 @@ if [ `uname` = Linux ]; then
 fi
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+chmod +x "${DIR}/tools/goversioninfo"
 [ `uname` = "Linux" ] && GOVERSIONINFO="${DIR}/tools/goversioninfo" || GOVERSIONINFO="goversioninfo"
 [ -n "${PACKAGE_VER+set}" ] || PACKAGE_VER=$(git describe --always `git rev-list --tags --max-count=1`)
-SYSO=build/rsrc_windows_amd64.syso
-$GOVERSIONINFO -product-version $PACKAGE_VER -64 -o $SYSO
+SYSO="${DIR}/rsrc_windows_amd64.syso"
+$GOVERSIONINFO -product-version $PACKAGE_VER -64 -o $SYSO -icon ${DIR}/images/app.ico ${DIR}/versioninfo.json
 GOOS=windows GOARCH=amd64 P=mingw64 LF="$SYSO -static -Wl,--export-all-symbols -Wl,--whole-archive" LD="-Wl,--no-whole-archive -lcrypt32 -lgdi32 -lmsimg32 -lopengl32 -lwinmm -lws2_32 -lole32 -lpsapi -lmpr -lluajit -lstdc++" T="vxagent.exe" "${DIR}"/build.sh
 rm $SYSO
