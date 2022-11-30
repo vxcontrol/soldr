@@ -114,7 +114,7 @@ generate-keys:
 
 .PHONY: setup-web-proxy
 setup-web-proxy:
-	echo "{\n  \"/api\": {\n    \"target\": \"http://localhost\",\n    \"secure\": false\n  }\n}" > $(CURDIR)/web/proxy.conf.json
+	echo '{"api": {"target": "http://localhost", "secure": false}}' > web/proxy.conf.json
 
 .PHONY: db-init
 db-init: db-create db-seed
