@@ -172,14 +172,16 @@ clean-build:
 .PHONY: clean-web
 clean-web:
 	rm -rf \
-		web/node_modules/* \
-		web/dist/* \
-		web/.angular/cache
+		web/.angular \
+		web/dist \
+		web/node_modules
 
 .PHONY: clean-sec
 clean-sec:
 	rm -rf \
 		build/ssl/* \
+		scripts/certs_writer/certs_writer \
+		scripts/sbh_generator/sbh_generator \
 		security/certs \
 		security/vconf/hardening/abh.json \
 		security/vconf/lic/sbh.json \
