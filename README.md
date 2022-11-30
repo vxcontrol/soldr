@@ -17,7 +17,7 @@ Soldr is an Endpoint Detection and Response system which consists of centralised
 ### Prerequisites
 
 - [docker-ce](https://docs.docker.com/engine/installation)
-- [docker-compose](https://docs.docker.com/compose)
+- [docker-compose](https://docs.docker.com/compose) version <= 1.29.0
 - [protobuf](https://github.com/protocolbuffers/protobuf/releases)
 - [go](https://go.dev/dl/)
 - `protoc-gen-go`
