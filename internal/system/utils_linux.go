@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/cobaugh/osrelease"
+	"github.com/acobaugh/osrelease"
 )
 
 func getOSName() string {
