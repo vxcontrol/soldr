@@ -18,7 +18,8 @@ if [[ "$LATEST_API_VERSION" =~ $hasSpacesRE ]]; then
 	exit 1
 fi
 
-export VERSION_STRING=$PACKAGE_VER
+BUILD_VERSION="${GITHUB_RUN_NUMBER:-0}"
+export VERSION_STRING="$PACKAGE_VER.$BUILD_VERSION"
 [ "$PACKAGE_REV" ] && VERSION_STRING="$VERSION_STRING-$PACKAGE_REV"
 mkdir -p "$BUILD_ARTIFACTS_DIR"
 echo $VERSION_STRING > "$BUILD_ARTIFACTS_DIR/version"
@@ -28,7 +29,7 @@ DB_ENCRYPT_KEY=$(<"$ROOT_DIR/internal/app/api/utils/dbencryptor/sec-store-key.tx
 
 export BASE_PREFIX="$ROOT_DIR/assets/lib"
 CGO_ENABLED=1 go build -ldflags "
-    -X soldr/main.PackageVer=$PACKAGE_VER \
+    -X soldr/main.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
     -X soldr/main.PackageRev=$PACKAGE_REV \
     -X soldr/internal/app/server/config.latestAPIVersion=$LATEST_API_VERSION \
     -X soldr/internal/app/server/mmodule/hardening/v1/crypto.DBEncryptKey=$DB_ENCRYPT_KEY \

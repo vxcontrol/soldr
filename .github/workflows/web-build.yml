@@ -1,0 +1,28 @@
+name: Build web
+
+on: workflow_call
+
+jobs:
+  ui_build_frontend:
+    name: Build web
+    runs-on: ubuntu-latest
+    container:
+      image: node:16
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Create directories
+        uses: ./.github/actions/common
+      - name: Enable cache
+        uses: ./.github/actions/yarn_cache
+      - name: Build
+        run: |
+          make build-web
+      - name: Upload result for ui_build_frontend
+        uses: actions/upload-artifact@v3
+        with:
+          name: ui_frontend
+          path: web/dist/

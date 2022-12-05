@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if ! [ -d /opt/ ]; then
+  mkdir "/opt" || true
+fi
+rm -rf /opt/vxcontrol/vxagent || true
+rmdir /opt/vxcontrol/ || true

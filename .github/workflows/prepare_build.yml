@@ -1,0 +1,30 @@
+name: Generate build env
+
+on: workflow_call
+
+jobs:
+  generate_all:
+    name: Generate all
+    runs-on: ubuntu-latest
+    container:
+      image: vxcontrol/vxbuild-cross
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate ALL
+        run: |
+          find . -type f -name "*.sh" -print0 |xargs -0 chmod 755
+          make generate-all
+      - name: Upload result for generate_all
+        uses: actions/upload-artifact@v3
+        with:
+          name: all_environment
+          path: |
+            build/ssl/*
+            security/certs
+            security/vconf/hardening/abh.json
+            security/vconf/lic/sbh.json
+            internal/app/api/utils/dbencryptor/sec-store-key.txt

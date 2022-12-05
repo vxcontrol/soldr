@@ -1,0 +1,35 @@
+name: VXAgent build and push
+
+on: workflow_call
+
+jobs:
+  build_and_push_docker:
+    name: Docker Build and Publish
+    environment:
+      name: production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v3
+        with:
+          name: agent_linux
+      - uses: actions/download-artifact@v3
+        with:
+          name: decode_environment
+      - name: prepare files
+        run: |
+          mkdir build/package/agent/_tmp
+          cp -r agent/_tmp/* build/package/agent/_tmp
+          chmod +x build/package/agent/_tmp/linux/*/vxagent
+          ls -R build/package/agent/_tmp
+      - name: Docker build vxagent
+        uses: ./.github/actions/docker_build
+        with:
+          workdir: "build/package/agent"
+          docker_name: "soldr-agent"
+          docker_login: ${{ secrets.DOCKER_LOGIN }}
+          docker_password: ${{ secrets.DOCKER_PASSWORD }}

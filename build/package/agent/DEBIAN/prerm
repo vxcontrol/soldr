@@ -1,0 +1,9 @@
+#!/bin/bash
+
+set -e
+
+/opt/vxcontrol/vxagent/bin/vxagent -command stop || true
+if pgrep -f vxagent &>/dev/null; then
+  kill -9 $(cat /var/run/vxagent.pid 2>/dev/null) &>/dev/null || true
+fi
+/opt/vxcontrol/vxagent/bin/vxagent -command uninstall || true

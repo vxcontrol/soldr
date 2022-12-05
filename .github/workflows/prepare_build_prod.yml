@@ -1,0 +1,31 @@
+name: Generate build env
+
+on: workflow_call
+
+jobs:
+  decode_all:
+    name: Generate all
+    environment:
+      name: production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Generate ALL
+        run: |
+          echo -n "${{secrets.GEN_CERTS}}" | base64 --decode > certs.tar.gz
+          tar -xvf certs.tar.gz
+          ls -R security
+      - name: Upload result for generate_all
+        uses: actions/upload-artifact@v3
+        with:
+          name: decode_environment
+          path: |
+            build/ssl/*
+            security/certs
+            security/vconf/hardening/abh.json
+            security/vconf/lic/sbh.json
+            internal/app/api/utils/dbencryptor/sec-store-key.txt

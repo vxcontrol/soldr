@@ -1,0 +1,11 @@
+Package: vxagent
+Version: $VERSION
+Section: base
+Priority: optional
+Architecture: $arch
+Depends: bash (>= 4.0), systemd, init-system-helpers, libstdc++6, libc6, gettext-base
+Provides: vxagent
+Conflicts: vxagent
+Maintainer: VXControl <support@vxcontrol.com>
+Description: VX agent.
+  This service work VX agent

@@ -1,0 +1,35 @@
+name: Build server
+
+on: workflow_call
+
+jobs:
+  server_build:
+    name: Build server
+    runs-on: ubuntu-latest
+    container:
+      image: vxcontrol/vxbuild-cross
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Common
+        uses: ./.github/actions/common
+      - name: Enable cache
+        uses: ./.github/actions/go_cache
+      - uses: actions/download-artifact@v3
+        with:
+          name: decode_environment
+      - name: Build
+        run: |
+          make build-server
+          ls -la ./build/artifacts/server/version || true
+          ls -la ./build/bin/vxserver || true
+      - name: Upload result for server
+        uses: actions/upload-artifact@v3
+        with:
+          name: server
+          path: |
+            build/artifacts/server/version
+            build/bin/vxserver

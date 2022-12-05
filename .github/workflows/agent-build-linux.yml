@@ -1,0 +1,39 @@
+name: Build UI
+
+on: workflow_call
+
+jobs:
+  agent_build_linux:
+    name: Build agent linux
+    runs-on: ubuntu-latest
+    container:
+      image: vxcontrol/vxbuild-cross
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Common
+        uses: ./.github/actions/common
+      - name: Enable cache
+        uses: ./.github/actions/go_cache
+      - uses: actions/download-artifact@v3
+        with:
+          name: decode_environment
+      - name: Build
+        run: |
+          cd build/package/agent/
+          # Linux
+          bash -x ./build-linux-386.sh && mv -v ../../bin/vxagent  _tmp/linux/386/
+          bash -x ./build-linux-amd64.sh && mv -v ../../bin/vxagent  _tmp/linux/amd64/
+          # Common components
+          cp -v startup.sh _tmp/
+          cp -v ../../artifacts/agent/version _tmp/
+
+      - name: Upload result for agent linux
+        uses: actions/upload-artifact@v3
+        with:
+          name: agent_linux
+          path: |
+            build/package/*/_tmp/
