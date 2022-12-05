@@ -64,22 +64,22 @@ echo "Done create deb $arch"
 
 cp *.deb install_linux/
 export VXSERVER_CONNECT="VXSERVER_CONNECT"
-rm -rf /root/rpmbuild/SOURCES/* || true
-mkdir -p /root/rpmbuild/SOURCES/vxagent/{bin,unit}
+rm -rf ~/rpmbuild/SOURCES/* || true
+mkdir -p ~/rpmbuild/SOURCES/vxagent/{bin,unit}
 
 arch="386"
 eval "echo \"$(cat RPM/rpm.spec)\"" > rpm_$arch.spec
-cp _tmp/linux/386/vxagent /root/rpmbuild/SOURCES/vxagent/bin/
-cp vxagent.service /root/rpmbuild/SOURCES/vxagent/unit/
+cp _tmp/linux/386/vxagent ~/rpmbuild/SOURCES/vxagent/bin/
+cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 
 rpmbuild -bb ./rpm_$arch.spec --target i386
 cp ~/rpmbuild/RPMS/i386/* install_linux/vxagent-${VERSION}_i386.rpm
 
 arch="amd64"
 rm -rf ~/rpmbuild/SOURCES/* || true
-mkdir -p /root/rpmbuild/SOURCES/vxagent/{bin,unit}
-cp _tmp/linux/amd64/vxagent /root/rpmbuild/SOURCES/vxagent/bin/
-cp vxagent.service /root/rpmbuild/SOURCES/vxagent/unit/
+mkdir -p ~/rpmbuild/SOURCES/vxagent/{bin,unit}
+cp _tmp/linux/amd64/vxagent ~/rpmbuild/SOURCES/vxagent/bin/
+cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 
 eval "echo \"$(cat RPM/rpm.spec)\"" > rpm_$arch.spec
 rpmbuild -bb ./rpm_$arch.spec --target amd64
