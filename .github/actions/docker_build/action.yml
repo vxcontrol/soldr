@@ -16,11 +16,11 @@ inputs:
   docker_login:
     description: 'Login to docker hub'
     required: true
-    default: './'
+    default: ''
   docker_password:
     description: 'Password to docker hub'
     required: true
-    default: './'
+    default: ''
 runs:
   using: "composite"
   steps:
