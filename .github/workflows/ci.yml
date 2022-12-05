@@ -13,6 +13,7 @@ jobs:
     uses: ./.github/workflows/prepare_build.yml
   prepare_build_prod:
     uses: ./.github/workflows/prepare_build_prod.yml
+    if: github.ref_name == 'master' || startsWith(github.ref, 'refs/tags')
     secrets: inherit
   # TESTS AND LINTERS
   test_go:
