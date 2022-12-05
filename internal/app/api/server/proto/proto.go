@@ -124,7 +124,7 @@ func doVXServerConnection(
 	agentInfo *protoagent.Information,
 	ltacGetter vxcommonVM.LTACGetter,
 ) (*socket, error) {
-	certsDir := filepath.Join("security", "certs")
+	certsDir := filepath.Join("security", "certs", "api")
 	if dir, ok := os.LookupEnv("CERTS_PATH"); ok {
 		certsDir = dir
 	}
@@ -293,7 +293,7 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockType st
 		sv:       sv,
 		logger:   logger,
 	}
-	certsDir := filepath.Join("security", "certs")
+	certsDir := filepath.Join("security", "certs", "api")
 	if dir, ok := os.LookupEnv("CERTS_PATH"); ok {
 		certsDir = dir
 	}
