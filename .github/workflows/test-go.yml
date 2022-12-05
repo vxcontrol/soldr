@@ -1,0 +1,43 @@
+name: Test GO
+
+on: workflow_call
+
+jobs:
+  code_lint:
+    name: Code lint with golangci-lint
+    runs-on: ubuntu-latest
+    container:
+      image: golangci/golangci-lint:v1.45.2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: run_golangci-lint
+        run: |
+          apt-get update && apt-get install -y jq
+          golangci-lint run --issues-exit-code 1 --out-format code-climate | tee gl-code-quality-report.json | jq -r '.[] | "\(.location.path):\(.location.lines.begin) \(.description)"'
+
+  code_test:
+    name: Code test with go test
+    runs-on: ubuntu-latest
+    container:
+      image: vxcontrol/vxbuild-cross
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Enable cache
+        uses: ./.github/actions/go_cache
+      - uses: actions/download-artifact@v3
+        with:
+          name: all_environment
+      - name: run_go-test
+        run: |
+          mkdir -p .go
+          go get ./...
+          make test

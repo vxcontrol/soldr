@@ -1,14 +1,23 @@
-FROM debian:buster-slim
+FROM minio/mc as minio_client
 
-RUN mkdir -p /opt/vxagent/{bin,data,logs}
+FROM mysql
 
-COPY preparing.sh 			/opt/vxagent/bin/
-COPY build/package/agent/_tmp/version 			/opt/vxagent/bin/
-COPY build/package/agent/_tmp/linux/amd64/vxagent 	/opt/vxagent/bin/
+COPY --from=minio_client /usr/bin/mc /usr/bin/mc
 
-WORKDIR /opt/vxagent
+RUN mkdir -p /opt/vxbinaries && \
+    microdnf install jq && \
+    microdnf clean all
 
-RUN chmod +x /opt/vxagent/bin/preparing.sh && \
-    /opt/vxagent/bin/preparing.sh
+# Entrypoint script
+COPY build/package/agent/_tmp/startup.sh /opt/vxbinaries/
+COPY build/package/agent/_tmp/version /opt/vxbinaries/
 
-ENTRYPOINT ["/opt/vxagent/bin/vxagent"]
+COPY build/package/agent/_tmp/windows /opt/vxbinaries/windows
+COPY build/package/agent/_tmp/linux   /opt/vxbinaries/linux
+COPY build/package/agent/_tmp/darwin  /opt/vxbinaries/darwin
+
+WORKDIR /opt/vxbinaries
+
+RUN chmod +x /opt/vxbinaries/startup.sh
+
+ENTRYPOINT ["/opt/vxbinaries/startup.sh"]

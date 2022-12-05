@@ -14,14 +14,14 @@ elif [ "$API_USE_SSL" = "true" ]; then
     openssl req \
         -new -x509 -days 3650 \
         -key ${API_SSL_CA_KEY} \
-        -subj "/C=RU/ST=MO/L=MO/O=Positive/OU=Org/CN=VXControl SOLDR Root CA" \
+        -subj "/C=RU/ST=MO/L=MO/O=VXControl/OU=Org/CN=VXControl SOLDR Root CA" \
         -out ${API_SSL_CA_CRT}
     openssl req \
         -newkey rsa:4096 \
         -sha256 \
         -nodes \
         -keyout ${API_SSL_KEY} \
-        -subj "/C=RU/ST=MO/L=MO/O=Positive/OU=Org/CN=vxapi.local" \
+        -subj "/C=RU/ST=MO/L=MO/O=VXControl/OU=Org/CN=vxapi.local" \
         -out ${API_SSL_CSR}
     openssl x509 -req \
         -days 730 \

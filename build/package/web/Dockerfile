@@ -1,7 +1,7 @@
-FROM node:14 as build
+FROM node:16 as build
 ARG CYPRESS_INSTALL_BINARY=""
 WORKDIR /src/app
-COPY . .
+COPY web/. .
 # Install yarn dependencies and run build
 RUN yarn install && yarn build --prod
 

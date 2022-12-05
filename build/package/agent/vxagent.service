@@ -1,0 +1,14 @@
+[Unit]
+Description=VXAgent service to the OS control
+Requires=multi-user.target sockets.target
+After=multi-user.target sockets.target
+
+[Service]
+WorkingDirectory=/opt/vxcontrol/vxagent/data/
+PIDFile=/var/run/vxagent.pid
+ExecStartPre=/bin/rm -f /var/run/vxagent.pid
+ExecStart=/opt/vxcontrol/vxagent/bin/vxagent -service -connect ${VXSERVER_CONNECT} -logdir /opt/vxcontrol/vxagent/logs
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

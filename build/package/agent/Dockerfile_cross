@@ -4,7 +4,9 @@ FROM mysql
 
 COPY --from=minio_client /usr/bin/mc /usr/bin/mc
 
-RUN mkdir -p /opt/vxbinaries
+RUN mkdir -p /opt/vxbinaries && \
+    microdnf install jq && \
+    microdnf clean all
 
 # Entrypoint script
 COPY build/package/agent/_tmp/startup.sh /opt/vxbinaries/
