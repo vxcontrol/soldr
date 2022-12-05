@@ -1,6 +1,6 @@
 # SOLDR
 
-Soldr is an Endpoint Detection and Response system which consists of centralised management part with extensive Web UI and Agents being installed on endpoint systems. Soldr allows you not only to configure security policies but also write your own modules and make detection of the comprehensive security events as well as do almost instant response on the security alarms.
+SOLDR is an Endpoint Detection and Response system which consists of centralised management part with extensive Web UI and Agents being installed on endpoint systems. SOLDR allows you not only to configure security policies but also write your own modules and make detection of the comprehensive security events as well as do almost instant response on the security alarms.
 
 ## Repository structure
 
@@ -62,9 +62,38 @@ Setup an environment configuration:
 cp .env.template .env
 ```
 
-### First run
+### Run whole project by docker compose
 
-Soldr require prepared DB schema and additional data stored in S3 for proper initialization. Pull dependencies and start MySQL and Minio servers for simplicity using docker.
+Docker images stored in [vxcontrol](https://hub.docker.com/u/vxcontrol) docker hub account.
+This scenario requires `.env` and `docker-compose.yml` files.
+
+#### Download and update images
+
+```bash
+docker compose pull
+```
+
+#### Run services
+
+```bash
+docker compose up -d
+```
+
+#### Stop services
+
+```bash
+docker compose down
+```
+
+#### Remove services and collected data
+
+```bash
+docker compose down -v
+```
+
+### First run without compose
+
+SOLDR require prepared DB schema and additional data stored in S3 for proper initialization. Pull dependencies and start MySQL and Minio servers for simplicity using docker.
 
 ```bash
 docker compose pull
@@ -165,7 +194,7 @@ Then click on `Send data` button and check the log right below - it should conta
     2:04:20 PM.166 RECV DATA: {"data":"pong","type":"hs_server"}
 ```
 
-Congratulations! The setup of the Soldr project is done, it is fully functioning and ready for you to dig into the wilderness of the Endpoint Detection and Response!
+Congratulations! The setup of the SOLDR project is done, it is fully functioning and ready for you to dig into the wilderness of the Endpoint Detection and Response!
 
 ### Next steps
 
