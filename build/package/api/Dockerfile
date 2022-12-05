@@ -1,7 +1,9 @@
 FROM debian:buster-slim
 
 RUN mkdir -p /opt/api/logs && \
-    mkdir -p /opt/api/logsssl
+    mkdir -p /opt/api/logsssl && \
+    apt update && apt install -y openssl && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY build/bin/vxapi                   /opt/api/bin/
 COPY db/api/migrations                 /opt/api/db/api/migrations
