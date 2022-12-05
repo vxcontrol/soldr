@@ -1,17 +1,19 @@
 FROM debian:buster-slim
 
-RUN mkdir -p /opt/vxserver/{bin,data,logs}
+RUN mkdir -p /opt/vxserver/bin && \
+    mkdir -p /opt/vxserver/data && \
+    mkdir -p /opt/vxserver/logs
 
-COPY preparing.sh 	                    /opt/vxserver/bin/
-COPY ../../artifacts/server/version 	/opt/vxserver/bin/
-COPY ../../bin/server 			        /opt/vxserver/bin/
-COPY ../../../db/server/migrations 	    /opt/vxserver/migrations
-COPY build/package/server/vconf 	    /opt/vxserver/vconf
-COPY build/package/server/crts/server 	/opt/vxserver/crts/server
+COPY build/package/server/preparing.sh 	/opt/vxserver/bin/
+COPY build/artifacts/server/version 	/opt/vxserver/bin/
+COPY build/bin/vxserver			        /opt/vxserver/bin/
+COPY db/server/migrations 	            /opt/vxserver/db/server/migrations
+COPY security/vconf 	                /opt/vxserver/security/vconf
+COPY security/certs/server              /opt/vxserver/security/certs/server
 
 WORKDIR /opt/vxserver
 
 RUN chmod +x /opt/vxserver/bin/preparing.sh && \
     /opt/vxserver/bin/preparing.sh
 
-ENTRYPOINT ["/opt/vxserver/bin/server"]
+ENTRYPOINT ["/opt/vxserver/bin/vxserver"]

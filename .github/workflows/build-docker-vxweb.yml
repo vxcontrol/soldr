@@ -1,0 +1,35 @@
+name: VXServer build and push
+
+on: workflow_call
+
+jobs:
+  build_and_push_docker:
+    name: Docker Build and Publish
+    environment:
+      name: production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v3
+        with:
+          name: ui_frontend
+      - uses: actions/download-artifact@v3
+        with:
+          name: decode_environment
+      - name: prepare build
+        run: |
+          mkdir web/dist/
+          cp -r build/package/web/* web/
+          cp -r apps/* web/dist/
+          ls web
+      - name: Docker build vxweb
+        uses: ./.github/actions/docker_build
+        with:
+          workdir: "web"
+          docker_name: "soldr-web"
+          docker_login: ${{ secrets.DOCKER_LOGIN }}
+          docker_password: ${{ secrets.DOCKER_PASSWORD }}

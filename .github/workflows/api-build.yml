@@ -1,0 +1,37 @@
+name: Build API
+
+on: workflow_call
+
+jobs:
+  ui_build_backend:
+    name: Build API
+    runs-on: ubuntu-latest
+    container:
+      image: vxcontrol/vxbuild-cross
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Common
+        uses: ./.github/actions/common
+      - name: Enable cache
+        uses: ./.github/actions/go_cache
+      - uses: actions/download-artifact@v3
+        with:
+          name: decode_environment
+      - name: Build
+        run: |
+          make build-api
+          echo "./build/bin/vxapi"
+          ls -la ./build/bin/vxapi || true
+          echo "./build/artifacts/api"
+          ls -la ./build/artifacts/api || true
+      - name: Upload result for ui_build_backend
+        uses: actions/upload-artifact@v3
+        with:
+          name: ui_backend
+          path: |
+            build/bin/vxapi
+            cmd/api

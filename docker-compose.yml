@@ -11,9 +11,9 @@ services:
       - --character-set-server=utf8
       - --collation-server=utf8_general_ci
     ports:
-    - "3306:3306"
+      - 3306:3306
     volumes:
-    - vx-mysql-data:/var/lib/mysql
+      - vx-mysql-data:/var/lib/mysql
     networks:
       - vx-stand
     environment:
@@ -29,7 +29,7 @@ services:
     hostname: minio.local
     restart: unless-stopped
     ports:
-      - "9000:9000"
+      - 9000:9000
     command:
       - server
       - /data
@@ -46,9 +46,6 @@ services:
     container_name: vx_modules
     hostname: modules.local
     restart: unless-stopped
-    links:
-    - minio:minio.local
-    - mysql:mysql.local
     networks:
       - vx-stand
     environment:
@@ -67,6 +64,159 @@ services:
       mysql:
         condition: service_started
 
+  res:
+    image: vxcontrol/soldr-res
+    container_name: vx_res
+    hostname: res.local
+    restart: unless-stopped
+    networks:
+      - vx-stand
+    environment:
+      DB_HOST: mysql.local
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_ENDPOINT: http://minio.local:9000
+    depends_on:
+      minio:
+        condition: service_started
+      mysql:
+        condition: service_started
+      api:
+        condition: service_started
+
+  dbmigrate:
+    image: vxcontrol/soldr-dbmigrate
+    container_name: vx_dbmigrate
+    hostname: dbmigrate.local
+    networks:
+      - vx-stand
+    environment:
+      DB_HOST: mysql.local
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      MYSQL_ROOT_USER: ${DB_ROOT_USER}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      AGENT_SERVER_HOST: server.local
+      AGENT_SERVER_DB_NAME: ${AGENT_SERVER_DB_NAME}
+      AGENT_SERVER_DB_USER: ${AGENT_SERVER_DB_USER}
+      AGENT_SERVER_DB_PASS: ${AGENT_SERVER_DB_PASS}
+      AGENT_SERVER_MINIO_BUCKET_NAME: ${AGENT_SERVER_MINIO_BUCKET_NAME}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_ENDPOINT: http://minio.local:9000
+    depends_on:
+      minio:
+        condition: service_started
+      mysql:
+        condition: service_started
+
+  server:
+    image: vxcontrol/soldr-server
+    container_name: vx_server
+    hostname: server.local
+    restart: unless-stopped
+    networks:
+      - vx-stand
+    expose:
+      - 8443/tcp
+    ports:
+      - 8443:8443
+    environment:
+      LISTEN: wss://0.0.0.0:8443
+      LOG_DIR: logs
+      CONFIG_LOADER: db
+      VALID_LOADER: db
+      FILES_LOADER: s3
+      DB_HOST: mysql.local
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${AGENT_SERVER_DB_NAME}
+      DB_USER: ${AGENT_SERVER_DB_USER}
+      DB_PASS: ${AGENT_SERVER_DB_PASS}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${AGENT_SERVER_MINIO_BUCKET_NAME}
+      MINIO_ENDPOINT: http://minio.local:9000
+    volumes:
+      - vx-server-data:/opt/vxserver/data:rw
+      - vx-server-logs:/opt/vxserver/logs:rw
+      - vx-server-store:/tmp/vx-store:rw
+    depends_on:
+      modules:
+        condition: service_started
+      dbmigrate:
+        condition: service_started
+
+  web:
+    image: vxcontrol/soldr-web
+    container_name: vx_web
+    hostname: web.local
+    restart: unless-stopped
+    expose:
+      - 8080/tcp
+    ports:
+      - 8080:8080
+    networks:
+      - vx-stand
+
+  api:
+    image: vxcontrol/soldr-api
+    container_name: vx_api
+    hostname: api.local
+    restart: unless-stopped
+    networks:
+      - vx-stand
+    ports:
+      - ${API_SERVER_HOST:-127.0.0.1}:${API_SERVER_PORT_HTTP:-80}:8080
+      - ${API_SERVER_HOST:-127.0.0.1}:${API_SERVER_PORT_HTTPS:-443}:8443
+    volumes:
+      - vx-api-server-ssl:/opt/api/ssl:rw
+      - vx-api-server-logs:/opt/api/logs:rw
+    environment:
+      API_USE_SSL: ${UI_USE_SSL:-true}
+      API_SERVER_HOST: ${API_SERVER_HOST:-127.0.0.1}
+      API_SERVER_PORT_HTTPS: ${API_SERVER_PORT_HTTPS:-:443}
+      API_SERVER_PORT_HTTP: ${API_SERVER_PORT_HTTP:-:80}
+      API_STATIC_URL: http://web.local:8080
+      DB_HOST: mysql.local
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      MINIO_ENDPOINT: http://minio.local:9000
+    depends_on:
+      minio:
+        condition: service_started
+      mysql:
+        condition: service_started
+      web:
+        condition: service_started
+      dbmigrate:
+        condition: service_started
+
+  agent:
+    image: vxcontrol/soldr-agent
+    container_name: vx_agent
+    hostname: agent.local
+    restart: unless-stopped
+    networks:
+      - vx-stand
+    environment:
+      CONNECT: "wss://server.local:8443"
+    depends_on:
+      server:
+        condition: service_started
+
 networks:
   vx-stand:
     driver: bridge
@@ -75,4 +225,14 @@ volumes:
   vx-mysql-data:
     driver: local
   vx-minio-data:
+    driver: local
+  vx-api-server-ssl:
+    driver: local
+  vx-api-server-logs:
+    driver: local
+  vx-server-data:
+    driver: local
+  vx-server-logs:
+    driver: local
+  vx-server-store:
     driver: local

@@ -1,0 +1,5 @@
+vxagent $VERSION stable; urgency=low
+
+  * $CI_COMMIT_MESSAGE
+
+  -- VXControl <support@vxcontrol.com>  $(date -Ru)

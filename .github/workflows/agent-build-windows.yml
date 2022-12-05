@@ -1,0 +1,40 @@
+name: Build Agent Windows
+
+on: workflow_call
+
+jobs:
+  agent_build_linux:
+    name: Build agent windows
+    runs-on: ubuntu-latest
+    container:
+      image: vxcontrol/vxbuild-cross
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Common
+        uses: ./.github/actions/common
+      - name: Enable cache
+        uses: ./.github/actions/go_cache
+      - uses: actions/download-artifact@v3
+        with:
+          name: decode_environment
+      - name: Build
+        run: |
+          cd build/package/agent/
+          # windows
+          bash -x ./build-windows-386.sh && mv -v ../../bin/vxagent.exe  _tmp/windows/386/
+          bash -x ./build-windows-amd64.sh && mv -v ../../bin/vxagent.exe  _tmp/windows/amd64/
+          ls -la ../../bin/ || true
+          # Common components
+          cp -v startup.sh _tmp/
+          cp -v ../../artifacts/agent/version _tmp/
+
+      - name: Upload result for agent windows
+        uses: actions/upload-artifact@v3
+        with:
+          name: agent_windows
+          path: |
+            build/package/*/_tmp/
