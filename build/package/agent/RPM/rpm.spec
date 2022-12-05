@@ -19,9 +19,9 @@ VX agent
 
 %install
 export DONT_STRIP=1
-mkdir -p %{buildroot}/opt/pt/vxagent/{bin,logs,data}
+mkdir -p %{buildroot}/opt/vxcontrol/vxagent/{bin,logs,data}
 mkdir -p %{buildroot}/etc/systemd/system/
-install -D -pm 755 %{SOURCE0}/bin/vxagent %{buildroot}/opt/pt/vxagent/bin/vxagent
+install -D -pm 755 %{SOURCE0}/bin/vxagent %{buildroot}/opt/vxcontrol/vxagent/bin/vxagent
 install -D -pm 755 %{SOURCE0}/unit/vxagent.service %{buildroot}/etc/systemd/system/vxagent.service
 
 

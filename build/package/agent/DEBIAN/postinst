@@ -5,11 +5,10 @@ set -e
 ln -s /lib/x86_64-linux-gnu/librt.so.1 /lib/x86_64-linux-gnu/librt.so 2>/dev/null || true
 ln -s /lib/x86_64-linux-gnu/libpthread.so.0 /lib/x86_64-linux-gnu/libpthread.so 2>/dev/null || true
 
-chmod +x /opt/pt/vxagent/bin/vxagent && chown root:root /opt/pt/vxagent/bin/vxagent
+chmod +x /opt/vxcontrol/vxagent/bin/vxagent && chown root:root /opt/vxcontrol/vxagent/bin/vxagent
 tmpfile=$(mktemp)
 VXSERVER_CONNECT="${VXSERVER_CONNECT:-'wss://localhost:8443'}" envsubst < /etc/systemd/system/vxagent.service > ${tmpfile}
 cat ${tmpfile} > /etc/systemd/system/vxagent.service
 rm -f ${tmpfile}
 systemctl daemon-reload
-/opt/pt/vxagent/bin/vxagent -command start
-
+/opt/vxcontrol/vxagent/bin/vxagent -command start

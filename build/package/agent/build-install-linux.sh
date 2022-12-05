@@ -10,9 +10,9 @@ mkdir install_linux/
 
 mv DEBIAN/control TMP_control
 mv DEBIAN/changelog TMP_changelog
-mkdir -p vxagent/opt/pt/vxagent/{bin,logs,data} && \
+mkdir -p vxagent/opt/vxcontrol/vxagent/{bin,logs,data} && \
 	mkdir vxagent/DEBIAN && \
-	cp _tmp/linux/386/vxagent vxagent/opt/pt/vxagent/bin && \
+	cp _tmp/linux/386/vxagent vxagent/opt/vxcontrol/vxagent/bin && \
 	mkdir -p vxagent/etc/systemd/system/ && \
 	cp vxagent.service vxagent/etc/systemd/system/vxagent.service
 
@@ -37,9 +37,9 @@ echo "Done create deb $arch"
 
 rm -rf vxagent
 
-mkdir -p vxagent/opt/pt/vxagent/{bin,logs,data} && \
+mkdir -p vxagent/opt/vxcontrol/vxagent/{bin,logs,data} && \
 	mkdir vxagent/DEBIAN && \
-	cp _tmp/linux/amd64/vxagent vxagent/opt/pt/vxagent/bin && \
+	cp _tmp/linux/amd64/vxagent vxagent/opt/vxcontrol/vxagent/bin && \
 	mkdir -p vxagent/etc/systemd/system/ && \
 	cp vxagent.service vxagent/etc/systemd/system/vxagent.service
 
@@ -84,4 +84,3 @@ cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 eval "echo \"$(cat RPM/rpm.spec)\"" > rpm_$arch.spec
 rpmbuild -bb ./rpm_$arch.spec --target amd64
 cp ~/rpmbuild/RPMS/amd64/* install_linux/vxagent-${VERSION}_amd64.rpm
-
