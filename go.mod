@@ -27,7 +27,6 @@ require (
 	github.com/minio/minio-go/v7 v7.0.36
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
-	github.com/oklog/run v1.1.0
 	github.com/pierrec/lz4/v4 v4.1.15
 	github.com/qor/validations v0.0.0-20171228122639-f364bca61b46
 	github.com/rubenv/sql-migrate v1.2.0
@@ -56,6 +55,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.9.0
 	go.opentelemetry.io/proto/otlp v0.11.0
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
+	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -286,7 +286,6 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20220827204233-334a2380cb91 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
-	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/genproto v0.0.0-20220519153652-3a47de7e79bd // indirect
