@@ -77,6 +77,11 @@ run-agent: build-agent
 run-web:
 	cd $(CURDIR)/web && yarn start
 
+.PHONY: run-web-nginx
+run-web-nginx:
+	envsubst <nginx.conf >/tmp/nginx.conf
+	nginx -e stderr -c /tmp/nginx.conf
+
 .PHONY: fmt
 fmt: $(GOLANGCI_BIN)
 	$(GOLANGCI_BIN) run --fix ./...
