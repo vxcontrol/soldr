@@ -278,10 +278,8 @@
         </ng-template>
 
         <ng-template #empty>
-            <div
-                class="layout-fill layout-row layout-align-center-center text_second"
-                *transloco="let tCommon; read: 'common'">
-                {{ tCommon('Common.Pseudo.Text.NoData') }}
+            <div class="layout-fill layout-row layout-align-center-center" *transloco="let tCommon; read: 'common'">
+                <span class="text_second">{{ tCommon('Common.Pseudo.Text.NoData') }}</span>
             </div>
         </ng-template>
     </ng-container>

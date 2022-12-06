@@ -1,0 +1,4 @@
+@use 'sass:meta';
+@use 'element-variables';
+
+$dark-element-ui: meta.module-variables(element-variables);

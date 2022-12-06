@@ -13,6 +13,10 @@
         }
     }
 
+    .mc-navbar-container .mc-icon.mc-bento_16 {
+        color: $palette-blue-100;
+    }
+
     .mc-button.navbar__service-dropdown {
         &,
         &:active:not([disabled]),

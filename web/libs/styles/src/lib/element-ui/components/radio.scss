@@ -1,205 +1,95 @@
 @import '../mixins/mixins';
-@import '../mixins/utils';
 @import '../mixins/button';
-@import '../element-variables';
 
-@include b(radio) {
-    color: $--radio-font-color;
-    font-weight: $--radio-font-weight;
-    line-height: 1;
-    position: relative;
-    cursor: pointer;
-    display: inline-block;
-    white-space: nowrap;
-    outline: none;
-    font-size: $--font-size-base;
-    margin-right: 30px;
-    @include utils-user-select(none);
+@mixin radio($tokens) {
+    @include b(radio) {
+        color: map-get($tokens, radio-font-color);
+        font-weight: map-get($tokens, radio-font-weight);
+        font-size: map-get($tokens, font-size-base);
 
-    @include when(bordered) {
-        padding: $--radio-bordered-padding;
-        border-radius: $--border-radius-base;
-        border: $--border-base;
-        box-sizing: border-box;
-        height: $--radio-bordered-height;
+        @include when(bordered) {
+            border: map-get($tokens, border-base);
 
-        &.is-checked {
-            border-color: $--color-primary;
-        }
-
-        &.is-disabled {
-            cursor: not-allowed;
-            border-color: $--border-color-lighter;
-        }
-
-        & + .el-radio.is-bordered {
-            margin-left: 10px;
-        }
-    }
-
-    @include m(medium) {
-        &.is-bordered {
-            padding: $--radio-bordered-medium-padding;
-            border-radius: $--button-medium-border-radius;
-            height: $--radio-bordered-medium-height;
-
-            .el-radio__label {
-                font-size: $--button-medium-font-size;
+            &.is-checked {
+                border-color: map-get($tokens, color-primary);
             }
 
-            .el-radio__inner {
-                height: $--radio-bordered-medium-input-height;
-                width: $--radio-bordered-medium-input-width;
+            &.is-disabled {
+                border-color: map-get($tokens, border-color-lighter);
             }
         }
-    }
-    @include m(small) {
-        &.is-bordered {
-            padding: $--radio-bordered-small-padding;
-            border-radius: $--button-small-border-radius;
-            height: $--radio-bordered-small-height;
 
-            .el-radio__label {
-                font-size: $--button-small-font-size;
-            }
-
-            .el-radio__inner {
-                height: $--radio-bordered-small-input-height;
-                width: $--radio-bordered-small-input-width;
+        @include m(medium) {
+            &.is-bordered {
+                .el-radio__label {
+                    font-size: map-get($tokens, button-medium-font-size);
+                }
             }
         }
-    }
-    @include m(mini) {
-        &.is-bordered {
-            padding: $--radio-bordered-mini-padding;
-            border-radius: $--button-mini-border-radius;
-            height: $--radio-bordered-mini-height;
 
-            .el-radio__label {
-                font-size: $--button-mini-font-size;
+        @include e(input) {
+            @include when(disabled) {
+                .el-radio__inner {
+                    background-color: map-get($tokens, radio-disabled-input-fill);
+                    border-color: map-get($tokens, radio-disabled-input-border-color);
+
+                    &::after {
+                        background-color: map-get($tokens, radio-disabled-icon-color);
+                    }
+                }
+                &.is-checked {
+                    .el-radio__inner {
+                        background-color: map-get($tokens, radio-disabled-checked-input-fill);
+                        border-color: map-get($tokens, radio-disabled-checked-input-border-color);
+
+                        &::after {
+                            background-color: map-get($tokens, radio-disabled-checked-icon-color);
+                        }
+                    }
+                }
+                & + span.el-radio__label {
+                    color: map-get($tokens, color-text-placeholder);
+                }
             }
 
-            .el-radio__inner {
-                height: $--radio-bordered-mini-input-height;
-                width: $--radio-bordered-mini-input-width;
-            }
-        }
-    }
-
-    &:last-child {
-        margin-right: 0;
-    }
-
-    @include e(input) {
-        white-space: nowrap;
-        cursor: pointer;
-        outline: none;
-        display: inline-block;
-        line-height: 1;
-        position: relative;
-        vertical-align: middle;
-
-        @include when(disabled) {
-            .el-radio__inner {
-                background-color: $--radio-disabled-input-fill;
-                border-color: $--radio-disabled-input-border-color;
-                cursor: not-allowed;
-
-                &::after {
-                    cursor: not-allowed;
-                    background-color: $--radio-disabled-icon-color;
+            @include when(checked) {
+                .el-radio__inner {
+                    border-color: map-get($tokens, radio-checked-input-border-color);
+                    background: map-get($tokens, radio-checked-icon-color);
                 }
 
                 & + .el-radio__label {
-                    cursor: not-allowed;
+                    color: map-get($tokens, radio-checked-font-color);
                 }
             }
-            &.is-checked {
+
+            @include when(focus) {
                 .el-radio__inner {
-                    background-color: $--radio-disabled-checked-input-fill;
-                    border-color: $--radio-disabled-checked-input-border-color;
-
-                    &::after {
-                        background-color: $--radio-disabled-checked-icon-color;
-                    }
+                    border-color: map-get($tokens, radio-input-border-color-hover);
                 }
             }
-            & + span.el-radio__label {
-                color: $--color-text-placeholder;
-                cursor: not-allowed;
+        }
+        @include e(inner) {
+            border: map-get($tokens, radio-input-border);
+            background-color: map-get($tokens, radio-input-background-color);
+
+            &:hover {
+                border-color: map-get($tokens, radio-input-border-color-hover);
+            }
+
+            &::after {
+                background-color: map-get($tokens, color-white);
             }
         }
 
-        @include when(checked) {
+        &:focus:not(.is-focus):not(:active):not(.is-disabled) {
             .el-radio__inner {
-                border-color: $--radio-checked-input-border-color;
-                background: $--radio-checked-icon-color;
-
-                &::after {
-                    transform: translate(-50%, -50%) scale(1);
-                }
-            }
-
-            & + .el-radio__label {
-                color: $--radio-checked-font-color;
+                box-shadow: 0 0 2px 2px map-get($tokens, radio-input-border-color-hover);
             }
         }
 
-        @include when(focus) {
-            .el-radio__inner {
-                border-color: $--radio-input-border-color-hover;
-            }
+        @include e(label) {
+            font-size: map-get($tokens, radio-font-size);
         }
-    }
-    @include e(inner) {
-        border: $--radio-input-border;
-        border-radius: $--radio-input-border-radius;
-        width: $--radio-input-width;
-        height: $--radio-input-height;
-        background-color: $--radio-input-background-color;
-        position: relative;
-        cursor: pointer;
-        display: inline-block;
-        box-sizing: border-box;
-
-        &:hover {
-            border-color: $--radio-input-border-color-hover;
-        }
-
-        &::after {
-            width: 4px;
-            height: 4px;
-            border-radius: $--radio-input-border-radius;
-            background-color: $--color-white;
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%) scale(0);
-            transition: transform .15s ease-in;
-        }
-    }
-
-    @include e(original) {
-        opacity: 0;
-        outline: none;
-        position: absolute;
-        z-index: -1;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        margin: 0;
-    }
-
-    &:focus:not(.is-focus):not(:active):not(.is-disabled) { /*获得焦点时 样式提醒*/
-        .el-radio__inner {
-            box-shadow: 0 0 2px 2px $--radio-input-border-color-hover;
-        }
-    }
-
-    @include e(label) {
-        font-size: $--radio-font-size;
-        padding-left: 10px;
     }
 }

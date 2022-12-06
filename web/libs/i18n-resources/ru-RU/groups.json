@@ -20,6 +20,7 @@
     "Groups.GroupInfo.Text.CollectorType": "Сбор данных",
     "Groups.GroupInfo.Text.DetectorType": "Обнаружение",
     "Groups.GroupInfo.Text.ProvisionerType": "Доставка и установка",
+    "Groups.GroupInfo.Text.ResponderType": "Реагирование",
 
     "Groups.GroupsList.ActionBarTitle.Groups": "Группы агентов",
     "Groups.GroupsList.ButtonText.CreateGroup": "Создать группу",

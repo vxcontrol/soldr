@@ -736,6 +736,7 @@ export const reducer = createReducer(
         const names = Object.keys(schema.properties as object);
 
         let defaultConfig = clone(state.module.default_event_config) as Record<string, any>;
+
         defaultConfig = applyChangesToObject(defaultConfig, Object.keys(defaultConfig), names, (eventName: string) =>
             getDefaultEvent(schema.properties[eventName].allOf[0].$ref as EventConfigurationItemType)
         );
@@ -755,6 +756,8 @@ export const reducer = createReducer(
                 Object.keys(emptyDefaultEventData as object),
                 (name) => emptyDefaultEventData[name]
             );
+
+            defaultConfig[eventName].type = emptyDefaultEventData.type;
 
             if (defaultConfig[eventName].type === 'atomic') {
                 defaultConfig[eventName].fields = emptyDefaultEventData.fields;

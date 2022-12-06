@@ -47,7 +47,6 @@ export class ModulesInstancesFacade {
     deleteError$ = this.store.select(selectDeleteModuleError);
     disableError$ = this.store.select(selectDisableModuleError);
     enableError$ = this.store.select(selectEnableModuleError);
-    saveError$ = this.store.select(selectSavingModuleError);
     entityId$ = this.store.select(selectEntityId);
     events$ = this.store.select(selectEvents);
     eventsGridFiltration$ = this.store.select(selectEventsGridFiltration);
@@ -56,8 +55,8 @@ export class ModulesInstancesFacade {
     eventsSearchValue$ = this.store.select(selectEventsGridSearch);
     isChangingVersionModule$ = this.store.select(selectIsChangingVersionModule);
     isDeletingModule$ = this.store.select(selectIsDeletingModule);
-    isEnablingModule$ = this.store.select(selectIsEnablingModule);
     isDisablingModule$ = this.store.select(selectIsDisablingModule);
+    isEnablingModule$ = this.store.select(selectIsEnablingModule);
     isLoadingEvents$ = this.store.select(selectIsLoadingEvents);
     isLoadingModule$ = this.store.select(selectIsLoadingModule);
     isLoadingModuleVersion$ = this.store.select(selectIsLoadingModuleVersions);
@@ -70,6 +69,7 @@ export class ModulesInstancesFacade {
     moduleName$ = this.store.select(selectModuleName);
     moduleVersions$ = this.store.select(selectModuleVersions);
     policy$ = this.store.select(selectModulePolicy);
+    saveError$ = this.store.select(selectSavingModuleError);
     totalEvents$ = this.store.select(selectTotalEvents);
     updateError$ = this.store.select(selectUpdateModuleError);
     viewMode$ = this.store.select(selectViewMode);

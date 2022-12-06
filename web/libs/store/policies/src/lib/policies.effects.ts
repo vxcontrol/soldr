@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, filter, first, forkJoin, map, of, switchMap, tap, withLatestFrom, zip } from 'rxjs';
+import { catchError, debounceTime, filter, first, forkJoin, map, of, switchMap, tap, withLatestFrom, zip } from 'rxjs';
 
 import {
     AgentsService,
@@ -32,7 +32,7 @@ import {
     UpgradesService
 } from '@soldr/api';
 import { policyToDto } from '@soldr/models';
-import { Filter, ModalInfoService } from '@soldr/shared';
+import { DEBOUNCING_DURATION_FOR_REQUESTS, Filter, ModalInfoService } from '@soldr/shared';
 import { SharedFacade } from '@soldr/store/shared';
 
 import * as PoliciesActions from './policies.actions';
@@ -59,6 +59,7 @@ export class PoliciesEffects {
     fetchFiltersCounters$ = createEffect(() =>
         this.actions$.pipe(
             ofType(PoliciesActions.fetchCountersByFilters),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.store.select(selectFilters).pipe(
                     first(),
@@ -80,6 +81,7 @@ export class PoliciesEffects {
     fetchPoliciesPage$ = createEffect(() =>
         this.actions$.pipe(
             ofType(PoliciesActions.fetchPoliciesPage),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             withLatestFrom(this.store.select(selectInitialListQuery)),
             switchMap(([action, initialQuery]) => {
                 const currentPage = action.page || 1;
@@ -99,6 +101,7 @@ export class PoliciesEffects {
     fetchFilterItems$ = createEffect(() =>
         this.actions$.pipe(
             ofType(PoliciesActions.fetchFilterItems),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             withLatestFrom(this.store.select(selectInitialListQuery)),
             filter(([_, query]) => !!query),
             switchMap(([_, { filters }]) =>
@@ -146,6 +149,7 @@ export class PoliciesEffects {
     fetchPolicyModules$ = createEffect(() =>
         this.actions$.pipe(
             ofType(PoliciesActions.fetchPolicyModules),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(({ hash }) =>
                 this.policiesService.fetchModules(hash, allListQuery()).pipe(
                     map((modulesResponse) =>

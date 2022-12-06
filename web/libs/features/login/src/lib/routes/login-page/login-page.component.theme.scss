@@ -1,5 +1,5 @@
 @mixin login-page-theme($theme) {
     .login-page {
-        background-color: map-get(map-get($theme, background), background-under);
+        background-color: map-deep-get($theme, custom, login-background);
     }
 }

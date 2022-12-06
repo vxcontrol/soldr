@@ -407,7 +407,7 @@ export class AssigningActionsMasterComponent implements OnInit, OnDestroy {
                     },
                     module_name: 'System',
                     module_os: {},
-                    name: 'system'
+                    name: LOG_TO_DB_ACTION.name
                 };
                 const module = {
                     ...this.module,

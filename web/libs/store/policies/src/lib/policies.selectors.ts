@@ -24,11 +24,6 @@ export const selectSelectedFilter = createSelector(selectFiltersWithCounter, sel
 export const selectPolicy = createSelector(selectPoliciesState, (state) => state.policy);
 export const selectCreatedPolicy = createSelector(selectPoliciesState, (state) => state.createdPolicy);
 export const selectTotal = createSelector(selectPoliciesState, (state) => state.total);
-export const selectSelectedPolicyId = createSelector(selectPoliciesState, (state) => state.selectedPolicyId);
-export const selectSelectedPolicy = createSelector(selectPolicies, selectSelectedPolicyId, (policies, policyId) =>
-    policies.find((policy) => policy.id.toString() === policyId)
-);
-export const selectSelectedPoliciesIds = createSelector(selectPoliciesState, (state) => state.selectedIds);
 export const selectSelectedPolicies = createSelector(selectPoliciesState, (state) =>
     state.policies.filter(({ id }) => state.selectedIds.includes(id))
 );

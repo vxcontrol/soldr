@@ -2,8 +2,8 @@ FROM node:16 as build
 ARG CYPRESS_INSTALL_BINARY=""
 WORKDIR /src/app
 COPY web/. .
-# Install yarn dependencies and run build
-RUN yarn install && yarn build --prod
+# Install npm dependencies and run build
+RUN npm install --legacy-peer-deps && npm run build --prod
 
 FROM nginxinc/nginx-unprivileged:1.18-alpine
 

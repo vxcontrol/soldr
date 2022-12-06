@@ -47,8 +47,15 @@ export class ModuleConfigComponent implements OnChanges {
                 '*.items.properties.*.rules.*.errMsg',
                 '*.items.properties.*.rules.customRule.*.errMsg'
             ],
-            (key: string) =>
-                /^[A-z\d]+\.[A-z\d]+\.[A-z\d]+\.[A-z\d]+$/.test(key) ? this.transloco.translate(`common.${key}`) : key
+            (key: string) => {
+                if (/^[A-z\d]+\.[A-z\d]+\.[A-z\d]+\.[A-z\d]+$/.test(key)) {
+                    const scope = key.split('.', 1)[0];
+
+                    return this.transloco.translate(`${scope.toLowerCase()}.${key}`);
+                } else {
+                    return key;
+                }
+            }
         );
 
         this.localizeProperties(

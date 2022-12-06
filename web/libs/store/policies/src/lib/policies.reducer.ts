@@ -14,7 +14,7 @@ import {
     Group,
     privateGroupsToModels
 } from '@soldr/models';
-import { Filter, Filtration, Sorting } from '@soldr/shared';
+import { clone, Filter, Filtration, Sorting } from '@soldr/shared';
 
 import * as PoliciesActions from './policies.actions';
 
@@ -468,6 +468,20 @@ export const reducer = createReducer(
         ...state,
         selectedIds: ids
     })),
+
+    on(PoliciesActions.updatePolicyModuleConfig, (state, { module }) => {
+        const modules = clone(state.modulesOfPolicy) as PolicyModule[];
+        const updatedModules = modules.map((item) =>
+            module.id === item.id
+                ? {
+                      ...item,
+                      current_config: module.current_config
+                  }
+                : item
+        );
+
+        return { ...state, modulesOfPolicy: updatedModules };
+    }),
 
     on(PoliciesActions.restoreState, (state, { restoredState }) => ({ ...state, restored: true, ...restoredState })),
 

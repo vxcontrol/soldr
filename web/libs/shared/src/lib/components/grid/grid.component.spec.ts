@@ -1,4 +1,6 @@
 import { By } from '@angular/platform-browser';
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE, LOCALES } from '@soldr/i18n';
+import { EdrGridScrollToBodyEndDirective, SharedModule, SortingDirection, TemplateCellComponent } from '@soldr/shared';
 import { TranslocoTestingModule } from '@ngneat/transloco';
 import { AgGridModule } from 'ag-grid-angular';
 import { MockBuilder, MockRender, ngMocks } from 'ng-mocks';

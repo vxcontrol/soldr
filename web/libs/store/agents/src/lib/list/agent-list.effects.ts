@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, filter, first, forkJoin, map, of, switchMap, withLatestFrom, zip } from 'rxjs';
+import { catchError, debounceTime, filter, first, forkJoin, map, of, switchMap, withLatestFrom, zip } from 'rxjs';
 
 import {
     AgentAction,
@@ -28,7 +28,7 @@ import {
     VersionsService
 } from '@soldr/api';
 import { agentToDto } from '@soldr/models';
-import { Filter, ModalInfoService } from '@soldr/shared';
+import { DEBOUNCING_DURATION_FOR_REQUESTS, Filter, ModalInfoService } from '@soldr/shared';
 
 import * as AgentListActions from './agent-list.actions';
 import { State } from './agent-list.reducer';
@@ -39,6 +39,7 @@ export class AgentListEffects {
     fetchFiltersCounters$ = createEffect(() =>
         this.actions$.pipe(
             ofType(AgentListActions.fetchCountersByFilters),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.store.select(selectFilters).pipe(
                     first(),
@@ -70,6 +71,7 @@ export class AgentListEffects {
                     AgentListActions.resetFiltration
                 ]
             ),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() => [AgentListActions.fetchAgentsPage({ page: 1 }), AgentListActions.fetchFilterItems()])
         )
     );
@@ -77,6 +79,7 @@ export class AgentListEffects {
     fetchAgentsPage$ = createEffect(() =>
         this.actions$.pipe(
             ofType(AgentListActions.fetchAgentsPage),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             withLatestFrom(this.store.select(selectInitialListQuery)),
             switchMap(([action, initialQuery]) => {
                 const currentPage = action.page || 1;

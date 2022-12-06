@@ -29,6 +29,7 @@ import { SharedFacade } from '@soldr/store/shared';
 
 import { PolicyDependenciesFacadeService } from '../../services/policy-dependencies-facade.service';
 import { defaultPolicyPageState, PolicyPageState } from '../../utils';
+import { ModelsModuleA } from '@soldr/api';
 
 @Component({
     selector: 'soldr-policy-page',
@@ -304,6 +305,10 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
 
     cancelUpgradeAgent(event: { hash: string; task: AgentUpgradeTask }) {
         this.policiesFacade.cancelUpgradeAgent(event.hash, event.task);
+    }
+
+    updateModuleConfig(module: ModelsModuleA) {
+        this.policiesFacade.updateModuleConfig(module);
     }
 
     private saveState() {

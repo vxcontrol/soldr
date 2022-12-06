@@ -30,6 +30,7 @@ import {
 import { OptionsService } from '@soldr/api';
 import { getModelFromSchema, getSchemaFromModel } from '@soldr/features/modules';
 import {
+    clone,
     getChangesArrays,
     getEmptySchema,
     NcFormProperty,
@@ -44,6 +45,7 @@ import { SharedFacade } from '@soldr/store/shared';
 import { DefinitionsService, DialogsService } from '../../services';
 import { ActionConfigurationItem, ConfigurationItem, ModuleSection } from '../../types';
 import { applyDiff } from '../../utils';
+import { unwrapFormItems } from '../../utils/unwrap-form-items';
 import {
     correctDefaultValueValidator,
     formItemFieldsValidator,
@@ -93,8 +95,8 @@ export class EditActionsSectionComponent implements OnInit, OnDestroy, ModuleSec
 
     ngOnInit(): void {
         const initFormSubscription = this.moduleEditFacade.actionsConfigSchemaModel$
-            .pipe(startWith(undefined), pairwise())
-            .subscribe(([oldSchema, schema]) => {
+            .pipe(startWith(undefined), pairwise(), withLatestFrom(this.moduleEditFacade.changedActions$))
+            .subscribe(([[oldSchema, schema], changes]) => {
                 const prevSchema: NcformSchema = oldSchema || getEmptySchema();
                 const oldModel = this.getActionsModelFromSchema(prevSchema);
                 const model = this.getActionsModelFromSchema(schema);
@@ -102,10 +104,13 @@ export class EditActionsSectionComponent implements OnInit, OnDestroy, ModuleSec
                 const names = Object.keys(schema.properties as object);
                 const diff = getChangesArrays(namesOld, names);
 
-                this.defaultSchema = {
-                    ...schema,
-                    definitions: this.definitions.getDefinitions(names)
-                } as NcformSchema;
+                this.defaultSchema = unwrapFormItems(
+                    {
+                        ...clone(schema),
+                        definitions: this.definitions.getDefinitions(names)
+                    } as NcformSchema,
+                    changes
+                );
 
                 applyDiff(
                     this.form.controls.actions,

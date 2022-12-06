@@ -1,5 +1,7 @@
-import { AfterViewInit, Component, ElementRef, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, Input, OnChanges, SimpleChanges } from '@angular/core';
 import * as monaco from 'monaco-editor';
+
+import { MosaicTokens, THEME_TOKENS } from '@soldr/core';
 
 import IStandaloneEditorConstructionOptions = monaco.editor.IStandaloneEditorConstructionOptions;
 
@@ -16,7 +18,7 @@ export class EventDataBlockComponent implements OnChanges, AfterViewInit {
         automaticLayout: true,
         folding: false,
         foldingHighlight: false,
-        fontSize: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--typography-subheading-font-size')),
+        fontSize: parseInt(this.tokens.TypographySubheadingFontSize),
         glyphMargin: false,
         hideCursorInOverviewRuler: true,
         language: 'json',
@@ -34,7 +36,7 @@ export class EventDataBlockComponent implements OnChanges, AfterViewInit {
     };
     editor: any;
 
-    constructor(private element: ElementRef) {}
+    constructor(private element: ElementRef, @Inject(THEME_TOKENS) private tokens: MosaicTokens) {}
 
     ngAfterViewInit(): void {
         const editorContainer: HTMLElement = this.element.nativeElement.querySelector('.event-data-block__editor');

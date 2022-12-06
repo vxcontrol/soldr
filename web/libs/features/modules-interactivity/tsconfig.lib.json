@@ -7,6 +7,7 @@
         "inlineSources": true,
         "types": []
     },
+<<<<<<<< HEAD:libs/features/modules-interactivity/tsconfig.lib.json
     "exclude": [
         "src/test-setup.ts",
         "**/*.spec.ts",
@@ -15,4 +16,8 @@
     "include": [
         "**/*.ts"
     ]
+========
+    "exclude": ["src/test-setup.ts", "**/*.spec.ts", "**/*.test.ts", "jest.config.ts"],
+    "include": ["**/*.ts"]
+>>>>>>>> origin/develop:libs/features/backups/tsconfig.lib.json
 }

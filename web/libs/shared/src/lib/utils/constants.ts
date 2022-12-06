@@ -9,3 +9,5 @@ export const MAX_NAME_LENGTH_VALIDATOR = 100;
 export const MINUTES_PER_HOUR = 60;
 export const HOURS_PER_DAY = 24;
 export const DAYS_IN_MONTH = 30;
+
+export const DEBOUNCING_DURATION_FOR_REQUESTS = 100;

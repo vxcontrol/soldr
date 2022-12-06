@@ -117,7 +117,7 @@
                     </ng-template>
                 </mc-dd>
 
-                <ng-container *ngIf="provisionerCount || collectorCount || detectorCount">
+                <ng-container *ngIf="provisionerCount || collectorCount || detectorCount || responderCount">
                     <mc-dt>{{ t('Groups.Pseudo.Label.Modules') }}</mc-dt>
                     <mc-dd class="group-info__modules">
                         <div class="modules-info-item" *ngIf="provisionerCount">
@@ -140,6 +140,14 @@
                                 <span class="modules-info-count">{{ detectorCount }}</span>
                             </div>
                             <mc-progress-bar class="detector-type" [value]="detectorPercent"></mc-progress-bar>
+                        </div>
+
+                        <div class="modules-info-item" *ngIf="responderCount">
+                            <div class="layout-row layout-align-space-between">
+                                <span>{{ t('Groups.GroupInfo.Text.ResponderType') }}</span>
+                                <span class="modules-info-count">{{ responderCount }}</span>
+                            </div>
+                            <mc-progress-bar class="responder-type" [value]="responderCount"></mc-progress-bar>
                         </div>
                     </mc-dd>
                 </ng-container>

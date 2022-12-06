@@ -95,6 +95,16 @@ export const selectIsDirtySecureConfig = createSelector(
     selectIsDirtySecureDefaultConfig,
     (isDirtySecureConfigSchema, isDirtySecureDefaultConfig) => isDirtySecureConfigSchema || isDirtySecureDefaultConfig
 );
+export const selectChangedSecureParams = createSelector(
+    selectSecureConfigSection,
+    selectOriginal,
+    (schema, originalModule) =>
+        Object.keys(schema.properties).filter(
+            (paramName) =>
+                !originalModule.secure_config_schema.properties[paramName] ||
+                !compareObjects(schema.properties[paramName], originalModule.secure_config_schema.properties[paramName])
+        )
+);
 
 // EVENTS
 export const selectEventsConfigSection = createSelector(selectModule, (module) => module.event_config_schema);
@@ -118,6 +128,13 @@ export const selectIsDirtyEventsConfig = createSelector(
     selectIsDirtyEventsConfigSchema,
     selectIsDirtyDefaultEventsConfig,
     (isDirtyEventsConfigSchema, isDirtyDefaultEventsConfig) => isDirtyEventsConfigSchema || isDirtyDefaultEventsConfig
+);
+export const selectChangedEvents = createSelector(selectEventsConfigSection, selectOriginal, (schema, originalModule) =>
+    Object.keys(schema.properties).filter(
+        (eventName) =>
+            !originalModule.event_config_schema.properties[eventName] ||
+            !compareObjects(schema.properties[eventName], originalModule.event_config_schema.properties[eventName])
+    )
 );
 
 // ACTIONS
@@ -143,6 +160,19 @@ export const selectIsDirtyActionsConfig = createSelector(
     selectIsDirtyDefaultActionsConfig,
     (isDirtyActionsConfigSchema, isDirtyDefaultActionsConfig) =>
         isDirtyActionsConfigSchema || isDirtyDefaultActionsConfig
+);
+export const selectChangedActions = createSelector(
+    selectActionsConfigSection,
+    selectOriginal,
+    (schema, originalModule) =>
+        Object.keys(schema.properties).filter(
+            (actionName) =>
+                !originalModule.action_config_schema.properties[actionName] ||
+                !compareObjects(
+                    schema.properties[actionName],
+                    originalModule.action_config_schema.properties[actionName]
+                )
+        )
 );
 
 // FIELDS

@@ -1,4 +1,4 @@
-import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { combineLatest, filter, map, Subscription, switchMap } from 'rxjs';
@@ -22,7 +22,8 @@ import { defaultGroupModuleState, GroupModuleState } from '../../utils';
 @Component({
     selector: 'soldr-group-module-page',
     templateUrl: './group-module-page.component.html',
-    styleUrls: ['./group-module-page.component.scss']
+    styleUrls: ['./group-module-page.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GroupModulePageComponent implements OnInit, OnDestroy {
     group$ = this.groupsFacade.group$;
@@ -58,7 +59,7 @@ export class GroupModulePageComponent implements OnInit, OnDestroy {
             (this.stateStorage.loadState('groupModule.view') as GroupModuleState) || {}
         );
 
-        this.group$.pipe(filter(Boolean)).subscribe((group) => {
+        const groupSubscription = this.group$.pipe(filter(Boolean)).subscribe((group) => {
             const { hash, moduleName } = this.activatedRoute.snapshot.params as Record<string, string>;
 
             this.modulesInstancesFacade.init(ViewMode.Groups, group.id, moduleName);
@@ -66,6 +67,7 @@ export class GroupModulePageComponent implements OnInit, OnDestroy {
             this.modulesInstancesFacade.fetchEvents();
             this.modulesInstancesFacade.fetchModuleEventsFilterItems();
         });
+        this.subscription.add(groupSubscription);
 
         this.sharedFacade.fetchAllAgents();
     }

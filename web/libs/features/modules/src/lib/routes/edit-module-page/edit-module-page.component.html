@@ -52,7 +52,7 @@
                                     e2e-id="btnReleaseModule"
                                     mc-button
                                     class="mc-button mc-icon-button mc-button_transparent actionbar__button"
-                                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.Release')">
+                                    [mcTooltip]="t('Modules.ModuleEdit.TooltipText.Release')">
                                     <i mc-icon="soldr-icons-join_16" class="soldr-icons"></i>
                                 </button>
                             </soldr-release-module-modal>
@@ -64,7 +64,7 @@
                                     e2e-id="btnCreateDraft"
                                     mc-button
                                     class="mc-button mc-icon-button mc-button_transparent actionbar__button"
-                                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.CreateDraft')">
+                                    [mcTooltip]="t('Modules.ModuleEdit.TooltipText.CreateDraft')">
                                     <i mc-icon="soldr-icons-branch_16" class="soldr-icons"></i>
                                 </button>
                             </soldr-create-module-draft-modal>
@@ -79,7 +79,7 @@
                                     e2e-id="btnUpdateModuleInPolicies"
                                     mc-button
                                     class="mc-button mc-icon-button mc-button_transparent actionbar__button"
-                                    [mcTooltip]="t('Modules.ModuleEdit.ButtonTooltipText.UpdateInPolicies')"
+                                    [mcTooltip]="t('Modules.ModuleEdit.TooltipText.UpdateInPolicies')"
                                     [class.mc-progress]="isUpdatingInPolicies"
                                     [disabled]="!canUpdateModuleInPolicies"
                                     (click)="updateInPolicies()">

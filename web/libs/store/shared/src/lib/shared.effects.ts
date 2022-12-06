@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, from, map, of, switchMap } from 'rxjs';
+import { catchError, debounceTime, from, map, of, switchMap } from 'rxjs';
 
 import {
     AgentsService,
@@ -30,7 +30,7 @@ import {
     PrivateSystemModules,
     ModulesService
 } from '@soldr/api';
-import { ModalInfoService, saveFile } from '@soldr/shared';
+import { DEBOUNCING_DURATION_FOR_REQUESTS, ModalInfoService, saveFile } from '@soldr/shared';
 
 import * as SharedActions from './shared.actions';
 import { State } from './shared.reducer';
@@ -40,6 +40,7 @@ export class SharedEffects {
     fetchAllGroups$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAllGroups),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.groupsService.fetchList(allListQuery({ sort: { prop: 'name', order: 'ascending' } })).pipe(
                     map((response: SuccessResponse<PrivateGroups>) =>
@@ -54,6 +55,7 @@ export class SharedEffects {
     fetchAllAgents$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAllAgents),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.agentsService.fetchList(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateAgents>) =>
@@ -68,6 +70,7 @@ export class SharedEffects {
     fetchAllPolicies$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAllPolicies),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.policiesService.fetchList(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivatePolicies>) =>
@@ -82,6 +85,7 @@ export class SharedEffects {
     fetchAllServices$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAllServices),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.servicesService.fetchServiceList(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateServices>) =>
@@ -96,6 +100,7 @@ export class SharedEffects {
     fetchAllModules$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAllModules),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.modulesService.fetchList(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateSystemModules>) =>
@@ -126,6 +131,7 @@ export class SharedEffects {
     fetchInfo$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchInfo),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(({ refreshCookie }) =>
                 this.publicService.getUserInfo(refreshCookie).pipe(
                     map((response: SuccessResponse<PublicInfo>) => {
@@ -180,6 +186,7 @@ export class SharedEffects {
     fetchVersions$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAgentBinaries),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.binariesService
                     .getBinaries({
@@ -220,6 +227,7 @@ export class SharedEffects {
     fetchOptionsActions$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchOptionsActions),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.optionsService.fetchOptionsActions(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateOptionsActions>) =>
@@ -234,6 +242,7 @@ export class SharedEffects {
     fetchOptionsEvents$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchOptionsEvents),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.optionsService.fetchOptionsEvents(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateOptionsEvents>) =>
@@ -248,6 +257,7 @@ export class SharedEffects {
     fetchOptionsFields$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchOptionsFields),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.optionsService.fetchOptionsFields(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateOptionsEvents>) =>
@@ -262,6 +272,7 @@ export class SharedEffects {
     fetchOptionsTags$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchOptionsTags),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.optionsService.fetchOptionsTags(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateOptionsTags>) =>

@@ -7,6 +7,7 @@ import { catchError, combineLatest, filter, from, map, Observable, of, switchMap
 import {
     allListQuery,
     ModelsGroup,
+    ModelsModuleA,
     ModelsPolicy,
     PoliciesService,
     PrivatePolicies,
@@ -15,7 +16,6 @@ import {
 } from '@soldr/api';
 import { Agent, AgentUpgradeTask, Policy } from '@soldr/models';
 import { Filter, Filtration, GridColumnFilterItem, LanguageService, osList, Sorting } from '@soldr/shared';
-import { ModuleListFacade } from '@soldr/store/modules';
 import { ModulesInstancesFacade } from '@soldr/store/modules-instances';
 import { SharedFacade } from '@soldr/store/shared';
 
@@ -37,10 +37,7 @@ import {
     selectIsUpdatingPolicy,
     selectPage,
     selectRestored,
-    selectSelectedPolicy,
-    selectSelectedPolicyId,
     selectSelectedPolicies,
-    selectSelectedPoliciesIds,
     selectTotal,
     selectSelectedFilterId,
     selectFiltersWithCounter,
@@ -63,7 +60,6 @@ import {
     selectPolicyAgents,
     selectIsLoadingAgents,
     selectSelectedAgent,
-    selectSelectedAgentId,
     selectGroupsGridFiltration,
     selectGroupsGridFiltrationByField,
     selectGroupsPage,
@@ -71,7 +67,6 @@ import {
     selectTotalGroups,
     selectPolicyGroups,
     selectSelectedPolicyGroup,
-    selectSelectedPolicyGroupId,
     selectIsLoadingGroups,
     selectIsLoadingModules,
     selectIsUpdatingAgentData,
@@ -154,12 +149,7 @@ export class PoliciesFacade {
     selectedFilterId$ = this.store.select(selectSelectedFilterId);
     selectedGroupId$ = this.store.select(selectSelectedGroupId);
     selectedAgent$ = this.store.select(selectSelectedAgent);
-    selectedAgentId$ = this.store.select(selectSelectedAgentId);
     selectedPolicies$ = this.store.select(selectSelectedPolicies);
-    selectedPoliciesIds$ = this.store.select(selectSelectedPoliciesIds);
-    selectedPolicy$ = this.store.select(selectSelectedPolicy);
-    selectedPolicyId$ = this.store.select(selectSelectedPolicyId);
-    selectedPolicyGroupId$ = this.store.select(selectSelectedPolicyGroupId);
     selectedPolicyGroup$ = this.store.select(selectSelectedPolicyGroup);
     sorting$ = this.store.select(selectGridSorting);
     total$ = this.store.select(selectTotal);
@@ -353,10 +343,6 @@ export class PoliciesFacade {
         this.store.dispatch(PoliciesActions.fetchGroupFilterItems());
     }
 
-    selectPolicy(id: string): void {
-        this.store.dispatch(PoliciesActions.selectPolicy({ id }));
-    }
-
     selectPolicies(policies: Policy[]) {
         this.store.dispatch(PoliciesActions.selectPolicies({ policies }));
     }
@@ -536,6 +522,10 @@ export class PoliciesFacade {
 
     cancelUpgradeAgent(hash: string, task: AgentUpgradeTask) {
         this.store.dispatch(PoliciesActions.cancelUpgradeAgent({ hash, task }));
+    }
+
+    updateModuleConfig(module: ModelsModuleA) {
+        this.store.dispatch(PoliciesActions.updatePolicyModuleConfig({ module }));
     }
 
     resetCreatedPolicy() {

@@ -1,4 +1,4 @@
-import { Component, Inject, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Inject, OnDestroy, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { McSidepanelService } from '@ptsecurity/mosaic/sidepanel';
@@ -25,7 +25,8 @@ import { defaultPolicyModuleState, PolicyModuleState } from '../../utils';
 @Component({
     selector: 'soldr-policy-module-page',
     templateUrl: './policy-module-page.component.html',
-    styleUrls: ['./policy-module-page.component.scss']
+    styleUrls: ['./policy-module-page.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PolicyModulePageComponent implements OnInit, OnDestroy {
     policy$ = this.policiesFacade.policy$;

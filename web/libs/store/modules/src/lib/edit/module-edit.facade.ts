@@ -20,6 +20,9 @@ import {
     selectAgentVersionDependency,
     selectAgentVersions,
     selectAllModules,
+    selectChangedActions,
+    selectChangedEvents,
+    selectChangedSecureParams,
     selectChangelog,
     selectConfigSection,
     selectCreateDraftError,
@@ -80,6 +83,9 @@ export class ModuleEditFacade {
     agentVersions$ = this.store.select(selectAgentVersions);
     allModules$ = this.store.select(selectAllModules);
     canUpdateModuleInPolicies$ = this.store.select(selectUpdates).pipe(map((data) => data?.policies?.length > 0));
+    changedActions$ = this.store.select(selectChangedActions);
+    changedEvents$ = this.store.select(selectChangedEvents);
+    changedSecureParams$ = this.store.select(selectChangedSecureParams);
     changelog$ = this.store.select(selectChangelog);
     configSchemaModel$ = this.store.select(selectConfigSection);
     createDraftError$ = this.store.select(selectCreateDraftError);

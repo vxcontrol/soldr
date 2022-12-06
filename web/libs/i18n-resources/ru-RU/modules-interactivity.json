@@ -4,5 +4,5 @@
     "ModulesInteractivity.Grid.DropdownItemText.ClearSelection": "Снять выделение",
     "ModulesInteractivity.Grid.Text.RowsSummary": "Всего: {total}, {selected, select, all {выбраны все} other {выбрано: {selected}}}",
     "ModulesInteractivity.Grid.SelectPlaceholder.SelectColumns": "Выберите отображаемые столбцы в таблице",
-    "ModulesInteractivity.Grid.ButtonTooltipText.ColumnsSettings": "Выбрать столбцы"
+    "ModulesInteractivity.Grid.TooltipText.ColumnsSettings": "Выбрать столбцы"
 }

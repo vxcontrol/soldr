@@ -1,14 +1,22 @@
 import { Component, ElementRef, Input, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
-import { first, pairwise, reduce, startWith, Subject, Subscription, take } from 'rxjs';
+import { first, pairwise, reduce, startWith, Subject, Subscription, take, withLatestFrom } from 'rxjs';
 
-import { getChangesArrays, getEmptySchema, NcformSchema, NcformWrapperApi, usedPropertyTypes } from '@soldr/shared';
+import {
+    clone,
+    getChangesArrays,
+    getEmptySchema,
+    NcformSchema,
+    NcformWrapperApi,
+    usedPropertyTypes
+} from '@soldr/shared';
 import { ModuleEditFacade } from '@soldr/store/modules';
 
 import { DialogsService } from '../../services';
 import { ConfigurationItem, ModuleSection, SecureConfigurationItem } from '../../types';
 import { getSecureConfigModelFromSchema, getSecureConfigSchemaFromModel, applyDiff } from '../../utils';
+import { unwrapFormItems } from '../../utils/unwrap-form-items';
 import {
     correctDefaultValueValidator,
     formItemFieldsValidator,
@@ -89,10 +97,12 @@ export class EditSecureConfigSectionComponent implements OnInit, ModuleSection {
             });
         this.subscription.add(updateSchemaSubscription);
 
-        const defaultSubscription = this.moduleEditFacade.module$.subscribe((module) => {
-            this.defaultSchema = module.secure_config_schema;
-            this.defaultModel = module.secure_default_config;
-        });
+        const defaultSubscription = this.moduleEditFacade.module$
+            .pipe(withLatestFrom(this.moduleEditFacade.changedSecureParams$))
+            .subscribe(([module, changes]) => {
+                this.defaultSchema = unwrapFormItems(clone(module.secure_config_schema) as NcformSchema, changes);
+                this.defaultModel = module.secure_default_config;
+            });
         this.subscription.add(defaultSubscription);
     }
 

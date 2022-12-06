@@ -1,7 +1,8 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, Inject, OnDestroy } from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
-import { Observable, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 
+import { MosaicTokens, THEME_TOKENS } from '@soldr/core';
 import { SharedFacade } from '@soldr/store/shared';
 import { PublicInfo } from '@soldr/api';
 
@@ -12,18 +13,15 @@ import { PublicInfo } from '@soldr/api';
     providers: []
 })
 export class AppComponent implements OnDestroy {
-    info: PublicInfo;
-    loadingBarColor: string;
-
     private subscription: Subscription = new Subscription();
 
-    constructor(private sharedFacade: SharedFacade, private transloco: TranslocoService) {
+    constructor(private sharedFacade: SharedFacade, private transloco: TranslocoService,
+        @Inject(THEME_TOKENS) public tokens: MosaicTokens
+    ) {
         const localesChangesSubscription = this.transloco.langChanges$.subscribe((locale) => {
             localStorage.setItem('locale', locale);
         });
         this.subscription.add(localesChangesSubscription);
-
-        this.loadingBarColor = getComputedStyle(document.documentElement).getPropertyValue('--loading-bar-color');
     }
 
     ngOnDestroy() {

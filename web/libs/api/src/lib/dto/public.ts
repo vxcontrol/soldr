@@ -9,6 +9,11 @@ export interface ModelsSignIn {
     token?: string;
 }
 
+export enum Themes {
+    Dark = 'dark',
+    Light = 'light'
+}
+
 export interface PublicInfo {
     develop?: boolean;
     privileges?: string[];
@@ -16,6 +21,7 @@ export interface PublicInfo {
     service?: PublicInfoService;
     services?: PublicInfoService[];
     sso: boolean;
+    ui_style: Themes;
     tenant?: ModelsTenant;
     type?: string;
     user?: ModelsUser;

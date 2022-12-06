@@ -1,12 +1,8 @@
 @mixin actionbar-theme($mosaic-theme) {
     $foreground: map-get($mosaic-theme, foreground);
-    $primary: map-get($mosaic-theme, primary);
-    $custom: map-get($mosaic-theme, custom);
-
-    $border: 1px solid map-get($foreground, border);
 
     .actionbar {
-        background-color: map-get($custom, page-background);
+        background-color: mc-color(map-get($mosaic-theme, second), 60);
     }
 
     .actionbar__header {

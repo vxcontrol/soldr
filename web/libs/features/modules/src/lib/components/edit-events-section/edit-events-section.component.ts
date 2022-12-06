@@ -32,6 +32,7 @@ import {
 import { OptionsService } from '@soldr/api';
 import { getModelFromSchema, getSchemaFromModel } from '@soldr/features/modules';
 import {
+    clone,
     getChangesArrays,
     getEmptySchema,
     ListItem,
@@ -47,6 +48,7 @@ import { SharedFacade } from '@soldr/store/shared';
 import { DefinitionsService, DialogsService } from '../../services';
 import { ConfigurationItem, EventConfigurationItem, EventConfigurationItemType, ModuleSection } from '../../types';
 import { applyDiff } from '../../utils';
+import { unwrapFormItems } from '../../utils/unwrap-form-items';
 import {
     correctDefaultValueValidator,
     formItemFieldsValidator,
@@ -103,8 +105,8 @@ export class EditEventsSectionComponent implements OnInit, ModuleSection, OnDest
 
     ngOnInit(): void {
         const initFormSubscription = this.moduleEditFacade.eventsConfigSchemaModel$
-            .pipe(startWith(undefined), pairwise())
-            .subscribe(([oldSchema, schema]) => {
+            .pipe(startWith(undefined), pairwise(), withLatestFrom(this.moduleEditFacade.changedEvents$))
+            .subscribe(([[oldSchema, schema], changes]) => {
                 const prevSchema: NcformSchema = oldSchema || getEmptySchema();
                 const oldModel = this.getEventsModelFromSchema(prevSchema);
                 const model = this.getEventsModelFromSchema(schema);
@@ -112,10 +114,13 @@ export class EditEventsSectionComponent implements OnInit, ModuleSection, OnDest
                 const names = Object.keys(schema.properties as object);
                 const diff = getChangesArrays(namesOld, names);
 
-                this.defaultSchema = {
-                    ...schema,
-                    definitions: this.definitions.getDefinitions(names)
-                } as NcformSchema;
+                this.defaultSchema = unwrapFormItems(
+                    {
+                        ...clone(schema),
+                        definitions: this.definitions.getDefinitions(names)
+                    } as NcformSchema,
+                    changes
+                );
 
                 applyDiff(
                     this.form.controls.events,

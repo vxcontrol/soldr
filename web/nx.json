@@ -20,7 +20,7 @@
         }
     },
     "cli": {
-        "packageManager": "yarn"
+        "packageManager": "npm"
     },
     "defaultProject": "soldr-ui",
     "generators": {

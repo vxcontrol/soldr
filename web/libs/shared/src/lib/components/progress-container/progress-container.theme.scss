@@ -1,12 +1,11 @@
 @mixin progress-container-theme($mosaic-theme) {
     $background: map-get($mosaic-theme, background);
-    $custom: map-get($mosaic-theme, custom);
 
     .panel-bg {
         background-color: map-get($background, background);
     }
 
     .page-bg {
-        background-color: map-get($custom, page-background);
+        background-color: mc-color(map-get($mosaic-theme, second), 60);
     }
 }

@@ -1,3 +1,4 @@
+/* eslint-disable */
 export default {
     displayName: 'features-modules-interactivity',
     preset: '../../../jest.preset.js',
