@@ -19,6 +19,11 @@ import (
 	"soldr/internal/vxproto/tunnel"
 )
 
+const (
+	configTypeBrowser  = "browser"
+	configTypeExternal = "external"
+)
+
 type agentConn interface {
 	connect(ctx context.Context) error
 }
@@ -46,8 +51,8 @@ func (vxp *vxProto) openAgentSocket(
 	tunnelEncrypter tunnel.PackEncryptor,
 	infoGetter system.AgentInfoGetter,
 ) (socket *agentSocket, cleanup func(), err error) {
-	if config.Type == "browser" || config.Type == "external" {
-		return nil, nil, fmt.Errorf("connection initialization for the browser type is NYI")
+	if config.Type == configTypeBrowser || config.Type == configTypeExternal {
+		return nil, nil, fmt.Errorf("connection initialization for the %s type is NYI", configTypeBrowser)
 	}
 	dialer := websocket.Dialer{
 		TLSClientConfig: config.TLSConfig,
@@ -147,7 +152,10 @@ func (a *agentSocket) connect(ctx context.Context) error {
 		return fmt.Errorf("failed to start the pingee: %w", err)
 	}
 	defer func() {
-		a.pinger.Stop(ctx)
+		e := a.pinger.Stop(ctx)
+		if e != nil {
+			logrus.Errorf("failed to stop pinger: %s", e)
+		}
 	}()
 
 	if closeRootSpanCb, ok := ctx.Value(obs.VXProtoAgentConnect).(func()); ok {
@@ -170,9 +178,13 @@ const (
 	defaultReadTimeout   = defaultPingFrequency * 6
 )
 
-func openAgentSocketToInitConnection(ctx context.Context, logger *logrus.Entry, config *ClientInitConfig) (SyncWS, error) {
-	if config.Type == "browser" || config.Type == "external" {
-		return nil, fmt.Errorf("connection initialization for the browser type is NYI")
+func openAgentSocketToInitConnection(
+	ctx context.Context,
+	logger *logrus.Entry,
+	config *ClientInitConfig,
+) (SyncWS, error) {
+	if config.Type == configTypeBrowser || config.Type == configTypeExternal {
+		return nil, fmt.Errorf("connection initialization for the %s type is NYI", configTypeBrowser)
 	}
 	dialer := websocket.Dialer{
 		TLSClientConfig: config.TLSConfig,

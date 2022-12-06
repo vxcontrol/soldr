@@ -1,5 +1,7 @@
+//nolint:gosec
 package vxproto
 
+//TODO: replace mean cryptographic primitive and delete "nolint:gosec"
 import (
 	"bytes"
 	"context"
@@ -286,7 +288,10 @@ func (vxp *vxProto) runRecvPQueue() func() {
 		for _, p := range pq {
 			if time.Since(time.Unix(p.TS, 0)).Seconds() < DeferredPacketTTLSeconds {
 				// Here using public method because there need save proc time to recv other packets
-				vxp.recvPacket(ctx, p)
+				err := vxp.recvPacket(ctx, p)
+				if err != nil {
+					logrus.Errorf("failed to recive packet: %s", err)
+				}
 			}
 		}
 	})
@@ -301,7 +306,10 @@ func (vxp *vxProto) runSendPQueue() func() {
 		for _, p := range pq {
 			if time.Since(time.Unix(p.TS, 0)).Seconds() < DeferredPacketTTLSeconds {
 				// Here using public method because there need save proc time to send other packets
-				vxp.sendPacket(ctx, p)
+				err := vxp.sendPacket(ctx, p)
+				if err != nil {
+					logrus.Errorf("failed to send packet: %s", err)
+				}
 			}
 		}
 	})

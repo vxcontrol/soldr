@@ -148,7 +148,10 @@ func InitObserver(
 	if mprovider != nil {
 		metricglobal.SetMeterProvider(mprovider)
 		obs.meter = mprovider.Meter(tname)
-		mprovider.Start(ctx)
+		err := mprovider.Start(ctx)
+		if err != nil {
+			logrus.Errorf("failed to start mprovider: %s", err)
+		}
 	}
 
 	Observer = obs
@@ -276,15 +279,27 @@ func (obs *observer) Flush(ctx context.Context) {
 	if obs.mprovider != nil {
 		// TODO: it's dirty hack because otel sdk can't use Collect method when ticker was running
 		if obs.mprovider.IsRunning() {
-			obs.mprovider.Stop(ctx)
-			obs.mprovider.Start(ctx)
+			err := obs.mprovider.Stop(ctx)
+			if err != nil {
+				logrus.Errorf("failed to stop mprovider: %s", err)
+			}
+			err = obs.mprovider.Start(ctx)
+			if err != nil {
+				logrus.Errorf("failed to start mprovider: %s", err)
+			}
 		} else {
-			obs.mprovider.Collect(ctx)
+			err := obs.mprovider.Collect(ctx)
+			if err != nil {
+				logrus.Errorf("failed to collect mprovider: %s", err)
+			}
 		}
 		obs.flushMClient(ctx)
 	}
 	if obs.tprovider != nil {
-		obs.tprovider.ForceFlush(ctx)
+		err := obs.tprovider.ForceFlush(ctx)
+		if err != nil {
+			logrus.Errorf("failed to force flush tprovider: %s", err)
+		}
 		obs.flushTClient(ctx)
 	}
 }
@@ -305,15 +320,27 @@ func (obs *observer) Close() {
 	ctx := context.Background()
 	if obs.mprovider != nil {
 		if obs.mprovider.IsRunning() {
-			obs.mprovider.Stop(ctx)
+			err := obs.mprovider.Stop(ctx)
+			if err != nil {
+				logrus.Errorf("failt to stop mprovider: %s", err)
+			}
 		}
-		obs.mprovider.Collect(ctx)
+		err := obs.mprovider.Collect(ctx)
+		if err != nil {
+			logrus.Errorf("failed to collect mprovider: %s", err)
+		}
 		obs.flushMClient(ctx)
 	}
 	if obs.tprovider != nil {
-		obs.tprovider.ForceFlush(ctx)
+		err := obs.tprovider.ForceFlush(ctx)
+		if err != nil {
+			logrus.Errorf("failed to force flush tprovider: %s", err)
+		}
 		obs.flushTClient(ctx)
-		obs.tprovider.Shutdown(ctx)
+		err = obs.tprovider.Shutdown(ctx)
+		if err != nil {
+			logrus.Errorf("failed to shutdown tprovider: %s", err)
+		}
 	}
 	obs.cancelCtx()
 }
@@ -490,7 +517,10 @@ func (obs *observer) NewSpanWithParent(ctx context.Context, kind oteltrace.SpanK
 	)
 	tid, err = oteltrace.TraceIDFromHex(traceID)
 	if err != nil {
-		rand.Read(tid[:])
+		_, e := rand.Read(tid[:])
+		if e != nil {
+			logrus.Errorf("rand.Read is failed: %s", e)
+		}
 	}
 	sid, err = oteltrace.SpanIDFromHex(pspanID)
 	if err != nil {

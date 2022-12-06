@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package simple
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"encoding/json"
 	"errors"

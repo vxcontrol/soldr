@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package readiness_checker
 
+//TODO: io/ioutil is deprecated, replace to fs.FS
 import (
 	"context"
 	"errors"
@@ -154,7 +156,8 @@ func serializeReport(r *protoagent.AgentReadinessReport) ([]byte, error) {
 }
 
 func openLogFile(path string) (*os.File, error) {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
+	// #nosec G304
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open the file \"%s\": %w", path, err)
 	}
@@ -166,6 +169,7 @@ func ReadReport(ctx context.Context, logDir string) (*protoagent.AgentReadinessR
 	if err != nil {
 		return nil, err
 	}
+	// #nosec G304
 	fp, err := os.Open(logFilePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

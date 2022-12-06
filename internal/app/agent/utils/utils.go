@@ -154,6 +154,7 @@ func checkFileExists(path string) error {
 }
 
 func copyContents(src string, dst string, mode os.FileMode) error {
+	// #nosec G304
 	srcF, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("failed to open the source file %s: %w", src, err)
@@ -168,6 +169,7 @@ func copyContents(src string, dst string, mode os.FileMode) error {
 			return fmt.Errorf("failed to get the source file %s mode: %w", src, err)
 		}
 	}
+	// #nosec G304
 	dstF, err := os.OpenFile(dst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, fMode)
 	if err != nil {
 		return fmt.Errorf("failed to open the destination file %s: %w", dst, err)
@@ -217,7 +219,7 @@ func checkDstDir(dst string) (func(e error) error, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the list of dirs to create: %w", err)
 	}
-	if err = os.MkdirAll(dstDir, 0o755); err != nil {
+	if err = os.MkdirAll(dstDir, 0o750); err != nil {
 		return nil, fmt.Errorf("failed to create the destination file directory %s: %w", dstDir, err)
 	}
 	return func(e error) error {

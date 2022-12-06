@@ -2,6 +2,7 @@ package app
 
 import (
 	"github.com/oklog/run"
+	"github.com/sirupsen/logrus"
 )
 
 type AppGroup struct {
@@ -13,7 +14,10 @@ func NewAppGroup() *AppGroup {
 }
 
 func (a *AppGroup) Run() {
-	a.runGroup.Run()
+	err := a.runGroup.Run()
+	if err != nil {
+		logrus.Errorf("failed to run appGroup: %s", err)
+	}
 }
 
 // Add (function) to the application group. Each actor must be pre-emptable by an

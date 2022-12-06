@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package files
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"fmt"
 	"io/ioutil"

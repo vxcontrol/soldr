@@ -1,8 +1,10 @@
 //go:build linux
 // +build linux
 
+//nolint:staticcheck
 package system
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"io/ioutil"
 	"strings"

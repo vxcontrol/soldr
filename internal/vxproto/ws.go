@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package vxproto
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"bytes"
 	"context"
@@ -13,6 +15,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 var PacketMarkerV1 = []byte{0xf0, 0xa0, 0x60, 0x30}
@@ -208,8 +211,14 @@ func (ws *wsConnection) Write(ctx context.Context, data []byte) (err error) {
 	}
 	if !ws.original {
 		prefixBuffer := new(bytes.Buffer)
-		binary.Write(prefixBuffer, binary.LittleEndian, PacketMarkerV1)
-		binary.Write(prefixBuffer, binary.LittleEndian, uint32(len(data)))
+		e := binary.Write(prefixBuffer, binary.LittleEndian, PacketMarkerV1)
+		if e != nil {
+			logrus.Errorf("binary.Write failed: %s", e)
+		}
+		e = binary.Write(prefixBuffer, binary.LittleEndian, uint32(len(data)))
+		if e != nil {
+			logrus.Errorf("binary.Write failed: %s", e)
+		}
 		prefix := prefixBuffer.Bytes()
 		if n, err := writer.Write(prefix); err != nil || n != len(prefix) {
 			return fmt.Errorf(
@@ -289,7 +298,10 @@ func (ws *wsConnection) Close(ctx context.Context) error {
 		_ = ws.Conn.Close()
 	}()
 
-	if err := ws.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")); err != nil {
+	if err := ws.WriteMessage(
+		websocket.CloseMessage,
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
+	); err != nil {
 		if strings.HasPrefix(err.Error(), "websocket: close ") {
 			// to avoid issue with hanging TLS/TCP connection
 			_ = ws.Conn.Close()
@@ -297,7 +309,11 @@ func (ws *wsConnection) Close(ctx context.Context) error {
 		}
 		err = fmt.Errorf("failed to write a request Close control message: %w", err)
 		if closeErr := ws.Conn.Close(); closeErr != nil {
-			err = fmt.Errorf("failed to properly close the websocket connection (%v) after another error has occurred: %w", closeErr, err)
+			err = fmt.Errorf(
+				"failed to properly close the websocket connection (%v) after another error has occurred: %w",
+				closeErr,
+				err,
+			)
 		}
 		return err
 	}

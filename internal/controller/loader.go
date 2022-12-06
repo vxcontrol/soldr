@@ -24,9 +24,62 @@ const (
 
 // List of SQL queries string
 const (
-	sLoadModulesSQL    string = "SELECT m.`id`, IFNULL(g.`hash`, '') AS `group_id`, IFNULL(p.`hash`, '') AS `policy_id`, m.`info`, m.`last_update`, m.`last_module_update`, m.`state`, m.`template` FROM `modules` m LEFT JOIN (SELECT * FROM `policies` UNION SELECT 0, '', '{}', NOW(), NOW(), NULL) p ON m.`policy_id` = p.`id` AND p.deleted_at IS NULL LEFT JOIN `groups_to_policies` gp ON gp.`policy_id` = p.`id` LEFT JOIN (SELECT * FROM `groups` UNION SELECT 0, '', '{}', NOW(), NOW(), NULL) g ON gp.`group_id` = g.`id` AND g.deleted_at IS NULL WHERE m.`status` = 'joined' AND NOT (ISNULL(g.`hash`) AND p.`hash` NOT LIKE '') AND m.deleted_at IS NULL"
-	sGetModuleFieldSQL string = "SELECT `%s` FROM `modules` WHERE `id` = ? LIMIT 1"
-	sSetModuleFieldSQL string = "UPDATE `modules` SET `%s` = ? WHERE `id` = ?"
+	sLoadModulesSQL string = `
+		SELECT
+			m.id
+			, IFNULL(g.hash, '') AS group_id
+     		, IFNULL(p.hash, '') AS policy_id
+     		, m.info
+     		, m.last_update
+     		, m.last_module_update
+     		, m.state
+     		, m.template
+		FROM modules m
+		    LEFT JOIN (
+		    	SELECT *
+		    	FROM policies
+		    	UNION
+		    		SELECT
+		    		    0
+		    		     , ''
+		    		     , '{}'
+		    		     , NOW()
+		    		     , NOW()
+		    		     , NULL
+		    ) p ON
+		        m.policy_id = p.id
+		            AND p.deleted_at IS NULL
+		    LEFT JOIN groups_to_policies gp
+		        ON gp.policy_id = p.id
+		    LEFT JOIN (
+		    	SELECT *
+		    	FROM groups
+		    	UNION
+		    		SELECT
+		    		    0
+		    		     , ''
+		    		     , '{}'
+		    		     , NOW()
+		    		     , NOW()
+		    		     , NULL
+		    	) g ON
+		    	    gp.group_id = g.id
+		    	        AND g.deleted_at IS NULL
+		WHERE m.status = 'joined'
+			AND NOT (ISNULL(g.hash)
+			AND p.hash NOT LIKE '')
+		  	AND m.deleted_at IS NULL`
+
+	sGetModuleFieldSQL string = `
+		SELECT %s
+		FROM modules
+		WHERE id = ?
+		LIMIT 1`
+
+	sSetModuleFieldSQL string = `
+		UPDATE modules
+		SET %s = ?
+		WHERE id = ?`
 )
 
 // tFilesLoaderType is type for loading module
@@ -115,7 +168,9 @@ func (cl *configLoaderDB) load() ([]*loader.ModuleConfig, error) {
 				return nil, fmt.Errorf("failed to parse the module config: %w", err)
 			}
 		} else {
-			return nil, fmt.Errorf("failed to load the module config: returned rows do not contain the field '%s'", moduleInfoField)
+			return nil, fmt.Errorf(
+				"failed to load the module config: returned rows do not contain the field '%s'", moduleInfoField,
+			)
 		}
 		if groupID, ok := m["group_id"]; ok {
 			mc.GroupID = groupID

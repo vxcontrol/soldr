@@ -1,5 +1,7 @@
+//nolint:gosec
 package system
 
+//TODO: replace mean cryptographic primitive and delete "nolint:gosec"
 import (
 	"context"
 	"crypto/md5"

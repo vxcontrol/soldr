@@ -10,7 +10,11 @@ import (
 	"soldr/internal/vxproto"
 )
 
-func (v *Validator) OnInitConnect(ctx context.Context, socket vxproto.SyncWS, agentInfo *protoagent.Information) (err error) {
+func (v *Validator) OnInitConnect(
+	ctx context.Context,
+	socket vxproto.SyncWS,
+	agentInfo *protoagent.Information,
+) (err error) {
 	defer func() {
 		if err != nil {
 			v.vm.ResetInitConnection()

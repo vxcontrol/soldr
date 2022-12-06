@@ -21,6 +21,8 @@ import (
 	"soldr/internal/protoagent"
 	utilsErrors "soldr/internal/utils/errors"
 	vxprotoTunnel "soldr/internal/vxproto/tunnel"
+
+	"github.com/sirupsen/logrus"
 )
 
 const certServerName = "example"
@@ -164,10 +166,16 @@ func (v *vm) popSCA() ([]byte, error) {
 	return sca, nil
 }
 
-func (v *vm) PrepareInitConnectionRequest(info *InitConnectionAgentInfo, agentInfo *protoagent.Information) (msg []byte, err error) {
+func (v *vm) PrepareInitConnectionRequest(
+	info *InitConnectionAgentInfo,
+	agentInfo *protoagent.Information,
+) (msg []byte, err error) {
 	defer func() {
 		if err != nil {
-			v.popSCA()
+			_, err = v.popSCA()
+			if err != nil {
+				logrus.Errorf("popSCA is failed: %s", err)
+			}
 		}
 	}()
 	csr, ltacKey, err := v.generateLTACRequest()
@@ -191,7 +199,10 @@ func (v *vm) PrepareInitConnectionRequest(info *InitConnectionAgentInfo, agentIn
 func (v *vm) ProcessInitConnectionResponse(respData []byte) (err error) {
 	defer func() {
 		if err != nil {
-			v.popSCA()
+			_, err = v.popSCA()
+			if err != nil {
+				logrus.Errorf("popSCA is failed: %s", err)
+			}
 		}
 	}()
 	var initConnResp protoagent.InitConnectionResponse
@@ -271,7 +282,11 @@ func (vm *vm) ProcessConnectionRequest(req []byte, packEncryptor vxprotoTunnel.P
 	}
 	if err = vm.checkSBH(connReq.Sbh); err != nil {
 		if resetErr := vm.Reset(); resetErr != nil {
-			return nil, fmt.Errorf("failed to reset the VM store (%v), while processing the SBH verification error: %w", resetErr, err)
+			return nil, fmt.Errorf(
+				"failed to reset the VM store (%v), while processing the SBH verification error: %w",
+				resetErr,
+				err,
+			)
 		}
 		return nil, err
 	}
@@ -348,7 +363,12 @@ func checkKeyPairValidity(pub interface{}, priv []byte) error {
 	return nil
 }
 
-func prepareInitConnReqProtoMsg(csr []byte, abh []byte, info *InitConnectionAgentInfo, agentInfo *protoagent.Information) ([]byte, error) {
+func prepareInitConnReqProtoMsg(
+	csr []byte,
+	abh []byte,
+	info *InitConnectionAgentInfo,
+	agentInfo *protoagent.Information,
+) ([]byte, error) {
 	os := runtime.GOOS
 	arch := runtime.GOARCH
 	req := &protoagent.InitConnectionRequest{
@@ -378,6 +398,9 @@ func (v *vm) GetTLSConfigForInitConnection() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the VXCA pool: %w", err)
 	}
+	//TODO: TLS version is too low
+
+	// #nosec G402
 	tlsConfig := &tls.Config{
 		Certificates:          []tls.Certificate{*iac},
 		RootCAs:               vxcaPool,
@@ -389,7 +412,10 @@ func (v *vm) GetTLSConfigForInitConnection() (*tls.Config, error) {
 
 func (v *vm) initConnectionVerifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 	// TODO(SSH): change
-	v.popSCA()
+	_, err := v.popSCA()
+	if err != nil {
+		return fmt.Errorf("failed to pop SCA certificate: %w", err)
+	}
 	if len(rawCerts) != 2 {
 		return fmt.Errorf("expected to get two raw certs, actually got %d", len(rawCerts))
 	}
@@ -399,7 +425,7 @@ func (v *vm) initConnectionVerifyPeerCertificate(rawCerts [][]byte, verifiedChai
 	if len(verifiedChains[0]) != 3 {
 		return fmt.Errorf("expected to get three certificates in the verified chain, actually got %d", len(verifiedChains[0]))
 	}
-	if err := v.pushSCA(rawCerts[1]); err != nil {
+	if err = v.pushSCA(rawCerts[1]); err != nil {
 		return fmt.Errorf("failed to save the passed SCA certificate: %w", err)
 	}
 	return nil
@@ -414,6 +440,9 @@ func (v *vm) GetTLSConfigForConnection() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the LTAC certificate: %w", err)
 	}
+	//TODO: TLS version is too low
+
+	// #nosec G402
 	return &tls.Config{
 		Certificates: []tls.Certificate{*ltacCert},
 		RootCAs:      vxcaPool,
@@ -423,7 +452,11 @@ func (v *vm) GetTLSConfigForConnection() (*tls.Config, error) {
 
 func (v *vm) ProcessConnectionChallengeRequest(ctx context.Context, req []byte) ([]byte, error) {
 	var connChallengeReq protoagent.ConnectionChallengeRequest
-	if err := protoagent.UnpackProtoMessage(&connChallengeReq, req, protoagent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
+	if err := protoagent.UnpackProtoMessage(
+		&connChallengeReq,
+		req,
+		protoagent.Message_CONNECTION_CHALLENGE_REQUEST,
+	); err != nil {
 		return nil, fmt.Errorf("failed to unpack the connection challenge request: %w", err)
 	}
 	ct, err := v.prepareChallengeResponseCT(&connChallengeReq)

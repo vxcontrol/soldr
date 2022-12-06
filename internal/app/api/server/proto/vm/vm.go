@@ -48,7 +48,11 @@ func NewVM(
 
 func (v *VM) ProcessConnectionChallengeRequest(ctx context.Context, req []byte) ([]byte, error) {
 	var connChallengeReq protoagent.ConnectionChallengeRequest
-	if err := protoagent.UnpackProtoMessage(&connChallengeReq, req, protoagent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
+	if err := protoagent.UnpackProtoMessage(
+		&connChallengeReq,
+		req,
+		protoagent.Message_CONNECTION_CHALLENGE_REQUEST,
+	); err != nil {
 		return nil, fmt.Errorf("failed to unpack the connection challenge request: %w", err)
 	}
 	agentID, err := getAgentID(ctx)

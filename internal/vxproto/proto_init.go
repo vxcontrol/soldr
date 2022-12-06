@@ -13,7 +13,12 @@ import (
 	"soldr/internal/system"
 )
 
-func (vxp *vxProto) InitConnection(ctx context.Context, connValidator AgentConnectionValidator, config *ClientInitConfig, logger *logrus.Entry) error {
+func (vxp *vxProto) InitConnection(
+	ctx context.Context,
+	connValidator AgentConnectionValidator,
+	config *ClientInitConfig,
+	logger *logrus.Entry,
+) error {
 	vxp.isClosedMux.RLock()
 	defer vxp.isClosedMux.RUnlock()
 	if vxp.isClosed {
@@ -130,7 +135,13 @@ func NewSyncWS(ctx context.Context, logger *logrus.Entry, ws *websocket.Conn, co
 	return s, nil
 }
 
-func configurePing(done <-chan struct{}, logger *logrus.Entry, ws IWSConnection, readTimeout time.Duration, pingFrequency time.Duration) {
+func configurePing(
+	done <-chan struct{},
+	logger *logrus.Entry,
+	ws IWSConnection,
+	readTimeout time.Duration,
+	pingFrequency time.Duration,
+) {
 	if pingFrequency == 0 {
 		handleWSPing(ws, logger, readTimeout)
 		return
@@ -138,7 +149,13 @@ func configurePing(done <-chan struct{}, logger *logrus.Entry, ws IWSConnection,
 	configureWSPing(done, logger, ws, readTimeout, pingFrequency)
 }
 
-func configureWSPing(done <-chan struct{}, logger *logrus.Entry, ws IWSConnection, readTimeout time.Duration, pingFrequency time.Duration) {
+func configureWSPing(
+	done <-chan struct{},
+	logger *logrus.Entry,
+	ws IWSConnection,
+	readTimeout time.Duration,
+	pingFrequency time.Duration,
+) {
 	go func() {
 		ticker := time.NewTicker(pingFrequency)
 		for {

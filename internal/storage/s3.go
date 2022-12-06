@@ -112,6 +112,7 @@ func (s *S3) ListDir(path string) (map[string]os.FileInfo, error) {
 		Prefix:    path,
 		Recursive: true,
 	})
+	//nolint:exportloopref
 	for object := range objectCh {
 		if object.Err != nil {
 			return nil, ErrListFailed
@@ -123,6 +124,7 @@ func (s *S3) ListDir(path string) (map[string]os.FileInfo, error) {
 		dirName, fileName := filepath.Split(shortPath)
 		spl := strings.Split(dirName, "/")
 		if dirName == "/" {
+			//TODO: Check use pointer in loop. Perhaps it is worth passing a pointer to the channel
 			tree[shortPath] = &S3FileInfo{
 				isDir:      false,
 				path:       fileName,

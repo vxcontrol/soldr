@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package config
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"encoding/json"
 	"errors"
@@ -133,6 +135,7 @@ var defaultConfig = &Config{
 
 func parseConfigFile(path string) (*Config, error) {
 	var cfg Config
+	// #nosec G304
 	cfgData, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err

@@ -16,8 +16,10 @@ import (
 // ControlMessageType is type of message that used for modules communication
 type ControlMessageType int32
 
-// Enumerate control message types
 const (
+	typeUnknown = "unknown"
+
+	// Enumerate control message types
 	AgentConnected    ControlMessageType = 0
 	AgentDisconnected ControlMessageType = 1
 	StopModule        ControlMessageType = 2
@@ -40,7 +42,7 @@ func (cmt ControlMessageType) String() string {
 		return str
 	}
 
-	return "unknown"
+	return typeUnknown
 }
 
 // MarshalJSON using for convert from ControlMessageType to JSON
@@ -197,7 +199,7 @@ func (mt MsgType) String() string {
 		return str
 	}
 
-	return "unknown"
+	return typeUnknown
 }
 
 // MarshalJSON using for convert from MsgType to JSON
@@ -307,7 +309,7 @@ func (pt PacketType) String() string {
 		return str
 	}
 
-	return "unknown"
+	return typeUnknown
 }
 
 // MarshalJSON using for convert from PacketType to JSON
@@ -418,7 +420,7 @@ func (p *Packet) fromPB(packet *protocol.Packet) (*Packet, error) {
 		p.PType = PTAction
 		p.Payload = (&Action{}).fromPB(content)
 	default:
-		return nil, fmt.Errorf("unknown packet type")
+		return nil, fmt.Errorf("%s packet type", typeUnknown)
 	}
 
 	return p, nil
@@ -485,7 +487,7 @@ func (p *Packet) fromBytesJSON(data []byte) (*Packet, error) {
 		}
 		p.Payload = &act
 	default:
-		return nil, fmt.Errorf("unknown packet type")
+		return nil, fmt.Errorf("%s packet type", typeUnknown)
 	}
 
 	var traceID string
@@ -527,7 +529,7 @@ func (p *Packet) toPB() (*protocol.Packet, error) {
 	case PTAction:
 		content = p.Payload.(*Action).toPB()
 	default:
-		return nil, fmt.Errorf("unknown packet type")
+		return nil, fmt.Errorf("%s packet type", typeUnknown)
 	}
 
 	spanCtx := obs.Observer.SpanContextFromContext(p.ctx)

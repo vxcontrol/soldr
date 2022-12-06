@@ -109,7 +109,10 @@ func (vxp *vxProto) listenWS(
 		vxp.mutex.Lock()
 		defer vxp.mutex.Unlock()
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		server.Shutdown(ctx)
+		e := server.Shutdown(ctx)
+		if e != nil {
+			logrus.Errorf("failed to shutdown server: %s", e)
+		}
 		cancel()
 
 		for idx, closer := range vxp.closers {
@@ -132,7 +135,11 @@ func (vxp *vxProto) listenWS(
 	return server.ListenAndServeTLS("", "")
 }
 
-func (vxp *vxProto) configureRouter(c ServerAPIVersionsConfig, validatorFactory ConnectionValidatorFactory, logger *logrus.Entry) (http.Handler, error) {
+func (vxp *vxProto) configureRouter(
+	c ServerAPIVersionsConfig,
+	validatorFactory ConnectionValidatorFactory,
+	logger *logrus.Entry,
+) (http.Handler, error) {
 	policyManagerIterator, err := NewConnectionPolicyManagerIterator(c)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize a connection policy manager factory: %w", err)
@@ -143,8 +150,18 @@ func (vxp *vxProto) configureRouter(c ServerAPIVersionsConfig, validatorFactory 
 		if err != nil {
 			return nil, fmt.Errorf("failed to get a connection policy manager: %w", err)
 		}
-		if err := vxp.configureVersionHandlers(r, validatorFactory, managerWithVer.Manager, managerWithVer.Version, logger); err != nil {
-			return nil, fmt.Errorf("failed to configurate the version handlers for version \"%s\": %w", managerWithVer.Version, err)
+		if err := vxp.configureVersionHandlers(
+			r,
+			validatorFactory,
+			managerWithVer.Manager,
+			managerWithVer.Version,
+			logger,
+		); err != nil {
+			return nil, fmt.Errorf(
+				"failed to configure the version handlers for version \"%s\": %w",
+				managerWithVer.Version,
+				err,
+			)
 		}
 	}
 	return r, nil
@@ -299,7 +316,13 @@ type getConnectionPolicyMiddlewareResult struct {
 	AgentConnectionInfo *AgentConnectionInfo
 }
 
-func getConnectionPolicy(ctx context.Context, urlPath string, agentID string, idFetcher AgentIDFetcher, policyManager ConnectionPolicyManager) (*getConnectionPolicyMiddlewareResult, error) {
+func getConnectionPolicy(
+	ctx context.Context,
+	urlPath string,
+	agentID string,
+	idFetcher AgentIDFetcher,
+	policyManager ConnectionPolicyManager,
+) (*getConnectionPolicyMiddlewareResult, error) {
 	agentType, err := getAgentTypeFromURL(urlPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the agent type from the URL path: %w", err)
@@ -356,7 +379,11 @@ func extractAgentType(r *http.Request) (AgentType, error) {
 	return agentType, nil
 }
 
-func fetchAgentConnectionInfo(reqCtx context.Context, idFetcher AgentIDFetcher, id string) (*AgentConnectionInfo, error) {
+func fetchAgentConnectionInfo(
+	reqCtx context.Context,
+	idFetcher AgentIDFetcher,
+	id string,
+) (*AgentConnectionInfo, error) {
 	connInfo, err := idFetcher.GetAgentConnectionInfo(reqCtx, &AgentInfoForIDFetcher{
 		ID: id,
 	})
@@ -404,9 +431,15 @@ func handleAgentWS(
 	}()
 
 	// Run ping sender
-	socket.pinger.Start(r.Context(), socket.ping)
+	err = socket.pinger.Start(r.Context(), socket.ping)
+	if err != nil {
+		log.Errorf("failed to start pinger: %s", err)
+	}
 	defer func() {
-		socket.pinger.Stop(r.Context())
+		e := socket.pinger.Stop(r.Context())
+		if e != nil {
+			log.Errorf("failed to stop pinger: %s", e)
+		}
 	}()
 
 	// Read messages before connection will be closed

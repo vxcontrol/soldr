@@ -8,10 +8,10 @@ import (
 )
 
 type Validator struct {
-	vm                  vm.VM
-	agentID             string
-	version             string
-	connProtocolVersion string
+	vm      vm.VM
+	agentID string
+	version string
+	//connProtocolVersion string - unused field
 }
 
 func NewValidator(agentID string, version string, luaVM vm.VM) *Validator {
