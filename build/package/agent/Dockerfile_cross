@@ -1,12 +1,11 @@
 FROM minio/mc as minio_client
 
-FROM mysql
+FROM alpine
 
 COPY --from=minio_client /usr/bin/mc /usr/bin/mc
 
 RUN mkdir -p /opt/vxbinaries && \
-    microdnf install jq && \
-    microdnf clean all
+    apk add --no-cache mysql-client bash jq
 
 # Entrypoint script
 COPY build/package/agent/_tmp/startup.sh /opt/vxbinaries/
