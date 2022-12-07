@@ -74,6 +74,9 @@
                             <div class="mc-form__control flex-80">
                                 <soldr-autocomplete-tags
                                     formControlName="fields"
+                                    [tagMask]="regexTagFields"
+                                    [tagMaskForReplace]="regexTagFieldsForReplace"
+                                    [tagMaskTooltipText]="t('Modules.ModuleEdit.HintText.ItemNameWithDot')"
                                     [allTags]="fieldList">
                                 </soldr-autocomplete-tags>
                             </div>
@@ -86,8 +89,17 @@
                             <div class="mc-form__control flex-80">
                                 <soldr-autocomplete-tags
                                     formControlName="events"
+                                    [tagMask]="regexTags"
+                                    [tagMaskForReplace]="regexTagsForReplace"
+                                    [tagMaskTooltipText]="t('Modules.ModuleEdit.HintText.ItemName')"
                                     [allTags]="eventList">
                                 </soldr-autocomplete-tags>
+                                <mc-hint
+                                    *ngIf="form.get('events').errors?.eventNameExists"
+                                    class="layout-margin-top-xxs"
+                                    [color]="themePalette.Error">
+                                    {{ t('Modules.ModuleEdit.ValidationText.EventConfigEventIdAlreadyExistsValidation') }}
+                                </mc-hint>
                             </div>
                         </div>
                         <div class="mc-form__row mc-form-row_margin">
@@ -97,8 +109,17 @@
                             <div class="mc-form__control flex-80">
                                 <soldr-autocomplete-tags
                                     formControlName="actions"
+                                    [tagMask]="regexTags"
+                                    [tagMaskForReplace]="regexTagsForReplace"
+                                    [tagMaskTooltipText]="t('Modules.ModuleEdit.HintText.ItemName')"
                                     [allTags]="actionList">
                                 </soldr-autocomplete-tags>
+                                <mc-hint
+                                    *ngIf="form.get('actions').errors?.actionNameExists"
+                                    class="layout-margin-top-xxs"
+                                    [color]="themePalette.Error">
+                                    {{ t('Modules.ModuleEdit.ValidationText.ActionsConfigActionIdAlreadyExistsValidation') }}
+                                </mc-hint>
                             </div>
                         </div>
                         <div class="mc-form__row mc-form-row_margin">

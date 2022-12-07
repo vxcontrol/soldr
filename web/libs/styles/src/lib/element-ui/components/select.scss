@@ -1,151 +1,66 @@
 @import '../mixins/mixins';
-@import '../mixins/utils';
-@import '../element-variables';
-@import 'select-dropdown';
-@import 'input';
-@import 'tag';
-@import 'option';
-@import 'option-group';
-@import 'scrollbar';
 
-@include b(select) {
-    display: inline-block;
-    position: relative;
-
-    .el-select__tags
-    > span {
-        display: contents;
-    }
-
-    &:hover {
-        .el-input__inner {
-            border-color: $--select-border-color-hover;
-        }
-    }
-
-    .el-input__inner {
-        cursor: pointer;
-        padding-right: 35px;
-
-        &:focus {
-            border-color: $--select-input-focus-border-color;
-        }
-    }
-
-    .el-input {
-        & .el-select__caret {
-            color: $--select-input-color;
-            font-size: $--select-input-font-size;
-            transition: transform .3s;
-            transform: rotateZ(180deg);
-            cursor: pointer;
-
-            @include when(reverse) {
-                transform: rotateZ(0deg);
-            }
-
-            @include when(show-close) {
-                font-size: $--select-font-size;
-                text-align: center;
-                transform: rotateZ(180deg);
-                border-radius: $--border-radius-circle;
-                color: $--select-input-color;
-                transition: $--color-transition-base;
-
-                &:hover {
-                    color: $--select-close-hover-color;
-                }
-            }
-        }
-
-        &.is-disabled {
-            & .el-input__inner {
-                cursor: not-allowed;
-
-                &:hover {
-                    border-color: $--select-disabled-border;
-                }
-            }
-        }
-
-        &.is-focus .el-input__inner {
-            border-color: $--select-input-focus-border-color;
-        }
-    }
-
-    > .el-input {
-        display: block;
-    }
-
-    @include e(input) {
-        border: none;
-        outline: none;
-        padding: 0;
-        margin-left: 15px;
-        color: $--select-multiple-input-color;
-        font-size: $--select-font-size;
-        appearance: none;
-        height: 28px;
-        background-color: transparent;
-        @include when(mini) {
-            height: 14px;
-        }
-    }
-
-    @include e(close) {
-        cursor: pointer;
-        position: absolute;
-        top: 8px;
-        z-index: $--index-top;
-        right: 25px;
-        color: $--select-input-color;
-        line-height: 18px;
-        font-size: $--select-input-font-size;
-
+@mixin select($tokens) {
+    @include b(select) {
         &:hover {
-            color: $--select-close-hover-color;
+            .el-input__inner {
+                border-color: map-get($tokens, select-border-color-hover);
+            }
         }
-    }
 
-    @include e(tags) {
-        position: absolute;
-        line-height: normal;
-        white-space: normal;
-        z-index: $--index-normal;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-    }
+        .el-input__inner {
+            &:focus {
+                border-color: map-get($tokens, select-input-focus-border-color);
+            }
+        }
 
-    @include e(tags-text) {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+        .el-input {
+            & .el-select__caret {
+                color: map-get($tokens, select-input-color);
 
-    .el-tag {
-        box-sizing: border-box;
-        border-color: transparent;
-        margin: 2px 0 2px 6px;
-        background-color: #f0f2f5;
-        display: flex;
-        max-width: 100%;
-        align-items: center;
+                @include when(show-close) {
+                    font-size: map-get($tokens, select-font-size);
+                    color: map-get($tokens, select-input-color);
 
-        &__close.el-icon-close {
-            background-color: $--color-text-placeholder;
-            top: 0;
-            color: $--color-white;
-            flex-shrink: 0;
+                    &:hover {
+                        color: map-get($tokens, select-close-hover-color);
+                    }
+                }
+            }
+
+            &.is-disabled {
+                & .el-input__inner {
+                    &:hover {
+                        border-color: map-get($tokens, select-disabled-border);
+                    }
+                }
+            }
+
+            &.is-focus .el-input__inner {
+                border-color: map-get($tokens, select-input-focus-border-color);
+            }
+        }
+
+        @include e(input) {
+            font-size: map-get($tokens, select-font-size);
+        }
+
+        @include e(close) {
+            color: map-get($tokens, select-input-color);
 
             &:hover {
-                background-color: $--color-text-secondary;
+                color: map-get($tokens, select-close-hover-color);
             }
+        }
 
-            &::before {
-                display: block;
-                transform: translate(0, .5px);
+        .el-tag {
+            &__close.el-icon-close {
+                background-color: map-get($tokens, color-text-placeholder);
+                color: map-get($tokens, color-white);
+
+                &:hover {
+                    background-color: map-get($tokens, color-text-secondary);
+                }
             }
         }
     }

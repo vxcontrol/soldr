@@ -1,5 +1,4 @@
 @mixin distributions-page-theme($mosaic-theme) {
-    $primary: map-get($mosaic-theme, primary);
     $foreground: map-get($mosaic-theme, foreground);
     $background: map-get($mosaic-theme, background);
     $second: map-get($mosaic-theme, second);
@@ -19,6 +18,10 @@
             .os-title {
                 color: map-get($foreground, text);
             }
+
+            .distributions-page__os-card .os-img-macos {
+                filter: map-deep-get($mosaic-theme, custom, macos-img-filter);
+            }
         }
 
         .distributions-page__divider {
@@ -27,14 +30,14 @@
 
         .distributions-page__os-action {
             .os-action-button {
-                background: mc-color($primary, 60);
+                background: map-deep-get($mosaic-theme, custom, distribution-buttons-background);
 
                 &:focus {
                     outline-color: map-deep-get($mosaic-theme, components, link, state-focused-outline);
                 }
 
                 .os-action-text {
-                    color: map-deep-get($mosaic-theme, components, link, text);
+                    color: map-deep-get($mosaic-theme, custom, distribution-buttons-text-color);
                 }
             }
         }

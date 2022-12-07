@@ -3,6 +3,7 @@ import { createAction, props } from '@ngrx/store';
 import {
     ErrorResponse,
     ModelsGroup,
+    ModelsModuleA,
     ModelsPolicy,
     PrivateAgents,
     PrivateEvents,
@@ -127,13 +128,15 @@ export enum ActionType {
     ResetFiltration = '[policies] Reset filtration',
     SetGridSorting = '[policies] Set sorting grid',
 
-    UpgradeSelectedAgent = '[groups] Upgrade selected agents',
-    UpgradeSelectedAgentSuccess = '[groups] Upgrade selected agents success',
-    UpgradeSelectedAgentFailure = '[groups] Upgrade selected agents failure',
+    UpgradeSelectedAgent = '[policies] Upgrade selected agents',
+    UpgradeSelectedAgentSuccess = '[policies] Upgrade selected agents success',
+    UpgradeSelectedAgentFailure = '[policies] Upgrade selected agents failure',
 
-    CancelUpgradeAgent = '[groups]  Cancel upgrade agent',
-    CancelUpgradeAgentSuccess = '[groups]  Cancel upgrade agent success',
-    CancelUpgradeAgentFailure = '[groups]  Cancel upgrade agent failure',
+    CancelUpgradeAgent = '[policies] Cancel upgrade agent',
+    CancelUpgradeAgentSuccess = '[policies] Cancel upgrade agent success',
+    CancelUpgradeAgentFailure = '[policies] Cancel upgrade agent failure',
+
+    UpdatePolicyModuleConfig = '[policies] Update module config in policy',
 
     RestoreState = '[policies] Restore state',
 
@@ -337,6 +340,11 @@ export const cancelUpgradeAgent = createAction(
 );
 export const cancelUpgradeAgentSuccess = createAction(ActionType.CancelUpgradeAgentSuccess);
 export const cancelUpgradeAgentFailure = createAction(ActionType.CancelUpgradeAgentFailure);
+
+export const updatePolicyModuleConfig = createAction(
+    ActionType.UpdatePolicyModuleConfig,
+    props<{ module: ModelsModuleA }>()
+);
 
 export const restoreState = createAction(ActionType.RestoreState, props<{ restoredState: Partial<State> }>());
 

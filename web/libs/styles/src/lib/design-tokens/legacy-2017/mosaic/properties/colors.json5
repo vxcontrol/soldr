@@ -1,0 +1,7 @@
+{
+    'light-color-scheme': {
+        background: {
+            background: { value: '#ffffff' },
+        }
+    }
+}

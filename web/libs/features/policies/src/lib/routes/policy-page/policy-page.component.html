@@ -203,7 +203,8 @@
                                     [selectModuleName]="selectedModuleName"
                                     (selectModule)="onSelectModule($event)"
                                     (refresh)="refreshModules()"
-                                    (afterChangeModuleState)="refreshAfterChangeModuleState()">
+                                    (afterChangeModuleState)="refreshAfterChangeModuleState($event)"
+                                    (afterChangeModuleConfig)="updateModuleConfig($event)">
                                 </soldr-modules-config>
                                 <ng-template #moduleInstanceLink let-moduleName="moduleName">
                                     <a

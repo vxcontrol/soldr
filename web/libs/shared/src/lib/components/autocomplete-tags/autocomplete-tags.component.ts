@@ -52,6 +52,7 @@ export class AutocompleteTagsComponent implements AfterViewInit, ControlValueAcc
     showErrorsTooltip$: Observable<boolean>;
     errorsTooltip: TemplateRef<any>;
     disabled: boolean;
+    tags: string[];
 
     constructor(private changeDetectorRef: ChangeDetectorRef) {}
 

@@ -70,19 +70,22 @@
                         "tsConfig": "apps/soldr-ui/tsconfig.app.json",
                         "inlineStyleLanguage": "scss",
                         "allowedCommonJsDependencies": [
-                            "handlebars/dist/cjs/handlebars",
+                            "@messageformat/core",
                             "@vxcontrol/ncform",
                             "@vxcontrol/ncform-theme-elementui",
+                            "ag-grid-community",
+                            "base64-js",
                             "element-ui",
                             "semver",
-                            "vue-data-tables",
+                            "flat",
+                            "handlebars/dist/cjs/handlebars",
                             "http-vue-loader",
                             "jszip",
-                            "flat",
-                            "base64-js",
                             "luxon",
-                            "@messageformat/core",
-                            "ag-grid-community"
+                            "monaco-editor",
+                            "object-hash",
+                            "semver",
+                            "vue-data-tables"
                         ],
                         "assets": [
                             "apps/soldr-ui/src/assets",
@@ -103,7 +106,47 @@
                             }
                         ],
                         "styles": [
-                            "libs/styles/src/index.scss"
+                            "libs/styles/src/index.scss",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/actionbar/actionbar.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/aria/aria.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/button/button.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon-modifiers.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/contextview/contextview.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/countBadge/countBadge.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/iconLabel/iconlabel.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/inputbox/inputBox.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/keybindingLabel/keybindingLabel.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/list/list.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/mouseCursor/mouseCursor.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/progressbar/progressbar.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/sash/sash.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/scrollbar/media/scrollbars.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/splitview/splitview.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/table/table.css",
+                            "./node_modules/monaco-editor/esm/vs/base/browser/ui/tree/media/tree.css",
+                            "./node_modules/monaco-editor/esm/vs/base/parts/quickinput/browser/media/quickInput.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/controller/textAreaHandler.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/currentLineHighlight/currentLineHighlight.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/indentGuides/indentGuides.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/lineNumbers/lineNumbers.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/linesDecorations/linesDecorations.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/lines/viewLines.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/marginDecorations/marginDecorations.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/minimap/minimap.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/overlayWidgets/overlayWidgets.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/standalone/browser/standalone-tokens.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/standalone/browser/quickInput/standaloneQuickInput.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/widget/media/editor.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/decorations/decorations.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/glyphMargin/glyphMargin.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/rulers/rulers.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/scrollDecoration/scrollDecoration.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/selections/selections.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/viewParts/viewCursors/viewCursors.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/widget/media/diffEditor.css",
+                            "./node_modules/monaco-editor/esm/vs/editor/browser/widget/media/diffReview.css",
+                            "./node_modules/monaco-editor/esm/vs/platform/contextview/browser/contextMenuHandler.css"
                         ],
                         "scripts": [
                             "./node_modules/monaco-editor/min/vs/loader.js"
@@ -423,8 +466,8 @@
                     "builder": "@nrwl/linter:eslint",
                     "options": {
                         "lintFilePatterns": [
-                            "libs/features/policies/src/**/*.ts",
-                            "libs/features/policies/src/**/*.html"
+                            "libs/features/policies/**/*.ts",
+                            "libs/features/policies/**/*.html"
                         ]
                     }
                 }

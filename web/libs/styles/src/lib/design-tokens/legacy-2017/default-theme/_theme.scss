@@ -1,23 +1,33 @@
 @import '@ptsecurity/mosaic/theming';
 @import 'tokens';
 
-$light: mc-light-theme();
+$light-primary: mc-palette($light-color-scheme-primary-palette, $light-color-scheme-primary-default);
+$light-second: mc-palette($light-color-scheme-second-palette, $light-color-scheme-second-default);
+$light-error: mc-palette($light-color-scheme-error-palette, $light-color-scheme-error-default);
+
+$light-info: mc-palette($light-color-scheme-info-palette, $light-color-scheme-info-default);
+$light-success: mc-palette($light-color-scheme-success-palette, $light-color-scheme-success-default);
+$light-warning: mc-palette($light-color-scheme-warning-palette, $light-color-scheme-warning-default);
+
+$light: mc-light-theme($light-primary, $light-second, $light-error, $light-info, $light-success, $light-warning);
+
+$second: map-get($light, second);
 $custom-light: (
-    page-background: mc-color(map-get($light, second), 60),
-    navbar-dropdown: #206ea1,
-    navbar-dropdown-hover: #277bb3,
+    default-warning: mc-color(map-get($light, warning), 560),
+    default-success: mc-color(map-get($light, success), 560),
+    login-background: white,
+    navbar-dropdown: mc-color(map-get($light, primary), 600),
+    navbar-dropdown-hover: mc-color(map-get($light, primary), 560),
     row-gradient: #f2f2f2,
-    selected-server-text: white
+    selected-server-text: white,
+    card_default-vertical-line: mc-color($second, 300),
+    card_default-shadow: mc-color($second, 100),
+    card_default-background: mc-color($second, 60),
+    license-message_expiring: mc-color(map-get($light, warning), 100),
+    license-message_expired: mc-color(map-get($light, error), 100),
+    distribution-buttons-background: mc-color(map-get($light, primary), 60),
+    distribution-buttons-text-color: $link-light-color-scheme-text,
+    macos-img-filter: invert(0)
 );
 
 $legacy-2017-typography: mc-typography-config();
-
-:root {
-    --loading-bar-color: #{$palette-blue-500};
-    --foreground-text: #{$light-color-scheme-foreground-text};
-    --foreground-text-less-contrast: #{$light-color-scheme-foreground-text-less-contrast};
-    --monaco-background: #{$light-color-scheme-background-background};
-    --typography-subheading-font-size: #{$typography-subheading-font-size};
-    --tooltip-size-max-width: #{$tooltip-size-max-width};
-    --tooltip-size-padding: #{$tooltip-size-padding};
-}

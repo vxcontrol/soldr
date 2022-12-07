@@ -14,6 +14,10 @@
             background-color: mc-color(map-get($mosaic-theme, success), 500);
         }
 
+        .responder-type.mc-progress-bar .mc-progress-bar__line {
+            background-color: mc-color(map-get($mosaic-theme, info), 500);
+        }
+
         .modules-info-count {
             color: map-get($foreground, text-less-contrast);
         }

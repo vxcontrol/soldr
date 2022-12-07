@@ -61,7 +61,7 @@ const routes: Routes = [
                         path: '',
                         canActivate: [LazyLoadTranslationsGuard],
                         canActivateChild: [PermissionsGuard],
-                        data: { scope: ['modules', 'modules'] },
+                        data: { scope: ['modules'] },
                         loadChildren: () => import('@soldr/features/modules').then((m) => m.FeaturesModulesModule)
                     },
                     {

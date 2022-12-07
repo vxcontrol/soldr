@@ -54,7 +54,7 @@ const template = `
 
                         <el-input
                             v-if="isSearchByText"
-                            class="vue-grid__search-input flex-auto"
+                            class="vue-grid__search-input uk-flex-auto"
                             v-model="searchValue"
                             clearable
                             :placeholder="currentSearchPlaceholder"
@@ -93,7 +93,7 @@ const template = `
                 </div>
 
                 <div class="flex-none layout-margin-left-xl">
-                    <el-tooltip :content="$t('ModulesInteractivity.Grid.ButtonTooltipText.ColumnsSettings')">
+                    <el-tooltip :content="$t('ModulesInteractivity.Grid.TooltipText.ColumnsSettings')">
                         <el-button icon="el-icon-setting" v-popover:columnsSelectorPopover></el-button>
                     </el-tooltip>
                 </div>
@@ -169,7 +169,7 @@ const template = `
             </el-popover>
         </div>
 
-        <div class="flex-none text-right" ref="footerText">
+        <div class="flex-none uk-text-right" ref="footerText">
             {{ footerText }}
         </div>
     </div>

@@ -20,6 +20,7 @@
     "Groups.GroupInfo.Text.CollectorType": "Data collection",
     "Groups.GroupInfo.Text.DetectorType": "Detection",
     "Groups.GroupInfo.Text.ProvisionerType": "Delivery and installation",
+    "Groups.GroupInfo.Text.ResponderType": "Response",
 
     "Groups.GroupsList.ActionBarTitle.Groups": "Groups of agents",
     "Groups.GroupsList.ButtonText.CreateGroup": "Create a group",

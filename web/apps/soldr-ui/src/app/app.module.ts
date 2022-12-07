@@ -2,7 +2,7 @@ import { APP_INITIALIZER, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ApiModule } from '@soldr/api';
-import { CoreModule } from '@soldr/core';
+import { CoreModule, initializeApp, ThemeService } from '@soldr/core';
 import { environment } from '@soldr/environments';
 import { I18nModule } from '@soldr/i18n';
 import { SharedModule } from '@soldr/shared';
@@ -11,7 +11,7 @@ import { StoreGroupsModule } from '@soldr/store/groups';
 import { StoreModulesModule } from '@soldr/store/modules';
 import { StoreModulesInstancesModule } from '@soldr/store/modules-instances';
 import { StorePoliciesModule } from '@soldr/store/policies';
-import { StoreSharedModule } from '@soldr/store/shared';
+import { SharedFacade, StoreSharedModule } from '@soldr/store/shared';
 import { StoreTagsModule } from '@soldr/store/tags';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -69,7 +69,8 @@ import { initializeTheme } from './utils';
     providers: [
         {
             provide: APP_INITIALIZER,
-            useFactory: () => initializeTheme,
+            useFactory: initializeApp,
+            deps: [SharedFacade, ThemeService],
             multi: true
         }
     ],

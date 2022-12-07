@@ -705,7 +705,7 @@
       },
       "background": {
         "background": {
-          "value": "white",
+          "value": "#ffffff",
           "type": "color"
         },
         "background-disabled": {
@@ -7061,7 +7061,7 @@
             },
             "inner-circle-shadow": {
               "value": {
-                "color": "white",
+                "color": "#ffffff",
                 "type": "dropShadow",
                 "x": "0",
                 "y": "0",
@@ -8159,7 +8159,7 @@
             "shadow": {
               "value": [
                 {
-                  "color": "white",
+                  "color": "#ffffff",
                   "type": "innerShadow",
                   "x": "0",
                   "y": "0",

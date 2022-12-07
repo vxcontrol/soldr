@@ -2,6 +2,6 @@
     $warning: map-get($mosaic-theme, warning);
 
     .agent-version_has-new-version .agent-version__current-version {
-        color: mc-color($warning, 560);
+        color: map-deep-get($mosaic-theme, custom, default-warning);
     }
 }

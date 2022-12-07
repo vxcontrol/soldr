@@ -12,9 +12,16 @@ import { Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
 import { McSidepanelPosition, McSidepanelService } from '@ptsecurity/mosaic/sidepanel';
-import { filter, first, map, Observable, Subject, takeUntil } from 'rxjs';
+import { filter, first, from, map, Observable, Subject, switchMap, takeUntil, toArray } from 'rxjs';
 
-import { ModelsModuleInfo, ModelsModuleInfoOS, ModelsOptionsTags, ModuleTemplate } from '@soldr/api';
+import {
+  ModelsModuleInfo,
+  ModelsModuleInfoOS,
+  ModelsOptionsActions,
+  ModelsOptionsEvents,
+  ModelsOptionsTags,
+  ModuleTemplate
+} from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { convertVersion } from '@soldr/features/modules';
 import { ListItem, ModelsFormControl, moduleOsList, ProxyPermission } from '@soldr/shared';
@@ -32,6 +39,11 @@ const MODULE_TEMPLATE = [
 ];
 const MIN_LENGTH = 3;
 const DEFAULT_VERSION = '0.1.0';
+
+const regexTagFields = /^[a-zA-Z\d_\.]+$/g;
+const regexTagFieldsForReplace = /[^a-zA-Z\d_\.]+/g;
+const regexTags = /^[a-zA-Z\d_]+$/g;
+const regexTagsForReplace = /[^a-zA-Z\d_]+/g;
 
 @Component({
     selector: 'soldr-create-module-modal',
@@ -58,6 +70,10 @@ export class CreateModuleModalComponent implements OnInit, OnDestroy {
     fieldList: string[] = [];
     tagNameMask = tagNameMask;
     tagNameMaskForReplace = tagNameMaskForReplace;
+    regexTagFields = regexTagFields;
+    regexTagFieldsForReplace = regexTagFieldsForReplace;
+    regexTags = regexTags;
+    regexTagsForReplace = regexTagsForReplace;
 
     tags$ = this.sharedFacade.optionsTags$.pipe(map((tags) => this.setOptions(tags)));
 
@@ -135,8 +151,8 @@ export class CreateModuleModalComponent implements OnInit, OnDestroy {
                 ['darwin:amd64']: new FormControl(true)
             }),
             fields: new FormControl<string[]>([]),
-            events: new FormControl<string[]>([]),
-            actions: new FormControl<string[]>([]),
+            events: new FormControl<string[]>([], [], [this.eventNameExistsValidator()]),
+            actions: new FormControl<string[]>([], [], [this.actionNameExistsValidator()]),
             tags: new FormControl<string[]>([])
         });
         this.sidepanelService.open(this.sidePanel, {
@@ -198,5 +214,27 @@ export class CreateModuleModalComponent implements OnInit, OnDestroy {
 
     private setOptions(options: ModelsOptionsTags[]): string[] {
         return [...new Set(options.map(({ name }: { name: string }) => name))].sort();
+    }
+
+    private eventNameExistsValidator(): AsyncValidatorFn {
+        return (control: AbstractControl): Observable<ValidationErrors | null> =>
+            this.sharedFacade.optionsEvents$.pipe(
+                first(),
+                switchMap((events: ModelsOptionsEvents[]) => from(events)),
+                filter((event: ModelsOptionsEvents) => control.value.find((name: string) => name === event.name)),
+                toArray(),
+                map((found: ModelsOptionsEvents[]) => (found.length > 0 ? { eventNameExists: true } : null))
+            );
+    }
+
+    private actionNameExistsValidator(): AsyncValidatorFn {
+        return (control: AbstractControl): Observable<ValidationErrors | null> =>
+            this.sharedFacade.optionsActions$.pipe(
+                first(),
+                switchMap((actions: ModelsOptionsActions[]) => from(actions)),
+                filter((action: ModelsOptionsActions) => control.value.find((name: string) => name === action.name)),
+                toArray(),
+                map((found: ModelsOptionsActions[]) => (found.length > 0 ? { actionNameExists: true } : null))
+            );
     }
 }

@@ -258,7 +258,11 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
 
         this.modal.afterOpen.pipe(take(1)).subscribe(() => {
             this.modal.getElement().querySelector<HTMLElement>('.mc-modal').style.top = '0px';
-            this.modal.getElement().querySelector<HTMLElement>('.mc-modal-header').classList.add('layout-fill');
+            this.modal.getElement().querySelector<HTMLElement>('.mc-modal-header').style.boxSizing = 'border-box';
+            this.modal
+                .getElement()
+                .querySelector<HTMLElement>('.mc-modal-header')
+                .classList.add('edit-file-modal__header');
             this.modal.getElement().querySelector<HTMLElement>('.mc-modal-title').classList.add('flex-auto');
             this.modal
                 .getElement()

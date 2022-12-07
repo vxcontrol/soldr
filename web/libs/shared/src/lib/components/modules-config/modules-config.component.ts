@@ -31,7 +31,7 @@ import {
     withLatestFrom
 } from 'rxjs';
 
-import { DependencyType, ErrorResponse, ModelsModuleA, ModuleStatus } from '@soldr/api';
+import { DependencyType, ErrorResponse, ModelsModuleA, ModelsModuleConfig, ModuleStatus } from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { Policy, PolicyModule } from '@soldr/models';
 import { ModalInfoService, ModuleConfigBlockComponent, ProxyPermission, sortModules } from '@soldr/shared';
@@ -57,6 +57,7 @@ export class ModulesConfigComponent implements OnInit, OnChanges, OnDestroy {
     @Output() selectModule = new EventEmitter<EntityModule>();
     @Output() refresh = new EventEmitter();
     @Output() afterChangeModuleState = new EventEmitter();
+    @Output() afterChangeModuleConfig = new EventEmitter<ModelsModuleA>();
 
     @ViewChild('changeModuleVersionPanel') changeModuleVersionPanel: TemplateRef<any>;
     @ViewChild(forwardRef(() => ModuleConfigBlockComponent)) moduleConfig: ModuleConfigBlockComponent;
@@ -162,8 +163,8 @@ export class ModulesConfigComponent implements OnInit, OnChanges, OnDestroy {
     save(module: ModelsModuleA) {
         this.moduleConfig.validate().then(({ result }) => {
             if (result) {
-                const model = this.moduleConfig.getModel();
-                const updatedModule = { ...module, current_config: model };
+                const model = this.moduleConfig.getModel() as ModelsModuleConfig;
+                const updatedModule: EntityModule = { ...module, current_config: model };
 
                 this.saveModuleEventConfig(updatedModule);
             }
@@ -174,12 +175,16 @@ export class ModulesConfigComponent implements OnInit, OnChanges, OnDestroy {
         this.moduleConfig.reset();
     }
 
-    saveModuleEventConfig(updatedModule: EntityModule) {
+    saveModuleEventConfig(updatedModule: EntityModule, onlyConfig?: boolean) {
         this.isSavingModule$
-            .pipe(pairwise(), take(2), withLatestFrom(this.modules$))
-            .subscribe(([[oldValue, newValue], modules]: [[boolean, boolean], EntityModule[]]) => {
-                if (oldValue && !newValue) {
-                    this.afterChangeModuleState.emit();
+            .pipe(pairwise(), take(2), withLatestFrom(this.modulesInstancesFacade.saveError$))
+            .subscribe(([[oldValue, newValue], saveError]: [[boolean, boolean], ErrorResponse]) => {
+                if (oldValue && !newValue && !saveError) {
+                    if (onlyConfig) {
+                        this.afterChangeModuleState.emit();
+                    } else {
+                        this.afterChangeModuleConfig.emit(updatedModule);
+                    }
                 }
             });
 

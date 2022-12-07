@@ -1,14 +1,7 @@
 @import '../mixins/mixins';
-@import '../element-variables';
 
-@include b(timeline) {
-  margin: 0;
-  font-size: $--font-size-base;
-  list-style: none;
-
-  & .el-timeline-item:last-child {
-    & .el-timeline-item__tail {
-      display: none;
+@mixin timeline($tokens) {
+    @include b(timeline) {
+        font-size: map-get($tokens, font-size-base);
     }
-  }
 }

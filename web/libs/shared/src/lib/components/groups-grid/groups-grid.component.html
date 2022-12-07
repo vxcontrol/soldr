@@ -250,8 +250,10 @@
                 </ng-container>
 
                 <ng-template #noSelectedGroup>
-                    <div class="layout-fill layout-column layout-align-center-center" *transloco="let tCommon; read: 'common'">
-                        {{ tCommon('Common.Pseudo.Text.NoInformation') }}
+                    <div
+                        *transloco="let tCommon; read: 'common'"
+                        class="layout-fill layout-column layout-align-center-center">
+                        <span class="text_second">{{ tCommon('Common.Pseudo.Text.NoInformation') }}</span>
                     </div>
                 </ng-template>
             </div>

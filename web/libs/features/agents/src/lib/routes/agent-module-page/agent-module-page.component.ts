@@ -1,4 +1,4 @@
-import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Inject, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { combineLatest, filter, map, startWith, Subscription, switchMap } from 'rxjs';
@@ -23,7 +23,8 @@ import { SharedFacade } from '@soldr/store/shared';
 @Component({
     selector: 'soldr-agent-module-page',
     templateUrl: './agent-module-page.component.html',
-    styleUrls: ['./agent-module-page.component.scss']
+    styleUrls: ['./agent-module-page.component.scss'],
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AgentModulePageComponent implements OnInit, OnDestroy {
     agent$ = this.agentCardFacade.agent$;
@@ -65,13 +66,14 @@ export class AgentModulePageComponent implements OnInit, OnDestroy {
             (this.stateStorage.loadState('agentModule.view') as AgentModuleState) || {}
         );
 
-        this.agent$.pipe(filter(Boolean)).subscribe((agent: Agent) => {
+        const agentSubscription = this.agent$.pipe(filter(Boolean)).subscribe((agent: Agent) => {
             const { hash, moduleName } = this.activatedRoute.snapshot.params as Record<string, string>;
 
             this.moduleInstancesFacade.init(ViewMode.Agents, agent.id, moduleName);
             this.moduleInstancesFacade.fetchModule(hash);
             this.moduleInstancesFacade.fetchEvents();
         });
+        this.subscription.add(agentSubscription);
     }
 
     ngOnDestroy(): void {

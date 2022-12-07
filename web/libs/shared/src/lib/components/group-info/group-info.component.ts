@@ -34,10 +34,12 @@ export class GroupInfoComponent implements OnChanges {
     provisionerCount = 0;
     collectorCount = 0;
     detectorCount = 0;
+    responderCount = 0;
 
     provisionerPercent: number;
     collectorPercent: number;
     detectorPercent: number;
+    responderPercent: number;
 
     constructor(
         private languageService: LanguageService,
@@ -73,6 +75,9 @@ export class GroupInfoComponent implements OnChanges {
 
             this.detectorCount = this.getModulesCountByTag('detector');
             this.detectorPercent = this.getPercent(this.detectorCount, modulesCount);
+
+            this.responderCount = this.getModulesCountByTag('responder');
+            this.responderPercent = this.getPercent(this.responderCount, modulesCount);
         }
     }
 

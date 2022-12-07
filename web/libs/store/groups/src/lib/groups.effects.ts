@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { filter, forkJoin, of, tap, withLatestFrom } from 'rxjs';
+import { debounceTime, filter, forkJoin, of, tap, withLatestFrom } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 
 import {
@@ -34,7 +34,7 @@ import {
     UpgradesService
 } from '@soldr/api';
 import { groupToDto } from '@soldr/models';
-import { ModalInfoService } from '@soldr/shared';
+import { DEBOUNCING_DURATION_FOR_REQUESTS, ModalInfoService } from '@soldr/shared';
 import {
     selectAgentsGridFiltration,
     selectAgentsGridSearch,
@@ -59,6 +59,7 @@ export class GroupsEffects {
     fetchGroupsPage$ = createEffect(() =>
         this.actions$.pipe(
             ofType(GroupsActions.fetchGroupsPage),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             withLatestFrom(this.store.select(selectInitialListQuery)),
             switchMap(([action, initialQuery]) => {
                 const currentPage = action.page || 1;
@@ -277,6 +278,7 @@ export class GroupsEffects {
                     GroupsActions.resetFiltration
                 ]
             ),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() => [GroupsActions.fetchGroupsPage({ page: 1 }), GroupsActions.fetchFilterItems()])
         )
     );

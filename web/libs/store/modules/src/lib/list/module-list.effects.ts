@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, map, of, switchMap, withLatestFrom } from 'rxjs';
+import { catchError, debounceTime, map, of, switchMap, withLatestFrom } from 'rxjs';
 
 import {
     allListQuery,
@@ -19,12 +19,14 @@ import {
 import * as ModuleListActions from './module-list.actions';
 import { State } from './module-list.reducer';
 import { selectInitialListQuery } from './module-list.selectors';
+import { DEBOUNCING_DURATION_FOR_REQUESTS } from '@soldr/shared';
 
 @Injectable()
 export class ModuleListEffects {
     fetchModules$ = createEffect(() =>
         this.actions$.pipe(
             ofType(ModuleListActions.fetchModules),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
                 this.modulesService.fetchList(allListQuery()).pipe(
                     map((response: SuccessResponse<PrivateSystemModules>) =>
@@ -39,6 +41,7 @@ export class ModuleListEffects {
     fetchModulesPage$ = createEffect(() =>
         this.actions$.pipe(
             ofType(ModuleListActions.fetchModulesPage),
+            debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             withLatestFrom(this.store.select(selectInitialListQuery)),
             switchMap(([action, initialQuery]) => {
                 const currentPage = action.page || 1;

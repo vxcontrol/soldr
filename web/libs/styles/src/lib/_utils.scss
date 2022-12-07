@@ -45,6 +45,11 @@
     height: 100%;
 }
 
+// for support of modules interactivity
+.overflow-hidden {
+    overflow: hidden;
+}
+
 .dark-theme .distributions-page__os-card .os-img-macos {
     filter: invert(1);
 }

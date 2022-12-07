@@ -5,7 +5,7 @@
         [mcVisible]="(showErrorsTooltip$ | async) === true"
         [mcTooltipClass]="'warning'"
         [ngClass]="{'form-field-error': control.errors}">
-        <mc-tag-list #tagList [disabled]="disabled">
+        <mc-tag-list #tagList [disabled]="disabled" [(ngModel)]="tags">
             <mc-tag
                 e2e-id="optTag"
                 *ngFor="let tag of selectedTags"

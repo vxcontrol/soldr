@@ -4,5 +4,5 @@
     "ModulesInteractivity.Grid.DropdownItemText.ClearSelection": "Clear selection",
     "ModulesInteractivity.Grid.Text.RowsSummary": "Total: {total}, {selected, select, all {all selected} other {selected: {selected}}}",
     "ModulesInteractivity.Grid.SelectPlaceholder.SelectColumns": "Select the displayed columns in the table",
-    "ModulesInteractivity.Grid.ButtonTooltipText.ColumnsSettings": "Columns setting"
+    "ModulesInteractivity.Grid.TooltipText.ColumnsSettings": "Columns setting"
 }

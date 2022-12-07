@@ -46,7 +46,6 @@ export * from './module-config-block/module-config-block.component';
 export * from './module-config/module-config.component';
 export * from './module-events/module-events.component';
 export * from './module-info/module-info.component';
-export * from '../../../../features/modules-interactivity/src/lib/components/module-page/module-page.component';
 export * from './module-type/module-type.component';
 export * from './modules-config/modules-config.component';
 export * from './multiple-selection-panel/multiple-selection-panel.component';

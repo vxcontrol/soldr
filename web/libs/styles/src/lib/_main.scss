@@ -4,12 +4,18 @@
 @import 'design-tokens/pt-2022/default-theme/theme';
 @import 'themes/theme';
 
+@import 'element-ui/element-ui-components.theme';
+@import 'design-tokens/legacy-2017/element-ui/theme';
+@import 'design-tokens/pt-2022/element-ui/theme';
+
 .light-theme {
     @include soldr-typography($legacy-2017-typography);
     @include soldr-theme($light, $custom-light);
+    @include element-ui-components($light-element-ui);
 }
 
 .dark-theme {
     @include soldr-typography($pt-2022-typography);
     @include soldr-theme($dark, $custom-dark);
+    @include element-ui-components($dark-element-ui);
 }

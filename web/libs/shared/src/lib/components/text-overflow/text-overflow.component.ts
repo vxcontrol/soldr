@@ -1,11 +1,18 @@
 import { ContentObserver } from '@angular/cdk/observers';
-import { AfterViewInit, ChangeDetectorRef, Component, Directive, ElementRef, Input, OnDestroy } from '@angular/core';
+import {
+    AfterViewInit,
+    ChangeDetectorRef,
+    Component,
+    Directive,
+    ElementRef,
+    Inject,
+    Input,
+    OnDestroy
+} from '@angular/core';
 import { PopUpPlacements } from '@ptsecurity/mosaic/core';
 import { Subscription } from 'rxjs';
 
-const TOOLTIP_CONTENT_WIDTH = parseInt(getComputedStyle(document.documentElement)
-    .getPropertyValue('--tooltip-size-max-width'), 10) - 2 * parseInt(getComputedStyle(document.documentElement)
-    .getPropertyValue('--tooltip-size-padding'));
+import { MosaicTokens, THEME_TOKENS } from '@soldr/core';
 
 @Directive({ selector: '[soldrTextOverflow]' })
 export class TextOverflowDirective {}
@@ -42,13 +49,15 @@ export class TextOverflowComponent implements AfterViewInit, OnDestroy {
     text: string;
     hasTitle: boolean;
     element: Element;
+    tooltipContentWidth = parseInt(this.tokens.TooltipSizeMaxWidth, 10) - 2 * parseInt(this.tokens.TooltipSizePadding);
 
     private subscription: Subscription = new Subscription();
 
     constructor(
         public elementRef: ElementRef,
         private contentObserver: ContentObserver,
-        private changeDetectorRef: ChangeDetectorRef
+        private changeDetectorRef: ChangeDetectorRef,
+        @Inject(THEME_TOKENS) public tokens: MosaicTokens
     ) {}
 
     ngAfterViewInit() {
@@ -79,7 +88,7 @@ export class TextOverflowComponent implements AfterViewInit, OnDestroy {
         this.element = this.elementRef.nativeElement as Element;
         this.findLastChild();
         this.text = this.element.textContent;
-        if (this.element.clientWidth > TOOLTIP_CONTENT_WIDTH) {
+        if (this.element.clientWidth > this.tooltipContentWidth) {
             this.hasTitle = true;
         }
         this.changeDetectorRef.detectChanges();

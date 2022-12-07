@@ -53,7 +53,7 @@
 
     "Shared.Grid.ButtonText.ResetToDefault": "По умолчанию",
     "Shared.Grid.DropdownItemText.Export": "Экспорт",
-    "Shared.Grid.ButtonTooltipText.Export": "Экспорт списка данных",
+    "Shared.Grid.TooltipText.Export": "Экспорт списка данных",
     "Shared.Grid.DropdownButtonText.OnlySelected": "Выбранные {selected}",
     "Shared.Grid.DropdownButtonText.All": "Все {total}",
     "Shared.Grid.ButtonText.Export": "Экспортировать",

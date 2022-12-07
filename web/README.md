@@ -13,16 +13,16 @@ Create a file `proxy.conf.json` in the root directory with target and secure opt
 ```
 **Docs**: https://angular.io/guide/build#proxying-to-a-backend-server
 
-Run `npm run start (yarn start)` for a dev server. Navigate to http://localhost:8080/. The app will automatically reload if you
+Run `npm run start` for a dev server. Navigate to http://localhost:4200/. The app will automatically reload if you
 change any of the source files.
 
 ## Build
 
-Run `npm run build (yarn build)` to build the project. The build artifacts will be stored in the `dist/` directory.
+Run `npm run build` to build the project. The build artifacts will be stored in the `dist/` directory.
 
 ## Running unit tests
 
-Run `npm run test (yarn test)` to execute the unit tests via [Jest](https://jestjs.io).
+Run `npm run test` to execute the unit tests via [Jest](https://jestjs.io).
 
 ## Understand your workspace
 
