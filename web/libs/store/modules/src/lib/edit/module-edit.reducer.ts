@@ -346,42 +346,23 @@ export const reducer = createReducer(
         };
     }),
     on(ModuleEditActions.removeConfigParam, (state, { name }) => {
-        const props = clone(state.module.config_schema.properties) as Record<string, NcFormProperty>;
+        const newSchema = clone(state.module.config_schema) as NcformSchema;
+        const props = newSchema.properties;
 
-        if (name.includes('.')) {
-            const parts = name.split('.');
-            const nestedObjects = parts.slice(0, -1);
-            const propName = parts[parts.length - 1];
-            const obj = nestedObjects.reduce((acc, current) => props[current].properties, props);
-
-            delete obj[propName];
-        } else {
-            delete props[name];
-        }
+        delete props[name];
+        newSchema.required = newSchema.required.filter((propName) => name !== propName);
 
         const locale = clone(state.module.locale.config) as Record<string, ModelsModuleLocaleDesc>;
         delete locale[name];
 
         const defaultConfig = clone(state.module.default_config) as Record<string, any>;
-        if (name.includes('.')) {
-            const parts = name.split('.');
-            const nestedObjects = parts.slice(0, -1);
-            const propName = parts[parts.length - 1];
-            const obj = nestedObjects.reduce((acc, current) => acc[current], defaultConfig);
-
-            delete obj[propName];
-        } else {
-            delete defaultConfig[name];
-        }
+        delete defaultConfig[name];
 
         return {
             ...state,
             module: {
                 ...state.module,
-                config_schema: {
-                    ...state.module.config_schema,
-                    properties: props
-                },
+                config_schema: newSchema,
                 default_config: defaultConfig,
                 locale: {
                     ...state.module.locale,
@@ -505,49 +486,23 @@ export const reducer = createReducer(
         };
     }),
     on(ModuleEditActions.removeSecureConfigParam, (state, { name }) => {
-        const props = clone(state.module.secure_config_schema.properties) as Record<string, NcFormProperty>;
+        const newSchema = clone(state.module.secure_config_schema) as NcformSchema;
+        const props = newSchema.properties;
 
-        if (name.includes('.')) {
-            const parts = name.split('.');
-            const nestedObjects = parts.slice(0, -1);
-            const propName = parts[parts.length - 1];
-            const obj = nestedObjects.reduce(
-                (acc, current, index) =>
-                    index === 0 ? acc[current].properties.value.properties : acc[current].properties,
-                props
-            );
-
-            delete obj[propName];
-        } else {
-            delete props[name];
-        }
+        delete props[name];
+        newSchema.required = newSchema.required.filter((propName) => name !== propName);
 
         const locale = clone(state.module.locale.secure_config) as Record<string, ModelsModuleLocaleDesc>;
         delete locale[name];
 
         const defaultConfig = clone(state.module.secure_default_config) as Record<string, any>;
-        if (name.includes('.')) {
-            const parts = name.split('.');
-            const nestedObjects = parts.slice(0, -1);
-            const propName = parts[parts.length - 1];
-            const obj = nestedObjects.reduce(
-                (acc, current, index) => (index === 0 ? acc[current].value : acc[current]),
-                defaultConfig
-            );
-
-            delete obj[propName];
-        } else {
-            delete defaultConfig[name];
-        }
+        delete defaultConfig[name];
 
         return {
             ...state,
             module: {
                 ...state.module,
-                secure_config_schema: {
-                    ...state.module.secure_config_schema,
-                    properties: props
-                },
+                secure_config_schema: newSchema,
                 secure_default_config: defaultConfig,
                 locale: {
                     ...state.module.locale,
