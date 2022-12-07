@@ -4,6 +4,7 @@ import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { TranslocoModule } from '@ngneat/transloco';
+import { LetModule } from '@ngrx/component';
 import { DateAdapter, MC_DATE_LOCALE } from '@ptsecurity/cdk/datetime';
 import { LuxonDateAdapter, McLuxonDateModule } from '@ptsecurity/mosaic-luxon-adapter/adapter';
 import { DateFormatter } from '@ptsecurity/mosaic/core';
@@ -215,7 +216,8 @@ const pipes = [
         MosaicModule,
         ReactiveFormsModule,
         RouterModule,
-        TranslocoModule
+        TranslocoModule,
+        LetModule
     ],
     exports: [...components, ...directives, ...pipes, MosaicModule, TranslocoModule],
     providers: [

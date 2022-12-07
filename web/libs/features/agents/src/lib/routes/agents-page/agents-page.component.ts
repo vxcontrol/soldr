@@ -173,13 +173,13 @@ export class AgentsPageComponent implements OnInit, OnDestroy {
     onSelectFilter(filterId: string): void {
         this.agentListFacade.selectFilter(filterId);
         this.agentListFacade.fetchFiltersCounters();
-        this.sharedFacade.fetchAllGroups();
+        this.sharedFacade.fetchAllGroups(true);
     }
 
     onSelectGroup(groupId: string) {
         this.agentListFacade.selectGroup(groupId);
         this.agentListFacade.fetchFiltersCounters();
-        this.sharedFacade.fetchAllGroups();
+        this.sharedFacade.fetchAllGroups(true);
     }
 
     onGridFilter(filtration: Filtration) {

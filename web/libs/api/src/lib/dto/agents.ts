@@ -135,6 +135,14 @@ export interface PrivatePatchAgentAction {
     agent: ModelsAgent;
 }
 
+export interface PrivateAgentCountResponse {
+    all: number;
+    authorized: number;
+    blocked: number;
+    unauthorized: number;
+    without_groups: number;
+}
+
 export enum AgentsSQLMappers {
     GroupId = 'group_id',
     GroupName = 'group_name',

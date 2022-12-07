@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Route, RouterModule } from '@angular/router';
-import { ReactiveComponentModule } from '@ngrx/component';
+import { LetModule } from '@ngrx/component';
 
 import { CanLeavePageGuard, ModulesGuard, SharedModule } from '@soldr/shared';
 
@@ -55,7 +55,7 @@ export const featuresModulesRoutes: Route[] = [
         SharedModule,
         ReactiveFormsModule,
         FormsModule,
-        ReactiveComponentModule
+        LetModule
     ],
     declarations: [
         ConfigParamTabsComponent,

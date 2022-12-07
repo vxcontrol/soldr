@@ -1,6 +1,6 @@
 import { createAction, props } from '@ngrx/store';
 
-import { ErrorResponse, PrivateAgent, PrivateAgentModules, PrivateAgents } from '@soldr/api';
+import { ErrorResponse, PrivateAgent, PrivateAgentCountResponse, PrivateAgentModules, PrivateAgents } from '@soldr/api';
 import { Agent, AgentUpgradeTask } from '@soldr/models';
 import { Filter, Filtration, Sorting } from '@soldr/shared';
 
@@ -14,6 +14,7 @@ export enum ActionType {
 
     FetchCountersByFilters = '[agent-list] Fetch counter by filters',
     FetchCountersByFiltersSuccess = '[agent-list] Fetch counter by filters success',
+    FetchCountersByFiltersFailure = '[agent-list] Fetch counter by filters failure',
 
     FetchAgentsPage = '[agent-list] Fetch agents page',
     FetchAgentsPageSuccess = '[agent-list] Fetch agents page success',
@@ -85,8 +86,9 @@ export const selectGroup = createAction(ActionType.SelectGroup, props<{ id: stri
 export const fetchCountersByFilters = createAction(ActionType.FetchCountersByFilters);
 export const fetchCountersByFiltersSuccess = createAction(
     ActionType.FetchCountersByFiltersSuccess,
-    props<{ counters: Record<string, number> }>()
+    props<{ counters: PrivateAgentCountResponse }>()
 );
+export const fetchCountersByFiltersFailure = createAction(ActionType.FetchCountersByFiltersFailure);
 
 export const fetchAgentsPage = createAction(ActionType.FetchAgentsPage, props<{ page?: number }>());
 export const fetchAgentsPageSuccess = createAction(

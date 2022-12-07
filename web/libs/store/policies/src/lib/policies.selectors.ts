@@ -1,5 +1,6 @@
 import { createFeatureSelector, createSelector } from '@ngrx/store';
 
+import { PrivatePolicyCountResponse } from '@soldr/api';
 import { filtrationToDictionary } from '@soldr/shared';
 
 import * as fromPolicies from './policies.reducer';
@@ -13,7 +14,7 @@ export const selectFiltersWithCounter = createSelector(selectFilters, selectFilt
         id: filter.id,
         label: filter.label,
         value: filter.value,
-        count: counters[filter.id] || 0
+        count: counters[filter.id as keyof PrivatePolicyCountResponse] || 0
     }))
 );
 export const selectSelectedFilterId = createSelector(selectPoliciesState, (state) => state.selectedFilterId);

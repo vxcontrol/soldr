@@ -10,6 +10,7 @@ import {
     ModelsAgent,
     ModelsModuleA,
     PrivateAgent,
+    PrivateAgentCountResponse,
     PrivateAgentModules,
     PrivateAgents,
     PrivateAgentsAction,
@@ -29,6 +30,10 @@ export class AgentsService {
 
     fetchList<T extends ListQuery | GroupedListQuery>(query: T): ResponseList<T, PrivateAgents> {
         return this.http.get(this.baseUrl, { params: toHttpParams(query) });
+    }
+
+    fetchStatistics() {
+        return this.http.get(`${this.baseUrl}count`) as Response<PrivateAgentCountResponse>;
     }
 
     fetchOne(hash: string) {

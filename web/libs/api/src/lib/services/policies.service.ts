@@ -13,6 +13,7 @@ import {
     ModelsPolicy,
     PrivatePolicies,
     PrivatePolicy,
+    PrivatePolicyCountResponse,
     PrivatePolicyGroupPatch,
     PrivatePolicyInfo,
     PrivatePolicyModules,
@@ -30,6 +31,10 @@ export class PoliciesService {
 
     fetchList<T extends ListQuery | GroupedListQuery>(query: T): ResponseList<T, PrivatePolicies> {
         return this.http.get(this.baseUrl, { params: toHttpParams(query) });
+    }
+
+    fetchStatistics() {
+        return this.http.get(`${this.baseUrl}count`) as Response<PrivatePolicyCountResponse>;
     }
 
     fetchOne(hash: string) {
