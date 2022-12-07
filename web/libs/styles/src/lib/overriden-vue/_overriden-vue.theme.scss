@@ -10,4 +10,9 @@
     .__object-form-item > [class*='-layout'] {
         border-color: map-deep-get($theme, foreground, divider);
     }
+
+    .form-item_error * {
+        color: mc-color(map-get($theme, error), 400) !important;
+        border-color: mc-color(map-get($theme, error), 400) !important;
+    }
 }
