@@ -1,11 +1,11 @@
 .module-interactivity-part {
     display: block;
-    box-sizing: border-box;
 }
 
 .module-interactivity-container {
     height: 100%;
     overflow: auto;
+    box-sizing: border-box;
 
     .drag-select {
         .sortable-ghost {
