@@ -47,7 +47,7 @@ build-agent-vxbuild:
 
 .PHONY: build-web
 build-web:
-	cd $(CURDIR)/web && yarn install && yarn build
+	cd $(CURDIR)/web && npm install --legacy-peer-deps && npm run build
 
 .PHONY: run-api
 run-api: build-api
@@ -75,7 +75,7 @@ run-agent: build-agent
 
 .PHONY: run-web
 run-web:
-	cd $(CURDIR)/web && yarn start
+	cd $(CURDIR)/web && npm run start
 
 .PHONY: fmt
 fmt: $(GOLANGCI_BIN)
