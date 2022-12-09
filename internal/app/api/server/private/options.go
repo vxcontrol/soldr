@@ -127,8 +127,10 @@ func getBaseQueryForItem(db *gorm.DB, option string) *gorm.SqlExpr {
 		SubQuery()
 }
 
+//nolint:typecheck
 func validOptions(c *gin.Context, value interface{}) bool {
 	var vlist []models.IValid
+	//TODO: Check pointers in switch
 	switch tvalue := value.(type) {
 	case *[]models.OptionsActions:
 		for _, v := range *tvalue {

@@ -43,7 +43,7 @@ type IStorage interface {
 	RemoveDir(path string) error
 	RemoveFile(path string) error
 	Remove(path string) error
-	Rename(old, new string) error
+	Rename(old, n string) error
 	CopyFile(src, dst string) error
 	IFileReader
 	ILimits

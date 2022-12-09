@@ -45,11 +45,33 @@ func startProcessMetricCollect(meter metric.Meter, attrs []attribute.KeyValue) e
 	}
 
 	if _, err := proc.MemoryInfo(); err == nil {
-		meter.NewInt64GaugeObserver("process_resident_memory_bytes", collectRssMem)
-		meter.NewInt64GaugeObserver("process_virtual_memory_bytes", collectVirtMem)
+		_, err = meter.NewInt64GaugeObserver("process_resident_memory_bytes", collectRssMem)
+		if err != nil {
+			logrus.Errorf(
+				"meter.NewInt64GaugeObserver is failed: %s: %s",
+				"process_resident_memory_bytes",
+				err,
+			)
+		}
+
+		_, err = meter.NewInt64GaugeObserver("process_virtual_memory_bytes", collectVirtMem)
+		if err != nil {
+			logrus.Errorf(
+				"meter.NewInt64GaugeObserver is failed: %s: %s",
+				"process_virtual_memory_bytes",
+				err,
+			)
+		}
 	}
 	if _, err := proc.Percent(time.Duration(0)); err == nil {
-		meter.NewFloat64GaugeObserver("process_cpu_usage_percent", collectCpuPercent)
+		_, err = meter.NewFloat64GaugeObserver("process_cpu_usage_percent", collectCpuPercent)
+		if err != nil {
+			logrus.Errorf(
+				"meter.NewInt64GaugeObserver is failed: %s: %s",
+				"process_cpu_usage_percent",
+				err,
+			)
+		}
 	}
 
 	return nil
@@ -75,35 +97,97 @@ func startGoRuntimeMetricCollect(meter metric.Meter, attrs []attribute.KeyValue)
 		return &procRuntimeMemStat
 	}
 
-	meter.NewInt64GaugeObserver("go_cgo_calls", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(runtime.NumCgoCall(), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_goroutines", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(runtime.NumGoroutine()), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_heap_objects_bytes", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().HeapInuse), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_heap_objects_counter", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().HeapObjects), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_stack_inuse_bytes", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().StackInuse), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_stack_sys_bytes", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().StackSys), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_total_allocs_bytes", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().TotalAlloc), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_heap_allocs_bytes", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().HeapAlloc), attrs...)
-	})
-	meter.NewInt64GaugeObserver("go_pause_gc_total_nanosec", func(ctx context.Context, m metric.Int64ObserverResult) {
-		m.Observe(int64(getMemStats().PauseTotalNs), attrs...)
-	})
+	_, err := meter.NewInt64GaugeObserver(
+		"go_cgo_calls",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(runtime.NumCgoCall(), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_cgo_calls")
+	}
 
-	return nil
+	_, err = meter.NewInt64GaugeObserver(
+		"go_goroutines",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(runtime.NumGoroutine()), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_goroutines")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_heap_objects_bytes",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().HeapInuse), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_heap_objects_types")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_heap_objects_counter",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().HeapObjects), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_heap_objects_counter")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_stack_inuse_bytes",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().StackInuse), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_stack_inuse_bytes")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_stack_sys_bytes",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().StackSys), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_stack_sys_bytes")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_total_allocs_bytes",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().TotalAlloc), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_total_allocs_bytes")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_heap_allocs_bytes",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().HeapAlloc), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_heap_allocs_bytes")
+	}
+
+	_, err = meter.NewInt64GaugeObserver(
+		"go_pause_gc_total_nanosec",
+		func(ctx context.Context, m metric.Int64ObserverResult) {
+			m.Observe(int64(getMemStats().PauseTotalNs), attrs...)
+		},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorf("meter.NewInt64GaugeObserver is failed: %s", "go_pause_gc_total_nanosec")
+	}
+
+	return err
 }
 
 func startDumperMetricCollect(stats IDumper, meter metric.Meter, attrs []attribute.KeyValue) error {
@@ -136,11 +220,14 @@ func startDumperMetricCollect(stats IDumper, meter metric.Meter, attrs []attribu
 
 	for key := range lastStats {
 		metricName := key
-		meter.NewFloat64CounterObserver(metricName, func(ctx context.Context, m metric.Float64ObserverResult) {
+		_, err = meter.NewFloat64CounterObserver(metricName, func(ctx context.Context, m metric.Float64ObserverResult) {
 			if value, ok := getProtoStats()[metricName]; ok {
 				m.Observe(value, attrs...)
 			}
 		})
+		if err != nil {
+			logrus.Errorf("meter.NewFloat64CounterObserver is failed: %s", err)
+		}
 	}
 
 	return nil

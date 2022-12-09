@@ -26,7 +26,11 @@ type SimpleTLSConfigurer struct {
 	scaStore      scaStore
 }
 
-func NewSimpleTLSConfigurer(certsProvider certs.CertProvider, ltacGetter LTACGetter, scaStore scaStore) *SimpleTLSConfigurer {
+func NewSimpleTLSConfigurer(
+	certsProvider certs.CertProvider,
+	ltacGetter LTACGetter,
+	scaStore scaStore,
+) *SimpleTLSConfigurer {
 	return &SimpleTLSConfigurer{
 		certsProvider: certsProvider,
 		ltacGetter:    ltacGetter,
@@ -43,6 +47,9 @@ func (c *SimpleTLSConfigurer) GetTLSConfigForInitConnection() (*tls.Config, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the VXCA pool: %w", err)
 	}
+	//TODO: TLS version is too low
+
+	// #nosec G402
 	tlsConfig := &tls.Config{
 		Certificates:          []tls.Certificate{*iac},
 		RootCAs:               vxcaPool,
@@ -61,6 +68,9 @@ func (c *SimpleTLSConfigurer) GetTLSConfigForConnection() (*tls.Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the LTAC certificate: %w", err)
 	}
+	//TODO: TLS version is too low
+
+	// #nosec G402
 	return &tls.Config{
 		Certificates: []tls.Certificate{*ltacCert},
 		RootCAs:      vxcaPool,
@@ -100,8 +110,14 @@ func (c *SimpleTLSConfigurer) getLTACCertificate() (*tls.Certificate, error) {
 	return &cert, nil
 }
 
-func (c *SimpleTLSConfigurer) initConnectionVerifyPeerCertificate(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-	c.scaStore.PopSCA()
+func (c *SimpleTLSConfigurer) initConnectionVerifyPeerCertificate(
+	rawCerts [][]byte,
+	verifiedChains [][]*x509.Certificate,
+) error {
+	_, err := c.scaStore.PopSCA()
+	if err != nil {
+		return fmt.Errorf("popSCA is failed: %w", err)
+	}
 	if len(rawCerts) != 2 {
 		return fmt.Errorf("expected to get two raw certs, actually got %d", len(rawCerts))
 	}
@@ -111,7 +127,7 @@ func (c *SimpleTLSConfigurer) initConnectionVerifyPeerCertificate(rawCerts [][]b
 	if len(verifiedChains[0]) != 3 {
 		return fmt.Errorf("expected to get three certificates in the verified chain, actually got %d", len(verifiedChains[0]))
 	}
-	if err := c.scaStore.PushSCA(rawCerts[1]); err != nil {
+	if err = c.scaStore.PushSCA(rawCerts[1]); err != nil {
 		return fmt.Errorf("failed to save the passed SCA certificate: %w", err)
 	}
 	return nil

@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package static
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"crypto/ed25519"
 	"crypto/rand"
@@ -80,8 +82,8 @@ func getVXCAs(certsDir string) (map[string]*x509Cert, error) {
 		if filepath.Ext(fi.Name()) != ".cert" {
 			continue
 		}
-		fPath := filepath.Join(vxcasPath, fi.Name())
-		data, err := os.ReadFile(fPath)
+		// #nosec G304
+		data, err := os.ReadFile(filepath.Join(vxcasPath, fi.Name()))
 		if err != nil {
 			return nil, err
 		}
@@ -154,8 +156,8 @@ func getCertKeyFiles(filesInfo []fs.FileInfo, baseDir string) (certKeyFiles, err
 		if ext != certExt && ext != keyExt {
 			continue
 		}
-		fPath := filepath.Join(baseDir, fi.Name())
-		data, err := os.ReadFile(fPath)
+		// #nosec G304
+		data, err := os.ReadFile(filepath.Join(baseDir, fi.Name()))
 		if err != nil {
 			return nil, err
 		}

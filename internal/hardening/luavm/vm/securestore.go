@@ -1,5 +1,7 @@
+//nolint:gosec
 package vm
 
+//TODO: replace mean cryptographic primitive and delete "nolint:gosec"
 import (
 	"crypto/rc4"
 	"crypto/sha256"

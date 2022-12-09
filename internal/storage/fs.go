@@ -1,11 +1,15 @@
+//nolint:staticcheck
 package storage
 
+//TODO: io/ioutil is deprecated, replace to fs.FS
 import (
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 // FS is main class for FS API
@@ -14,7 +18,7 @@ type FS struct {
 }
 
 // NewFS is function that construct FS driver with IStorage
-func NewFS() (IStorage, error) {
+func NewFS() (*FS, error) {
 	return &FS{
 		sLimits: sLimits{
 			defPerm:     0644,
@@ -112,6 +116,7 @@ func (fs *FS) ReadFile(path string) ([]byte, error) {
 	} else if info.Size() > fs.maxFileSize {
 		return nil, ErrLimitExceeded
 	}
+	// #nosec G304
 	if data, err := ioutil.ReadFile(path); err == nil {
 		return data, nil
 	}
@@ -178,6 +183,7 @@ func (fs *FS) CreateDir(path string) error {
 // CreateFile is function for create new file if not exists
 func (fs *FS) CreateFile(path string) error {
 	if !fs.IsExist(path) {
+		// #nosec G304
 		file, err := os.Create(path)
 		if err != nil {
 			return ErrCreateFailed
@@ -193,6 +199,7 @@ func (fs *FS) CreateFile(path string) error {
 
 // WriteFile is function that write (override) data to a file
 func (fs *FS) WriteFile(path string, data []byte) error {
+	// #nosec G304
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, fs.defPerm)
 	if err != nil {
 		return ErrOpenFailed
@@ -212,6 +219,7 @@ func (fs *FS) WriteFile(path string, data []byte) error {
 
 // AppendFile is function that append data to an exist file
 func (fs *FS) AppendFile(path string, data []byte) error {
+	// #nosec G304
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fs.defPerm)
 	if err != nil {
 		return ErrOpenFailed
@@ -294,11 +302,18 @@ func (fs *FS) CopyFile(src, dst string) error {
 		}
 	}
 
+	// #nosec G304
 	in, err := os.Open(src)
 	if err != nil {
 		return ErrOpenFailed
 	}
-	defer in.Close()
+	defer func(in *os.File) {
+		e := in.Close()
+		if e != nil {
+			logrus.Errorf("failed to close file: %s", e)
+		}
+	}(in)
+	// #nosec G304
 	out, err := os.Create(dst)
 	if err != nil {
 		return ErrCreateFailed

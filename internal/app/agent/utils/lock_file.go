@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package utils
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"context"
 	"errors"
@@ -13,7 +15,8 @@ import (
 )
 
 func CreateLockFile(name string) error {
-	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666)
+	// #nosec G304
+	f, err := os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to create a lock file: %w", err)
 	}
@@ -52,6 +55,7 @@ func WatchLockFile(ctx context.Context, name string) error {
 }
 
 func getPID(name string) (int, error) {
+	// #nosec G304
 	pidBytes, err := ioutil.ReadFile(name)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

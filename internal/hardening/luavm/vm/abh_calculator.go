@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/sirupsen/logrus"
 )
 
 type ABH []byte
@@ -25,11 +27,17 @@ func (c *abhCalculator) GetABH() (ABH, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current executable path: %w", err)
 	}
+	// #nosec G304
 	f, err := os.Open(execFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open the executable file %s: %w", execFile, err)
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			logrus.Errorf("failed close file: %s", err)
+		}
+	}(f)
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
 		return nil, fmt.Errorf("failed to get the hash of the executable file: %w", err)

@@ -72,7 +72,7 @@ func (at AgentType) String() string {
 		return str
 	}
 
-	return "unknown"
+	return typeUnknown
 }
 
 // MarshalJSON using for convert from AgentType to JSON

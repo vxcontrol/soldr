@@ -84,7 +84,10 @@ func (m *Module) Start() {
 	m.wgRun.Add(1)
 	go func() {
 		defer m.wgRun.Done()
-		m.recvPacket()
+		err := m.recvPacket()
+		if err != nil {
+			m.logger.WithContext(m.state.ctx).Errorf("failed to recive packet: %s", err)
+		}
 	}()
 	m.logger.WithContext(m.state.ctx).Info("the module was started")
 	defer func(m *Module) {
@@ -118,7 +121,10 @@ func (m *Module) Stop() {
 	defer m.logger.WithContext(m.state.ctx).Info("the module stopping has done")
 
 	m.closed = true
-	m.controlMsgCb(m.state.ctx, "quit", "")
+	_, err := m.controlMsgCb(m.state.ctx, "quit", "")
+	if err != nil {
+		m.logger.WithContext(m.state.ctx).Error(err)
+	}
 	close(m.quit)
 	close(m.notifier)
 
@@ -1449,25 +1455,28 @@ func NewModule(args map[string][]string, state *State, socket vxproto.IModuleSoc
 	state.L.SetGlobal("__args")
 
 	// TODO: change it to native load function
-	state.L.DoString(`
-	io.stdout:setvbuf('no')
+	err := state.L.DoString(`
+		io.stdout:setvbuf('no')
 
-	function __api.async(f, ...)
-		local glue = require("glue")
-		__api.unsafe.unlock()
-		t = glue.pack(f(...))
-		__api.unsafe.lock()
-		return glue.unpack(t)
-	end
+		function __api.async(f, ...)
+			local glue = require("glue")
+			__api.unsafe.unlock()
+			t = glue.pack(f(...))
+			__api.unsafe.lock()
+			return glue.unpack(t)
+		end
 
-	function __api.sync(f, ...)
-		local glue = require("glue")
-		__api.unsafe.lock()
-		t = glue.pack(f(...))
-		__api.unsafe.unlock()
-		return glue.unpack(t)
-	end
-	`)
+		function __api.sync(f, ...)
+			local glue = require("glue")
+			__api.unsafe.lock()
+			t = glue.pack(f(...))
+			__api.unsafe.unlock()
+			return glue.unpack(t)
+		end
+		`)
+	if err != nil {
+		logrus.Errorf("DoString is failed: %s", err)
+	}
 
 	m.logger.WithContext(state.ctx).Info("the module was created")
 	return m, nil

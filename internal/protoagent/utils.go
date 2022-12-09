@@ -54,7 +54,12 @@ func UnpackProtoMessage(dst proto.Message, msg []byte, msgType Message_Type) err
 		return err
 	}
 	if actualMsgType != msgType {
-		return fmt.Errorf("%w: expected agent message type: %d, got: %d", errors.ErrUnexpectedUnpackType, msgType, actualMsgType)
+		return fmt.Errorf(
+			"%w: expected agent message type: %d, got: %d",
+			errors.ErrUnexpectedUnpackType,
+			msgType,
+			actualMsgType,
+		)
 	}
 	if err := UnpackProtoMessagePayload(dst, payload); err != nil {
 		return err

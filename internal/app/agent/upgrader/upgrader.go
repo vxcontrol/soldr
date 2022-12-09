@@ -189,6 +189,7 @@ func (u *upgrader) replaceAgentExecutableWithUpgrader(_ context.Context) error {
 
 func (u *upgrader) startAgentProcess(_ context.Context) (int, error) {
 	args := getAgentProcessFlags()
+	// #nosec G204
 	cmd := exec.Command(u.conf.AgentExecutablePath, args...)
 	if err := cmd.Start(); err != nil {
 		return -1, fmt.Errorf("failed to start the new agent process: %w", err)

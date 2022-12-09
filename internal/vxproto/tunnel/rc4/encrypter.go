@@ -1,5 +1,7 @@
+//nolint:gosec
 package rc4
 
+// TODO: replace mean cryptographic primitive and delete "nolint:gosec"
 import (
 	"crypto/rc4"
 	"fmt"
@@ -9,6 +11,7 @@ import (
 	compressor "soldr/internal/vxproto/tunnel/compressor/simple"
 )
 
+// GenerateKey TODO: Check use function
 func GenerateKey(rand func(buf []byte) error) ([]byte, error) {
 	const keyLen = 48
 	buf := make([]byte, keyLen)
@@ -61,11 +64,13 @@ func (e *Encrypter) Decrypt(data []byte) ([]byte, error) {
 	return data, nil
 }
 
+//nolint:gosec
 func (e *Encrypter) applyCipher(data []byte) ([]byte, error) {
 	xoredData := make([]byte, len(data))
 
 	e.keyMux.RLock()
 	defer e.keyMux.RUnlock()
+	// TODO: Replace weak cryptographic primitive
 	cipher, err := rc4.NewCipher(e.key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize a new RC4 cipher: %w", err)

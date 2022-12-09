@@ -93,31 +93,31 @@ func ApplyGorm(db *gorm.DB) {
 		recordStartTime(scope)
 	})
 	db.Callback().Create().After("gorm:create").Register("metric:create-after", func(scope *gorm.Scope) {
-		labels := append(labels, makeQueryLabel(scope))
-		recordHistogram(scope, createHist, labels...)
+		l := append(labels, makeQueryLabel(scope))
+		recordHistogram(scope, createHist, l...)
 	})
 
 	db.Callback().Update().Before("gorm:update").Register("metric:update-before", func(scope *gorm.Scope) {
 		recordStartTime(scope)
 	})
 	db.Callback().Update().After("gorm:update").Register("metric:update-after", func(scope *gorm.Scope) {
-		labels := append(labels, makeQueryLabel(scope))
-		recordHistogram(scope, updateHist, labels...)
+		l := append(labels, makeQueryLabel(scope))
+		recordHistogram(scope, updateHist, l...)
 	})
 
 	db.Callback().Query().Before("gorm:query").Register("metric:query-before", func(scope *gorm.Scope) {
 		recordStartTime(scope)
 	})
 	db.Callback().Query().After("gorm:query").Register("metric:query-after", func(scope *gorm.Scope) {
-		labels := append(labels, makeQueryLabel(scope))
-		recordHistogram(scope, queryHist, labels...)
+		l := append(labels, makeQueryLabel(scope))
+		recordHistogram(scope, queryHist, l...)
 	})
 
 	db.Callback().Delete().Before("gorm:delete").Register("metric:delete-before", func(scope *gorm.Scope) {
 		recordStartTime(scope)
 	})
 	db.Callback().Delete().After("gorm:delete").Register("metric:delete-after", func(scope *gorm.Scope) {
-		labels := append(labels, makeQueryLabel(scope))
-		recordHistogram(scope, deleteHist, labels...)
+		l := append(labels, makeQueryLabel(scope))
+		recordHistogram(scope, deleteHist, l...)
 	})
 }

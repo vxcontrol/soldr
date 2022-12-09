@@ -1,5 +1,8 @@
+//nolint:gosec,staticcheck
 package vxproto
 
+//TODO: replace mean cryptographic primitive and delete "nolint:gosec"
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"context"
 	"crypto/md5"
@@ -241,10 +244,20 @@ func (ms *moduleSocket) sendFileStream(ctx context.Context, dst string, file *Fi
 			return fmt.Errorf("invalid left index %d: cannot be negative", left)
 		}
 		if left > right {
-			return fmt.Errorf("invalid left (%d) and right (%d) indices: the left index cannot be greater than the right index", left, right)
+			return fmt.Errorf(
+				"invalid left (%d) and right (%d) indices: "+
+					"the left index cannot be greater than the right index",
+				left,
+				right,
+			)
 		}
 		if right > dataLen {
-			return fmt.Errorf("invalid right index (%d) for the given data length (%d): the right index cannot be greater than the data length", right, dataLen)
+			return fmt.Errorf(
+				"invalid right index (%d) for the given data length (%d): "+
+					"the right index cannot be greater than the data length",
+				right,
+				dataLen,
+			)
 		}
 		return nil
 	}
@@ -355,7 +368,10 @@ func (ms *moduleSocket) parseFileStream(ctx context.Context, packet *Packet) (bo
 	}
 
 	tempDir := filepath.Join(os.TempDir(), "vx-store")
-	os.Mkdir(tempDir, 0700)
+	err := os.Mkdir(tempDir, 0700)
+	if err != nil {
+		return false, fmt.Errorf("failed to make directory: %s", err)
+	}
 
 	tempFile := filepath.Join(tempDir, uniqArr[0])
 	tempFileFlags := os.O_WRONLY | os.O_CREATE

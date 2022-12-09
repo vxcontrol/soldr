@@ -1,5 +1,7 @@
+//nolint:staticcheck
 package lua
 
+//TODO: io/ioutil is deprecated, replace to fs.FS and delete "nolint:staticcheck"
 import (
 	"context"
 	"fmt"
@@ -58,7 +60,7 @@ func NewState(files map[string][]byte) (*State, error) {
 
 	pathToPID := filepath.Join(tmpdir, "lock.pid")
 	pid := strconv.Itoa(os.Getpid())
-	if err = ioutil.WriteFile(pathToPID, []byte(pid), 0640); err != nil {
+	if err = ioutil.WriteFile(pathToPID, []byte(pid), 0600); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +93,10 @@ func NewState(files map[string][]byte) (*State, error) {
 	for name, data := range nfiles {
 		lfiles[name] = string(data)
 	}
-	s.getRegisterFFILoader()(s.L, s.tmpdir)
+	err = s.getRegisterFFILoader()(s.L, s.tmpdir)
+	if err != nil {
+		return nil, err
+	}
 	luar.GoToLua(s.L, tmpdir)
 	s.L.SetGlobal("__tmpdir")
 	luar.GoToLua(s.L, lfiles)
@@ -151,7 +156,7 @@ func writeFile(ctx context.Context, path string, contents []byte, logger *logrus
 			Error("failed to create a directory")
 		return fmt.Errorf("failed to create a directory: %w", err)
 	}
-	if err := ioutil.WriteFile(path, contents, 0640); err != nil {
+	if err := ioutil.WriteFile(path, contents, 0600); err != nil {
 		logger.WithContext(ctx).WithError(err).WithField("name", path).
 			Error("failed to write a file")
 		return fmt.Errorf("failed to write a file: %w", err)
@@ -164,7 +169,7 @@ func (s *State) getModuleLoader() func(*lua.State) int {
 	return func(L *lua.State) int {
 		moduleName := L.CheckString(1)
 
-		logger := logger.WithFields(logrus.Fields{
+		l := logger.WithFields(logrus.Fields{
 			"component": "lua_module_loader",
 			"require":   moduleName,
 		})
@@ -173,7 +178,7 @@ func (s *State) getModuleLoader() func(*lua.State) int {
 		err := luar.LuaToGo(L, -1, &files)
 		L.Pop(1)
 		if err != nil {
-			logger.WithError(err).Error("failed to put the module files into the lua state")
+			l.WithError(err).Error("failed to put the module files into the lua state")
 		}
 
 		var moduleNames []string
@@ -184,7 +189,7 @@ func (s *State) getModuleLoader() func(*lua.State) int {
 			moduleData, ok := files[filePath]
 			if ok && L.LoadBuffer([]byte(moduleData), len(moduleData), moduleName) != 0 {
 				err = fmt.Errorf(L.ToString(-1))
-				logger.WithError(err).Error("failed to put the module data into the lua state")
+				l.WithError(err).Error("failed to put the module data into the lua state")
 				L.Pop(1)
 				break
 			}
@@ -348,51 +353,57 @@ func (s *State) RegisterLogger(level logrus.Level, fields logrus.Fields) error {
 	s.L.SetField(-2, "_debug")
 	s.L.SetGlobal("__log")
 
-	s.L.DoString(`
-	function __log.error(...)
-		if __log.level >= __log.level_error then
-			__log._error(...)
+	err := s.L.DoString(`
+		function __log.error(...)
+			if __log.level >= __log.level_error then
+				__log._error(...)
+			end
 		end
-	end
-	function __log.warn(...)
-		if __log.level >= __log.level_warn then
-			__log._warn(...)
+		function __log.warn(...)
+			if __log.level >= __log.level_warn then
+				__log._warn(...)
+			end
 		end
-	end
-	function __log.info(...)
-		if __log.level >= __log.level_info then
-			__log._info(...)
+		function __log.info(...)
+			if __log.level >= __log.level_info then
+				__log._info(...)
+			end
 		end
-	end
-	function __log.debug(...)
-		if __log.level >= __log.level_debug then
-			__log._debug(...)
+		function __log.debug(...)
+			if __log.level >= __log.level_debug then
+				__log._debug(...)
+			end
 		end
-	end
-	`)
+		`)
+	if err != nil {
+		logrus.Errorf("DoString is failed: %s", err)
+	}
 
-	s.L.DoString(`
-	function __log.errorf(fmt, ...)
-		if __log.level >= __log.level_error then
-			__log._error(string.format(fmt, ...))
+	err = s.L.DoString(`
+		function __log.errorf(fmt, ...)
+			if __log.level >= __log.level_error then
+				__log._error(string.format(fmt, ...))
+			end
 		end
-	end
-	function __log.warnf(fmt, ...)
-		if __log.level >= __log.level_warn then
-			__log._warn(string.format(fmt, ...))
+		function __log.warnf(fmt, ...)
+			if __log.level >= __log.level_warn then
+				__log._warn(string.format(fmt, ...))
+			end
 		end
-	end
-	function __log.infof(fmt, ...)
-		if __log.level >= __log.level_info then
-			__log._info(string.format(fmt, ...))
+		function __log.infof(fmt, ...)
+			if __log.level >= __log.level_info then
+				__log._info(string.format(fmt, ...))
+			end
 		end
-	end
-	function __log.debugf(fmt, ...)
-		if __log.level >= __log.level_debug then
-			__log._debug(string.format(fmt, ...))
+		function __log.debugf(fmt, ...)
+			if __log.level >= __log.level_debug then
+				__log._debug(string.format(fmt, ...))
+			end
 		end
-	end
-	`)
+		`)
+	if err != nil {
+		logrus.Errorf("DoString is failed: %s", err)
+	}
 
 	return nil
 }

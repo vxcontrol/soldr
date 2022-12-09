@@ -10,7 +10,9 @@ import (
 	"soldr/internal/protoagent"
 )
 
-func NewConnectionPolicyManagerIterator(versionsConfig ServerAPIVersionsConfig) (*ConnectionPolicyManagerIterator, error) {
+func NewConnectionPolicyManagerIterator(
+	versionsConfig ServerAPIVersionsConfig,
+) (*ConnectionPolicyManagerIterator, error) {
 	if versionsConfig == nil {
 		return nil, fmt.Errorf("a nil configuration object passed")
 	}
@@ -126,7 +128,7 @@ func (p EndpointConnectionPolicy) String() string {
 	case EndpointConnectionPolicyUpgrade:
 		return "upgrade"
 	default:
-		return "unknown"
+		return typeUnknown
 	}
 }
 
@@ -135,7 +137,10 @@ type staticConnectionPolicyManager struct {
 	policyType EndpointConnectionPolicy
 }
 
-func newStaticConnectionPolicyManager(policy ConnectionPolicy, policyType EndpointConnectionPolicy) *staticConnectionPolicyManager {
+func newStaticConnectionPolicyManager(
+	policy ConnectionPolicy,
+	policyType EndpointConnectionPolicy,
+) *staticConnectionPolicyManager {
 	return &staticConnectionPolicyManager{
 		policy:     policy,
 		policyType: policyType,
@@ -309,7 +314,8 @@ func newUpgradePacketChecker() *upgradePacketChecker {
 			return fmt.Errorf("only upgrade files can be sent via this endpoint")
 		default:
 			return fmt.Errorf(
-				"sending packet of type %d, but only data packets (of type %d) or file packets (of type %d) are allowed for this connection",
+				"sending packet of type %d, "+
+					"but only data packets (of type %d) or file packets (of type %d) are allowed for this connection",
 				p.PType,
 				PTData,
 				PTFile,
