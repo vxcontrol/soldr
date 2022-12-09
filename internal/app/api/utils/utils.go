@@ -103,29 +103,6 @@ func IsUseSSL() bool {
 	return os.Getenv("API_USE_SSL") == "true"
 }
 
-// GetServerHost is function to return server host and port in format {host}:{port}
-// there will be ignored port if it's default for http or https schema (80 and 443)
-func GetServerHost() string {
-	useSSL := IsUseSSL()
-	host := os.Getenv("API_SERVER_HOST")
-	if host == "" {
-		host = "localhost"
-	}
-	portHttp := os.Getenv("API_SERVER_PORT_HTTP")
-	portHttps := os.Getenv("API_SERVER_PORT_HTTPS")
-	var port string
-	if useSSL {
-		if portHttps != "" && portHttps != "443" {
-			port = ":" + portHttps
-		}
-	} else {
-		if portHttp != "" && portHttp != "80" {
-			port = ":" + portHttp
-		}
-	}
-	return fmt.Sprintf("%s%s", host, port)
-}
-
 // FromContext is function to get logrus Entry with context
 func FromContext(c *gin.Context) *logrus.Entry {
 	return logrus.WithContext(c.Request.Context())

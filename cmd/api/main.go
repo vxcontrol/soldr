@@ -14,11 +14,10 @@ import (
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
 	"github.com/natefinch/lumberjack"
-	"github.com/oklog/run"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
+	"golang.org/x/sync/errgroup"
 
-	"soldr/internal/app"
 	"soldr/internal/app/api/server"
 	srvevents "soldr/internal/app/api/server/events"
 	"soldr/internal/app/api/storage/mem"
@@ -88,8 +87,9 @@ func defaultConfig() Config {
 			Addr: "otel.local:8148",
 		},
 		PublicAPI: PublicAPIConfig{
-			Addr:      ":8080",
-			AddrHTTPS: ":8443",
+			Addr:            ":8080",
+			AddrHTTPS:       ":8443",
+			GracefulTimeout: time.Minute,
 		},
 		EventWorker: EventWorkerConfig{
 			PollInterval: 30 * time.Second,
@@ -110,8 +110,8 @@ func main() {
 		os.Exit(0)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
 
 	cfg := defaultConfig()
 	cfgLoader := confita.NewLoader(
@@ -243,6 +243,7 @@ func main() {
 	// initialize system metric collection in current observer instance
 	observability.Observer.StartProcessMetricCollect("vxapi", version.GetBinaryVersion(), attr)
 	observability.Observer.StartGoRuntimeMetricCollect("vxapi", version.GetBinaryVersion(), attr)
+	defer observability.Observer.Close()
 
 	exchanger := srvevents.NewExchanger()
 	eventWorker := srvevents.NewEventPoller(exchanger, cfg.EventWorker.PollInterval, dbWithORM)
@@ -261,27 +262,31 @@ func main() {
 	// run worker to synchronize events retention policy to all instance DB
 	go worker.SyncRetentionEvents(ctx, dbWithORM)
 
-	runGroup := app.NewAppGroup()
-	signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE)
-	runGroup.Add(run.SignalHandler(ctx, syscall.SIGINT, syscall.SIGTERM))
-
 	router := server.NewRouter(
 		dbWithORM,
 		exchanger,
 		serviceDBConnectionStorage,
 		serviceS3ConnectionStorage,
 	)
-	api := server.NewAPI(server.Config{
-		Addr:      cfg.PublicAPI.Addr,
-		AddrHTTPS: cfg.PublicAPI.AddrHTTPS,
-		UseSSL:    cfg.PublicAPI.UseSSL,
-		CertFile:  cfg.PublicAPI.CertFile,
-		KeyFile:   cfg.PublicAPI.KeyFile,
-	}, router, logger.WithField("component", "api"))
-	runGroup.Add(api.Start, api.Stop)
 
-	defer observability.Observer.Close()
-
-	logger.Info("starting services")
-	runGroup.Run()
+	srvg, ctx := errgroup.WithContext(ctx)
+	srvg.Go(func() error {
+		return server.Server{
+			Addr:            cfg.PublicAPI.Addr,
+			GracefulTimeout: cfg.PublicAPI.GracefulTimeout,
+		}.ListenAndServe(ctx, router)
+	})
+	if cfg.PublicAPI.UseSSL {
+		srvg.Go(func() error {
+			return server.Server{
+				Addr:            cfg.PublicAPI.AddrHTTPS,
+				CertFile:        cfg.PublicAPI.CertFile,
+				KeyFile:         cfg.PublicAPI.KeyFile,
+				GracefulTimeout: cfg.PublicAPI.GracefulTimeout,
+			}.ListenAndServeTLS(ctx, router)
+		})
+	}
+	if err := srvg.Wait(); err != nil {
+		logger.WithError(err).Error("failed to start server")
+	}
 }
