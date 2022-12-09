@@ -3,7 +3,7 @@ import { Injectable } from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, debounceTime, filter, first, forkJoin, map, of, switchMap, withLatestFrom, zip } from 'rxjs';
+import { catchError, debounceTime, filter, forkJoin, map, of, switchMap, withLatestFrom } from 'rxjs';
 
 import {
     AgentAction,
@@ -18,6 +18,7 @@ import {
     ModelsGroup,
     ModulesService,
     PrivateAgent,
+    PrivateAgentCountResponse,
     PrivateAgentModules,
     PrivateAgents,
     PrivateTags,
@@ -28,11 +29,11 @@ import {
     VersionsService
 } from '@soldr/api';
 import { agentToDto } from '@soldr/models';
-import { DEBOUNCING_DURATION_FOR_REQUESTS, Filter, ModalInfoService } from '@soldr/shared';
+import { DEBOUNCING_DURATION_FOR_REQUESTS, ModalInfoService } from '@soldr/shared';
 
 import * as AgentListActions from './agent-list.actions';
 import { State } from './agent-list.reducer';
-import { selectFilters, selectInitialListQuery } from './agent-list.selectors';
+import { selectInitialListQuery } from './agent-list.selectors';
 
 @Injectable()
 export class AgentListEffects {
@@ -41,18 +42,11 @@ export class AgentListEffects {
             ofType(AgentListActions.fetchCountersByFilters),
             debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
-                this.store.select(selectFilters).pipe(
-                    first(),
-                    map((filters: Filter[]) => filters.map((filter) => this.fetchAgentsCountByFilter(filter))),
-                    switchMap((v) => zip(...v)),
-                    map((counters) =>
-                        counters.reduce((acc, { count, id }) => {
-                            acc[id] = count;
-
-                            return acc;
-                        }, {} as Record<string, number>)
+                this.agentsService.fetchStatistics().pipe(
+                    map((response: SuccessResponse<PrivateAgentCountResponse>) =>
+                        AgentListActions.fetchCountersByFiltersSuccess({ counters: response.data })
                     ),
-                    map((counters) => AgentListActions.fetchCountersByFiltersSuccess({ counters }))
+                    catchError(() => of(AgentListActions.fetchCountersByFiltersFailure()))
                 )
             )
         )
@@ -355,17 +349,6 @@ export class AgentListEffects {
             map(() => AgentListActions.fetchCountersByFilters())
         )
     );
-
-    private fetchAgentsCountByFilter = (filter: Filter) => {
-        const query = allListQuery({ filters: filter.value });
-
-        return this.agentsService.fetchList(query).pipe(
-            map((response: SuccessResponse<PrivateAgents>) => ({
-                id: filter.id,
-                count: response.data.total
-            }))
-        );
-    };
 
     constructor(
         private actions$: Actions,

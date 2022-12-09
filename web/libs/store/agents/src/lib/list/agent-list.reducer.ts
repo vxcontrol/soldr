@@ -1,6 +1,6 @@
 import { createReducer, on } from '@ngrx/store';
 
-import { ErrorResponse } from '@soldr/api';
+import { ErrorResponse, PrivateAgentCountResponse } from '@soldr/api';
 import { Agent, manyAgentsToModels, oneAgentToModel, AgentModule, privateAgentModulesToModels } from '@soldr/models';
 import { Filter, Filtration, Sorting } from '@soldr/shared';
 
@@ -18,7 +18,7 @@ export interface State {
     filterItemsTags: string[];
     filterItemsVersions: string[];
     filters: Filter[];
-    filtersCounters: Record<string, number>;
+    filtersCounters: PrivateAgentCountResponse;
     gridFiltration: Filtration[];
     gridSearch: string;
     initialized: boolean;
@@ -57,7 +57,13 @@ export const initialState: State = {
     filterItemsTags: [],
     filterItemsVersions: [],
     filters: [],
-    filtersCounters: {},
+    filtersCounters: {
+        all: 0,
+        authorized: 0,
+        blocked: 0,
+        unauthorized: 0,
+        without_groups: 0
+    },
     gridFiltration: [],
     gridSearch: '',
     initialized: false,

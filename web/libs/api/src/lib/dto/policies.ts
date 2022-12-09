@@ -93,6 +93,11 @@ export interface PrivatePolicyModulesUpdates {
     policies?: ModelsPolicy[];
 }
 
+export interface PrivatePolicyCountResponse {
+    all: number;
+    without_groups: number;
+}
+
 export enum PoliciesSQLMappers {
     ModuleName = 'module_name',
     GroupId = 'group_id'

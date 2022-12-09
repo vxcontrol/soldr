@@ -19,7 +19,6 @@
 
         <mc-divider class="flex-none"></mc-divider>
 
-        <soldr-progress-container class="scrollable-y" [loadingFlag]="isLoadingGroups$ | async">
             <div
                 class="flex-auto groups-ang-filter__list"
                 *ngIf="(foundFilters$ | async)?.length > 0 || (filtersByGroup$ | async)?.length > 0; else notFound">
@@ -44,7 +43,11 @@
                     <mc-divider
                         *ngIf="(foundFilters$ | async)?.length > 0 && (filtersByGroup$ | async).length > 0"></mc-divider>
 
-                    <ng-container *ngIf="(isLoadingGroups$ | async) === false">
+                    <ng-container *ngrxLet="isLoadingGroups$; let isLoading">
+                        <mc-loader-overlay *ngIf="isLoading; else groupsLoaded"></mc-loader-overlay>
+                    </ng-container>
+
+                    <ng-template #groupsLoaded>
                         <mc-list-option
                             class="groups-ang-filter__group"
                             *ngFor="let group of (filtersByGroup$ | async)"
@@ -66,7 +69,7 @@
                                 </a>
                             </div>
                         </mc-list-option>
-                    </ng-container>
+                    </ng-template>
 
                 </mc-list-selection>
             </div>
@@ -77,6 +80,6 @@
                     </span>
                 </div>
             </ng-template>
-        </soldr-progress-container>
+
     </div>
 </ng-container>

@@ -1,9 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
-import { catchError, debounceTime, filter, first, forkJoin, map, of, switchMap, tap, withLatestFrom, zip } from 'rxjs';
+import { catchError, debounceTime, filter, forkJoin, map, of, switchMap, tap, withLatestFrom } from 'rxjs';
 
 import {
     AgentsService,
@@ -25,6 +26,7 @@ import {
     PrivateGroups,
     PrivatePolicies,
     PrivatePolicy,
+    PrivatePolicyCountResponse,
     PrivatePolicyModules,
     PrivateTags,
     SuccessResponse,
@@ -32,7 +34,7 @@ import {
     UpgradesService
 } from '@soldr/api';
 import { policyToDto } from '@soldr/models';
-import { DEBOUNCING_DURATION_FOR_REQUESTS, Filter, ModalInfoService } from '@soldr/shared';
+import { DEBOUNCING_DURATION_FOR_REQUESTS, ModalInfoService } from '@soldr/shared';
 import { SharedFacade } from '@soldr/store/shared';
 
 import * as PoliciesActions from './policies.actions';
@@ -44,7 +46,6 @@ import {
     selectEventsGridFiltration,
     selectEventsGridSearch,
     selectEventsGridSorting,
-    selectFilters,
     selectGroupsGridFiltration,
     selectGroupsGridSearch,
     selectGroupsGridSorting,
@@ -61,19 +62,13 @@ export class PoliciesEffects {
             ofType(PoliciesActions.fetchCountersByFilters),
             debounceTime(DEBOUNCING_DURATION_FOR_REQUESTS),
             switchMap(() =>
-                this.store.select(selectFilters).pipe(
-                    first(),
-                    map((filters: Filter[]) => filters.map((filter) => this.fetchPoliciesCountByFilter(filter))),
-                    switchMap((v) => zip(...v)),
-                    map((counters) =>
-                        counters.reduce((acc, { count, id }) => {
-                            acc[id] = count;
-
-                            return acc;
-                        }, {} as Record<string, number>)
-                    ),
-                    map((counters) => PoliciesActions.fetchCountersByFiltersSuccess({ counters }))
-                )
+                this.policiesService
+                    .fetchStatistics()
+                    .pipe(
+                        map((response: SuccessResponse<PrivatePolicyCountResponse>) =>
+                            PoliciesActions.fetchCountersByFiltersSuccess({ counters: response.data })
+                        )
+                    )
             )
         )
     );
@@ -190,7 +185,7 @@ export class PoliciesEffects {
                         PoliciesActions.selectPoliciesByIds({ ids: [response.data?.id] }),
                         PoliciesActions.fetchCountersByFilters()
                     ]),
-                    catchError(({ error }) => of(PoliciesActions.createPolicyFailure({ error })))
+                    catchError(({ error }: HttpErrorResponse) => of(PoliciesActions.createPolicyFailure({ error })))
                 )
             )
         )
@@ -202,7 +197,7 @@ export class PoliciesEffects {
             switchMap(({ policy }) =>
                 this.policiesService.update(policy.hash, policyToDto(policy)).pipe(
                     map(() => PoliciesActions.updatePolicySuccess()),
-                    catchError(({ error }) => of(PoliciesActions.updatePolicyFailure({ error })))
+                    catchError(({ error }: HttpErrorResponse) => of(PoliciesActions.updatePolicyFailure({ error })))
                 )
             )
         )
@@ -228,7 +223,7 @@ export class PoliciesEffects {
                             PoliciesActions.copyPolicySuccess({ policy: response.data }),
                             PoliciesActions.fetchCountersByFilters()
                         ]),
-                        catchError(({ error }) => of(PoliciesActions.copyPolicyFailure({ error })))
+                        catchError(({ error }: HttpErrorResponse) => of(PoliciesActions.copyPolicyFailure({ error })))
                     )
             )
         )
@@ -240,7 +235,7 @@ export class PoliciesEffects {
             switchMap(({ hash }) =>
                 this.policiesService.delete(hash).pipe(
                     switchMap(() => [PoliciesActions.deletePolicySuccess(), PoliciesActions.fetchCountersByFilters()]),
-                    catchError(({ error }) => of(PoliciesActions.deletePolicyFailure({ error })))
+                    catchError(({ error }: HttpErrorResponse) => of(PoliciesActions.deletePolicyFailure({ error })))
                 )
             )
         )
@@ -252,7 +247,9 @@ export class PoliciesEffects {
             switchMap(({ hash, group }) =>
                 this.policiesService.updateGroup(hash, { action: 'activate', group }).pipe(
                     map(() => PoliciesActions.linkPolicyToGroupSuccess()),
-                    catchError(({ error }) => of(PoliciesActions.linkPolicyToGroupFailure({ error })))
+                    catchError(({ error }: HttpErrorResponse) =>
+                        of(PoliciesActions.linkPolicyToGroupFailure({ error }))
+                    )
                 )
             )
         )
@@ -264,7 +261,9 @@ export class PoliciesEffects {
             switchMap(({ hash, group }) =>
                 this.policiesService.updateGroup(hash, { action: 'deactivate', group }).pipe(
                     map(() => PoliciesActions.unlinkPolicyFromGroupSuccess()),
-                    catchError(({ error }) => of(PoliciesActions.unlinkPolicyFromGroupFailure({ error })))
+                    catchError(({ error }: HttpErrorResponse) =>
+                        of(PoliciesActions.unlinkPolicyFromGroupFailure({ error }))
+                    )
                 )
             )
         )
@@ -507,7 +506,7 @@ export class PoliciesEffects {
                     })
                     .pipe(
                         map(() => PoliciesActions.upgradeAgentsSuccess()),
-                        catchError(({ error }) => {
+                        catchError(({ error }: HttpErrorResponse) => {
                             this.modalInfoService.openErrorInfoModal(
                                 this.transloco.translate('agents.Agents.EditAgent.ErrorText.UpgradeAgent')
                             );
@@ -694,15 +693,4 @@ export class PoliciesEffects {
         private transloco: TranslocoService,
         private upgradesService: UpgradesService
     ) {}
-
-    private fetchPoliciesCountByFilter = (filter: Filter) => {
-        const query = allListQuery({ filters: filter.value });
-
-        return this.policiesService.fetchList(query).pipe(
-            map((response: SuccessResponse<PrivatePolicies>) => ({
-                id: filter.id,
-                count: response.data.total
-            }))
-        );
-    };
 }

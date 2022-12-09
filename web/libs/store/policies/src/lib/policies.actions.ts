@@ -10,6 +10,7 @@ import {
     PrivateGroups,
     PrivatePolicies,
     PrivatePolicy,
+    PrivatePolicyCountResponse,
     PrivatePolicyInfo,
     PrivatePolicyModules
 } from '@soldr/api';
@@ -26,6 +27,7 @@ export enum ActionType {
 
     FetchCountersByFilters = '[policies] Fetch counter by filters',
     FetchCountersByFiltersSuccess = '[policies] Fetch counter by filters - Success',
+    FetchCountersByFiltersFailure = '[policies] Fetch counter by filters - Failure',
 
     FetchAllPolicies = '[policies] Fetch all policies',
     FetchAllPoliciesSuccess = '[policies] Fetch all policies - Success',
@@ -154,8 +156,9 @@ export const selectGroup = createAction(ActionType.SelectGroup, props<{ id: stri
 export const fetchCountersByFilters = createAction(ActionType.FetchCountersByFilters);
 export const fetchCountersByFiltersSuccess = createAction(
     ActionType.FetchCountersByFiltersSuccess,
-    props<{ counters: Record<string, number> }>()
+    props<{ counters: PrivatePolicyCountResponse }>()
 );
+export const fetchCountersByFiltersFailure = createAction(ActionType.FetchCountersByFiltersFailure);
 
 export const fetchAllPolicies = createAction(ActionType.FetchAllPolicies, props<{ silent: boolean }>());
 export const fetchAllPoliciesSuccess = createAction(
