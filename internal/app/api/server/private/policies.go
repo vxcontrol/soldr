@@ -36,6 +36,11 @@ type policy struct {
 	Details policyDetails `json:"details"`
 }
 
+type policyCount struct {
+	All           int `json:"all"`
+	WithoutGroups int `json:"without_groups"`
+}
+
 type policyInfo struct {
 	Name string   `json:"name" binding:"max=255,required_without=From"`
 	Tags []string `json:"tags" binding:"omitempty"`
@@ -854,4 +859,50 @@ func DeletePolicy(c *gin.Context) {
 	}
 
 	utils.HTTPSuccessWithUAFields(c, http.StatusOK, struct{}{}, uaf)
+}
+
+// GetPoliciesCount is a function to return groups of counted policies
+// @Summary Retrieve groups of counted policies
+// @Tags Policies
+// @Produce json
+// @Success 200 {object} utils.successResp{data=policyCount} "groups of counted agents policies successfully"
+// @Failure 500 {object} utils.errorResp "internal error"
+// @Router /policies/count [get]
+func GetPoliciesCount(c *gin.Context) {
+	var (
+		err  error
+		iDB  *gorm.DB
+		resp policyCount
+	)
+	logger := utils.FromContext(c)
+	uaf := utils.UserActionFields{
+		Domain:            "policy",
+		ObjectType:        "policy",
+		ActionCode:        "counting",
+		ObjectDisplayName: utils.UnknownObjectDisplayName,
+	}
+
+	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
+		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+		return
+	}
+
+	// language=MySQL
+	const q = `SELECT
+    	COUNT(*) AS 'all',
+    	(SELECT COUNT(*) FROM policies
+		LEFT JOIN groups_to_policies gtp on policies.id = gtp.policy_id
+		WHERE gtp.group_id IS NULL AND deleted_at IS NULL) AS 'without_groups'
+	FROM policies
+	WHERE deleted_at IS NULL`
+	err = iDB.Raw(q).
+		Scan(&resp).
+		Error
+	if err != nil {
+		logger.WithError(err).Errorf("could not count policies")
+		utils.HTTPError(c, srverrors.ErrInternal, err)
+		return
+	}
+
+	utils.HTTPSuccessWithUAFields(c, http.StatusOK, resp, uaf)
 }

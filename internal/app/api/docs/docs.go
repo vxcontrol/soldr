@@ -268,6 +268,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/agents/count": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Agents"
+                ],
+                "summary": "Retrieve groups of counted agents",
+                "responses": {
+                    "200": {
+                        "description": "groups of counted agents retrieved successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/private.agentCount"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/agents/{hash}": {
             "get": {
                 "produces": [
@@ -3941,6 +3978,43 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "internal error on creating policy",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/policies/count": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Policies"
+                ],
+                "summary": "Retrieve groups of counted policies",
+                "responses": {
+                    "200": {
+                        "description": "groups of counted agents policies successfully",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/private.policyCount"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "500": {
+                        "description": "internal error",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -8609,6 +8683,26 @@ const docTemplate = `{
                 }
             }
         },
+        "private.agentCount": {
+            "type": "object",
+            "properties": {
+                "all": {
+                    "type": "integer"
+                },
+                "authorized": {
+                    "type": "integer"
+                },
+                "blocked": {
+                    "type": "integer"
+                },
+                "unauthorized": {
+                    "type": "integer"
+                },
+                "without_groups": {
+                    "type": "integer"
+                }
+            }
+        },
         "private.agentDetails": {
             "type": "object",
             "properties": {
@@ -9092,6 +9186,17 @@ const docTemplate = `{
                 },
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
+                }
+            }
+        },
+        "private.policyCount": {
+            "type": "object",
+            "properties": {
+                "all": {
+                    "type": "integer"
+                },
+                "without_groups": {
+                    "type": "integer"
                 }
             }
         },

@@ -1381,6 +1381,19 @@ definitions:
       details:
         $ref: '#/definitions/private.agentDetails'
     type: object
+  private.agentCount:
+    properties:
+      all:
+        type: integer
+      authorized:
+        type: integer
+      blocked:
+        type: integer
+      unauthorized:
+        type: integer
+      without_groups:
+        type: integer
+    type: object
   private.agentDetails:
     properties:
       active_modules:
@@ -1704,6 +1717,13 @@ definitions:
         $ref: '#/definitions/private.policyDetails'
       policy:
         $ref: '#/definitions/models.Policy'
+    type: object
+  private.policyCount:
+    properties:
+      all:
+        type: integer
+      without_groups:
+        type: integer
     type: object
   private.policyDetails:
     properties:
@@ -2466,6 +2486,27 @@ paths:
       tags:
       - Agents
       - Modules
+  /agents/count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: groups of counted agents retrieved successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/private.agentCount'
+              type: object
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Retrieve groups of counted agents
+      tags:
+      - Agents
   /auth/login:
     post:
       consumes:
@@ -5202,6 +5243,27 @@ paths:
       tags:
       - Policies
       - Modules
+  /policies/count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: groups of counted agents policies successfully
+          schema:
+            allOf:
+            - $ref: '#/definitions/SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/private.policyCount'
+              type: object
+        "500":
+          description: internal error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Retrieve groups of counted policies
+      tags:
+      - Policies
   /roles/:
     get:
       parameters:

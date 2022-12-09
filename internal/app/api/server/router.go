@@ -286,6 +286,7 @@ func setAgentsGroup(parent *gin.RouterGroup, service *private.AgentService) {
 	{
 		agentsViewGroup.GET("/", service.GetAgents)
 		agentsViewGroup.GET("/:hash", service.GetAgent)
+		agentsViewGroup.GET("/count", service.GetAgentsCount)
 	}
 
 	agentsModulesViewGroup := parent.Group("/agents")
@@ -372,6 +373,7 @@ func setPoliciesGroup(parent *gin.RouterGroup) {
 	{
 		policiesViewGroup.GET("/", private.GetPolicies)
 		policiesViewGroup.GET("/:hash", private.GetPolicy)
+		policiesViewGroup.GET("/count", private.GetPoliciesCount)
 	}
 
 	policiesModulesViewGroup := parent.Group("/policies")

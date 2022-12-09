@@ -44,6 +44,14 @@ type agentInfo struct {
 	Arch string `json:"arch" binding:"oneof=386 amd64,required" default:"amd64" enums:"386,amd64"`
 }
 
+type agentCount struct {
+	All           int `json:"all"`
+	Authorized    int `json:"authorized"`
+	Blocked       int `json:"blocked"`
+	Unauthorized  int `json:"unauthorized"`
+	WithoutGroups int `json:"without_groups"`
+}
+
 type AgentsAction struct {
 	Action  string              `form:"action" json:"action" binding:"oneof=authorize block delete unauthorize move,required" enums:"authorize,block,delete,unauthorize,move"`
 	Filters []utils.TableFilter `form:"filters" json:"filters" binding:"omitempty"`
@@ -185,6 +193,8 @@ func getActionCode(action string) string {
 		actionCode = "group change"
 	case "edit":
 		actionCode = "editing"
+	case "count":
+		actionCode = "counting"
 	default:
 		actionCode = ""
 	}
@@ -958,4 +968,51 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 	}
 
 	utils.HTTPSuccessWithUAFields(c, http.StatusOK, struct{}{}, uaf)
+}
+
+// GetAgentsCount is a function to return groups of counted agents
+// @Summary Retrieve groups of counted agents
+// @Tags Agents
+// @Produce json
+// @Success 200 {object} utils.successResp{data=agentCount} "groups of counted agents retrieved successfully"
+// @Failure 500 {object} utils.errorResp "internal error"
+// @Router /agents/count [get]
+func (s *AgentService) GetAgentsCount(c *gin.Context) {
+	var (
+		err  error
+		iDB  *gorm.DB
+		resp agentCount
+	)
+	logger := utils.FromContext(c)
+	uaf := utils.UserActionFields{
+		Domain:            "agent",
+		ObjectType:        "agent",
+		ActionCode:        getActionCode("count"),
+		ObjectDisplayName: utils.UnknownObjectDisplayName,
+	}
+
+	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
+		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+		return
+	}
+
+	// language=MySQL
+	const q = `SELECT
+		COUNT(*) AS 'all',
+		SUM(auth_status = 'authorized') AS 'authorized',
+		SUM(auth_status = 'blocked') AS 'blocked',
+		SUM(auth_status = 'unauthorized') AS 'unauthorized',
+		SUM(group_id = 0 AND auth_status = 'authorized') AS 'without_groups'
+		FROM agents
+		WHERE deleted_at IS NULL`
+	err = iDB.Raw(q).
+		Scan(&resp).
+		Error
+	if err != nil {
+		logger.WithError(err).Errorf("could not count agents")
+		utils.HTTPError(c, srverrors.ErrInternal, err)
+		return
+	}
+
+	utils.HTTPSuccessWithUAFields(c, http.StatusOK, resp, uaf)
 }
