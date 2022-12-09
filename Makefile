@@ -145,7 +145,7 @@ s3-init: $(GOMINIO_BIN)
 
 .PHONY: s3-upload-vxagent
 s3-upload-vxagent: $(GOMINIO_BIN)
-	$(eval VERSION := $(shell cat $(CURDIR)/build/artifacts/agent/version | sed 's/\-/.0-/'))
+	$(eval VERSION := $(shell cat $(CURDIR)/build/artifacts/agent/version))
 	$(eval VERSION_MAJ := $(shell echo "$(VERSION)" | cut -d '.' -f 1 | cut -c2-))
 	$(eval VERSION_MIN := $(shell echo "$(VERSION)" | cut -d '.' -f 2))
 	$(eval VERSION_PATCH := $(shell echo "$(VERSION)" | cut -d '.' -f 3 | cut -d '-' -f 1))
