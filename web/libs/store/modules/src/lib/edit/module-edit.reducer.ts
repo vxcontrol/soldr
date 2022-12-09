@@ -787,7 +787,8 @@ export const reducer = createReducer(
             locale.event_config[eventName] = applyChangesToObject(
                 locale.event_config[eventName],
                 Object.keys(locale.event_config[eventName] || {}),
-                eventKeys
+                eventKeys,
+                (keyName: string) => getLocaleDescriptionByValue(keyName)
             );
         }
 
@@ -1088,7 +1089,8 @@ export const reducer = createReducer(
             locale.action_config[actionName] = applyChangesToObject(
                 locale.action_config[actionName],
                 Object.keys(locale.action_config[actionName] || {}),
-                actionKeys
+                actionKeys,
+                (keyName: string) => getLocaleDescriptionByValue(keyName)
             );
         }
 
