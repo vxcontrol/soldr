@@ -36,7 +36,7 @@ const name = "responder";
 
 module.exports = {
   name,
-  props: ["protoAPI", "hash", "module", "eventsAPI", "modulesAPI", "components", "viewMode"],
+  props: ["protoAPI", "hash", "module", "api", "components", "viewMode"],
   data: () => ({
     leftTab: undefined,
     connection: {},
