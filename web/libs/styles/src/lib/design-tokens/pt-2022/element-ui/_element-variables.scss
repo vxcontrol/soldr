@@ -570,7 +570,7 @@ $button-disabled-border-color: $border-color-lighter !default;
 /// color||Color|0
 $button-primary-border-color: $button-dark-color-scheme-primary-border;
 /// color||Color|0
-$button-primary-font-color: $color-primary-text;
+$button-primary-font-color: $color-black;
 /// color||Color|0
 $button-primary-background-color: $button-dark-color-scheme-primary-background;
 /// color||Color|0
@@ -834,6 +834,8 @@ $datepicker-cell-hover-color: #fff !default;
 $loading-spinner-size: 42px !default;
 /// height||Other|4
 $loading-fullscreen-spinner-size: 50px !default;
+
+$loader-overlay: $loader-overlay-dark-color-scheme-background;
 
 /* Scrollbar
 --------------------------*/

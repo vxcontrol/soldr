@@ -25,6 +25,11 @@
         }
 
         @include e(input) {
+            .el-checkbox__inner::after {
+                border-left: 0;
+                border-top: 0;
+            }
+
             @include when(disabled) {
                 .el-checkbox__inner {
                     border-color: map-get($tokens, checkbox-disabled-border-color);
