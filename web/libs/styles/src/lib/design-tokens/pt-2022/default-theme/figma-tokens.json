@@ -1609,7 +1609,7 @@
     "font": {
       "family": {
         "accent": {
-          "value": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "value": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "type": "fontFamilies"
         },
         "base": {
@@ -1759,7 +1759,7 @@
           "lineHeight": "48px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -1771,7 +1771,7 @@
           "lineHeight": "38px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -1783,7 +1783,7 @@
           "lineHeight": "28px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -1795,7 +1795,7 @@
           "lineHeight": "24px",
           "letterSpacing": "normal",
           "fontWeight": "600",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -3471,7 +3471,7 @@
           "lineHeight": "76px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -3483,7 +3483,7 @@
           "lineHeight": "56px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -3495,7 +3495,7 @@
           "lineHeight": "44px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -3507,7 +3507,7 @@
           "lineHeight": "32px",
           "letterSpacing": "normal",
           "fontWeight": "normal",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -3519,7 +3519,7 @@
           "lineHeight": "28px",
           "letterSpacing": "normal",
           "fontWeight": "600",
-          "fontFamily": "'TT Positive', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
+          "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
           "textCase": "none",
           "fontFeatureSettings": "initial"
         },
@@ -5181,9 +5181,19 @@
     "datepicker-body": {
       "light-color-scheme": {
         "states": {
-          "selected": {
+          "today": {
             "color": {
               "value": "{light-color-scheme.primary.palette.500}",
+              "type": "color"
+            },
+            "background": {
+              "value": "{light-color-scheme.background.background}",
+              "type": "color"
+            }
+          },
+          "selected": {
+            "color": {
+              "value": "{light-color-scheme.foreground.text}",
               "type": "color"
             },
             "background": {
@@ -5195,9 +5205,19 @@
       },
       "dark-color-scheme": {
         "states": {
-          "selected": {
+          "today": {
             "color": {
               "value": "{dark-color-scheme.primary.palette.400}",
+              "type": "color"
+            },
+            "background": {
+              "value": "{dark-color-scheme.background.background}",
+              "type": "color"
+            }
+          },
+          "selected": {
+            "color": {
+              "value": "{dark-color-scheme.foreground.text}",
               "type": "color"
             },
             "background": {
@@ -5230,6 +5250,10 @@
           "border-width": {
             "value": "{size.border-width}",
             "type": "borderWidth"
+          },
+          "border-radius": {
+            "value": "0",
+            "type": "borderRadius"
           }
         }
       },
@@ -5261,6 +5285,10 @@
         "padding-blocks": {
           "value": "{size.m}",
           "type": "spacing"
+        },
+        "border-radius": {
+          "value": "0",
+          "type": "borderRadius"
         },
         "divider-width": {
           "value": "1px",
@@ -7856,10 +7884,6 @@
         },
         "padding": {
           "value": "0 {size.l}",
-          "type": "spacing"
-        },
-        "close-padding": {
-          "value": "0 0 0 {size.s}",
           "type": "spacing"
         }
       },
