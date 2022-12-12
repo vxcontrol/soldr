@@ -386,8 +386,7 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
             unicodeHighlight: {
                 ambiguousCharacters: false
             },
-            value: tab.content,
-            theme: 'soldrFileTheme'
+            value: tab.content
         });
         editor.onDidChangeModelContent(() => {
             tab.content = editor.getValue();
