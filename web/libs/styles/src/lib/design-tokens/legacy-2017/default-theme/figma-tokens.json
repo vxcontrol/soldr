@@ -4573,13 +4573,23 @@
     "datepicker-body": {
       "light-color-scheme": {
         "states": {
-          "selected": {
+          "today": {
             "color": {
               "value": "{light-color-scheme.primary.default}",
               "type": "color"
             },
             "background": {
-              "value": "{light-color-scheme.primary.palette.100}",
+              "value": "{light-color-scheme.background.background}",
+              "type": "color"
+            }
+          },
+          "selected": {
+            "color": {
+              "value": "{light-color-scheme.foreground.text}",
+              "type": "color"
+            },
+            "background": {
+              "value": "{light-color-scheme.states.selected-color}",
               "type": "color"
             }
           }
@@ -4587,13 +4597,23 @@
       },
       "dark-color-scheme": {
         "states": {
-          "selected": {
+          "today": {
             "color": {
               "value": "{dark-color-scheme.primary.palette.500}",
               "type": "color"
             },
             "background": {
-              "value": "{dark-color-scheme.primary.palette.700}",
+              "value": "{light-color-scheme.background.background}",
+              "type": "color"
+            }
+          },
+          "selected": {
+            "color": {
+              "value": "{light-color-scheme.foreground.text}",
+              "type": "color"
+            },
+            "background": {
+              "value": "{light-color-scheme.states.selected-color}",
               "type": "color"
             }
           }
@@ -4622,6 +4642,10 @@
           "border-width": {
             "value": "{size.border-width}",
             "type": "borderWidth"
+          },
+          "border-radius": {
+            "value": "0",
+            "type": "borderRadius"
           }
         }
       },
@@ -4653,6 +4677,10 @@
         "padding-blocks": {
           "value": "{size.m}",
           "type": "spacing"
+        },
+        "border-radius": {
+          "value": "0",
+          "type": "borderRadius"
         },
         "divider-width": {
           "value": "1px",
