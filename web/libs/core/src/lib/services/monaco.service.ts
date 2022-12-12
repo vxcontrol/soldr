@@ -40,7 +40,7 @@ export class MonacoService {
             }
         });
 
-        (window as any).monaco.editor.defineTheme('soldrFileTheme', {
+        (window as any).monaco.editor.defineTheme('soldrTheme', {
             base: theme === Themes.Dark ? 'vs-dark' : 'vs',
             inherit: true,
             rules: [{ background: colors.background }],
@@ -48,5 +48,7 @@ export class MonacoService {
                 'editor.background': colors.background
             }
         });
+
+      (window as any).monaco.editor.setTheme('soldrTheme');
     }
 }
