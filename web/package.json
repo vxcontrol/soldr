@@ -2,6 +2,10 @@
     "name": "soldr-ui",
     "version": "1.0.0",
     "license": "MIT",
+    "engines": {
+        "node": ">=16.0.0",
+        "npm": ">=8.0.0"
+    },
     "scripts": {
         "ng": "nx",
         "postinstall": "node ./decorate-angular-cli.js && ngcc --properties es2020 browser module main",
