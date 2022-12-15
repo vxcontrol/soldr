@@ -27,4 +27,5 @@ export * from './save-file';
 export * from './sort';
 export * from './sort-keys';
 export * from './to-pascal-case';
+export * from './traverse-model-by-scheme';
 export * from './tree';

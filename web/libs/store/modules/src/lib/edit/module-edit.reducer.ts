@@ -22,7 +22,8 @@ import {
     getNameForNewItem,
     NcFormProperty,
     NcformSchema,
-    PropertyType
+    PropertyType,
+    traverseModelByScheme
 } from '@soldr/shared';
 import { EventConfigurationItemType } from 'libs/features/modules/src/lib/types';
 
@@ -398,6 +399,18 @@ export const reducer = createReducer(
             if (state.module.config_schema.properties[paramName]?.type !== type) {
                 defaultConfig[paramName] = getDefaultValueByType(type);
             }
+
+            if (type === PropertyType.OBJECT) {
+                traverseModelByScheme(
+                    processedSchema.properties[paramName],
+                    defaultConfig[paramName] as Record<string, any>,
+                    (parent: NcFormProperty, parentModel: Record<string, any>, propName: string) => {
+                        if (parentModel[propName] === undefined) {
+                            parentModel[propName] = getDefaultValueByType(parent.properties[propName].type);
+                        }
+                    }
+                );
+            }
         }
 
         const locale = clone(state.module.locale) as ModelsLocale;
@@ -538,6 +551,18 @@ export const reducer = createReducer(
             defaultConfig[paramName].server_only = processedSchema.properties[paramName].properties.server_only.value;
             if (state.module.secure_config_schema.properties[paramName]?.properties.value.type !== type) {
                 defaultConfig[paramName].value = getDefaultValueByType(type);
+            }
+
+            if (type === PropertyType.OBJECT) {
+                traverseModelByScheme(
+                    processedSchema.properties[paramName].properties.value,
+                    defaultConfig[paramName].value as Record<string, any>,
+                    (parent: NcFormProperty, parentModel: Record<string, any>, propName: string) => {
+                        if (parentModel[propName] === undefined) {
+                            parentModel[propName] = getDefaultValueByType(parent.properties[propName].type);
+                        }
+                    }
+                );
             }
         }
 
