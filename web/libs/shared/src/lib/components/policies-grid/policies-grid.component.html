@@ -16,6 +16,7 @@
                 [storageKey]="storageGridKey"
                 [total]="total"
                 (search)="onSearch($event)"
+                (sortChanged)="onGridSort($event)"
                 (nextPage)="nextPage()"
                 (selectRows)="onGridSelectRows($event)"
                 (resetFiltration)="onResetFiltration()"

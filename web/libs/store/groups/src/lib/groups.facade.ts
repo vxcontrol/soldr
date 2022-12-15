@@ -368,6 +368,10 @@ export class GroupsFacade {
         this.store.dispatch(GroupsActions.setPoliciesGridSearch({ value }));
     }
 
+    setPoliciesGridSorting(sorting: Sorting) {
+        this.store.dispatch(GroupsActions.setPoliciesGridSorting({ sorting }));
+    }
+
     resetPoliciesFiltration(): void {
         this.store.dispatch(GroupsActions.resetPoliciesFiltration());
     }

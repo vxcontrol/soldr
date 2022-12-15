@@ -75,6 +75,7 @@ export interface State {
     page: number;
     policiesGridFiltration: Filtration[];
     policiesGridSearch: string;
+    policiesGridSorting: Sorting | Record<never, any>;
     policiesPage: number;
     policiesTotal: number;
     policyFilterItemModuleNames: string[];
@@ -145,6 +146,7 @@ export const initialState: State = {
     page: 0,
     policiesGridFiltration: [],
     policiesGridSearch: '',
+    policiesGridSorting: {},
     policiesPage: 0,
     policiesTotal: 0,
     policyFilterItemModuleNames: [],
@@ -315,6 +317,7 @@ export const reducer = createReducer(
             policiesGridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])]
         };
     }),
+    on(GroupsActions.setPoliciesGridSorting, (state, { sorting }) => ({ ...state, policiesGridSorting: sorting })),
     on(GroupsActions.setPoliciesGridSearch, (state, { value }) => ({ ...state, policiesGridSearch: value })),
     on(GroupsActions.resetPoliciesFiltration, (state) => ({ ...state, policiesGridFiltration: [] })),
     on(GroupsActions.selectPolicy, (state, { id }) => ({ ...state, selectedPolicyId: id })),
