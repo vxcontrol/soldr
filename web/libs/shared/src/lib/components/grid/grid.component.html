@@ -191,7 +191,7 @@
                     <ng-container *ngIf="(foundColumns$ | async) as foundColumns">
                         <mc-list-selection
                             *ngIf="foundColumns?.length > 0; else notFound"
-                            class="grid__filter-popover-list"
+                            class="grid__filter-popover-list mc-scrollbar"
                             multiple
                             (selectionChange)="onChangeColumnsVisibility($event)">
                             <ng-container *ngFor="let column of foundColumns">

@@ -31,7 +31,7 @@
             <ng-container *ngIf="(foundItems$ | async) as foundItems">
                 <mc-list-selection
                     *ngIf="foundItems?.length > 0; else notFound"
-                    class="tree-popover__list"
+                    class="tree-popover__list mc-scrollbar"
                     multiple="true"
                     [(ngModel)]="selectedItems">
                     <ng-container *ngFor="let item of foundItems">

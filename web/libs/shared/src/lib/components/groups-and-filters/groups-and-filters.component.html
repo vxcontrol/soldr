@@ -20,7 +20,7 @@
         <mc-divider class="flex-none"></mc-divider>
 
             <div
-                class="flex-auto groups-ang-filter__list"
+                class="flex-auto scrollable"
                 *ngIf="(foundFilters$ | async)?.length > 0 || (filtersByGroup$ | async)?.length > 0; else notFound">
 
                 <mc-list-selection

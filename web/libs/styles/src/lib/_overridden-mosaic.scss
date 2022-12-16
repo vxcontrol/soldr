@@ -28,3 +28,8 @@
 .mc-confirm .mc-confirm-btns button {
     margin: 16px;
 }
+
+.mc-modal-wrap,
+.mc-sidepanel-body {
+    @extend .mc-scrollbar;
+}
