@@ -4,8 +4,8 @@
 
 .module-interactivity-container {
     height: 100%;
-    overflow: auto;
     box-sizing: border-box;
+    @extend .scrollable !optional;
 
     .drag-select {
         .sortable-ghost {
@@ -31,7 +31,7 @@
 
             & > .el-tab-pane {
                 height: 100%;
-                overflow-y: auto;
+                @extend .scrollable-y !optional;
             }
 
             & > .el-tab-pane > *:first-child:last-child {
@@ -42,7 +42,7 @@
 
                     & > .el-tabs__content {
                         height: 100%;
-                        overflow-y: auto;
+                        @extend .scrollable-y !optional;
                     }
                 }
             }
@@ -67,7 +67,7 @@
 
             & > .el-tab-pane {
                 height: 100%;
-                overflow-y: auto;
+                @extend .scrollable-y !optional;
             }
 
             & > .el-tab-pane > * {
@@ -78,7 +78,7 @@
 
                     & > .el-tabs__content {
                         height: 100%;
-                        overflow-y: auto;
+                        @extend .scrollable-y !optional;
                     }
                 }
             }

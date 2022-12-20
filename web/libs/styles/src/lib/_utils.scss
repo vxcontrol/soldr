@@ -1,9 +1,11 @@
 .scrollable {
     overflow: auto;
+    @extend .mc-scrollbar;
 }
 
 .scrollable-y {
     overflow-y: auto;
+    @extend .mc-scrollbar;
 }
 
 .ellipsis {

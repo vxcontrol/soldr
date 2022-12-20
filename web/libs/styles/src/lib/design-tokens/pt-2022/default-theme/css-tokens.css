@@ -163,6 +163,12 @@
   --mc-radio-size-inner-size: 10px;
   --mc-radio-size-cap-size: 6px;
   --mc-radio-size-label-margin: 8px;
+  --mc-scrollbar-size-track-width: 16px;
+  --mc-scrollbar-size-thumb-width: 8px;
+  --mc-scrollbar-size-thumb-border-width: 4px;
+  --mc-scrollbar-size-thumb-border-radius: 8px;
+  --mc-scrollbar-size-arrow-icon-width: 16px;
+  --mc-scrollbar-size-arrow-icon-height: 16px;
   --mc-select-size-left-padding: 12px;
   --mc-select-size-right-padding: 6px;
   --mc-select-size-left-padding-multiple: 12px;

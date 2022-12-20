@@ -78,7 +78,7 @@
                         <mc-list-selection
                             e2e-id="selFilterValues"
                             *ngIf="data.foundFilterItems?.length > 0; else notFound"
-                            class="grid__filter-popover-list"
+                            class="grid__filter-popover-list mc-scrollbar"
                             multiple
                             (selectionChange)="onChangeSelectedFilterItems(data.selectedFilterValues, $event.option.value, $event.option.selected)">
                             <ng-container
