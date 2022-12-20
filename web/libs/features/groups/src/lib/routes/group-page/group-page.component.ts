@@ -205,6 +205,10 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
         this.groupsFacade.setAgentsGridSorting(sorting);
     }
 
+    policiesSort(sorting: Sorting) {
+        this.groupsFacade.setPoliciesGridSorting(sorting);
+    }
+
     policyFilter(value: Filtration) {
         this.groupsFacade.setPoliciesGridFiltration(value);
     }

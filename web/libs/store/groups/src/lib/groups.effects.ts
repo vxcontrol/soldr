@@ -46,7 +46,8 @@ import {
     selectAgentsGridSorting,
     selectEventsGridSorting,
     selectInitialListQuery,
-    selectGridFiltration
+    selectGridFiltration,
+    selectPoliciesGridSorting
 } from '@soldr/store/groups';
 
 import * as GroupsActions from './groups.actions';
@@ -238,9 +239,10 @@ export class GroupsEffects {
             ofType(GroupsActions.fetchGroupPolicies),
             withLatestFrom(
                 this.store.select(selectPoliciesGridSearch),
-                this.store.select(selectPoliciesGridFiltration)
+                this.store.select(selectPoliciesGridFiltration),
+                this.store.select(selectPoliciesGridSorting)
             ),
-            switchMap(([action, search, filtration]) => {
+            switchMap(([action, search, filtration, sorting]) => {
                 const page = action.page || 1;
 
                 return this.policiesService
@@ -251,7 +253,8 @@ export class GroupsEffects {
                                 { field: 'data', value: search },
                                 { field: 'group_id', value: [action.id] },
                                 ...filtration
-                            ]
+                            ],
+                            sort: sorting || {}
                         })
                     )
                     .pipe(

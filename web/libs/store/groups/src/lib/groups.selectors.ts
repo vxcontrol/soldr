@@ -82,6 +82,7 @@ export const selectPoliciesGridFiltration = createSelector(selectGroupsState, (s
 export const selectPoliciesGridFiltrationByField = createSelector(selectPoliciesGridFiltration, (filtration) =>
     filtrationToDictionary(filtration)
 );
+export const selectPoliciesGridSorting = createSelector(selectGroupsState, (state) => state.policiesGridSorting);
 export const selectSelectedPolicyId = createSelector(selectGroupsState, (state) => state.selectedPolicyId);
 export const selectSelectedPolicy = createSelector(
     selectGroupPolicies,

@@ -42,6 +42,7 @@ export class PoliciesGridComponent implements OnChanges, OnDestroy {
     @Output() resetFiltration = new EventEmitter();
     @Output() setTag = new EventEmitter<string>();
     @Output() gridSorting = new EventEmitter<Sorting>();
+    @Output() sort = new EventEmitter<Sorting>();
 
     policies$ = new BehaviorSubject<Policy[]>([]);
     language$ = this.languageService.current$;
@@ -109,5 +110,9 @@ export class PoliciesGridComponent implements OnChanges, OnDestroy {
 
     onGridFilter(filtration: Filtration) {
         this.filter.next(filtration);
+    }
+
+    onGridSort(sorting: Sorting): void {
+        this.sort.emit(sorting);
     }
 }
