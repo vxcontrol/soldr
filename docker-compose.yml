@@ -10,8 +10,10 @@ services:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8
       - --collation-server=utf8_general_ci
+    expose:
+      - 3306/tcp
     ports:
-      - 3306:3306
+      - ${INTERNAL_NET_HOST:-127.0.0.1}:3306:3306
     volumes:
       - vx-mysql-data:/var/lib/mysql
     networks:
@@ -28,8 +30,10 @@ services:
     container_name: vx_minio
     hostname: minio.local
     restart: unless-stopped
+    expose:
+      - 9000/tcp
     ports:
-      - 9000:9000
+      - ${INTERNAL_NET_HOST:-127.0.0.1}:9000:9000
     command:
       - server
       - /data
@@ -128,7 +132,7 @@ services:
     expose:
       - 8443/tcp
     ports:
-      - 8443:8443
+      - ${AGENT_SERVER_HOST:-0.0.0.0}:${AGENT_SERVER_PORT:-8443}:8443
     environment:
       LISTEN: wss://0.0.0.0:8443
       LOG_DIR: logs
@@ -162,7 +166,7 @@ services:
     expose:
       - 8080/tcp
     ports:
-      - 8080:8080
+      - ${WEB_SERVER_HOST:-127.0.0.1}:${WEB_SERVER_PORT:-8080}:8080
     networks:
       - vx-stand
 
@@ -174,14 +178,14 @@ services:
     networks:
       - vx-stand
     ports:
-      - ${API_SERVER_HOST:-127.0.0.1}:${API_SERVER_PORT_HTTP:-80}:8080
-      - ${API_SERVER_HOST:-127.0.0.1}:${API_SERVER_PORT_HTTPS:-443}:8443
+      - ${API_SERVER_HOST:-0.0.0.0}:${API_SERVER_PORT_HTTP:-80}:8080
+      - ${API_SERVER_HOST:-0.0.0.0}:${API_SERVER_PORT_HTTPS:-443}:8443
     volumes:
       - vx-api-server-ssl:/opt/api/ssl:rw
       - vx-api-server-logs:/opt/api/logs:rw
     environment:
       API_USE_SSL: ${UI_USE_SSL:-true}
-      API_SERVER_HOST: ${API_SERVER_HOST:-127.0.0.1}
+      API_SERVER_HOST: ${API_SERVER_HOST:-0.0.0.0}
       API_SERVER_PORT_HTTPS: ${API_SERVER_PORT_HTTPS:-:443}
       API_SERVER_PORT_HTTP: ${API_SERVER_PORT_HTTP:-:80}
       API_STATIC_URL: http://web.local:8080
