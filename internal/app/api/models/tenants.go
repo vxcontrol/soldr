@@ -7,7 +7,6 @@ type Tenant struct {
 	ID          uint64 `form:"id" json:"id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL;PRIMARY_KEY;AUTO_INCREMENT"`
 	Status      string `form:"status" json:"status" validate:"oneof=active blocked,required" gorm:"type:ENUM('active','blocked');NOT NULL"`
 	Hash        string `form:"hash" json:"hash" validate:"len=32,hexadecimal,lowercase,required" gorm:"type:VARCHAR(32);NOT NULL"`
-	UUID        string `form:"uuid,omitempty" json:"uuid,omitempty" validate:"len=36,uuid,omitempty" gorm:"type:VARCHAR(100)"`
 	Description string `form:"description" json:"description" validate:"max=255" gorm:"type:VARCHAR(255)"`
 }
 

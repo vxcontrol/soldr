@@ -7585,7 +7585,7 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "maxLength": 100,
-                    "minLength": 5
+                    "minLength": 4
                 },
                 "service": {
                     "type": "string"
@@ -8480,9 +8480,6 @@ const docTemplate = `{
                         "active",
                         "blocked"
                     ]
-                },
-                "uuid": {
-                    "type": "string"
                 }
             }
         },

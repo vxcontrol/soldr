@@ -62,7 +62,7 @@ func (up UserPassword) Validate(db *gorm.DB) {
 // Login is model to contain user information on Login procedure
 type Login struct {
 	Mail     string `form:"mail" json:"mail" validate:"max=50,required" gorm:"type:VARCHAR(50);NOT NULL;UNIQUE_INDEX"`
-	Password string `form:"password" json:"password" validate:"min=5,max=100,required" gorm:"type:VARCHAR(100)"`
+	Password string `form:"password" json:"password" validate:"min=4,max=100,required" gorm:"type:VARCHAR(100)"`
 	Service  string `form:"service" json:"service" validate:"omitempty,len=32,hexadecimal,lowercase" gorm:"-" default:""`
 }
 

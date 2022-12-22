@@ -592,7 +592,7 @@ definitions:
         type: string
       password:
         maxLength: 100
-        minLength: 5
+        minLength: 4
         type: string
       service:
         type: string
@@ -1231,8 +1231,6 @@ definitions:
         enum:
         - active
         - blocked
-        type: string
-      uuid:
         type: string
     required:
     - hash
