@@ -8,6 +8,9 @@
             "args": ["build/package/api/build-local.sh"],
             "options": {
                 "cwd": "${workspaceFolder}",
+                "env": {
+                    "DEBUG": "true"
+                }
             }
         },
         {
@@ -24,6 +27,9 @@
             "args": ["build/package/server/build-local.sh"],
             "options": {
                 "cwd": "${workspaceFolder}",
+                "env": {
+                    "DEBUG": "true"
+                }
             }
         },
         {
@@ -40,6 +46,9 @@
             "args": ["build/package/agent/build-local.sh"],
             "options": {
                 "cwd": "${workspaceFolder}",
+                "env": {
+                    "DEBUG": "true"
+                }
             }
         },
         {

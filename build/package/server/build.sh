@@ -28,7 +28,8 @@ echo $VERSION_STRING > "$BUILD_ARTIFACTS_DIR/version"
 DB_ENCRYPT_KEY=$(<"$ROOT_DIR/internal/app/api/utils/dbencryptor/sec-store-key.txt")
 
 export BASE_PREFIX="$ROOT_DIR/assets/lib"
-CGO_ENABLED=1 go build -ldflags "
+[ "$DEBUG" = "true" ] && DEBUG_FLAGS=(-gcflags=all="-N -l")
+CGO_ENABLED=1 go build "${DEBUG_FLAGS[@]}" -ldflags "
     -X soldr/main.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
     -X soldr/main.PackageRev=$PACKAGE_REV \
     -X soldr/internal/app/server/config.latestAPIVersion=$LATEST_API_VERSION \

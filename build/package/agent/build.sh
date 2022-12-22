@@ -18,9 +18,8 @@ echo $VERSION_STRING > "$BUILD_ARTIFACTS_DIR/version"
 [ `uname` = "Darwin" ] && BASE64="base64" || BASE64="base64 -w 0"
 [ -n "${STRIP+set}" ] || STRIP="strip"
 
-# go get
-# for debugging -gcflags="all=-N -l"
 PROTOCOL_VERSION="${API_VERSION:-v1}"
+[ "$DEBUG" = "true" ] && DEBUG_FLAGS=(-gcflags=all="-N -l")
 OUT_BIN="${OUT_BIN:-"$ROOT_DIR/build/bin/$T"}"
 
 IAC_CERT=$(cat $ROOT_DIR/security/certs/agent/iac.cert | eval "$BASE64" )
@@ -54,7 +53,7 @@ XOREncryptCerts(){
 
 XOREncryptCerts
 
-CGO_ENABLED=1 go build -gcflags="all=-N -l" -ldflags "\
+CGO_ENABLED=1 go build "${DEBUG_FLAGS[@]}" -ldflags "\
     -X soldr/internal/app/agent/config.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
     -X soldr/internal/app/agent/mmodule.protocolVersion=$PROTOCOL_VERSION \
     -X soldr/internal/app/agent/config.PackageRev=$PACKAGE_REV \

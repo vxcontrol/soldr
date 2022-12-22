@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
@@ -25,10 +24,10 @@ esac
 
 DB_ENCRYPT_KEY=$(<"$ROOT_DIR/internal/app/api/utils/dbencryptor/sec-store-key.txt")
 
-# for debugging -gcflags="all=-N -l"
+[ "$DEBUG" = "true" ] && DEBUG_FLAGS=(-gcflags=all="-N -l")
 OUT_BIN="${OUT_BIN:-"$ROOT_DIR/build/bin/vxapi"}"
 
-go build -ldflags "
+go build "${DEBUG_FLAGS[@]}" -ldflags "
     -X soldr/internal/version.IsDevelop=$DEVELOP \
     -X soldr/internal/version.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
     -X soldr/internal/version.PackageRev=$PACKAGE_REV \
