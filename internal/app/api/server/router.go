@@ -76,16 +76,34 @@ func NewRouter(
 	}
 	defer apiLogFile.Close()
 
+	staticPath := "./static"
+	if uiStaticPath, ok := os.LookupEnv("API_STATIC_PATH"); ok {
+		staticPath = uiStaticPath
+	}
+
+	index := func(c *gin.Context) {
+		data, err := ioutil.ReadFile(path.Join(staticPath, "/index.html"))
+		if err != nil {
+			utils.FromContext(c).WithError(err).Errorf("error loading index.html")
+			return
+		}
+		c.Data(200, "text/html", []byte(data))
+	}
+
 	router := gin.New()
 	router.Use(otelgin.Middleware("vxapi"))
 	router.Use(gin.LoggerWithWriter(io.MultiWriter(apiLogFile, os.Stdout)))
 	router.Use(gin.Recovery())
 	router.Use(sessions.Sessions("auth", cookieStore))
 
-	router.Static("/js", "./static/js")
-	router.Static("/css", "./static/css")
-	router.Static("/fonts", "./static/fonts")
-	router.Static("/images", "./static/images")
+	router.Static("/js", path.Join(staticPath, "js"))
+	router.Static("/css", path.Join(staticPath, "css"))
+	router.Static("/fonts", path.Join(staticPath, "fonts"))
+	router.Static("/images", path.Join(staticPath, "images"))
+
+	// TODO: should be moved to the web service
+	router.StaticFile("/favicon.ico", path.Join(staticPath, "favicon.ico"))
+	router.StaticFile("/apple-touch-icon.png", path.Join(staticPath, "apple-touch-icon.png"))
 
 	if uiStaticAddr, ok := os.LookupEnv("API_STATIC_URL"); ok {
 		uiStaticUrl, err := url.Parse(uiStaticAddr)
@@ -115,10 +133,6 @@ func NewRouter(
 			}
 		}())
 	} else {
-		// static files
-		router.StaticFile("/favicon.ico", "./static/favicon.ico")
-		router.StaticFile("/apple-touch-icon.png", "./static/apple-touch-icon.png")
-
 		router.GET("/", func(c *gin.Context) {
 			c.Redirect(http.StatusTemporaryRedirect, "/app/")
 		})
@@ -645,13 +659,4 @@ func setUsersGroup(parent *gin.RouterGroup) {
 	{
 		userEditGroup.PUT("/password", private.ChangePasswordCurrentUser)
 	}
-}
-
-func index(c *gin.Context) {
-	data, err := ioutil.ReadFile("./static/index.html")
-	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading index.html")
-		return
-	}
-	c.Data(200, "text/html", []byte(data))
 }

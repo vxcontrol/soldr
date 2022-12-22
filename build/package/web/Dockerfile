@@ -7,6 +7,7 @@ RUN npm install --legacy-peer-deps && npm run build --prod
 
 FROM nginxinc/nginx-unprivileged:1.18-alpine
 
+COPY assets/web /opt/soldr/www
 COPY --from=build /src/app/dist/apps/soldr-ui /opt/soldr/www
 COPY --from=build /src/app/conf/nginx_base.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
