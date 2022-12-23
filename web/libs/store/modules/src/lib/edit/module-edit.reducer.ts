@@ -376,7 +376,7 @@ export const reducer = createReducer(
         ...state,
         module: {
             ...state.module,
-            config_schema: getEmptySchema(),
+            config_schema: getEmptySchema(false),
             default_config: {},
             locale: {
                 ...state.module.locale,
@@ -528,7 +528,7 @@ export const reducer = createReducer(
         ...state,
         module: {
             ...state.module,
-            secure_config_schema: getEmptySchema(),
+            secure_config_schema: getEmptySchema(false),
             secure_default_config: {},
             locale: {
                 ...state.module.locale,
