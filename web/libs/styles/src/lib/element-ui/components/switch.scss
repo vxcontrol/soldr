@@ -1,0 +1,38 @@
+@import '../mixins/mixins';
+
+@mixin switch($tokens) {
+    @include b(switch) {
+        font-size: map-get($tokens, switch-font-size);
+
+        @include e(label) {
+            font-size: map-get($tokens, switch-font-size);
+            color: map-get($tokens, color-text-primary);
+
+            @include when(active) {
+                color: map-get($tokens, color-primary-text);
+            }
+
+            & * {
+                font-size: map-get($tokens, switch-font-size);
+            }
+        }
+
+        @include e(core) {
+            border: 1px solid map-get($tokens, switch-off-color) !important;
+            background: map-get($tokens, switch-off-color) !important;
+
+            &:after {
+                width: map-get($tokens, switch-button-size);
+                height: map-get($tokens, switch-button-size);
+                background-color: map-get($tokens, color-white);
+            }
+        }
+
+        @include when(checked) {
+            .el-switch__core {
+                border-color: map-get($tokens, switch-on-color) !important;
+                background-color: map-get($tokens, switch-on-color) !important;
+            }
+        }
+    }
+}
