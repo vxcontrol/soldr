@@ -52,15 +52,19 @@ export class LinkPolicyFacadeService implements LinkPolicyToGroupFacade<Group, P
         filter(([allPolicies]) => !!allPolicies.length),
         map(([allPolicies, linked, notLinked, policy]) =>
             notLinked.reduce((acc, group) => {
-                const modulesNames = group.details?.joined_modules?.split(',');
-                const moduleInPolicy = policy?.details?.joined_modules?.split(',');
+                const groupModuleNames = group.details?.joined_modules?.split(',');
 
-                for (const moduleName of modulesNames) {
-                    if (moduleName && moduleInPolicy?.includes(moduleName)) {
-                        const module = group.details?.modules?.find((module) => module.info.name === moduleName);
-                        const conflictedGroup = [...linked, ...notLinked]
-                            .filter(({ hash }) => hash !== group.hash)
-                            .find((item) => item.details?.joined_modules?.split(',').includes(moduleName));
+                for (const groupModuleName of groupModuleNames) {
+                    const policyModuleNames = policy?.details?.joined_modules?.split(',');
+
+                    if (groupModuleName && policyModuleNames?.includes(groupModuleName)) {
+                        const groupModule = group.details?.modules?.find(
+                            (module) => module.info.name === groupModuleName
+                        );
+                        const linkedGroups = linked.filter(({ hash }) => hash !== group.hash);
+                        const conflictedGroup = [...linkedGroups, ...notLinked].find((item) =>
+                            item.details?.joined_modules?.split(',').includes(groupModuleName)
+                        );
 
                         if (conflictedGroup) {
                             const policiesIdsInConflictedGroup = group?.details?.policies?.map(({ id }) => id);
@@ -69,13 +73,13 @@ export class LinkPolicyFacadeService implements LinkPolicyToGroupFacade<Group, P
                                 policiesIdsInConflictedGroup?.includes(id)
                             );
                             const conflictedPolicy = policiesInConflictedGroup.find((policy) =>
-                                policy.details?.joined_modules?.split(',').includes(moduleName)
+                                policy.details?.joined_modules?.split(',').includes(groupModuleName)
                             );
 
-                            if (module && conflictedPolicy) {
+                            if (groupModule && conflictedPolicy) {
                                 acc[group.id] = acc[group.id] || [];
                                 acc[group.id].push({
-                                    module,
+                                    module: groupModule,
                                     conflictedPolicy
                                 });
                             }

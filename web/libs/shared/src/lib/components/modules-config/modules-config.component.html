@@ -135,7 +135,7 @@
                                     mc-button
                                     class="mc-button_transparent"
                                     e2e-id="btnDisableModule"
-                                    [disabled]="policy.info?.system"
+                                    [disabled]="policy?.info?.system"
                                     [class.mc-progress]="data.isDisablingModule"
                                     (click)="doDisableModule(data.selectedModule)">
                                     <i mc-icon="soldr-icons-stop_16" class="soldr-icons"></i>
@@ -146,7 +146,7 @@
                                     mc-button
                                     class="mc-button_transparent"
                                     e2e-id="btnChangeModuleVersion"
-                                    [disabled]="policy.info?.system"
+                                    [disabled]="policy?.info?.system"
                                     [class.mc-progress]="data.isChangingModuleVersion"
                                     (click)="doOpenChangeModuleVersionPanel(data.selectedModule)">
                                     <i mc-icon="soldr-icons-download_16" class="soldr-icons"></i>
@@ -183,7 +183,7 @@
                                     class="mc-button_transparent"
                                     e2e-id="btnDeleteModuleFromPolicy"
                                     [class.mc-progress]="data.isDeletingModule"
-                                    [disabled]="policy.info?.system"
+                                    [disabled]="policy?.info?.system"
                                     [mcTooltip]="tShared('Shared.ModulesConfig.ButtonTooltip.DeleteFromPolicy')">
                                     <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
                                 </button>
