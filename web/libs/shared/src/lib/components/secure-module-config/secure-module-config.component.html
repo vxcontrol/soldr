@@ -32,51 +32,12 @@
             </div>
 
             <div *ngIf="param.isShowedValue" class="view-form layout-margin-top-xxs">
-                <ng-container *ngIf="!param.isComplexType; else complexTypeView">
-                    <ng-container [ngSwitch]="true">
-                        <ng-container *ngSwitchCase="param.type === PropertyType.BOOLEAN">
-                            <mc-radio-group class="layout-row" [disabled]="true" [value]="param.model">
-                                <mc-radio-button
-                                    [value]="true"
-                                    [disabled]="true">
-                                    {{ tCommon('Common.Pseudo.RadioButtonText.Yes') }}
-                                </mc-radio-button>
-
-                                <mc-radio-button
-                                    class="layout-margin-left-s"
-                                    [value]="false"
-                                    [disabled]="true">
-                                    {{ tCommon('Common.Pseudo.RadioButtonText.No') }}
-                                </mc-radio-button>
-                            </mc-radio-group>
-                        </ng-container>
-                        <mc-form-field *ngSwitchCase="param.type === PropertyType.NUMBER || param.type === PropertyType.INTEGER">
-                            <input
-                                mcInput
-                                type="number"
-                                disabled
-                                [(ngModel)]="param.model">
-                            <mc-stepper></mc-stepper>
-                        </mc-form-field>
-                        <mc-form-field *ngSwitchDefault>
-                            <input
-                                e2e-id="txtSecureParamTextValueView"
-                                type="text"
-                                mcInput
-                                autocomplete="off"
-                                disabled
-                                [value]="param.model">
-                            <mc-cleaner></mc-cleaner>
-                        </mc-form-field>
-                    </ng-container>
-                </ng-container>
-                <ng-template #complexTypeView>
-                    <soldr-ncform-wrapper
-                        [isReadOnly]="true"
-                        [schema]="param.schema"
-                        [model]="param.model">
-                    </soldr-ncform-wrapper>
-                </ng-template>
+                <soldr-ncform-wrapper
+                    *ngIf="param.schema && param.model"
+                    [isReadOnly]="true"
+                    [schema]="param.schema"
+                    [model]="param.model">
+                </soldr-ncform-wrapper>
             </div>
 
             <div
@@ -123,57 +84,14 @@
                         {{ t('Shared.ModuleConfig.Text.AboutSecureParamsOnEditing') }}
                     </div>
                 </div>
+                <div *ngIf="!currentParam.isComplexType" class="layout-margin-bottom-xxs">
+                    {{ currentParam.localizedTitle }}
+                </div>
                 <soldr-ncform-wrapper
-                    #editComplexParam
-                    *ngIf="currentParam.isComplexType; else otherTypes"
                     [schema]="currentParam.schema"
                     [model]="currentParam.model"
                     (registerApi)="onRegisterApi($event)">
                 </soldr-ncform-wrapper>
-                <ng-template #otherTypes>
-                    <div class="layout-margin-bottom-xxs">{{ currentParam.localizedTitle }}</div>
-
-                    <ng-container [ngSwitch]="true">
-                        <ng-container *ngSwitchCase="currentParam.type === PropertyType.BOOLEAN">
-                            <mc-radio-group class="layout-row" [(ngModel)]="currentParam.model">
-                                <mc-radio-button [value]="true">
-                                    {{ tCommon('Common.Pseudo.RadioButtonText.Yes') }}
-                                </mc-radio-button>
-
-                                <mc-radio-button
-                                    class="layout-margin-left-s" [value]="false">
-                                    {{ tCommon('Common.Pseudo.RadioButtonText.No') }}
-                                </mc-radio-button>
-                            </mc-radio-group>
-                        </ng-container>
-                        <mc-form-field *ngSwitchCase="currentParam.type === PropertyType.NUMBER">
-                            <input
-                                mcInput
-                                type="number"
-                                [(ngModel)]="currentParam.model">
-                            <mc-stepper></mc-stepper>
-                        </mc-form-field>
-                        <mc-form-field *ngSwitchCase="currentParam.type === PropertyType.INTEGER">
-                            <input
-                                mcInput
-                                type="number"
-                                step="1"
-                                [(ngModel)]="currentParam.model">
-                            <mc-stepper></mc-stepper>
-                        </mc-form-field>
-                        <ng-container *ngSwitchDefault>
-                            <mc-form-field class="">
-                                <input
-                                    e2e-id="txtSecureParamTextValue"
-                                    type="text"
-                                    mcInput
-                                    autocomplete="off"
-                                    [required]="currentParam.required"
-                                    [(ngModel)]="currentParam.model">
-                            </mc-form-field>
-                        </ng-container>
-                    </ng-container>
-                </ng-template>
             </ng-template>
         </ng-template>
 

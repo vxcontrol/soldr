@@ -1,4 +1,13 @@
-import { Component, Inject, Input, OnChanges, SimpleChanges, TemplateRef, ViewChild } from '@angular/core';
+import {
+    ChangeDetectorRef,
+    Component,
+    Inject,
+    Input,
+    OnChanges,
+    SimpleChanges,
+    TemplateRef,
+    ViewChild
+} from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
 import { McModalRef, McModalService, ModalSize } from '@ptsecurity/mosaic/modal';
@@ -11,7 +20,7 @@ import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { LanguageService } from '../../services';
 import { EntityModule, NcFormProperty, NcformSchema, PropertyType, ProxyPermission } from '../../types';
 import { clone } from '../../utils';
-import { NcformWrapperApi, NcformWrapperComponent } from '../ncform-wrapper/ncform-wrapper.component';
+import { NcformWrapperApi } from '../ncform-wrapper/ncform-wrapper.component';
 
 interface SecureParam {
     isComplexType: boolean;
@@ -58,9 +67,9 @@ export class SecureModuleConfigComponent implements OnChanges {
 
     @ViewChild('editParamModalBody') modalBodyTemplate: TemplateRef<any>;
     @ViewChild('editParamModalFooter') modalFooterTemplate: TemplateRef<any>;
-    @ViewChild('editComplexParam') editComplexParamNcform: TemplateRef<NcformWrapperComponent>;
 
     constructor(
+        private cdr: ChangeDetectorRef,
         private transloco: TranslocoService,
         private languageService: LanguageService,
         private modalService: McModalService,
@@ -75,10 +84,26 @@ export class SecureModuleConfigComponent implements OnChanges {
                 const type = this.getValueType(name);
                 const localizedTitle = this.module.locale.secure_config[name][this.languageService.lang].title;
                 const originalSchema = this.module.secure_config_schema.properties[name]?.properties.value;
-                const schema =
-                    type === PropertyType.ARRAY
-                        ? this.normalizeParamSchemaForArray(originalSchema, localizedTitle)
-                        : originalSchema;
+                let schema;
+
+                if (type === PropertyType.ARRAY) {
+                    schema = this.normalizeParamSchemaForArray(originalSchema, localizedTitle);
+                } else if (type === PropertyType.OBJECT) {
+                    schema = originalSchema;
+                } else {
+                    schema = {
+                        type: PropertyType.OBJECT,
+                        properties: {
+                            value: {
+                                ...originalSchema,
+                                ui: {
+                                    showLabel: false,
+                                    noLabelSpace: true
+                                }
+                            }
+                        }
+                    };
+                }
 
                 return {
                     name,
@@ -97,14 +122,20 @@ export class SecureModuleConfigComponent implements OnChanges {
         param.isFetchValueForView = true;
 
         this.loadValue(param).subscribe((response) => {
+            const type = this.getValueType(param.name);
+
             param.isFetchValueForView = false;
             param.isShowedValue = true;
 
-            if (this.getValueType(param.name) === PropertyType.ARRAY) {
+            if (type === PropertyType.ARRAY) {
                 param.model = { items: response.data[param.name] };
-            } else {
+            } else if (type === PropertyType.OBJECT) {
                 param.model = response.data[param.name];
+            } else {
+                param.model = { value: response.data[param.name] };
             }
+
+            this.cdr.detectChanges();
         });
     }
 
@@ -116,6 +147,8 @@ export class SecureModuleConfigComponent implements OnChanges {
                 this.initParamValue(param, response.data[param.name]);
                 this.openEditModal();
                 this.loadingForEditStatuses[param.name] = false;
+
+                this.cdr.detectChanges();
             });
         } else {
             setTimeout(() => {
@@ -162,7 +195,14 @@ export class SecureModuleConfigComponent implements OnChanges {
 
                 const paramForUpdate = this.params.find((item) => item.name === param.name);
 
-                paramForUpdate.model = paramForUpdate.type === PropertyType.ARRAY ? { items: data } : data;
+                if (paramForUpdate.type === PropertyType.ARRAY) {
+                    paramForUpdate.model = { items: data };
+                } else if (paramForUpdate.type === PropertyType.OBJECT) {
+                    paramForUpdate.model = data;
+                } else {
+                    paramForUpdate.model = { value: data };
+                }
+
                 this.isSaving = false;
 
                 this.toastService.show({
@@ -173,16 +213,17 @@ export class SecureModuleConfigComponent implements OnChanges {
                 this.close();
             });
 
-        if (param.isComplexType) {
-            this.api.validate().then(({ result }) => {
-                if (result) {
-                    const data: any = this.api.getValue();
+        this.api.validate().then(({ result }) => {
+            if (result) {
+                const data: any = this.api.getValue();
+
+                if (param.isComplexType) {
                     data$.next(this.castValueToType(data, param.type));
+                } else {
+                    data$.next(this.castValueToType(this.api.getValue().value, param.type));
                 }
-            });
-        } else {
-            data$.next(this.castValueToType(param.model, param.type));
-        }
+            }
+        });
     }
 
     close() {
@@ -240,10 +281,14 @@ export class SecureModuleConfigComponent implements OnChanges {
     }
 
     private initParamValue(param: SecureParam, value: any) {
-        if (this.getValueType(param.name) === PropertyType.ARRAY) {
+        const type = this.getValueType(param.name);
+
+        if (type === PropertyType.ARRAY) {
             param.model = { items: value };
-        } else {
+        } else if (type === PropertyType.OBJECT) {
             param.model = value;
+        } else {
+            param.model = { value };
         }
         this.currentParam = clone(param);
     }
