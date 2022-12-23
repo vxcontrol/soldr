@@ -26,6 +26,7 @@
 @import 'components/radio-button';
 @import 'components/select';
 @import 'components/select-dropdown';
+@import 'components/switch';
 @import 'components/table';
 @import 'components/table-column';
 @import 'components/tabs';
@@ -55,7 +56,6 @@
     @include message-box($tokens);
     @include notification($tokens);
     @include option($tokens);
-    @include select-group($tokens);
     @include pagination($tokens);
     @include popover($tokens);
     @include popper($tokens);
@@ -64,6 +64,8 @@
     @include radio-button($tokens);
     @include select($tokens);
     @include select-dropdown($tokens);
+    @include select-group($tokens);
+    @include switch($tokens);
     @include table($tokens);
     @include table-column($tokens);
     @include tabs($tokens);
