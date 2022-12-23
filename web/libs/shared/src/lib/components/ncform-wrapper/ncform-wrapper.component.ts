@@ -25,7 +25,7 @@ import Vue from 'vue';
 import VueI18n, { Formatter } from 'vue-i18n';
 
 import { LANGUAGES } from '@soldr/i18n';
-import { LanguageService, VueMessageFormatter } from '@soldr/shared';
+import { compareObjects, LanguageService, VueMessageFormatter } from '@soldr/shared';
 
 import { NcformAppComponent } from './ncform-app.component';
 
@@ -67,7 +67,7 @@ export class NcformWrapperComponent implements OnInit, OnChanges {
             return;
         }
 
-        if (schema) {
+        if (schema && !compareObjects(this.app.$data.schema, this.schema)) {
             this.app.$data.schema = this.schema;
         }
 
