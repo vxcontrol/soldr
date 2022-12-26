@@ -418,7 +418,7 @@ services:
     entrypoint:
       - /bin/sh
       - -c
-      - /bin/elasticsearch_exporter --es.uri=http://elasticsearch.local:$$(cat /usr/share/elasticsearch/config/passfile)@elasticsearch:9200
+      - /bin/elasticsearch_exporter --es.uri=http://elastic:$$(cat /usr/share/elasticsearch/config/passfile)@elasticsearch.local:9200
     depends_on:
       elasticsearch-config:
         condition: service_healthy
