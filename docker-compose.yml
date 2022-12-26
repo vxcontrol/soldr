@@ -309,6 +309,30 @@ services:
         condition: service_healthy
     profiles: ["obs"]
 
+  loki:
+    image: grafana/loki:2.6.1
+    container_name: vx_loki
+    hostname: loki.local
+    restart: always
+    command: 
+      - -config.file=/etc/loki/config.yaml
+    networks:
+      - vx-stand
+    expose:
+      - 3100/tcp
+    volumes:
+      - vx-loki-config:/etc/loki:rw
+      - vx-loki-data:/loki:rw
+    ulimits:
+      nofile:
+        hard: 65000
+        soft: 65000
+      nproc: 65535
+    depends_on:
+      observability-config:
+        condition: service_healthy
+    profiles: ["obs"]
+
   grafana:
     image: grafana/grafana:latest
     container_name: vx_grafana
@@ -364,6 +388,7 @@ services:
       - vx-elasticsearch-config:/usr/share/elasticsearch/config:rw
       - vx-grafana-config:/etc/grafana:rw
       - vx-jaeger-config:/etc/jaeger:rw
+      - vx-loki-config:/etc/loki:rw
       - vx-otel-config:/etc/otel:rw
       - vx-grafana-dashboards:/var/lib/grafana/dashboards:rw
     environment:
@@ -477,6 +502,10 @@ volumes:
   vx-grafana-dashboards:
     driver: local
   vx-grafana-data:
+    driver: local
+  vx-loki-config:
+    driver: local
+  vx-loki-data:
     driver: local
   vx-jaeger-config:
     driver: local
