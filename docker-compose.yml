@@ -153,6 +153,8 @@ services:
       - vx-server-data:/opt/vxserver/data:rw
       - vx-server-logs:/opt/vxserver/logs:rw
       - vx-server-store:/tmp/vx-store:rw
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+      - /etc/machine-id:/etc/machine-id:ro
     depends_on:
       modules:
         condition: service_started
@@ -184,6 +186,8 @@ services:
     volumes:
       - vx-api-server-ssl:/opt/api/ssl:rw
       - vx-api-server-logs:/opt/api/logs:rw
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+      - /etc/machine-id:/etc/machine-id:ro
     environment:
       API_USE_SSL: ${UI_USE_SSL:-true}
       API_SERVER_HOST: ${API_SERVER_HOST:-0.0.0.0}
@@ -219,6 +223,9 @@ services:
       - vx-stand
     environment:
       CONNECT: "wss://server.local:8443"
+    volumes:
+      - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
+      - /etc/machine-id:/etc/machine-id:ro
     depends_on:
       server:
         condition: service_started
