@@ -148,7 +148,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET_NAME: ${AGENT_SERVER_MINIO_BUCKET_NAME}
       MINIO_ENDPOINT: http://minio.local:9000
-      OTEL_ADDR: ${OTEL_ADDR:-otelcontribcol.local:8148}
+      OTEL_ADDR: ${OTEL_ADDR:-otel.local:8148}
     volumes:
       - vx-server-data:/opt/vxserver/data:rw
       - vx-server-logs:/opt/vxserver/logs:rw
@@ -199,7 +199,7 @@ services:
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
       MINIO_ENDPOINT: http://minio.local:9000
-      OTEL_ADDR: ${OTEL_ADDR:-otelcontribcol.local:8148}
+      OTEL_ADDR: ${OTEL_ADDR:-otel.local:8148}
     depends_on:
       minio:
         condition: service_started
@@ -223,14 +223,15 @@ services:
       server:
         condition: service_started
 
-  soldr-elastic-config:
+  elasticsearch-config:
     image: docker.io/vxcontrol/soldr-elastic-config:latest
-    container_name: vx_esconfig
+    container_name: vx_elasticsearch_config
+    hostname: elasticsearch-config.local
     restart: always
     networks:
       - vx-stand
     volumes:
-      - elasticsearch_config:/usr/share/elasticsearch/config:rw
+      - vx-elasticsearch-config:/usr/share/elasticsearch/config:rw
     environment:
       MASTER_PASSWORD: ${MASTER_PASSWORD:-P@ssw0rd}
     healthcheck:
@@ -247,6 +248,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.14.1
     container_name: vx_elasticsearch
+    hostname: elasticsearch.local
     restart: always
     networks:
       - vx-stand
@@ -254,10 +256,8 @@ services:
       - 9200/tcp
       - 9300/tcp
     volumes:
-      - elasticsearch_config:/usr/share/elasticsearch/config:rw
-      - source: elasticsearch
-        target: /usr/share/elasticsearch/data
-        type: volume
+      - vx-elasticsearch-config:/usr/share/elasticsearch/config:rw
+      - vx-elasticsearch-data:/usr/share/elasticsearch/data:rw
     ulimits:
       memlock:
         hard: -1
@@ -266,51 +266,54 @@ services:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
       ES_JAVA_OPTS: ${ES_JAVA_OPTS:-"-Xmx2g -Xms2g"}
     depends_on:
-      soldr-elastic-config:
+      elasticsearch-config:
         condition: service_started
     profiles: ["obs"]
 
   elasticsearch-exporter:
     image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.2.1
-    container_name: vx_esexporter
+    container_name: vx_elasticsearch_exporter
+    hostname: elasticsearch-exporter.local
     restart: always
     networks:
       - vx-stand
     expose:
-      - 7979/tcp
+      - 9114/tcp
     volumes:
-      - elasticsearch_config:/usr/share/elasticsearch/config:ro
+      - vx-elasticsearch-config:/usr/share/elasticsearch/config:ro
     entrypoint:
       - /bin/sh
       - -c
-      - /bin/elasticsearch_exporter --es.uri=http://elastic:$$(cat /usr/share/elasticsearch/config/passfile)@elasticsearch:9200
+      - /bin/elasticsearch_exporter --es.uri=http://elasticsearch.local:$$(cat /usr/share/elasticsearch/config/passfile)@elasticsearch:9200
     depends_on:
-      soldr-elastic-config:
+      elasticsearch-config:
         condition: service_healthy
     profiles: ["obs"]
 
   grafana:
     image: grafana/grafana:latest
     container_name: vx_grafana
+    hostname: grafana.local
     restart: always
     networks:
       - vx-stand
     expose:
       - 3000/tcp
     ports:
-      - 3000:3000
+      - ${GRAFANA_SERVER_HOST:-0.0.0.0}:${GRAFANA_SERVER_PORT:-3000}:3000
     volumes:
-      - grafana_config:/etc/grafana:rw
-      - grafana_data:/var/lib/grafana:rw
-      - grafana_dashboards:/var/lib/grafana/dashboards:rw
+      - vx-grafana-config:/etc/grafana:rw
+      - vx-grafana-data:/var/lib/grafana:rw
+      - vx-grafana-dashboards:/var/lib/grafana/dashboards:rw
     depends_on:
-      soldr-observability-stack-config:
+      observability-config:
         condition: service_healthy
     profiles: ["obs"]
 
   jaeger:
     image: jaegertracing/all-in-one:latest
     container_name: vx_jaeger
+    hostname: jaeger.local
     restart: always
     command:
       - --config-file=/etc/jaeger/config.yml
@@ -325,7 +328,7 @@ services:
       - 6831/udp
       - 6832/udp
     volumes:
-      - jaeger_config:/etc/jaeger:rw
+      - vx-jaeger-config:/etc/jaeger:rw
     ulimits:
       nofile:
         hard: 65000
@@ -334,13 +337,14 @@ services:
     environment:
       SPAN_STORAGE_TYPE: ${SPAN_STORAGE_TYPE:-elasticsearch}
     depends_on:
-      soldr-observability-stack-config:
+      observability-config:
         condition: service_healthy
     profiles: ["obs"]
 
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: vx_nexporter
+    container_name: vx_node_exporter
+    hostname: node-exporter.local
     restart: always    
     command:
       - --path.procfs=/host/proc
@@ -362,18 +366,19 @@ services:
         condition: service_started
     profiles: ["obs"]
 
-  soldr-observability-stack-config:
+  observability-config:
     image: docker.io/vxcontrol/soldr-observability-stack-config:latest
-    container_name: vx_obsconfig
+    container_name: vx_observability_config
+    hostname: observability-config.local
     restart: always
     networks:
       - vx-stand
     volumes:
-      - elasticsearch_config:/usr/share/elasticsearch/config:rw
-      - grafana_config:/etc/grafana:rw
-      - jaeger_config:/etc/jaeger:rw
-      - otelcontribcol_config:/etc/otel:rw
-      - grafana_dashboards:/var/lib/grafana/dashboards:rw
+      - vx-elasticsearch-config:/usr/share/elasticsearch/config:rw
+      - vx-grafana-config:/etc/grafana:rw
+      - vx-jaeger-config:/etc/jaeger:rw
+      - vx-otel-config:/etc/otel:rw
+      - vx-grafana-dashboards:/var/lib/grafana/dashboards:rw
     environment:
       ELK_VERSION: ${ELK_VERSION:-7.14.1}
     healthcheck:
@@ -386,14 +391,14 @@ services:
         - /opt/soldr_observability/healthcheck
       timeout: 10s
     depends_on:
-      soldr-elastic-config:
+      elasticsearch-config:
         condition: service_healthy
     profiles: ["obs"]
   
-  otelcontribcol:
+  otel:
     image: otel/opentelemetry-collector-contrib:latest
-    container_name: vx_otelcontribcol
-    hostname: otelcontribcol.local
+    container_name: vx_otel
+    hostname: otel.local
     restart: always    
     networks:
       - vx-stand
@@ -405,18 +410,19 @@ services:
       - 6831/tcp
       - 1777/tcp
     ports:
-      - 8148:8148
+      - ${INTERNAL_NET_HOST:-127.0.0.1}:8148:8148
     volumes:
-      - otelcontribcol_config:/etc/otel:rw
+      - vx-otel-config:/etc/otel:rw
     entrypoint: ["/otelcol-contrib", "--config", "/etc/otel/config.yaml"]
     depends_on:
-      soldr-observability-stack-config:
+      observability-config:
         condition: service_healthy
     profiles: ["obs"]
 
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.66.2
     container_name: vx_victoriametrics
+    hostname: victoriametrics.local
     restart: always
     command:
       - --storageDataPath=/storage
@@ -429,12 +435,10 @@ services:
       - vx-stand
     expose:
       - 8428/tcp
-    ports:
-      - 8428:8428
     volumes:
-      - vm_data:/storage:rw
+      - vx-victoriametrics-data:/storage:rw
     depends_on:
-      soldr-observability-stack-config:
+      observability-config:
         condition: service_started
     profiles: ["obs"]
 
@@ -457,19 +461,19 @@ volumes:
     driver: local
   vx-server-store:
     driver: local
-  elasticsearch:
+  vx-elasticsearch-data:
     driver: local
-  elasticsearch_config:
+  vx-elasticsearch-config:
     driver: local
-  grafana_config:
+  vx-grafana-config:
     driver: local
-  grafana_dashboards:
+  vx-grafana-dashboards:
     driver: local
-  grafana_data:
+  vx-grafana-data:
     driver: local
-  jaeger_config:
+  vx-jaeger-config:
     driver: local
-  otelcontribcol_config:
+  vx-otel-config:
     driver: local
-  vm_data:
+  vx-victoriametrics-data:
     driver: local
