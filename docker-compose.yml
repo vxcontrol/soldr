@@ -249,7 +249,7 @@ services:
         soft: -1
     environment:
       ELASTIC_PASSWORD: ${ELASTIC_PASSWORD:-changeme}
-      ES_JAVA_OPTS: ${ES_JAVA_OPTS:-"-Xmx2g -Xms2g"}
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xmx2g -Xms2g}
     depends_on:
       elasticsearch-config:
         condition: service_started
