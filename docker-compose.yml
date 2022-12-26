@@ -230,28 +230,6 @@ services:
       server:
         condition: service_started
 
-  elasticsearch-config:
-    image: docker.io/vxcontrol/soldr-elastic-config:latest
-    container_name: vx_elasticsearch_config
-    hostname: elasticsearch-config.local
-    restart: always
-    networks:
-      - vx-stand
-    volumes:
-      - vx-elasticsearch-config:/usr/share/elasticsearch/config:rw
-    environment:
-      MASTER_PASSWORD: ${MASTER_PASSWORD:-P@ssw0rd}
-    healthcheck:
-      interval: 0h
-      retries: 10
-      test:
-      - CMD
-      - test
-      - -f
-      - /usr/share/elasticsearch/config/passfile
-      timeout: 20s
-    profiles: ["obs"]
-
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.14.1
     container_name: vx_elasticsearch
@@ -277,44 +255,27 @@ services:
         condition: service_started
     profiles: ["obs"]
 
-  elasticsearch-exporter:
-    image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.2.1
-    container_name: vx_elasticsearch_exporter
-    hostname: elasticsearch-exporter.local
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.66.2
+    container_name: vx_victoriametrics
+    hostname: victoriametrics.local
     restart: always
+    command:
+      - --storageDataPath=/storage
+      - --graphiteListenAddr=:2003
+      - --opentsdbListenAddr=:4242
+      - --httpListenAddr=:8428
+      - --influxListenAddr=:8089
+      - --selfScrapeInterval=10s
     networks:
       - vx-stand
     expose:
-      - 9114/tcp
+      - 8428/tcp
     volumes:
-      - vx-elasticsearch-config:/usr/share/elasticsearch/config:ro
-    entrypoint:
-      - /bin/sh
-      - -c
-      - /bin/elasticsearch_exporter --es.uri=http://elasticsearch.local:$$(cat /usr/share/elasticsearch/config/passfile)@elasticsearch:9200
-    depends_on:
-      elasticsearch-config:
-        condition: service_healthy
-    profiles: ["obs"]
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: vx_grafana
-    hostname: grafana.local
-    restart: always
-    networks:
-      - vx-stand
-    expose:
-      - 3000/tcp
-    ports:
-      - ${GRAFANA_SERVER_HOST:-0.0.0.0}:${GRAFANA_SERVER_PORT:-3000}:3000
-    volumes:
-      - vx-grafana-config:/etc/grafana:rw
-      - vx-grafana-data:/var/lib/grafana:rw
-      - vx-grafana-dashboards:/var/lib/grafana/dashboards:rw
+      - vx-victoriametrics-data:/storage:rw
     depends_on:
       observability-config:
-        condition: service_healthy
+        condition: service_started
     profiles: ["obs"]
 
   jaeger:
@@ -348,29 +309,48 @@ services:
         condition: service_healthy
     profiles: ["obs"]
 
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: vx_node_exporter
-    hostname: node-exporter.local
-    restart: always    
-    command:
-      - --path.procfs=/host/proc
-      - --path.sysfs=/host/sys
-      - --collector.filesystem.ignored-mount-points
-      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: vx_grafana
+    hostname: grafana.local
+    restart: always
     networks:
       - vx-stand
     expose:
-      - 9100/tcp
+      - 3000/tcp
+    ports:
+      - ${GRAFANA_SERVER_HOST:-0.0.0.0}:${GRAFANA_SERVER_PORT:-3000}:3000
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    deploy:
-      mode: global
+      - vx-grafana-config:/etc/grafana:rw
+      - vx-grafana-data:/var/lib/grafana:rw
+      - vx-grafana-dashboards:/var/lib/grafana/dashboards:rw
     depends_on:
-      victoriametrics:
-        condition: service_started
+      observability-config:
+        condition: service_healthy
+    profiles: ["obs"]
+
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: vx_otel
+    hostname: otel.local
+    restart: always    
+    networks:
+      - vx-stand
+    expose:
+      - 55679/tcp
+      - 14268/tcp
+      - 8418/tcp
+      - 8148/tcp
+      - 6831/tcp
+      - 1777/tcp
+    ports:
+      - ${INTERNAL_NET_HOST:-127.0.0.1}:8148:8148
+    volumes:
+      - vx-otel-config:/etc/otel:rw
+    entrypoint: ["/otelcol-contrib", "--config", "/etc/otel/config.yaml"]
+    depends_on:
+      observability-config:
+        condition: service_healthy
     profiles: ["obs"]
 
   observability-config:
@@ -401,51 +381,71 @@ services:
       elasticsearch-config:
         condition: service_healthy
     profiles: ["obs"]
-  
-  otel:
-    image: otel/opentelemetry-collector-contrib:latest
-    container_name: vx_otel
-    hostname: otel.local
-    restart: always    
+
+  elasticsearch-config:
+    image: docker.io/vxcontrol/soldr-elastic-config:latest
+    container_name: vx_elasticsearch_config
+    hostname: elasticsearch-config.local
+    restart: always
+    networks:
+      - vx-stand
+    volumes:
+      - vx-elasticsearch-config:/usr/share/elasticsearch/config:rw
+    environment:
+      MASTER_PASSWORD: ${MASTER_PASSWORD:-P@ssw0rd}
+    healthcheck:
+      interval: 0h
+      retries: 10
+      test:
+      - CMD
+      - test
+      - -f
+      - /usr/share/elasticsearch/config/passfile
+      timeout: 20s
+    profiles: ["obs"]
+
+  elasticsearch-exporter:
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.2.1
+    container_name: vx_elasticsearch_exporter
+    hostname: elasticsearch-exporter.local
+    restart: always
     networks:
       - vx-stand
     expose:
-      - 55679/tcp
-      - 14268/tcp
-      - 8418/tcp
-      - 8148/tcp
-      - 6831/tcp
-      - 1777/tcp
-    ports:
-      - ${INTERNAL_NET_HOST:-127.0.0.1}:8148:8148
+      - 9114/tcp
     volumes:
-      - vx-otel-config:/etc/otel:rw
-    entrypoint: ["/otelcol-contrib", "--config", "/etc/otel/config.yaml"]
+      - vx-elasticsearch-config:/usr/share/elasticsearch/config:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - /bin/elasticsearch_exporter --es.uri=http://elasticsearch.local:$$(cat /usr/share/elasticsearch/config/passfile)@elasticsearch:9200
     depends_on:
-      observability-config:
+      elasticsearch-config:
         condition: service_healthy
     profiles: ["obs"]
 
-  victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.66.2
-    container_name: vx_victoriametrics
-    hostname: victoriametrics.local
-    restart: always
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: vx_node_exporter
+    hostname: node-exporter.local
+    restart: always    
     command:
-      - --storageDataPath=/storage
-      - --graphiteListenAddr=:2003
-      - --opentsdbListenAddr=:4242
-      - --httpListenAddr=:8428
-      - --influxListenAddr=:8089
-      - --selfScrapeInterval=10s
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
     networks:
       - vx-stand
     expose:
-      - 8428/tcp
+      - 9100/tcp
     volumes:
-      - vx-victoriametrics-data:/storage:rw
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    deploy:
+      mode: global
     depends_on:
-      observability-config:
+      victoriametrics:
         condition: service_started
     profiles: ["obs"]
 
