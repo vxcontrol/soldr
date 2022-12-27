@@ -231,7 +231,7 @@ services:
         condition: service_started
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.1
+    image: elasticsearch:7.17.8
     container_name: vx_elasticsearch
     hostname: elasticsearch.local
     restart: always
@@ -256,7 +256,7 @@ services:
     profiles: ["obs"]
 
   victoriametrics:
-    image: victoriametrics/victoria-metrics:v1.66.2
+    image: victoriametrics/victoria-metrics:v1.85.3
     container_name: vx_victoriametrics
     hostname: victoriametrics.local
     restart: always
@@ -279,7 +279,7 @@ services:
     profiles: ["obs"]
 
   jaeger:
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/all-in-one:1.40.0
     container_name: vx_jaeger
     hostname: jaeger.local
     restart: always
@@ -310,7 +310,7 @@ services:
     profiles: ["obs"]
 
   loki:
-    image: grafana/loki:2.6.1
+    image: grafana/loki:2.7.1
     container_name: vx_loki
     hostname: loki.local
     restart: always
@@ -334,7 +334,7 @@ services:
     profiles: ["obs"]
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:9.3.2
     container_name: vx_grafana
     hostname: grafana.local
     restart: always
@@ -354,7 +354,7 @@ services:
     profiles: ["obs"]
 
   otel:
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.68.0
     container_name: vx_otel
     hostname: otel.local
     restart: always    
@@ -378,7 +378,7 @@ services:
     profiles: ["obs"]
 
   observability-config:
-    image: docker.io/vxcontrol/soldr-observability-stack-config:latest
+    image: vxcontrol/soldr-observability-stack-config:latest
     container_name: vx_observability_config
     hostname: observability-config.local
     restart: always
@@ -392,7 +392,7 @@ services:
       - vx-otel-config:/etc/otel:rw
       - vx-grafana-dashboards:/var/lib/grafana/dashboards:rw
     environment:
-      ELK_VERSION: ${ELK_VERSION:-7.14.1}
+      ELK_VERSION: ${ELK_VERSION:-7.17.8}
     healthcheck:
       interval: 30s
       retries: 3
@@ -408,7 +408,7 @@ services:
     profiles: ["obs"]
 
   elasticsearch-config:
-    image: docker.io/vxcontrol/soldr-elastic-config:latest
+    image: vxcontrol/soldr-elastic-config:latest
     container_name: vx_elasticsearch_config
     hostname: elasticsearch-config.local
     restart: always
@@ -430,7 +430,7 @@ services:
     profiles: ["obs"]
 
   elasticsearch-exporter:
-    image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.2.1
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.5.0
     container_name: vx_elasticsearch_exporter
     hostname: elasticsearch-exporter.local
     restart: always
@@ -450,7 +450,7 @@ services:
     profiles: ["obs"]
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.5.0
     container_name: vx_node_exporter
     hostname: node-exporter.local
     restart: always    
