@@ -97,6 +97,7 @@ services:
     image: vxcontrol/soldr-dbmigrate
     container_name: vx_dbmigrate
     hostname: dbmigrate.local
+    restart: unless-stopped
     networks:
       - vx-stand
     environment:
@@ -234,7 +235,7 @@ services:
     image: elasticsearch:7.17.8
     container_name: vx_elasticsearch
     hostname: elasticsearch.local
-    restart: always
+    restart: unless-stopped
     networks:
       - vx-stand
     expose:
@@ -259,7 +260,7 @@ services:
     image: victoriametrics/victoria-metrics:v1.85.3
     container_name: vx_victoriametrics
     hostname: victoriametrics.local
-    restart: always
+    restart: unless-stopped
     command:
       - --storageDataPath=/storage
       - --graphiteListenAddr=:2003
@@ -282,7 +283,7 @@ services:
     image: jaegertracing/all-in-one:1.40.0
     container_name: vx_jaeger
     hostname: jaeger.local
-    restart: always
+    restart: unless-stopped
     command:
       - --config-file=/etc/jaeger/config.yml
     networks:
@@ -313,7 +314,7 @@ services:
     image: grafana/loki:2.7.1
     container_name: vx_loki
     hostname: loki.local
-    restart: always
+    restart: unless-stopped
     command: 
       - -config.file=/etc/loki/config.yaml
     networks:
@@ -337,7 +338,7 @@ services:
     image: grafana/grafana:9.3.2
     container_name: vx_grafana
     hostname: grafana.local
-    restart: always
+    restart: unless-stopped
     networks:
       - vx-stand
     expose:
@@ -357,7 +358,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.68.0
     container_name: vx_otel
     hostname: otel.local
-    restart: always    
+    restart: unless-stopped    
     networks:
       - vx-stand
     expose:
@@ -381,7 +382,7 @@ services:
     image: vxcontrol/soldr-observability-stack-config:latest
     container_name: vx_observability_config
     hostname: observability-config.local
-    restart: always
+    restart: unless-stopped
     networks:
       - vx-stand
     volumes:
@@ -411,7 +412,7 @@ services:
     image: vxcontrol/soldr-elastic-config:latest
     container_name: vx_elasticsearch_config
     hostname: elasticsearch-config.local
-    restart: always
+    restart: unless-stopped
     networks:
       - vx-stand
     volumes:
@@ -433,7 +434,7 @@ services:
     image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.5.0
     container_name: vx_elasticsearch_exporter
     hostname: elasticsearch-exporter.local
-    restart: always
+    restart: unless-stopped
     networks:
       - vx-stand
     expose:
@@ -453,7 +454,7 @@ services:
     image: prom/node-exporter:v1.5.0
     container_name: vx_node_exporter
     hostname: node-exporter.local
-    restart: always    
+    restart: unless-stopped    
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
