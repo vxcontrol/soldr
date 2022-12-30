@@ -238,7 +238,7 @@ Observability stack collect metrics, traces, logs from SOLDR components. Stack c
 > For more information about collector, visit [`https://opentelemetry.io/docs/collector`](https://opentelemetry.io/docs/collector).
 
 Run observability stack components and then open `Grafana` in a browser [`https://localhost:3000`](https://localhost:3000). Default credentials: `admin/admin`. After default password for `admin` user changed, you can check provisioned SOLDR dashboards by click `Dashboards` icon on menu bar. On this SOLDR dashboards you can view server, agents and modules resource utilization, events statistics etc. 
-For checking traces you need to click `Explore` icon on menu bar, then choose `Jaeger` data source from dropdown in the top left. Now you can query and filter traces by `Service Name`, `Operation Name`, `Tags`, `duration` and `Time ranges`.
+For checking traces, you need to click `Explore` icon on menu bar, then choose `Jaeger` data source from dropdown in the top left. Now you can query and filter traces by `Service Name`, `Operation Name`, `Tags`, `duration` and `Time ranges`.
 
 > Full observability stack requires more resources compare to clean SOLDR.
 
