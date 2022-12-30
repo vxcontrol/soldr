@@ -237,11 +237,11 @@ func TestObserverMetricsAPI(t *testing.T) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	// start metrics collecting
 	putTestMetricsSet(t, obs.Observer)
@@ -274,11 +274,11 @@ func TestObserverMetricsAPIGaugeCounter(t *testing.T) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	// start metrics collecting
 	gaugeInt64Counter, err := obs.Observer.NewInt64GaugeCounter("test-int64-gauge-counter")
@@ -330,11 +330,11 @@ func TestObserverMetricsAPIWithFlush(t *testing.T) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	// start metrics collecting
 	putTestMetricsSet(t, obs.Observer)
@@ -386,11 +386,11 @@ func TestObserverMetricsAPIWithTimeout(t *testing.T) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	// start metrics collecting
 	putTestMetricsSet(t, obs.Observer)
@@ -429,11 +429,11 @@ func TestObserverMetricsAPIRegistry(t *testing.T) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	registry, err := obs.NewMetricRegistry()
 	if err != nil {
@@ -472,14 +472,14 @@ func TestObserverMetricsCollector(t *testing.T) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	// start metrics collecting
-	obs.Observer.StartDumperMetricCollect(&d, "vxcommon", "v1.0.0-develop")
+	obs.Observer.StartDumperMetricCollect(&d, service, version)
 	// stop metrics collecting
 
 	obs.Observer.Close()
@@ -524,14 +524,14 @@ func TestObserverMetricsProxyCollector(t *testing.T) {
 	}
 	hookClient := obs.NewHookMeterClient(hookClientCfg)
 	proxyClient := obs.NewProxyMeterClient(adoptiveClient, hookClient)
-	controller, err := obs.NewMeterProvider(ctx, proxyClient, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, proxyClient, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, proxyClient, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, proxyClient, service, version, nil)
 
 	// start metrics collecting
-	obs.Observer.StartDumperMetricCollect(&d, "vxcommon", "v1.0.0-develop")
+	obs.Observer.StartDumperMetricCollect(&d, service, version)
 	// stop metrics collecting
 
 	obs.Observer.Close()
@@ -573,11 +573,11 @@ func BenchmarkObserverMetricsAPI(b *testing.B) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		b.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	meter := obs.Observer
 	direction := int64(1)
@@ -629,11 +629,11 @@ func BenchmarkObserverMetricsAPIRegistry(b *testing.B) {
 	}
 
 	client := obs.NewHookMeterClient(clientCfg)
-	controller, err := obs.NewMeterProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, client, service, version)
 	if err != nil {
 		b.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, client, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, client, service, version, nil)
 
 	meter, err := obs.NewMetricRegistry()
 	if err != nil {
@@ -696,11 +696,11 @@ func BenchmarkObserverMetricsProxyAPI(b *testing.B) {
 	hookClient := obs.NewHookMeterClient(hookClientCfg)
 	proxyClient := obs.NewProxyMeterClient(adoptiveClient, hookClient)
 
-	controller, err := obs.NewMeterProvider(ctx, proxyClient, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, proxyClient, service, version)
 	if err != nil {
 		b.Fatal(err)
 	}
-	obs.InitObserver(ctx, nil, controller, nil, proxyClient, "vxcommon", nil)
+	obs.InitObserver(ctx, nil, controller, nil, proxyClient, service, version, nil)
 
 	meter := obs.Observer
 	direction := int64(1)

@@ -31,6 +31,8 @@ import (
 	"soldr/internal/version"
 )
 
+const serviceName = "vxapi"
+
 type Config struct {
 	Debug            bool `config:"debug"`
 	Develop          bool `config:"is_develop"`
@@ -191,7 +193,7 @@ func main() {
 	serviceS3ConnectionStorage := mem.NewServiceS3ConnectionStorage()
 
 	tracerClient := observability.NewProxyTracerClient(
-		observability.NewOtlpTracerClient(cfg.Tracing.Addr),
+		observability.NewOtlpTracerAndLoggerClient(cfg.Tracing.Addr),
 		observability.NewHookTracerClient(&observability.HookClientConfig{
 			ResendTimeout:   observability.DefaultResendTimeout,
 			QueueSizeLimit:  observability.DefaultQueueSizeLimit,
@@ -199,7 +201,13 @@ func main() {
 		}),
 	)
 	attr := attribute.String("api_server_id", system.MakeAgentID())
-	tracerProvider, err := observability.NewTracerProvider(ctx, tracerClient, "vxapi", version.GetBinaryVersion(), attr)
+	tracerProvider, err := observability.NewTracerProvider(
+		ctx,
+		tracerClient,
+		serviceName,
+		version.GetBinaryVersion(),
+		attr,
+	)
 	if err != nil {
 		logger.WithError(err).Error("could not create tracer provider")
 		return
@@ -216,7 +224,13 @@ func main() {
 		logger.WithError(err).Error("could not create meter client")
 		return
 	}
-	meterProvider, err := observability.NewMeterProvider(ctx, meterClient, "vxapi", version.GetBinaryVersion(), attr)
+	meterProvider, err := observability.NewMeterProvider(
+		ctx,
+		meterClient,
+		serviceName,
+		version.GetBinaryVersion(),
+		attr,
+	)
 	if err != nil {
 		logger.WithError(err).Error("could not create meter provider")
 		return
@@ -232,7 +246,16 @@ func main() {
 	if cfg.Debug {
 		logLevels = append(logLevels, logrus.DebugLevel)
 	}
-	observability.InitObserver(ctx, tracerProvider, meterProvider, tracerClient, meterClient, "vxapi", logLevels)
+	observability.InitObserver(
+		ctx,
+		tracerProvider,
+		meterProvider,
+		tracerClient,
+		meterClient,
+		serviceName,
+		version.GetBinaryVersion(),
+		logLevels,
+	)
 
 	gormMeter := meterProvider.Meter("vxapi-meter")
 	if err = meter.InitGormMetrics(gormMeter); err != nil {
@@ -241,8 +264,8 @@ func main() {
 	}
 
 	// initialize system metric collection in current observer instance
-	observability.Observer.StartProcessMetricCollect("vxapi", version.GetBinaryVersion(), attr)
-	observability.Observer.StartGoRuntimeMetricCollect("vxapi", version.GetBinaryVersion(), attr)
+	observability.Observer.StartProcessMetricCollect(serviceName, version.GetBinaryVersion(), attr)
+	observability.Observer.StartGoRuntimeMetricCollect(serviceName, version.GetBinaryVersion(), attr)
 	defer observability.Observer.Close()
 
 	exchanger := srvevents.NewExchanger()

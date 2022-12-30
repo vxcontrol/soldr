@@ -110,11 +110,11 @@ func TestObserverTracesAPI(t *testing.T) {
 	}
 
 	client := obs.NewHookTracerClient(clientCfg)
-	provider, err := obs.NewTracerProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, client, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, client, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -145,11 +145,11 @@ func TestObserverTracesAPIWithFlush(t *testing.T) {
 	}
 
 	client := obs.NewHookTracerClient(clientCfg)
-	provider, err := obs.NewTracerProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, client, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, client, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -196,11 +196,11 @@ func TestObserverTracesProxyAPI(t *testing.T) {
 	hookClient := obs.NewHookTracerClient(hookClientCfg)
 	proxyClient := obs.NewProxyTracerClient(adoptiveClient, hookClient)
 
-	provider, err := obs.NewTracerProvider(ctx, proxyClient, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, proxyClient, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, proxyClient, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, proxyClient, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -238,11 +238,11 @@ func TestObserverTracesProxyAPIWithFlush(t *testing.T) {
 	hookClient := obs.NewHookTracerClient(hookClientCfg)
 	proxyClient := obs.NewProxyTracerClient(adoptiveClient, hookClient)
 
-	provider, err := obs.NewTracerProvider(ctx, proxyClient, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, proxyClient, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, proxyClient, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, proxyClient, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -284,11 +284,11 @@ func TestObserverTracesAPIFixedTraceID(t *testing.T) {
 	traceID := "d41d8cd98f00b204e9800998ecf8427e"
 	pspanID := "8f00b204e9800998"
 	client := obs.NewHookTracerClient(clientCfg)
-	provider, err := obs.NewTracerProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, client, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, client, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -319,11 +319,11 @@ func TestObserverTracesAPIDoubleEndSpan(t *testing.T) {
 	}
 
 	client := obs.NewHookTracerClient(clientCfg)
-	provider, err := obs.NewTracerProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, client, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, client, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -358,11 +358,11 @@ func TestObserverTracesAPIEmptyBranch(t *testing.T) {
 	}
 
 	client := obs.NewHookTracerClient(clientCfg)
-	provider, err := obs.NewTracerProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, client, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, client, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,
@@ -396,11 +396,11 @@ func TestObserverTracesAPIMixedBranches(t *testing.T) {
 	}
 
 	client := obs.NewHookTracerClient(clientCfg)
-	provider, err := obs.NewTracerProvider(ctx, client, "vxcommon", "v1.0.0-develop")
+	provider, err := obs.NewTracerProvider(ctx, client, service, version)
 	if err != nil {
 		t.Fatal(err)
 	}
-	obs.InitObserver(ctx, provider, nil, client, nil, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, nil, client, nil, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,

@@ -485,7 +485,7 @@ func getLogDir(configLogDir string) (string, error) {
 
 func initObserver(server *Server, _ *logrus.Entry) (func(), error) {
 	server.tracerClient = observability.NewProxyTracerClient(
-		observability.NewOtlpTracerClient(server.config.OtelAddr),
+		observability.NewOtlpTracerAndLoggerClient(server.config.OtelAddr),
 		observability.NewHookTracerClient(&observability.HookClientConfig{
 			ResendTimeout:   100 * time.Millisecond,
 			QueueSizeLimit:  100 * 1024 * 1024, // 100 MB
@@ -502,11 +502,23 @@ func initObserver(server *Server, _ *logrus.Entry) (func(), error) {
 	)
 	attr := attribute.String("server_id", system.MakeAgentID())
 	ctx := context.Background()
-	tracerProvider, err := observability.NewTracerProvider(ctx, server.tracerClient, serviceName, server.version, attr)
+	tracerProvider, err := observability.NewTracerProvider(
+		ctx,
+		server.tracerClient,
+		serviceName,
+		server.version,
+		attr,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize a tracer provider: %w", err)
 	}
-	meterProvider, err := observability.NewMeterProvider(ctx, server.metricsClient, serviceName, server.version, attr)
+	meterProvider, err := observability.NewMeterProvider(
+		ctx,
+		server.metricsClient,
+		serviceName,
+		server.version,
+		attr,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize a metrics provider: %w", err)
 	}
@@ -524,7 +536,16 @@ func initObserver(server *Server, _ *logrus.Entry) (func(), error) {
 	} else {
 		logrus.SetLevel(logrus.InfoLevel)
 	}
-	observability.InitObserver(ctx, tracerProvider, meterProvider, server.tracerClient, server.metricsClient, serviceName, logLevels)
+	observability.InitObserver(
+		ctx,
+		tracerProvider,
+		meterProvider,
+		server.tracerClient,
+		server.metricsClient,
+		serviceName,
+		server.version,
+		logLevels,
+	)
 	return func() {
 		observability.Observer.Close()
 	}, nil

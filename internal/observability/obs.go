@@ -107,7 +107,7 @@ type IDumper interface {
 }
 
 func init() {
-	InitObserver(context.Background(), nil, nil, nil, nil, "noop", []logrus.Level{})
+	InitObserver(context.Background(), nil, nil, nil, nil, "noop", "v0.0.0", []logrus.Level{})
 }
 
 func InitObserver(
@@ -117,6 +117,7 @@ func InitObserver(
 	tclient otlptrace.Client,
 	mclient otlpmetric.Client,
 	tname string,
+	tversion string,
 	levels []logrus.Level,
 ) {
 	if Observer != nil {
@@ -133,6 +134,9 @@ func InitObserver(
 		mclient:   mclient,
 	}
 
+	tverRev := strings.Split(tversion, "-")
+	tversion = strings.TrimPrefix(tverRev[0], "v")
+
 	if tprovider != nil {
 		otel.SetTracerProvider(tprovider)
 		otel.SetTextMapPropagator(
@@ -141,13 +145,13 @@ func InitObserver(
 				propagation.Baggage{},
 			),
 		)
-		obs.tracer = tprovider.Tracer(tname)
+		obs.tracer = tprovider.Tracer(tname, oteltrace.WithInstrumentationVersion(tversion))
 		logrus.AddHook(obs)
 	}
 
 	if mprovider != nil {
 		metricglobal.SetMeterProvider(mprovider)
-		obs.meter = mprovider.Meter(tname)
+		obs.meter = mprovider.Meter(tname, otelmetric.WithInstrumentationVersion(tversion))
 		mprovider.Start(ctx)
 	}
 
