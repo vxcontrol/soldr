@@ -37,17 +37,19 @@ func initObserver(uploadTraces, uploadMetrics func(context.Context, [][]byte) er
 	}
 
 	clientTraces := obs.NewHookTracerClient(clientTracesCfg)
-	provider, err := obs.NewTracerProvider(ctx, clientTraces, "vxcommon", "v1.0.0-develop")
+	service := "vxcommon"
+	version := "v1.0.0-develop"
+	provider, err := obs.NewTracerProvider(ctx, clientTraces, service, version)
 	if err != nil {
 		return err
 	}
 	clientMetric := obs.NewHookMeterClient(clientMetricsCfg)
-	controller, err := obs.NewMeterProvider(ctx, clientMetric, "vxcommon", "v1.0.0-develop")
+	controller, err := obs.NewMeterProvider(ctx, clientMetric, service, version)
 	if err != nil {
 		return err
 	}
 
-	obs.InitObserver(ctx, provider, controller, clientTraces, clientMetric, "vxcommon", []logrus.Level{
+	obs.InitObserver(ctx, provider, controller, clientTraces, clientMetric, service, version, []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
 		logrus.ErrorLevel,

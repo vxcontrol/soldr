@@ -18,6 +18,8 @@ import (
 
 const (
 	defUploadChan = 256
+	service       = "vxcommon"
+	version       = "v1.0.0-develop"
 )
 
 func makeResourceSpans(num int) []*tracepb.ResourceSpans {

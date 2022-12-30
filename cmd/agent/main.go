@@ -292,7 +292,13 @@ func configureLogging(ctx context.Context, c *config.Config) (func(), error) {
 		}
 	}
 	tracerClient := observability.NewHookTracerClient(c.TracerConfigClient)
-	tracerProvider, err := observability.NewTracerProvider(ctx, tracerClient, serviceName, c.Version, attr)
+	tracerProvider, err := observability.NewTracerProvider(
+		ctx,
+		tracerClient,
+		serviceName,
+		c.Version,
+		attr,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize a tracer provider for logging: %w", err)
 	}
@@ -305,12 +311,27 @@ func configureLogging(ctx context.Context, c *config.Config) (func(), error) {
 		}
 	}
 	meterClient := observability.NewHookMeterClient(c.MeterConfigClient)
-	meterProvider, err := observability.NewMeterProvider(ctx, meterClient, serviceName, c.Version, attr)
+	meterProvider, err := observability.NewMeterProvider(
+		ctx,
+		meterClient,
+		serviceName,
+		c.Version,
+		attr,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialized a metrics provider for logging")
 	}
 
-	observability.InitObserver(ctx, tracerProvider, meterProvider, tracerClient, meterClient, serviceName, logLevels)
+	observability.InitObserver(
+		ctx,
+		tracerProvider,
+		meterProvider,
+		tracerClient,
+		meterClient,
+		serviceName,
+		c.Version,
+		logLevels,
+	)
 	return func() {
 		observability.Observer.Close()
 	}, nil
