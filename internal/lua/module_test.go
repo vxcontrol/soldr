@@ -459,6 +459,81 @@ func Example_api() {
 	//Result:  success
 }
 
+// Run simple test with topics API functions
+func Example_topics_api() {
+	ctx := context.Background()
+	args := map[string][]string{}
+	files := map[string][]byte{
+		"main.lua": []byte(`
+			-- patch local environment because it's not initialized yet
+			local __gid = "5905185179cbba1bd95d478918bf0b32"
+			-- it's a part of the contract between modules
+			local topic_name = "test_topic"
+
+			-- publisher side --
+			local topic_token = __imc.make_topic(topic_name, __gid)
+			assert(topic_token:find("^ffff7777"))
+			--------------------
+
+			-- subscriber side --
+			assert(__imc.subscribe_to_topic(topic_name, __gid))
+
+			-- reduce packet waiting time
+			__api.set_recv_timeout(10) -- 10 ms
+
+			-- register data callback to receive packets from topic
+			if __api.add_cbs({
+				["data"] = function(src, data)
+					print("Received: " .. data)
+					return true
+				end,
+			}) == false then
+				return "failed"
+			end
+
+			-- check topic information
+			assert(__imc.is_topic(topic_token))
+			local name, gid, exist = __imc.get_info(topic_token)
+			assert(name == topic_name and gid == __gid and exist)
+
+			-- check subscriptions and topics
+			local topics = __imc.get_topics()
+			assert(#topics == 1)
+			for _, topic_id in ipairs(topics) do
+				assert(topic_id == topic_token)
+				local subs = __imc.get_subscriptions(topic_id)
+				assert(#subs == 1 and subs[1] == __imc.get_token())
+			end
+			---------------------
+
+			-- send data to topic on publisher side --
+			assert(__api.send_data_to(topic_token, "test_data"))
+			------------------------------------------
+
+			-- in the end of the module on subscriber side --
+			assert(__imc.unsubscribe_from_topic(topic_name, __gid))
+			-- also there could use
+			assert(__imc.unsubscribe_from_all_topics())
+			-- unregister data callback
+			if __api.del_cbs({ "data" }) == false then
+				return "failed"
+			end
+			-------------------------------------------------
+
+			return "success"
+		`),
+	}
+
+	proto, _ := vxproto.New(&FakeMainModule{})
+	module, _ := initModule(files, args, "test_module", proto)
+	fmt.Println("Result: ", runModule(module))
+	module.Close()
+	proto.Close(ctx)
+	// Output:
+	//Received: test_data
+	//Result:  success
+}
+
 // Run IMC test with the API functions
 func Example_imc() {
 	ctx := context.Background()
@@ -932,6 +1007,226 @@ func TestIMCSendDataFromCallback(t *testing.T) {
 		wg.Wait()
 		module1.Close()
 		module2.Close()
+		proto.Close(ctx)
+	}
+}
+
+// Run IMC test with call send data to transfer data to topic
+func TestIMCSendDataToTopic(t *testing.T) {
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	mname1 := []string{"test_topic", "test_module1", "sender"}
+	mname2 := []string{"test_topic", "test_module", "receiver"}
+	args1 := map[string][]string{
+		"dst_module": mname2,
+	}
+	args2 := map[string][]string{
+		"dst_module": mname1,
+	}
+	header := []byte(`
+		local res
+		local result = "failed"
+		local steps = {"step1", "step2", "step3", "step4"}
+		__api.set_recv_timeout(1000)
+
+		local this_imc_token = __imc.get_token()
+		if type(this_imc_token) ~= "string" or #this_imc_token ~= 40 then
+			return result
+		end
+	`)
+	sender := []byte(`
+		__api.await(200)
+		local imc_topic = __imc.make_topic(__args["dst_module"][1], "")
+		if __imc.is_topic(imc_topic) == false then
+			return result
+		end
+		local topicName, groupID, isExist = __imc.get_info(imc_topic)
+		if groupID ~= "" or topicName ~= __args["dst_module"][1] or isExist ~= true then
+			return result
+		end
+		if not __api.send_data_to(imc_topic, steps[1]) then
+			return "failed"
+		end
+	`)
+	receiver := []byte(`
+		local imc_token = __imc.make_token(__args["dst_module"][2], "")
+		if not __imc.subscribe_to_topic(__args["dst_module"][1], "") then
+			return "failed"
+		end
+	`)
+	footer := []byte(`
+		for i=0,10 do
+			__api.await(50)
+			if result == "success" then return result end
+		end
+
+		return result
+	`)
+	files1 := []map[string][]byte{
+		{
+			"main.lua": append(append(append(header, []byte(`
+				__api.add_cbs({
+					["data"] = function(src, data)
+						if not __imc.is_exist(src) then return false end
+						local mod, gid, exist = __imc.get_info(src)
+						if not exist or gid ~= "" then return false end
+						if mod:find(__args["dst_module"][2]) == nil then return false end
+						if data ~= steps[2] then return false end
+
+						if not __api.send_data_to(src, data) then return false end
+						result = "success"
+						return true
+					end,
+				})
+			`)...), sender...), footer...),
+		},
+		{
+			"main.lua": append(append(append(header, []byte(`
+				__api.add_cbs({
+					["data"] = function(src, data)
+						if not __imc.is_exist(src) then return false end
+						local mod, gid, exist = __imc.get_info(src)
+						if not exist or gid ~= "" then return false end
+						if mod:find(__args["dst_module"][2]) == nil then return false end
+
+						if not __api.send_data_to(src, data) then return false end
+						if data == steps[4] then
+							result = "success"
+						end
+						return true
+					end,
+				})
+			`)...), sender...), footer...),
+		},
+		{
+			"main.lua": append(append(append(header, []byte(`
+				__api.add_cbs({
+					["data"] = function(src, data)
+						if not __imc.is_exist(src) then return false end
+						local mod, gid, exist = __imc.get_info(src)
+						if not exist or gid ~= "" then return false end
+						if mod:find(__args["dst_module"][2]) == nil then return false end
+						if data ~= steps[2] then return false end
+
+						if not __api.send_data_to(src, data) then return false end
+						data, res = __api.recv_data_from(src)
+						if not res then return false end
+						if data ~= steps[3] then return false end
+						if not __api.send_data_to(src, data) then return false end
+
+						if not __api.send_data_to(src, data) then return false end
+						data, res = __api.recv_data_from(src)
+						if not res then return false end
+						if data ~= steps[4] then return false end
+						if not __api.send_data_to(src, data) then return false end
+
+						if not __api.send_data_to(src, data) then return false end
+						if not __api.send_data_to(src, data) then return false end
+						result = "success"
+						return true
+					end,
+				})
+			`)...), sender...), footer...),
+		},
+	}
+	files2 := []map[string][]byte{
+		{
+			"main.lua": append(append(append(header, receiver...), []byte(`
+				__api.add_cbs({
+					["data"] = function(src, data)
+						if src ~= imc_token then return false end
+						if data == steps[1] and __api.send_data_to(src, steps[2]) then
+							return true
+						elseif data == steps[2] then
+							result = "success"
+							return true
+						end
+						return false
+					end,
+				})
+			`)...), footer...),
+		},
+		{
+			"main.lua": append(append(append(header, receiver...), []byte(`
+				__api.add_cbs({
+					["data"] = function(src, data)
+						if src ~= imc_token then return false end
+						if data == steps[1] and __api.send_data_to(src, steps[2]) then
+							return true
+						elseif data == steps[2] and __api.send_data_to(src, steps[3]) then
+							return true
+						elseif data == steps[3] and __api.send_data_to(src, steps[4]) then
+							return true
+						elseif data == steps[4] then
+							result = "success"
+							return true
+						end
+						return false
+					end,
+				})
+			`)...), footer...),
+		},
+		{
+			"main.lua": append(append(append(header, receiver...), []byte(`
+				__api.add_cbs({
+					["data"] = function(src, data)
+						if src ~= imc_token then return false end
+						if data == steps[1] and __api.send_data_to(src, steps[2]) then
+							return true
+						elseif data == steps[2] and __api.send_data_to(src, steps[3]) then
+							data, res = __api.recv_data_from(src)
+							if not res or data ~= steps[3] then return false end
+							return true
+						elseif data == steps[3] and __api.send_data_to(src, steps[4]) then
+							data, res = __api.recv_data_from(src)
+							if not res or data ~= steps[4] then return false end
+							return true
+						elseif data == steps[4] then
+							data, res = __api.recv_data_from(src)
+							if not res or data ~= steps[4] then return false end
+							result = "success"
+							return true
+						end
+						return false
+					end,
+				})
+			`)...), footer...),
+		},
+	}
+
+	for idx := 0; idx < 3; idx++ {
+		proto, _ := vxproto.New(&FakeMainModule{})
+		module1, _ := initModule(files1[idx], args1, mname1[1], proto)
+		module2 := make([]*lua.Module, 0)
+		for jdx := 0; jdx < 5; jdx++ {
+			moduleID := fmt.Sprintf("%s%d", mname2[1], jdx+2)
+			module, _ := initModule(files2[idx], args2, moduleID, proto)
+			if module == nil {
+				continue
+			}
+			module2 = append(module2, module)
+
+			wg.Add(1)
+			go func(mdx int) {
+				if result := runModule(module); result != "success" {
+					t.Errorf("error in receiver[%d] module iterate %d: '%s'", mdx, idx, result)
+				}
+				wg.Done()
+			}(jdx)
+		}
+
+		wg.Add(1)
+		go func() {
+			if result := runModule(module1); result != "success" {
+				t.Errorf("error in sender module iterate %d: '%s'", idx, result)
+			}
+			wg.Done()
+		}()
+		wg.Wait()
+		module1.Close()
+		for _, module := range module2 {
+			module.Close()
+		}
 		proto.Close(ctx)
 	}
 }
