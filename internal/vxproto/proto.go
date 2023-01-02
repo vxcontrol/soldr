@@ -109,12 +109,26 @@ type IDefaultReceiver interface {
 // IIMC is interface for inter modules communication
 type IIMC interface {
 	HasIMCTokenFormat(token string) bool
+	HasIMCTopicFormat(topic string) bool
 	GetIMCModule(token string) IModuleSocket
+	GetIMCTopic(topic string) ITopicInfo
 	MakeIMCToken(name, gid string) string
+	MakeIMCTopic(name, gid string) string
+	SubscribeIMCToTopic(name, gid, token string) bool
+	UnsubscribeIMCFromTopic(name, gid, token string) bool
+	UnsubscribeIMCFromAllTopics(token string) bool
+	GetIMCTopics() []string
 	GetIMCGroupIDs() []string
 	GetIMCModuleIDs() []string
 	GetIMCGroupIDsByMID(mid string) []string
 	GetIMCModuleIDsByGID(gid string) []string
+}
+
+// ITopicInfo is interface for describe topic registration per each record
+type ITopicInfo interface {
+	GetName() string
+	GetGroupID() string
+	GetSubscriptions() []string
 }
 
 // IAgentValidator is interface for validator in main module for agent connection
@@ -170,6 +184,7 @@ type vxProto struct {
 	modules     map[string]map[string]*moduleSocket
 	agents      map[string]*agentSocket
 	routes      map[string]string
+	topics      map[string]*topicInfo
 	mutex       *sync.RWMutex
 	isClosed    bool
 	isClosedMux *sync.RWMutex
@@ -181,6 +196,12 @@ type vxProto struct {
 	wgqueue     sync.WaitGroup
 	ProtoStats
 	IMainModule
+}
+
+type topicInfo struct {
+	name          string
+	groupID       string
+	subscriptions []string
 }
 
 type ClientConfig struct {
@@ -228,6 +249,7 @@ func New(mmodule IMainModule) (IVXProto, error) {
 		modules:     make(map[string]map[string]*moduleSocket),
 		agents:      make(map[string]*agentSocket),
 		routes:      make(map[string]string),
+		topics:      make(map[string]*topicInfo),
 		mutex:       &sync.RWMutex{},
 		isClosedMux: &sync.RWMutex{},
 		isClosed:    false,
@@ -504,16 +526,20 @@ func (vxp *vxProto) Listen(
 
 // NewModule is function which used for new module creation
 func (vxp *vxProto) NewModule(name, gid string) IModuleSocket {
+	imcToken := vxp.MakeIMCToken(name, gid)
 	return &moduleSocket{
 		name:             name,
 		groupID:          gid,
-		imcToken:         vxp.MakeIMCToken(name, gid),
+		imcToken:         imcToken,
 		router:           newRouter(),
 		IIMC:             vxp,
 		IRouter:          vxp,
 		IProtoStats:      vxp,
 		IProtoIO:         vxp,
 		IDefaultReceiver: vxp,
+		closer: func(ctx context.Context) {
+			vxp.unsubscribeIMCFromAllTopics(imcToken)
+		},
 	}
 }
 
@@ -833,6 +859,15 @@ func (vxp *vxProto) HasIMCTokenFormat(token string) bool {
 	return true
 }
 
+// HasIMCTopicFormat is function which validate imc topic format
+func (vxp *vxProto) HasIMCTopicFormat(topic string) bool {
+	if len(topic) != 40 || !strings.HasPrefix(topic, "ffff7777") {
+		return false
+	}
+
+	return true
+}
+
 // GetIMCModule is function which get module socket for imc token
 // The function may return nil if the token doesn't exist
 func (vxp *vxProto) GetIMCModule(token string) IModuleSocket {
@@ -854,10 +889,137 @@ func (vxp *vxProto) GetIMCModule(token string) IModuleSocket {
 	return nil
 }
 
+// GetIMCTopic is function which get topic info for imc topic token
+// The function may return nil if the topic token doesn't exist
+func (vxp *vxProto) GetIMCTopic(topic string) ITopicInfo {
+	if !vxp.HasIMCTopicFormat(topic) {
+		return nil
+	}
+
+	vxp.mutex.RLock()
+	defer vxp.mutex.RUnlock()
+
+	if info, ok := vxp.topics[topic]; ok && info != nil {
+		return info
+	}
+
+	return nil
+}
+
 // MakeIMCToken is function which get new imc token
 func (vxp *vxProto) MakeIMCToken(name, gid string) string {
 	hash := md5.Sum(append([]byte(gid+":"+name+":"), vxp.tokenKey...))
 	return "ffffffff" + hex.EncodeToString(hash[:])
+}
+
+// MakeIMCTopic is function which get new imc topic
+func (vxp *vxProto) MakeIMCTopic(name, gid string) string {
+	hash := md5.Sum(append([]byte(gid+":"+name+":"), vxp.tokenKey...))
+	return "ffff7777" + hex.EncodeToString(hash[:])
+}
+
+// SubscribeIMCToTopic is function to make or extend record about topic in vxproto
+func (vxp *vxProto) SubscribeIMCToTopic(name, gid, token string) bool {
+	if !vxp.HasIMCTokenFormat(token) {
+		return false
+	}
+
+	vxp.mutex.Lock()
+	defer vxp.mutex.Unlock()
+
+	topic := vxp.MakeIMCTopic(name, gid)
+	if info, ok := vxp.topics[topic]; ok && info != nil {
+		if !stringInSlice(token, info.subscriptions) {
+			info.subscriptions = append(info.subscriptions, token)
+		}
+	} else {
+		vxp.topics[topic] = &topicInfo{
+			name:          name,
+			groupID:       gid,
+			subscriptions: []string{token},
+		}
+	}
+
+	return true
+}
+
+// UnsubscribeIMCFromTopic is function to remove record about topic in vxproto
+func (vxp *vxProto) UnsubscribeIMCFromTopic(name, gid, token string) bool {
+	if !vxp.HasIMCTokenFormat(token) {
+		return false
+	}
+
+	vxp.mutex.Lock()
+	defer vxp.mutex.Unlock()
+
+	topic := vxp.MakeIMCTopic(name, gid)
+	if info, ok := vxp.topics[topic]; ok && info != nil {
+		subs := info.subscriptions
+		for idx, sub := range subs {
+			if sub == token {
+				// It's possible because there used break in the bottom
+				subs = append(subs[:idx], subs[idx+1:]...)
+				break
+			}
+		}
+		if len(subs) == 0 {
+			delete(vxp.topics, topic)
+		} else {
+			info.subscriptions = subs
+		}
+	}
+
+	return true
+}
+
+// UnsubscribeIMCFromAllTopics is function to remove all topic records by imc token
+func (vxp *vxProto) UnsubscribeIMCFromAllTopics(token string) bool {
+	if !vxp.HasIMCTokenFormat(token) {
+		return false
+	}
+
+	vxp.mutex.Lock()
+	defer vxp.mutex.Unlock()
+
+	vxp.unsubscribeIMCFromAllTopics(token)
+
+	return true
+}
+
+// Internal method is a helper to stop and close module socket before it'll free
+func (vxp *vxProto) unsubscribeIMCFromAllTopics(token string) {
+	for topic, info := range vxp.topics {
+		if info == nil {
+			delete(vxp.topics, topic)
+			continue
+		}
+		subs := info.subscriptions
+		for idx, sub := range subs {
+			if sub == token {
+				// It's possible because there used break in the bottom
+				subs = append(subs[:idx], subs[idx+1:]...)
+				break
+			}
+		}
+		if len(subs) == 0 {
+			delete(vxp.topics, topic)
+		} else {
+			info.subscriptions = subs
+		}
+	}
+}
+
+// GetIMCTopics is function to get all registered topic IDs from vxproto
+func (vxp *vxProto) GetIMCTopics() []string {
+	vxp.mutex.RLock()
+	defer vxp.mutex.RUnlock()
+
+	topics := make([]string, 0, len(vxp.topics))
+	for topic := range vxp.topics {
+		topics = append(topics, topic)
+	}
+
+	return topics
 }
 
 // GetIMCGroupIDs is function which get group list which registered in vxproto
@@ -1240,6 +1402,19 @@ func (vxp *vxProto) notifyAgentDisconnected(ctx context.Context, src string) {
 	}
 }
 
+func (ti *topicInfo) GetName() string {
+	return ti.name
+}
+
+func (ti *topicInfo) GetGroupID() string {
+	return ti.groupID
+}
+
+func (ti *topicInfo) GetSubscriptions() []string {
+	subs := make([]string, 0, len(ti.subscriptions))
+	return append(subs, ti.subscriptions...)
+}
+
 func getURLFromHost(host string) (*url.URL, error) {
 	u, err := url.Parse(host)
 	if err != nil {
@@ -1266,4 +1441,13 @@ func getURLFromHost(host string) (*url.URL, error) {
 	}
 	u.Host = fmt.Sprintf("%s:%s", hostname, port)
 	return u, nil
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

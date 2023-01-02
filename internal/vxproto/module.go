@@ -42,12 +42,20 @@ type IModuleSocket interface {
 	IIMC
 }
 
+var (
+	ErrProtoIOUnset     = fmt.Errorf("the ProtoIO is nil")
+	ErrDstUnreachable   = fmt.Errorf("destination is unreachable")
+	ErrTopicUnreachable = fmt.Errorf("topic is unreachable")
+	ErrDstMalformed     = fmt.Errorf("destination is not a module socket")
+)
+
 // moduleSocket is struct that used for receive data from other side to ms
 type moduleSocket struct {
 	name     string
 	groupID  string
 	imcToken string
 	router   *recvRouter
+	closer   func(ctx context.Context)
 	IDefaultReceiver
 	IProtoStats
 	IProtoIO
@@ -56,9 +64,12 @@ type moduleSocket struct {
 }
 
 // Close is function which stop all blockers and valid close this socket
-func (ms *moduleSocket) Close(context.Context) {
+func (ms *moduleSocket) Close(ctx context.Context) {
 	if ms.router != nil {
 		ms.router.close()
+	}
+	if ms.closer != nil {
+		ms.closer(ctx)
 	}
 }
 
@@ -350,7 +361,10 @@ func (ms *moduleSocket) parseFileStream(ctx context.Context, packet *Packet) (bo
 	}
 
 	uniqArr := strings.Split(file.Uniq, ":")
-	if len(uniqArr) != 3 {
+	if file.Data == nil && file.Path != "" && file.Uniq != "" && len(uniqArr) == 1 {
+		// Case for multiple sending one file packet to other receivers via topic
+		return true, nil
+	} else if len(uniqArr) != 3 {
 		return false, fmt.Errorf("failed to parse the packet unique identifier")
 	}
 
@@ -420,22 +434,38 @@ func (ms *moduleSocket) sendPacket(ctx context.Context, dst string, pType Packet
 		Payload: payload,
 	}
 	if ms.IProtoIO == nil {
-		return fmt.Errorf("the ProtoIO is nil")
+		return ErrProtoIOUnset
 	}
-	if ms.HasIMCTokenFormat(dst) {
-		idstms := ms.GetIMCModule(dst)
+	sendViaIMC := func(token string) error {
+		idstms := ms.GetIMCModule(token)
 		if idstms == nil {
-			return fmt.Errorf("destination is unreachable")
+			return ErrDstUnreachable
 		}
 		dstms, ok := idstms.(*moduleSocket)
 		if !ok {
-			return fmt.Errorf("destination is not a module socket")
+			return ErrDstMalformed
 		}
 		packet.Module = dstms.GetName()
 		packet.Src = ms.GetIMCToken()
 		packet.ackChan = make(chan struct{}, 1)
 		packet.ctx = ctx
 		return dstms.recvPacket(ctx, packet)
+	}
+	if ms.HasIMCTopicFormat(dst) {
+		iti := ms.GetIMCTopic(dst)
+		if iti == nil {
+			return ErrTopicUnreachable
+		}
+		var lastErr error
+		for _, token := range iti.GetSubscriptions() {
+			if err := sendViaIMC(token); err != nil {
+				lastErr = err
+			}
+		}
+		return lastErr
+	}
+	if ms.HasIMCTokenFormat(dst) {
+		return sendViaIMC(dst)
 	}
 	return ms.IProtoIO.sendPacket(ctx, packet)
 }

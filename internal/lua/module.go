@@ -2,6 +2,7 @@ package lua
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -286,6 +287,9 @@ func (m *Module) getIMCToken() string {
 }
 
 func (m *Module) getIMCTokenInfo(token string) (string, string, bool) {
+	if info := m.socket.GetIMCTopic(token); info != nil {
+		return info.GetName(), info.GetGroupID(), true
+	}
 	ms := m.socket.GetIMCModule(token)
 	if ms == nil {
 		return "", "", false
@@ -297,8 +301,39 @@ func (m *Module) isIMCTokenExist(token string) bool {
 	return m.socket.GetIMCModule(token) != nil
 }
 
+func (m *Module) isIMCTopicExist(topic string) bool {
+	return m.socket.GetIMCTopic(topic) != nil
+}
+
 func (m *Module) makeIMCToken(name, gid string) string {
 	return m.socket.MakeIMCToken(name, gid)
+}
+
+func (m *Module) makeIMCTopic(name, gid string) string {
+	return m.socket.MakeIMCTopic(name, gid)
+}
+
+func (m *Module) subscribeIMCToTopic(name, gid string) bool {
+	return m.socket.SubscribeIMCToTopic(name, gid, m.socket.GetIMCToken())
+}
+
+func (m *Module) unsubscribeIMCFromTopic(name, gid string) bool {
+	return m.socket.UnsubscribeIMCFromTopic(name, gid, m.socket.GetIMCToken())
+}
+
+func (m *Module) unsubscribeIMCFromAllTopics() bool {
+	return m.socket.UnsubscribeIMCFromAllTopics(m.socket.GetIMCToken())
+}
+
+func (m *Module) getIMCSubscriptions(topic string) []string {
+	if info := m.socket.GetIMCTopic(topic); info != nil {
+		return info.GetSubscriptions()
+	}
+	return make([]string, 0)
+}
+
+func (m *Module) getIMCTopics() []string {
+	return m.socket.GetIMCTopics()
 }
 
 func (m *Module) getIMCGroupIDs() []string {
@@ -364,6 +399,10 @@ func (m *Module) tryPacketUnlock(dst string) {
 	}
 }
 
+func (m *Module) filterVXProtoErrors(err error) bool {
+	return errors.Is(err, vxproto.ErrTopicUnreachable)
+}
+
 func (m *Module) sendDataTo(dst, data string) bool {
 	if len(data) == 0 {
 		return false
@@ -386,12 +425,13 @@ func (m *Module) sendDataTo(dst, data string) bool {
 	err := m.socket.SendDataTo(ctx, dst, sdata)
 	m.state.L.Lock()
 
-	if err != nil {
+	isFilterable := m.filterVXProtoErrors(err)
+	if err != nil && !isFilterable {
 		l.WithError(err).Error("failed to send data")
 		return false
 	}
 	l.Debug("the module has sent data")
-	return true
+	return !isFilterable
 }
 
 func (m *Module) sendFileTo(dst, data, name string) bool {
@@ -418,12 +458,13 @@ func (m *Module) sendFileTo(dst, data, name string) bool {
 	err := m.socket.SendFileTo(ctx, dst, sfile)
 	m.state.L.Lock()
 
-	if err != nil {
+	isFilterable := m.filterVXProtoErrors(err)
+	if err != nil && !isFilterable {
 		l.WithError(err).Error("failed to send data as a file")
 		return false
 	}
 	l.Debug("the module has sent data as a file")
-	return true
+	return !isFilterable
 }
 
 func (m *Module) sendFileFromFSTo(dst, path, name string) bool {
@@ -450,12 +491,13 @@ func (m *Module) sendFileFromFSTo(dst, path, name string) bool {
 	err := m.socket.SendFileTo(ctx, dst, sfile)
 	m.state.L.Lock()
 
-	if err != nil {
+	isFilterable := m.filterVXProtoErrors(err)
+	if err != nil && !isFilterable {
 		l.WithError(err).Error("failed to send a file from the file system")
 		return false
 	}
 	l.Debug("the module has sent a file from the file system")
-	return true
+	return !isFilterable
 }
 
 func (m *Module) sendTextTo(dst, data, name string) bool {
@@ -482,12 +524,13 @@ func (m *Module) sendTextTo(dst, data, name string) bool {
 	err := m.socket.SendTextTo(ctx, dst, stext)
 	m.state.L.Lock()
 
-	if err != nil {
+	isFilterable := m.filterVXProtoErrors(err)
+	if err != nil && !isFilterable {
 		l.WithError(err).Error("failed to send data as a text")
 		return false
 	}
 	l.Debug("the module has sent data as a text")
-	return true
+	return !isFilterable
 }
 
 func (m *Module) sendMsgTo(dst, data string, mtype int32) bool {
@@ -514,12 +557,13 @@ func (m *Module) sendMsgTo(dst, data string, mtype int32) bool {
 	err := m.socket.SendMsgTo(ctx, dst, msg)
 	m.state.L.Lock()
 
-	if err != nil {
+	isFilterable := m.filterVXProtoErrors(err)
+	if err != nil && !isFilterable {
 		l.WithError(err).Error("failed to send a message")
 		return false
 	}
 	l.Debug("the module has sent a message")
-	return true
+	return !isFilterable
 }
 
 func (m *Module) sendActionTo(dst, data, name string) bool {
@@ -546,12 +590,13 @@ func (m *Module) sendActionTo(dst, data, name string) bool {
 	err := m.socket.SendActionTo(ctx, dst, act)
 	m.state.L.Lock()
 
-	if err != nil {
+	isFilterable := m.filterVXProtoErrors(err)
+	if err != nil && !isFilterable {
 		l.WithError(err).Error("failed to send an action")
 		return false
 	}
 	l.Debug("the module has sent an action")
-	return true
+	return !isFilterable
 }
 
 func (m *Module) asyncSendDataTo(dst, data string, callback interface{}) bool {
@@ -593,7 +638,7 @@ func (m *Module) asyncSendDataTo(dst, data string, callback interface{}) bool {
 			cb.Close()
 			m.state.L.Unlock()
 		}
-		if err != nil {
+		if err != nil && !m.filterVXProtoErrors(err) {
 			l.WithError(err).Error("failed to async send data")
 			return
 		}
@@ -644,7 +689,7 @@ func (m *Module) asyncSendFileTo(dst, data, name string, callback interface{}) b
 			cb.Close()
 			m.state.L.Unlock()
 		}
-		if err != nil {
+		if err != nil && !m.filterVXProtoErrors(err) {
 			l.WithError(err).Error("failed to async send data as a file")
 			return
 		}
@@ -695,7 +740,7 @@ func (m *Module) asyncSendFileFromFSTo(dst, path, name string, callback interfac
 			cb.Close()
 			m.state.L.Unlock()
 		}
-		if err != nil {
+		if err != nil && !m.filterVXProtoErrors(err) {
 			l.WithError(err).Error("failed to async send a file from the file system")
 			return
 		}
@@ -746,7 +791,7 @@ func (m *Module) asyncSendTextTo(dst, data, name string, callback interface{}) b
 			cb.Close()
 			m.state.L.Unlock()
 		}
-		if err != nil {
+		if err != nil && !m.filterVXProtoErrors(err) {
 			l.WithError(err).Error("failed to async send data as a text")
 			return
 		}
@@ -797,7 +842,7 @@ func (m *Module) asyncSendMsgTo(dst, data string, mtype int32, callback interfac
 			cb.Close()
 			m.state.L.Unlock()
 		}
-		if err != nil {
+		if err != nil && !m.filterVXProtoErrors(err) {
 			l.WithError(err).Error("failed to async send a message")
 			return
 		}
@@ -848,7 +893,7 @@ func (m *Module) asyncSendActionTo(dst, data, name string, callback interface{})
 			cb.Close()
 			m.state.L.Unlock()
 		}
-		if err != nil {
+		if err != nil && !m.filterVXProtoErrors(err) {
 			l.WithError(err).Error("failed to async send an action")
 			return
 		}
@@ -1435,14 +1480,21 @@ func NewModule(args map[string][]string, state *State, socket vxproto.IModuleSoc
 
 	luar.Register(state.L, "__imc", luar.Map{
 		// Functions
-		"get_token":          m.getIMCToken,
-		"get_info":           m.getIMCTokenInfo,
-		"is_exist":           m.isIMCTokenExist,
-		"make_token":         m.makeIMCToken,
-		"get_groups":         m.getIMCGroupIDs,
-		"get_modules":        m.getIMCModuleIDs,
-		"get_groups_by_mid":  m.getIMCGroupIDsByMID,
-		"get_modules_by_gid": m.getIMCModuleIDsByGID,
+		"get_token":                   m.getIMCToken,
+		"get_info":                    m.getIMCTokenInfo,
+		"is_exist":                    m.isIMCTokenExist,
+		"is_topic":                    m.isIMCTopicExist,
+		"make_token":                  m.makeIMCToken,
+		"make_topic":                  m.makeIMCTopic,
+		"subscribe_to_topic":          m.subscribeIMCToTopic,
+		"unsubscribe_from_topic":      m.unsubscribeIMCFromTopic,
+		"unsubscribe_from_all_topics": m.unsubscribeIMCFromAllTopics,
+		"get_subscriptions":           m.getIMCSubscriptions,
+		"get_topics":                  m.getIMCTopics,
+		"get_groups":                  m.getIMCGroupIDs,
+		"get_modules":                 m.getIMCModuleIDs,
+		"get_groups_by_mid":           m.getIMCGroupIDsByMID,
+		"get_modules_by_gid":          m.getIMCModuleIDsByGID,
 	})
 
 	luar.GoToLua(state.L, args)
