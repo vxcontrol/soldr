@@ -3,6 +3,7 @@
         [isReadOnly]="isReadOnly"
         [model]="config"
         [schema]="schema"
-        (registerApi)="onRegisterApi($event)">
+        (registerApi)="onRegisterApi($event)"
+        (modelChange)="onModelChange($event)">
     </soldr-ncform-wrapper>
 </div>

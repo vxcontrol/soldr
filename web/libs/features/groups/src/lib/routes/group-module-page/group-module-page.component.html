@@ -3,11 +3,10 @@
         group: group$ | async,
         lang: language$ | async,
         module: module$ | async,
-        isLoadingModule: isLoadingModule$ | async,
         isLoadingGroup: isLoadingGroup$ | async,
         moduleEventsGridColumnFilterItems: moduleEventsGridColumnFilterItems$ | async
     } as data">
-    <soldr-progress-container [loadingFlag]="data.isLoadingModule || data.isLoadingGroup">
+    <soldr-progress-container [loadingFlag]="data.isLoadingGroup">
         <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read: 'groups'">
             <soldr-actionbar class="flex-none">
                 <ng-container actionbar-left>
@@ -29,9 +28,11 @@
             <soldr-module-page
                 class="flex-auto"
                 [entity]="data.group"
+                [module]="data.module"
                 [eventsGridFilter]="data.moduleEventsGridColumnFilterItems"
                 [viewMode]="viewModeEnum.Groups"
                 [state]="pageState"
+                [isLoadingEntityModule]="data.isLoadingGroup"
                 [stateStorageKey]="'groupModule.view'">
             </soldr-module-page>
         </div>

@@ -134,7 +134,8 @@
                                     [model]="eventDetails?.model"
                                     [schema]="eventDetails?.schema"
                                     [isReadOnly]="isReadOnly"
-                                    (registerApi)="onRegisterNcformApi($event)">
+                                    (registerApi)="onRegisterNcformApi($event)"
+                                    (modelChange)="onModelChange()">
                                 </soldr-ncform-wrapper>
                             </div>
                         </ng-container>

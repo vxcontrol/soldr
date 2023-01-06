@@ -77,7 +77,8 @@
                                     [model]="action?.paramsModel"
                                     [schema]="action?.paramsSchema"
                                     [isReadOnly]="isReadOnly"
-                                    (registerApi)="onRegisterFormApi($event)">
+                                    (registerApi)="onRegisterFormApi($event)"
+                                    (modelChange)="onModelChange()">
                                 </soldr-ncform-wrapper>
                             </div>
                         </ng-container>

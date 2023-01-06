@@ -6,7 +6,7 @@ import { combineLatest, filter, map, startWith, Subscription, switchMap } from '
 import { ModelsModuleA } from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { AgentModuleState, defaultAgentModuleState } from '@soldr/features/agents';
-import { Agent } from '@soldr/models';
+import { Agent, AgentModule } from '@soldr/models';
 import {
     LanguageService,
     mergeDeep,
@@ -28,10 +28,16 @@ import { SharedFacade } from '@soldr/store/shared';
 })
 export class AgentModulePageComponent implements OnInit, OnDestroy {
     agent$ = this.agentCardFacade.agent$;
-    isLoadingModule$ = this.moduleInstancesFacade.isLoadingModule$;
     isLoadingAgent$ = this.agentCardFacade.isLoadingAgent$;
     language$ = this.languageService.current$;
-    module$ = this.moduleInstancesFacade.module$;
+    module$ = this.agentCardFacade.agentModules$.pipe(
+        filter((agentModules: AgentModule[]) => !!agentModules.length),
+        map((agentModules: AgentModule[]) =>
+            agentModules.find(
+                (agentModule: AgentModule) => agentModule.info.name === this.activatedRoute.snapshot.params.moduleName
+            )
+        )
+    );
     isModuleSupportOS$ = combineLatest([this.module$, this.agent$]).pipe(
         filter(([module, agent]) => !!module && !!agent),
         map(([module, agent]: [ModelsModuleA, Agent]) =>
@@ -47,7 +53,7 @@ export class AgentModulePageComponent implements OnInit, OnDestroy {
         private activatedRoute: ActivatedRoute,
         private agentCardFacade: AgentCardFacade,
         private languageService: LanguageService,
-        private moduleInstancesFacade: ModulesInstancesFacade,
+        private modulesInstancesFacade: ModulesInstancesFacade,
         private pageTitleService: PageTitleService,
         private sharedFacade: SharedFacade,
         private transloco: TranslocoService,
@@ -67,11 +73,10 @@ export class AgentModulePageComponent implements OnInit, OnDestroy {
         );
 
         const agentSubscription = this.agent$.pipe(filter(Boolean)).subscribe((agent: Agent) => {
-            const { hash, moduleName } = this.activatedRoute.snapshot.params as Record<string, string>;
+            const { moduleName } = this.activatedRoute.snapshot.params as Record<string, string>;
 
-            this.moduleInstancesFacade.init(ViewMode.Agents, agent.id, moduleName);
-            this.moduleInstancesFacade.fetchModule(hash);
-            this.moduleInstancesFacade.fetchEvents();
+            this.modulesInstancesFacade.init(ViewMode.Agents, agent.id, moduleName);
+            this.modulesInstancesFacade.fetchEvents();
         });
         this.subscription.add(agentSubscription);
     }

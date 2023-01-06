@@ -24,14 +24,10 @@ import {
     selectIsDisablingModule,
     selectIsEnablingModule,
     selectIsLoadingEvents,
-    selectIsLoadingModule,
-    selectIsLoadingModulePolicy,
     selectIsLoadingModuleVersions,
     selectIsSavingModule,
     selectIsUpdatingModule,
-    selectModule,
     selectModuleName,
-    selectModulePolicy,
     selectModuleVersions,
     selectSavingModuleError,
     selectTotalEvents,
@@ -58,17 +54,13 @@ export class ModulesInstancesFacade {
     isDisablingModule$ = this.store.select(selectIsDisablingModule);
     isEnablingModule$ = this.store.select(selectIsEnablingModule);
     isLoadingEvents$ = this.store.select(selectIsLoadingEvents);
-    isLoadingModule$ = this.store.select(selectIsLoadingModule);
     isLoadingModuleVersion$ = this.store.select(selectIsLoadingModuleVersions);
-    isLoadingPolicy$ = this.store.select(selectIsLoadingModulePolicy);
     isSavingModule$ = this.store.select(selectIsSavingModule);
     isUpdatingModule$ = this.store.select(selectIsUpdatingModule);
-    module$ = this.store.select(selectModule);
     moduleEventsFilterItemAgentIds$ = this.store.select(selectEventFilterItemAgentIds);
     moduleEventsFilterItemGroupIds$ = this.store.select(selectEventFilterItemGroupIds);
     moduleName$ = this.store.select(selectModuleName);
     moduleVersions$ = this.store.select(selectModuleVersions);
-    policy$ = this.store.select(selectModulePolicy);
     saveError$ = this.store.select(selectSavingModuleError);
     totalEvents$ = this.store.select(selectTotalEvents);
     updateError$ = this.store.select(selectUpdateModuleError);
@@ -78,10 +70,6 @@ export class ModulesInstancesFacade {
 
     init(viewMode: ViewMode, entityId: number, moduleName: string) {
         this.store.dispatch(ModulesInstancesActions.init({ viewMode, entityId, moduleName }));
-    }
-
-    fetchModule(entityHash: string) {
-        this.store.dispatch(ModulesInstancesActions.fetchModule({ entityHash }));
     }
 
     fetchEvents(page?: number): void {

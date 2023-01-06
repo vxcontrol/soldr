@@ -18,6 +18,7 @@ import { ModulesInstancesFacade } from '@soldr/store/modules-instances';
 import { SharedFacade } from '@soldr/store/shared';
 
 import { defaultGroupModuleState, GroupModuleState } from '../../utils';
+import { GroupModule } from '@soldr/models';
 
 @Component({
     selector: 'soldr-group-module-page',
@@ -28,10 +29,16 @@ import { defaultGroupModuleState, GroupModuleState } from '../../utils';
 export class GroupModulePageComponent implements OnInit, OnDestroy {
     group$ = this.groupsFacade.group$;
     isLoadingGroup$ = this.groupsFacade.isLoadingGroup$;
-    isLoadingModule$ = this.modulesInstancesFacade.isLoadingModule$;
     moduleEventsGridColumnFilterItems$ = this.groupsFacade.moduleEventsGridColumnFilterItems$;
     language$ = this.languageService.current$;
-    module$ = this.modulesInstancesFacade.module$;
+    module$ = this.groupsFacade.groupModules$.pipe(
+        filter((groupModules: GroupModule[]) => !!groupModules.length),
+        map((groupModules: GroupModule[]) =>
+            groupModules.find(
+                (groupModule: GroupModule) => groupModule.info.name === this.activatedRoute.snapshot.params.moduleName
+            )
+        )
+    );
     pageState: GroupModuleState;
     subscription = new Subscription();
     viewModeEnum = ViewMode;
@@ -60,10 +67,9 @@ export class GroupModulePageComponent implements OnInit, OnDestroy {
         );
 
         const groupSubscription = this.group$.pipe(filter(Boolean)).subscribe((group) => {
-            const { hash, moduleName } = this.activatedRoute.snapshot.params as Record<string, string>;
+            const { moduleName } = this.activatedRoute.snapshot.params as Record<string, string>;
 
             this.modulesInstancesFacade.init(ViewMode.Groups, group.id, moduleName);
-            this.modulesInstancesFacade.fetchModule(hash);
             this.modulesInstancesFacade.fetchEvents();
             this.modulesInstancesFacade.fetchModuleEventsFilterItems();
         });
