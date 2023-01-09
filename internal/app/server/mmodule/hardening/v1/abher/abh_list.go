@@ -18,18 +18,20 @@ import (
 )
 
 type ABHList struct {
-	Agents    map[string][]byte
-	Browsers  map[string][]byte
-	Externals map[string][]byte
-	mux       *sync.RWMutex
+	Agents     map[string][]byte
+	Aggregates map[string][]byte
+	Browsers   map[string][]byte
+	Externals  map[string][]byte
+	mux        *sync.RWMutex
 }
 
 func NewABHList() *ABHList {
 	return &ABHList{
-		Agents:    make(map[string][]byte),
-		Browsers:  make(map[string][]byte),
-		Externals: make(map[string][]byte),
-		mux:       &sync.RWMutex{},
+		Agents:     make(map[string][]byte),
+		Aggregates: make(map[string][]byte),
+		Browsers:   make(map[string][]byte),
+		Externals:  make(map[string][]byte),
+		mux:        &sync.RWMutex{},
 	}
 }
 
@@ -44,6 +46,8 @@ func (a *ABHList) Get(t vxproto.AgentType, abi string) ([]byte, error) {
 	switch t {
 	case vxproto.VXAgent:
 		abh, ok = a.Agents[abi]
+	case vxproto.Aggregate:
+		abh, ok = a.Aggregates[abi]
 	case vxproto.Browser:
 		abh, ok = a.Browsers[abi]
 	case vxproto.External:
@@ -73,9 +77,10 @@ func (l *ABHList) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("section \"%s\" has not been found in the passed json", version)
 	}
 	type fileABHListJSON struct {
-		Agents    map[string]string `json:"agents"`
-		Browsers  map[string]string `json:"browsers"`
-		Externals map[string]string `json:"externals"`
+		Agents     map[string]string `json:"agents"`
+		Aggregates map[string]string `json:"aggregates"`
+		Browsers   map[string]string `json:"browsers"`
+		Externals  map[string]string `json:"externals"`
 	}
 	var dst fileABHListJSON
 	if err := json.Unmarshal(versionData, &dst); err != nil {
@@ -92,6 +97,9 @@ func (l *ABHList) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	if err := copyMap(l.Agents, dst.Agents); err != nil {
+		return err
+	}
+	if err := copyMap(l.Aggregates, dst.Aggregates); err != nil {
 		return err
 	}
 	if err := copyMap(l.Browsers, dst.Browsers); err != nil {
@@ -160,6 +168,8 @@ func GetConnType(t string) (vxproto.AgentType, error) {
 	switch t {
 	case "agent":
 		return vxproto.VXAgent, nil
+	case "aggregate":
+		return vxproto.Aggregate, nil
 	case "browser":
 		return vxproto.Browser, nil
 	case "external":
@@ -193,6 +203,8 @@ func newABHListFromDBResult(results []*fetchABHListFromDBResult) (*ABHList, erro
 			switch r.T {
 			case vxproto.VXAgent:
 				abhList.Agents[abi] = abh
+			case vxproto.Aggregate:
+				abhList.Aggregates[abi] = abh
 			case vxproto.Browser:
 				abhList.Browsers[abi] = abh
 			case vxproto.External:
@@ -206,7 +218,7 @@ func newABHListFromDBResult(results []*fetchABHListFromDBResult) (*ABHList, erro
 }
 
 // nolint: lll
-var agentBinryIDRegexp = regexp.MustCompile(`(v)?[0-9]+\.[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-[a-zA-Z0-9]+)?/(((linux|darwin|windows)/(amd64|386))|(browser|external))`)
+var agentBinryIDRegexp = regexp.MustCompile(`(v)?[0-9]+\.[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-[a-zA-Z0-9]+)?/(((linux|darwin|windows)/(amd64|386))|(aggregate|browser|external))`)
 
 func ExtractABIFromDBBinaryPath(filePath string) (string, error) {
 	binaryIDs := agentBinryIDRegexp.FindAllString(filePath, -1)

@@ -189,7 +189,7 @@ func getOldToken(ctx context.Context, socket vxproto.IAgentSocket, logger *logru
 	pubInfo := socket.GetPublicInfo()
 	var err error
 	switch pubInfo.Type {
-	case vxproto.VXAgent, vxproto.Browser, vxproto.External:
+	case vxproto.VXAgent, vxproto.Aggregate, vxproto.Browser, vxproto.External:
 		err = doHandshakeWithAgentOnServer(ctx, socket)
 	default:
 		err = fmt.Errorf("unknown client type")

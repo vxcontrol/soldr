@@ -37,7 +37,8 @@ type AgentConnectionInfo struct {
 }
 
 type AgentInfoForIDFetcher struct {
-	ID string
+	ID   string
+	Type string
 }
 
 type AgentIDFetcher interface {
@@ -219,11 +220,11 @@ func (vxp *vxProto) configureVersionHandlers(
 					w.WriteHeader(http.StatusBadRequest)
 					return
 				}
-				span.SetAttributes(attribute.Key("span.agent_id").String(id))
+				span.SetAttributes(attribute.Key("span.conn_id").String(id))
 
 				result, err := getConnectionPolicy(r.Context(), r.URL.Path, id, connValidator, connectionPolicyManager)
 				if err != nil {
-					loggerCtx := logger.WithContext(r.Context()).WithField("agent_id", id).WithError(err)
+					loggerCtx := logger.WithContext(r.Context()).WithField("conn_id", id).WithError(err)
 					if errors.Is(err, ErrEndpointBlocked) {
 						loggerCtx.Warn("connection blocked")
 						w.WriteHeader(http.StatusForbidden)
@@ -253,6 +254,10 @@ func (vxp *vxProto) configureVersionHandlers(
 		}
 	}
 	withConnInfo.HandleFunc("/agent/{id:[0-9a-z]+}/",
+		func(w http.ResponseWriter, r *http.Request) {
+			handleConn(w, r)
+		})
+	withConnInfo.HandleFunc("/aggregate/{id:[0-9a-z]+}/",
 		func(w http.ResponseWriter, r *http.Request) {
 			handleConn(w, r)
 		})
@@ -299,21 +304,35 @@ type getConnectionPolicyMiddlewareResult struct {
 	AgentConnectionInfo *AgentConnectionInfo
 }
 
-func getConnectionPolicy(ctx context.Context, urlPath string, agentID string, idFetcher AgentIDFetcher, policyManager ConnectionPolicyManager) (*getConnectionPolicyMiddlewareResult, error) {
-	agentType, err := getAgentTypeFromURL(urlPath)
+func getConnectionPolicy(
+	ctx context.Context,
+	urlPath string,
+	id string,
+	idFetcher AgentIDFetcher,
+	policyManager ConnectionPolicyManager,
+) (*getConnectionPolicyMiddlewareResult, error) {
+	connType, err := getConnectionTypeFromURL(urlPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the agent type from the URL path: %w", err)
+		return nil, fmt.Errorf("failed to get the connection type from the URL path: %w", err)
 	}
-	if !policyManager.IsConnectionAllowed(agentType) {
-		return nil, fmt.Errorf("connection for the given agent type (%d) is forbidden: %w", agentType, ErrEndpointBlocked)
+	if !policyManager.IsConnectionAllowed(connType) {
+		return nil, fmt.Errorf("connection for the given type (%d) is forbidden: %w", connType, ErrEndpointBlocked)
 	}
-	connInfo, err := fetchAgentConnectionInfo(ctx, idFetcher, agentID)
+	fetchType := "agent"
+	if connType == Aggregate {
+		fetchType = "group"
+	}
+	ctxFetcher := &AgentInfoForIDFetcher{
+		ID:   id,
+		Type: fetchType,
+	}
+	connInfo, err := fetchConnectionInfo(ctx, idFetcher, ctxFetcher)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the info on the connecting agent: %w", err)
+		return nil, fmt.Errorf("failed to get the info on the connecting: %w", err)
 	}
 	connPolicy, err := policyManager.GetConnectionPolicy(&ConnectionInfo{
 		Agent:     connInfo,
-		AgentType: agentType,
+		AgentType: connType,
 		URLPath:   urlPath,
 	})
 	if err != nil {
@@ -321,26 +340,28 @@ func getConnectionPolicy(ctx context.Context, urlPath string, agentID string, id
 	}
 	return &getConnectionPolicyMiddlewareResult{
 		ConnectionPolicy:    connPolicy,
-		AgentType:           agentType,
+		AgentType:           connType,
 		AgentConnectionInfo: connInfo,
 	}, nil
 }
 
-func getAgentTypeFromURL(url string) (AgentType, error) {
+func getConnectionTypeFromURL(url string) (AgentType, error) {
 	urlParts := strings.Split(url, "/")
 	if len(urlParts) != 7 {
-		return 0, fmt.Errorf("the agent type cannot be extracted from the URL %s: too few url parts", url)
+		return 0, fmt.Errorf("the connection type cannot be extracted from the URL %s: too few url parts", url)
 	}
 	agentType := urlParts[4]
 	switch agentType {
 	case "agent":
 		return VXAgent, nil
+	case "aggregate":
+		return Aggregate, nil
 	case "browser":
 		return Browser, nil
 	case "external":
 		return External, nil
 	default:
-		return 0, fmt.Errorf("an unknown agent type \"%s\" is passed", agentType)
+		return 0, fmt.Errorf("an unknown connection type \"%s\" is passed", agentType)
 	}
 }
 
@@ -356,12 +377,14 @@ func extractAgentType(r *http.Request) (AgentType, error) {
 	return agentType, nil
 }
 
-func fetchAgentConnectionInfo(reqCtx context.Context, idFetcher AgentIDFetcher, id string) (*AgentConnectionInfo, error) {
-	connInfo, err := idFetcher.GetAgentConnectionInfo(reqCtx, &AgentInfoForIDFetcher{
-		ID: id,
-	})
+func fetchConnectionInfo(
+	reqCtx context.Context,
+	idFetcher AgentIDFetcher,
+	ctxFetcher *AgentInfoForIDFetcher,
+) (*AgentConnectionInfo, error) {
+	connInfo, err := idFetcher.GetAgentConnectionInfo(reqCtx, ctxFetcher)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the agent connection info: %w", err)
+		return nil, fmt.Errorf("failed to get the connection info: %w", err)
 	}
 	return connInfo, nil
 }
