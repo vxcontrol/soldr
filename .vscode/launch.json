@@ -81,6 +81,21 @@
             ], 
             "cwd": "${workspaceFolder}/scripts/sbh_generator",
             "dlvFlags": ["--check-go-version=false"]
+        },
+        {
+            "name": "launch certs generator",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/scripts/certs_writer",
+            "env": {},
+            "args": [
+                "-cert_gen=true",
+                "--dst=${workspaceFolder}/scripts/certs_writer/certs/tmp_dir",
+                "--server_name=example"
+            ],
+            "cwd": "${workspaceFolder}/scripts/certs_writer",
+            "dlvFlags": ["--check-go-version=false"]
         }
     ]
 }
