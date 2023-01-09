@@ -1,11 +1,11 @@
 #!/bin/bash
 
 sudo apt update && sudo apt install -y hashdeep fakeroot git wget
-VERSION_FROM_GIT=$( git describe --tags `git rev-list --tags --max-count=1` )
+VERSION_FROM_GIT=$(git describe --tags `git rev-list --tags --max-count=1` | awk -F'-' '{ print $1 }')
 VERSION=${VERSION_FROM_GIT:-0.0.1}
 export VERSION=$VERSION.$GITHUB_RUN_NUMBER
 export VERSION=${VERSION/v/}
-DEBIAN_FRONTEND=noninteractive sudo apt install -y  rpm
+DEBIAN_FRONTEND=noninteractive sudo apt install -y rpm
 mkdir install_linux/
 
 mv DEBIAN/control TMP_control

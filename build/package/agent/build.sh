@@ -6,7 +6,7 @@ ROOT_DIR=$(realpath "$DIR/../../..")
 
 BUILD_ARTIFACTS_DIR="$ROOT_DIR/build/artifacts/agent"
 
-[ -n "${PACKAGE_VER+set}" ] || PACKAGE_VER=$(git describe --always `git rev-list --tags --max-count=1`)
+[ -n "${PACKAGE_VER+set}" ] || PACKAGE_VER=$(git describe --always `git rev-list --tags --max-count=1` | awk -F'-' '{ print $1 }')
 [ -n "${PACKAGE_REV+set}" ] || PACKAGE_REV=$(git rev-parse --short HEAD)
 
 BUILD_VERSION="${GITHUB_RUN_NUMBER:-0}"
