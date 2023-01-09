@@ -8268,6 +8268,7 @@ const docTemplate = `{
                     "type": "string",
                     "default": "browser",
                     "enum": [
+                        "aggregate",
                         "browser",
                         "external"
                     ]

@@ -51,11 +51,11 @@ func (v *VM) ProcessConnectionChallengeRequest(ctx context.Context, req []byte) 
 	if err := protoagent.UnpackProtoMessage(&connChallengeReq, req, protoagent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
 		return nil, fmt.Errorf("failed to unpack the connection challenge request: %w", err)
 	}
-	agentID, err := getAgentID(ctx)
+	sockID, err := getSockID(ctx)
 	if err != nil {
 		return nil, err
 	}
-	ct, err := v.prepareChallengeResponseCT(&connChallengeReq, agentID)
+	ct, err := v.prepareChallengeResponseCT(&connChallengeReq, sockID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare the connection challenge response: %w", err)
 	}
@@ -69,28 +69,28 @@ func (v *VM) ProcessConnectionChallengeRequest(ctx context.Context, req []byte) 
 	return msg, nil
 }
 
-type CTXKey string
+type CTXKey int
 
-const CTXAgentIDKey CTXKey = "agent-id"
+const CTXSockIDKey CTXKey = iota + 1
 
-func getAgentID(ctx context.Context) (string, error) {
-	agentIDVal := ctx.Value(CTXAgentIDKey)
-	if agentIDVal == nil {
-		return "", fmt.Errorf("failed to find the agent ID (key %s) in the passed context", CTXAgentIDKey)
+func getSockID(ctx context.Context) (string, error) {
+	sockIDVal := ctx.Value(CTXSockIDKey)
+	if sockIDVal == nil {
+		return "", fmt.Errorf("failed to find the sock ID in the passed context")
 	}
-	agentID, ok := agentIDVal.(string)
+	sockID, ok := sockIDVal.(string)
 	if !ok {
-		return "", fmt.Errorf("the agent ID found in the context (%v) is of the wrong type (expected string)", agentIDVal)
+		return "", fmt.Errorf("the sock ID found in the context (%v) is of the wrong type (expected string)", sockIDVal)
 	}
-	return agentID, nil
+	return sockID, nil
 }
 
-func (v *VM) prepareChallengeResponseCT(req *protoagent.ConnectionChallengeRequest, agentID string) ([]byte, error) {
+func (v *VM) prepareChallengeResponseCT(req *protoagent.ConnectionChallengeRequest, sockID string) ([]byte, error) {
 	abh, err := v.abhGetter.GetABH()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the ABH: %w", err)
 	}
-	key := GetChallengeKey(agentID, abh)
+	key := GetChallengeKey(sockID, abh)
 	ct, err := aesEncrypt(key, req.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt the challenge nonce: %w", err)
@@ -100,10 +100,10 @@ func (v *VM) prepareChallengeResponseCT(req *protoagent.ConnectionChallengeReque
 
 type AESKey []byte
 
-func GetChallengeKey(agentID string, abh []byte) AESKey {
-	agentIDData := []byte(agentID)
-	key := make([]byte, 0, len(agentIDData)+len(abh))
-	key = append(append(key, agentIDData...), abh...)
+func GetChallengeKey(sockID string, abh []byte) AESKey {
+	sockIDData := []byte(sockID)
+	key := make([]byte, 0, len(sockIDData)+len(abh))
+	key = append(append(key, sockIDData...), abh...)
 	return getAESKey(key)
 }
 

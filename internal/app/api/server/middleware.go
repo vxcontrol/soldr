@@ -2,6 +2,8 @@ package server
 
 import (
 	"errors"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,6 +21,9 @@ import (
 
 func authTokenProtoRequired() gin.HandlerFunc {
 	privInteractive := "vxapi.modules.interactive"
+	connTypeRegexp := regexp.MustCompile(
+		fmt.Sprintf("%s/vxpws/(aggregate|browser|external)/.*", utils.PrefixPathAPI),
+	)
 	return func(c *gin.Context) {
 		if c.IsAborted() {
 			return
@@ -54,13 +59,20 @@ func authTokenProtoRequired() gin.HandlerFunc {
 				c.Set("prm", prms)
 			}
 
+			connTypeVal := connTypeRegexp.ReplaceAllString(c.Request.URL.Path, "$1")
+			switch connTypeVal {
+			case "aggregate", "browser", "external":
+			default:
+				connTypeVal = "browser"
+			}
+
 			c.Set("uid", uid.(uint64))
 			c.Set("rid", rid.(uint64))
 			c.Set("sid", sid.(uint64))
 			c.Set("tid", tid.(uint64))
 			c.Set("exp", exp.(int64))
 			c.Set("gtm", gtm.(int64))
-			c.Set("cpt", "browser")
+			c.Set("cpt", connTypeVal)
 			c.Set("uname", uname.(string))
 
 			c.Next()

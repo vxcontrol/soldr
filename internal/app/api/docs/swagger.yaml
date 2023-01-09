@@ -1078,6 +1078,7 @@ definitions:
       type:
         default: browser
         enum:
+        - aggregate
         - browser
         - external
         type: string

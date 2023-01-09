@@ -35,7 +35,7 @@ go build "${DEBUG_FLAGS[@]}" -ldflags "
     -o "$OUT_BIN" "$ROOT_DIR/cmd/api"
 
 ABH=$(sha256sum $OUT_BIN | awk '{print $1}')
-JQ_CMD=".v1.browsers += {\"$VERSION_STRING\": \"$ABH\"}"
+JQ_CMD=".v1.browsers += {\"$VERSION_STRING\": \"$ABH\"} | .v1.externals += {\"$VERSION_STRING\": \"$ABH\"} | .v1.aggregates += {\"$VERSION_STRING\": \"$ABH\"}"
 ABH_FILE="$ROOT_DIR/security/vconf/hardening/abh.json"
 if [ -f $ABH_FILE ]; then
     cat "$ABH_FILE" | jq -M --indent 2 "$JQ_CMD" > "$ABH_FILE.tmp" && mv "$ABH_FILE.tmp" "$ABH_FILE"
@@ -47,7 +47,12 @@ else
     "browsers": {
       "$VERSION_STRING": "$ABH"
     },
-    "externals": {}
+    "externals": {
+      "$VERSION_STRING": "$ABH"
+    },
+    "aggregates": {
+      "$VERSION_STRING": "$ABH"
+    }
   }
 }
 EOT
