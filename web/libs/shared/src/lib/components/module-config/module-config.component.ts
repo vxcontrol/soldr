@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
 
 import { clone, EntityModule, LanguageService, NcformSchema, PropertyType, replaceByProperties } from '@soldr/shared';
@@ -21,7 +21,11 @@ export class ModuleConfigComponent implements OnChanges {
 
     private api: NcformWrapperApi;
 
-    constructor(private languageService: LanguageService, private transloco: TranslocoService) {}
+    constructor(
+        private languageService: LanguageService,
+        private transloco: TranslocoService,
+        private cdr: ChangeDetectorRef
+    ) {}
 
     ngOnChanges({ module }: SimpleChanges): void {
         if (module?.currentValue) {
@@ -76,6 +80,11 @@ export class ModuleConfigComponent implements OnChanges {
 
     reset() {
         this.config = clone(this.module.current_config);
+    }
+
+    onModelChange(model: any): void {
+        this.cdr.detectChanges();
+        this.changeConfig.emit(model);
     }
 
     get isDirty() {

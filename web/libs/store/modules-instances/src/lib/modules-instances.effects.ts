@@ -12,11 +12,9 @@ import {
     EventsSQLMappers,
     GroupedData,
     GroupsService,
-    ModelsModuleA,
     ModulesService,
     PoliciesService,
     PrivateEvents,
-    PrivatePolicies,
     PrivateSystemShortModules,
     SuccessResponse
 } from '@soldr/api';
@@ -36,50 +34,6 @@ import {
 
 @Injectable()
 export class ModulesInstancesEffects {
-    fetchModule$ = createEffect(() =>
-        this.actions$.pipe(
-            ofType(ModulesInstancesActions.fetchModule),
-            withLatestFrom(this.store.select(selectViewMode), this.store.select(selectModuleName)),
-            switchMap(([{ entityHash }, viewMode, moduleName]) =>
-                this.getEntityService(viewMode)
-                    .fetchModule(entityHash, moduleName)
-                    .pipe(
-                        map((response: SuccessResponse<ModelsModuleA>) =>
-                            ModulesInstancesActions.fetchModuleSuccess({ module: response.data })
-                        ),
-                        catchError(() => of(ModulesInstancesActions.fetchModuleFailure()))
-                    )
-            )
-        )
-    );
-
-    fetchModulePolicy$ = createEffect(() =>
-        this.actions$.pipe(
-            ofType(ModulesInstancesActions.fetchModuleSuccess),
-            withLatestFrom(this.store.select(selectViewMode)),
-            switchMap(([{ module }]) =>
-                this.policiesService
-                    .fetchList(
-                        defaultListQuery({
-                            pageSize: 1,
-                            filters: [
-                                {
-                                    field: 'id',
-                                    value: module.policy_id
-                                }
-                            ]
-                        })
-                    )
-                    .pipe(
-                        map((response: SuccessResponse<PrivatePolicies>) =>
-                            ModulesInstancesActions.fetchPolicySuccess({ data: response.data })
-                        ),
-                        catchError(() => of(ModulesInstancesActions.fetchPolicyFailure()))
-                    )
-            )
-        )
-    );
-
     fetchEvents$ = createEffect(() =>
         this.actions$.pipe(
             ofType(ModulesInstancesActions.fetchEvents),

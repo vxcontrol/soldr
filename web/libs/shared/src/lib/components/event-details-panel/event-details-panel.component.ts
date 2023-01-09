@@ -1,5 +1,6 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import {
+    ChangeDetectorRef,
     Component,
     EventEmitter,
     Input,
@@ -71,7 +72,8 @@ export class EventDetailsPanelComponent implements OnChanges, OnDestroy {
         private languageService: LanguageService,
         private localizeActionService: LocalizeActionService,
         private sharedFacade: SharedFacade,
-        private sidePanelService: McSidepanelService
+        private sidePanelService: McSidepanelService,
+        private cdr: ChangeDetectorRef
     ) {
         this.subscription = this.sharedFacade.optionsActions$.subscribe((actions) => (this.globalActions = actions));
     }
@@ -159,6 +161,10 @@ export class EventDetailsPanelComponent implements OnChanges, OnDestroy {
 
     onRegisterNcformApi(api: NcformWrapperApi) {
         this.paramsNcformApi = api;
+    }
+
+    onModelChange(): void {
+        this.cdr.detectChanges();
     }
 
     get canSave() {

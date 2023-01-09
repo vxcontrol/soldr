@@ -17,12 +17,12 @@ import { ThemePalette } from '@ptsecurity/mosaic/core';
 import { SidebarPositions } from '@ptsecurity/mosaic/sidebar';
 import { Direction } from '@ptsecurity/mosaic/splitter';
 import { McTabGroup } from '@ptsecurity/mosaic/tabs';
-import { BehaviorSubject, combineLatestWith, filter, map, Observable, pairwise, Subscription, take } from 'rxjs';
+import { BehaviorSubject, combineLatestWith, map, Observable, pairwise, Subscription, take } from 'rxjs';
 
 import { ErrorResponse, ModelsModuleA } from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { AgentModuleState, AgentPageState } from '@soldr/features/agents';
-import { Policy } from '@soldr/models';
+import { AgentModule, GroupModule, Policy, PolicyModule } from '@soldr/models';
 import {
     DateFormatterService,
     LanguageService,
@@ -53,9 +53,12 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
     @Input() state: AgentModuleState;
     @Input() stateStorageKey: string;
     @Input() viewMode: ViewMode;
+    @Input() module: AgentModule | GroupModule | PolicyModule;
+    @Input() isLoadingEntityModule: boolean;
 
     @Output() update = new EventEmitter();
     @Output() seeVersions = new EventEmitter();
+    @Output() fetchModule = new EventEmitter();
 
     @ViewChild('tabs') tabsEl: McTabGroup;
     @ViewChild(forwardRef(() => ModuleConfigBlockComponent)) moduleConfig: ModuleConfigBlockComponent;
@@ -70,12 +73,10 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
     eventsSearchValue$ = this.modulesInstancesFacade.eventsSearchValue$;
     isLoadedModuleManagement$ = new BehaviorSubject<boolean>(false);
     isLoadingEvents$ = this.modulesInstancesFacade.isLoadingEvents$;
-    isLoadingModule$ = this.modulesInstancesFacade.isLoadingModule$;
     isLoadingModules$ = this.sharedFacade.isLoadingAllModules$;
     isSavingModule$ = this.modulesInstancesFacade.isSavingModule$;
     isReadOnly = false;
     language$ = this.languageService.current$;
-    module$: Observable<ModelsModuleA> = this.modulesInstancesFacade.module$;
     moduleVersions$ = this.modulesInstancesFacade.moduleVersions$;
     modules$ = this.sharedFacade.allModules$;
     pageState: AgentPageState;
@@ -100,15 +101,17 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
     ) {}
 
     ngOnInit(): void {
-        this.defineObservables();
-
         this.isReadOnly =
             this.viewMode !== ViewMode.Policies ||
             (this.viewMode === ViewMode.Policies && (this.entity as Policy)?.info?.system) ||
             !this.permitted.EditPolicies;
     }
 
-    ngOnChanges({ hasModuleOperations }: SimpleChanges): void {
+    ngOnChanges({ hasModuleOperations, module }: SimpleChanges): void {
+        if (module?.currentValue) {
+            this.refreshData();
+        }
+
         if (hasModuleOperations?.previousValue && !hasModuleOperations?.currentValue) {
             this.tabIndex = 0;
         }
@@ -198,13 +201,6 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
         return this.viewMode === ViewMode.Agents && this.permitted.ViewModulesOperations && this.hasModuleOperations;
     }
 
-    private defineObservables() {
-        const moduleSubscription = this.module$.pipe(filter(Boolean)).subscribe(() => {
-            this.refreshData();
-        });
-        this.subscription.add(moduleSubscription);
-    }
-
     private saveState() {
         const queryParams = {
             tab: this.tabsEl.tabs.get(this.tabsEl.selectedIndex)?.tabId
@@ -221,7 +217,7 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
     private afterSaveConfig() {
         this.refreshData();
         this.modulesInstancesFacade.fetchEvents();
-        this.modulesInstancesFacade.fetchModule(this.entity.hash);
+        this.fetchModule.emit();
     }
 
     private refreshData() {

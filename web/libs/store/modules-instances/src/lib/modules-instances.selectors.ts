@@ -12,9 +12,6 @@ export const selectViewMode = createSelector(selectModulesInstancesState, (state
 export const selectEntityId = createSelector(selectModulesInstancesState, (state) => state.entityId);
 export const selectModuleName = createSelector(selectModulesInstancesState, (state) => state.moduleName);
 
-export const selectModule = createSelector(selectModulesInstancesState, (state) => state.module);
-export const selectIsLoadingModule = createSelector(selectModulesInstancesState, (state) => state.isLoadingModule);
-
 export const selectEvents = createSelector(selectModulesInstancesState, (state) => state.events);
 export const selectTotalEvents = createSelector(selectModulesInstancesState, (state) => state.totalEvents);
 export const selectEventsPage = createSelector(selectModulesInstancesState, (state) => state.eventsPage);
@@ -27,11 +24,6 @@ export const selectEventsGridFiltration = createSelector(
 export const selectEventsGridSorting = createSelector(selectModulesInstancesState, (state) => state.eventsSorting);
 export const selectEventsGridFiltrationByField = createSelector(selectEventsGridFiltration, (filtration) =>
     filtrationToDictionary(filtration)
-);
-export const selectModulePolicy = createSelector(selectModulesInstancesState, (state) => state.policy);
-export const selectIsLoadingModulePolicy = createSelector(
-    selectModulesInstancesState,
-    (state) => state.isLoadingPolicy
 );
 
 export const selectModuleVersions = createSelector(selectModulesInstancesState, (state) => state.moduleVersions);

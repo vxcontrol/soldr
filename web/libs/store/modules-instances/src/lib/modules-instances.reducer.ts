@@ -1,7 +1,7 @@
 import { createReducer, on } from '@ngrx/store';
 
-import { ErrorResponse, ModelsModuleA, ModelsModuleSShort } from '@soldr/api';
-import { Event, Policy, privateEventsToModels, privatePoliciesToModels } from '@soldr/models';
+import { ErrorResponse, ModelsModuleSShort } from '@soldr/api';
+import { Event, privateEventsToModels } from '@soldr/models';
 import { Filtration, Sorting, ViewMode } from '@soldr/shared';
 
 import * as Actions from './modules-instances.actions';
@@ -24,18 +24,14 @@ export interface State {
     isDisablingModule: boolean;
     isEnablingModule: boolean;
     isLoadingEvents: boolean;
-    isLoadingModule: boolean;
     isLoadingModuleEventsFilterItems: boolean;
     isLoadingModuleVersions: boolean;
-    isLoadingPolicy: boolean;
     isSavingModuleConfig: boolean;
     isUpdatingModule: boolean;
-    module: ModelsModuleA;
     eventFilterItemAgentIds: string[];
     eventFilterItemGroupIds: string[];
     moduleName: string;
     moduleVersions: ModelsModuleSShort[];
-    policy: Policy;
     savingModuleError: ErrorResponse;
     totalEvents: number;
     updateModuleError: ErrorResponse;
@@ -58,18 +54,14 @@ export const initialState: State = {
     isDisablingModule: false,
     isEnablingModule: false,
     isLoadingEvents: false,
-    isLoadingModule: false,
     isLoadingModuleEventsFilterItems: false,
     isLoadingModuleVersions: false,
-    isLoadingPolicy: false,
     isSavingModuleConfig: false,
     isUpdatingModule: false,
-    module: undefined,
     eventFilterItemAgentIds: [],
     eventFilterItemGroupIds: [],
     moduleName: undefined,
     moduleVersions: [],
-    policy: undefined,
     savingModuleError: undefined,
     totalEvents: 0,
     updateModuleError: undefined,
@@ -80,10 +72,6 @@ export const reducer = createReducer(
     initialState,
 
     on(Actions.init, (state, { viewMode, entityId, moduleName }) => ({ ...state, viewMode, entityId, moduleName })),
-
-    on(Actions.fetchModule, (state) => ({ ...state, isLoadingModule: true })),
-    on(Actions.fetchModuleSuccess, (state, { module }) => ({ ...state, isLoadingModule: false, module })),
-    on(Actions.fetchModuleFailure, (state) => ({ ...state, isLoadingModule: false })),
 
     on(Actions.fetchEvents, (state) => ({ ...state, isLoadingEvents: true })),
     on(Actions.fetchEventsSuccess, (state, { data, page }) => ({
@@ -119,14 +107,6 @@ export const reducer = createReducer(
     on(Actions.setEventsGridSearch, (state, { value }) => ({ ...state, eventsGridSearch: value })),
     on(Actions.resetEventsFiltration, (state) => ({ ...state, eventsGridFiltration: [] })),
     on(Actions.setEventsGridSorting, (state, { sorting }) => ({ ...state, eventsSorting: sorting })),
-
-    on(Actions.fetchPolicy, (state) => ({ ...state, isLoadingPolicy: true })),
-    on(Actions.fetchPolicySuccess, (state, { data }) => ({
-        ...state,
-        isLoadingPolicy: false,
-        policy: privatePoliciesToModels(data)[0]
-    })),
-    on(Actions.fetchPolicyFailure, (state) => ({ ...state, isLoadingPolicy: false })),
 
     on(Actions.fetchModuleVersions, (state) => ({ ...state, isLoadingModuleVersions: true })),
     on(Actions.fetchModuleVersionSuccess, (state, { data }) => ({

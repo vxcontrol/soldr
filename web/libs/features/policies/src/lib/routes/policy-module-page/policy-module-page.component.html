@@ -6,15 +6,15 @@
         moduleEventsGridColumnFilterItems: moduleEventsGridColumnFilterItems$ | async,
         moduleVersions: moduleVersions$ | async,
         isEnablingModule: isEnablingModule$ | async,
-        isLoadingModule: isLoadingModule$ | async,
         isUpdatingModule: isUpdatingModule$ | async,
         isDeletingModule: isDeletingModule$ | async,
         isDisablingModule: isDisablingModule$ | async,
         isLoadingPolicy: isLoadingPolicy$ | async,
+        isLoadingModules: isLoadingModules$ | async,
         isChangingModuleVersion: isChangingModuleVersion$ | async
     } as data">
     <ng-container *transloco="let t; read: 'policies'">
-        <soldr-progress-container [loadingFlag]="data.isLoadingModule || data.isLoadingPolicy">
+        <soldr-progress-container [loadingFlag]="data.isLoadingModules || data.isLoadingPolicy">
             <div class="page-layout layout-column layout-align-space-between">
                 <soldr-actionbar class="flex-none">
                     <ng-container actionbar-left>
@@ -92,11 +92,14 @@
                 <soldr-module-page
                     class="flex-auto"
                     [entity]="data.policy"
+                    [module]="data.module"
                     [eventsGridFilter]="data.moduleEventsGridColumnFilterItems"
                     [viewMode]="viewModeEnum.Policies"
                     [state]="pageState"
                     [stateStorageKey]="'policyModule.view'"
+                    [isLoadingEntityModule]="data.isLoadingModules"
                     (update)="doUpdateModule($event)"
+                    (fetchModule)="fetchPolicyModules()"
                     (seeVersions)="openChangeVersionPanel()">
                 </soldr-module-page>
             </div>

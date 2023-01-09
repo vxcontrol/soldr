@@ -1,5 +1,5 @@
 import { animate, state, style, transition, trigger } from '@angular/animations';
-import { Component, EventEmitter, Input, Output, TemplateRef, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Input, Output, TemplateRef, ViewChild } from '@angular/core';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
 import { McSidepanelService } from '@ptsecurity/mosaic/sidepanel';
 import { take } from 'rxjs';
@@ -50,7 +50,11 @@ export class ActionDetailsPanelComponent {
 
     private panelId = 'action-details-panel';
 
-    constructor(private languageService: LanguageService, private sidePanelService: McSidepanelService) {}
+    constructor(
+        private languageService: LanguageService,
+        private sidePanelService: McSidepanelService,
+        private cdr: ChangeDetectorRef
+    ) {}
 
     open(actionName: string) {
         this.actionName = actionName;
@@ -122,6 +126,10 @@ export class ActionDetailsPanelComponent {
 
     onRegisterFormApi(ncformWrapperApi: NcformWrapperApi) {
         this.ncformWrapperApi = ncformWrapperApi;
+    }
+
+    onModelChange() {
+        this.cdr.detectChanges();
     }
 
     get canSave() {

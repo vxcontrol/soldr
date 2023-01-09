@@ -3,11 +3,10 @@
         agent: agent$ | async,
         lang: language$ | async,
         module: module$ | async,
-        isLoadingModule: isLoadingModule$ | async,
         isLoadingAgent: isLoadingAgent$ | async,
         isModuleSupportOS: isModuleSupportOS$ | async
     } as data">
-    <soldr-progress-container [loadingFlag]="data.isLoadingModule || data.isLoadingAgent">
+    <soldr-progress-container [loadingFlag]="data.isLoadingAgent">
         <div class="page-layout layout-column layout-align-space-between" *transloco="let t; read: 'agents'">
             <soldr-actionbar class="flex-none">
                 <ng-container actionbar-left>
@@ -30,10 +29,12 @@
             <soldr-module-page
                 class="flex-auto"
                 [entity]="data.agent"
+                [module]="data.module"
                 [hasModuleOperations]="data.isModuleSupportOS"
                 [viewMode]="viewModeEnum.Agents"
                 [state]="pageState"
-                [stateStorageKey]="'agentModule.view'">
+                [stateStorageKey]="'agentModule.view'"
+                [isLoadingEntityModule]="data.isLoadingAgent">
             </soldr-module-page>
         </div>
     </soldr-progress-container>

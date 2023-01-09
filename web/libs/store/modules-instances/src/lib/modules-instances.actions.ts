@@ -1,18 +1,10 @@
 import { createAction, props } from '@ngrx/store';
 
-import { ErrorResponse, ModelsModuleA, PrivateEvents, PrivatePolicies, PrivateSystemShortModules } from '@soldr/api';
+import { ErrorResponse, ModelsModuleA, PrivateEvents, PrivateSystemShortModules } from '@soldr/api';
 import { Filtration, Sorting, ViewMode } from '@soldr/shared';
 
 export enum ActionType {
     Init = '[modules-instances] Init',
-
-    FetchModule = '[modules-instances] Fetch module',
-    FetchModuleSuccess = '[modules-instances] Fetch module success',
-    FetchModuleFailure = '[modules-instances] Fetch module failure',
-
-    FetchPolicy = '[modules-instances] Fetch policy',
-    FetchPolicySuccess = '[modules-instances] Fetch policy success',
-    FetchPolicyFailure = '[modules-instances] Fetch policy failure',
 
     FetchEvents = '[modules-instances] Fetch events',
     FetchEventsSuccess = '[modules-instances] Fetch events success',
@@ -63,14 +55,6 @@ export const init = createAction(
     ActionType.Init,
     props<{ viewMode: ViewMode; entityId: number; moduleName: string }>()
 );
-
-export const fetchModule = createAction(ActionType.FetchModule, props<{ entityHash: string }>());
-export const fetchModuleSuccess = createAction(ActionType.FetchModuleSuccess, props<{ module: ModelsModuleA }>());
-export const fetchModuleFailure = createAction(ActionType.FetchModuleFailure);
-
-export const fetchPolicy = createAction(ActionType.FetchPolicy, props<{ hash: string }>());
-export const fetchPolicySuccess = createAction(ActionType.FetchPolicySuccess, props<{ data: PrivatePolicies }>());
-export const fetchPolicyFailure = createAction(ActionType.FetchPolicyFailure);
 
 export const fetchEvents = createAction(ActionType.FetchEvents, props<{ page?: number }>());
 export const fetchEventsSuccess = createAction(

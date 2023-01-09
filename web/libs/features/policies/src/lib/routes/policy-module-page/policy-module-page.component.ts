@@ -21,6 +21,7 @@ import { PoliciesFacade } from '@soldr/store/policies';
 import { SharedFacade } from '@soldr/store/shared';
 
 import { defaultPolicyModuleState, PolicyModuleState } from '../../utils';
+import { PolicyModule } from '@soldr/models';
 
 @Component({
     selector: 'soldr-policy-module-page',
@@ -30,15 +31,25 @@ import { defaultPolicyModuleState, PolicyModuleState } from '../../utils';
 })
 export class PolicyModulePageComponent implements OnInit, OnDestroy {
     policy$ = this.policiesFacade.policy$;
-    isEnablingModule$ = this.modulesInstancesFacade.isEnablingModule$;
-    isLoadingModule$ = this.modulesInstancesFacade.isLoadingModule$;
     isLoadingPolicy$ = this.policiesFacade.isLoadingPolicy$;
+    isLoadingModules$ = this.policiesFacade.isLoadingModules$;
+
+    isEnablingModule$ = this.modulesInstancesFacade.isEnablingModule$;
     isDeletingModule$ = this.modulesInstancesFacade.isDeletingModule$;
     isDisablingModule$ = this.modulesInstancesFacade.isDisablingModule$;
     isUpdatingModule$ = this.modulesInstancesFacade.isUpdatingModule$;
     isChangingModuleVersion$ = this.modulesInstancesFacade.isChangingVersionModule$;
     language$ = this.languageService.current$;
-    module$ = this.modulesInstancesFacade.module$;
+
+    module$ = this.policiesFacade.policyModules$.pipe(
+        filter((policyModules: PolicyModule[]) => !!policyModules.length),
+        map((policyModules: PolicyModule[]) =>
+            policyModules.find(
+                (policyModule: PolicyModule) =>
+                    policyModule.info.name === this.activatedRoute.snapshot.params.moduleName
+            )
+        )
+    );
     moduleEventsGridColumnFilterItems$ = this.policiesFacade.moduleEventsGridColumnFilterItems$;
     moduleVersions$ = this.modulesInstancesFacade.moduleVersions$;
 
@@ -125,7 +136,7 @@ export class PolicyModulePageComponent implements OnInit, OnDestroy {
             .subscribe(([[oldValue, newValue], updateError]) => {
                 if (oldValue && !newValue) {
                     if (!updateError) {
-                        this.modulesInstancesFacade.fetchModule(hash);
+                        this.fetchPolicyModules();
                     } else {
                         this.modalInfoService.openErrorInfoModal(
                             this.transloco.translate('shared.Shared.ModulesConfig.ErrorText.Update')
@@ -143,7 +154,7 @@ export class PolicyModulePageComponent implements OnInit, OnDestroy {
             .subscribe(([[oldValue, newValue], changeVersionError]) => {
                 if (oldValue && !newValue) {
                     if (!changeVersionError) {
-                        this.modulesInstancesFacade.fetchModule(hash);
+                        this.fetchPolicyModules();
                     } else {
                         this.modalInfoService.openErrorInfoModal(
                             this.transloco.translate('shared.Shared.ModulesConfig.ErrorText.ChangeVersion')
@@ -169,8 +180,7 @@ export class PolicyModulePageComponent implements OnInit, OnDestroy {
     }
 
     private refreshModuleData() {
-        const { hash } = this.activatedRoute.snapshot.params as Record<string, string>;
-        this.modulesInstancesFacade.fetchModule(hash);
+        this.fetchPolicyModules();
         this.modulesInstancesFacade.fetchEvents();
         this.modulesInstancesFacade.fetchModuleEventsFilterItems();
         this.sharedFacade.fetchAllAgents();
@@ -211,5 +221,11 @@ export class PolicyModulePageComponent implements OnInit, OnDestroy {
             .subscribe((segments) => this.pageTitleService.setTitle(segments));
 
         this.subscription.add(titlesSubscription);
+    }
+
+    fetchPolicyModules() {
+        const { hash } = this.activatedRoute.snapshot.params as Record<string, string>;
+
+        this.policiesFacade.fetchModules(hash);
     }
 }

@@ -5,11 +5,9 @@
         eventsPage: eventsPage$ | async,
         eventsSearchValue: eventsSearchValue$ | async,
         isLoadingEvents: isLoadingEvents$ | async,
-        isLoadingModule: isLoadingModule$ | async,
         isLoadingModules: isLoadingModules$ | async,
         isSavingModule: isSavingModule$ | async,
         lang: language$ | async,
-        module: module$ | async,
         moduleVersions: moduleVersions$ | async,
         modules: modules$ | async,
         totalEvents: totalEvents$ | async
@@ -54,11 +52,14 @@
 
                 <mc-divider class="flex-none"></mc-divider>
 
-                <div class="sidebar-content flex-auto">
+                <div
+                    class="sidebar-content flex-auto"
+                    soldrProgressSpinner
+                    [loadingFlag]="isLoadingEntityModule">
                     <soldr-module-info
-                        *ngIf="data.module"
+                        *ngIf="module"
                         [viewMode]="viewMode"
-                        [module]="data.module"
+                        [module]="module"
                         [versions]="data.moduleVersions"
                         (update)="doUpdate($event)"
                         (seeVersions)="doSeeVersions()">
@@ -100,9 +101,9 @@
                     [label]="tShared('Shared.ModuleView.Tab.Management')"
                     [tabId]="'management'">
                     <soldr-module-interactive-part
-                        *ngIf="data.module && entity"
-                        class="layout-fill scrollable-y"
-                        [module]="data.module"
+                        *ngIf="module && entity"
+                        class="layout-fill scrollable-y layout-padding-l"
+                        [module]="module"
                         [entity]="entity"
                         [viewMode]="viewMode">
                     </soldr-module-interactive-part>
@@ -137,10 +138,12 @@
                     [tabId]="'config'">
                     <div
                         soldrProgressSpinner
-                        [loadingFlag]="data.isLoadingModule">
-                        <div class="scrollable-y layout-padding-l">
+                        [loadingFlag]="isLoadingEntityModule"
+                        class="layout-column">
+                        <div class="flex-auto scrollable-y layout-padding-l">
                             <soldr-module-config-block
-                                [module]="data.module"
+                                *ngIf="module"
+                                [module]="module"
                                 [isReadOnly]="isReadOnly"
                                 (saveModuleConfig)="saveModuleEventConfig($event)">
                             </soldr-module-config-block>
@@ -155,7 +158,7 @@
                                             [class.mc-progress]="data.isSavingModule"
                                             [color]="themePalette.Primary"
                                             [disabled]="!moduleConfig?.isDirty"
-                                            (click)="saveModuleConfig(data.module)">
+                                            (click)="saveModuleConfig(module)">
                                             {{ tCommon('Common.Pseudo.ButtonText.Save') }}
                                         </button>
                                     </div>
@@ -178,14 +181,14 @@
                     [tabId]="'dependencies'">
                     <soldr-dependencies-info
                         class="layout-fill scrollable-y"
-                        [module]="data.module"
+                        [module]="module"
                         [modules]="data.modules"
                         [loading]="data.isLoadingModules">
                     </soldr-dependencies-info>
                 </mc-tab>
 
                 <mc-tab [label]="tShared('Shared.ModuleView.Tab.Versions')" [tabId]="'versions'">
-                    <soldr-changelog [module]="data.module" [versions]="data.moduleVersions" [readOnly]="true">
+                    <soldr-changelog [module]="module" [versions]="data.moduleVersions" [readOnly]="true">
                     </soldr-changelog>
                 </mc-tab>
             </mc-tab-group>
