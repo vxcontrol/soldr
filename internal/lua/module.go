@@ -298,11 +298,13 @@ func (m *Module) getIMCTokenInfo(token string) (string, string, bool) {
 }
 
 func (m *Module) isIMCTokenExist(token string) bool {
-	return m.socket.GetIMCModule(token) != nil
-}
-
-func (m *Module) isIMCTopicExist(topic string) bool {
-	return m.socket.GetIMCTopic(topic) != nil
+	if m.socket.HasIMCTokenFormat(token) {
+		return m.socket.GetIMCModule(token) != nil
+	}
+	if m.socket.HasIMCTopicFormat(token) {
+		return m.socket.GetIMCTopic(token) != nil
+	}
+	return false
 }
 
 func (m *Module) makeIMCToken(name, gid string) string {
@@ -1486,7 +1488,6 @@ func NewModule(args map[string][]string, state *State, socket vxproto.IModuleSoc
 		"get_token":                   m.getIMCToken,
 		"get_info":                    m.getIMCTokenInfo,
 		"is_exist":                    m.isIMCTokenExist,
-		"is_topic":                    m.isIMCTopicExist,
 		"make_token":                  m.makeIMCToken,
 		"make_topic":                  m.makeIMCTopic,
 		"subscribe_to_topic":          m.subscribeIMCToTopic,

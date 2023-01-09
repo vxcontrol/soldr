@@ -492,7 +492,7 @@ func Example_topics_api() {
 			end
 
 			-- check topic information
-			assert(__imc.is_topic(topic_token))
+			assert(__imc.is_exist(topic_token))
 			local name, gid, exist = __imc.get_info(topic_token)
 			assert(name == topic_name and gid == __gid and exist)
 
@@ -1037,7 +1037,7 @@ func TestIMCSendDataToTopic(t *testing.T) {
 	sender := []byte(`
 		__api.await(200)
 		local imc_topic = __imc.make_topic(__args["dst_module"][1], "")
-		if __imc.is_topic(imc_topic) == false then
+		if __imc.is_exist(imc_topic) == false then
 			return result
 		end
 		local topicName, groupID, isExist = __imc.get_info(imc_topic)
