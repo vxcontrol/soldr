@@ -195,7 +195,8 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
     }
 
     get hasManagementTab() {
-        return this.viewMode === ViewMode.Agents && this.permitted.ViewModulesOperations && this.hasModuleOperations;
+        return (this.viewMode === ViewMode.Groups || this.viewMode === ViewMode.Agents) && 
+            this.permitted.ViewModulesOperations && this.hasModuleOperations;
     }
 
     private defineObservables() {
