@@ -477,8 +477,7 @@ export const reducer = createReducer(
         const updatedModules = modules.map((item) =>
             module.id === item.id
                 ? {
-                      ...item,
-                      current_config: module.current_config
+                      ...module
                   }
                 : item
         );
