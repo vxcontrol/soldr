@@ -148,9 +148,6 @@
                             "./node_modules/monaco-editor/esm/vs/editor/browser/widget/media/diffReview.css",
                             "./node_modules/monaco-editor/esm/vs/platform/contextview/browser/contextMenuHandler.css"
                         ],
-                        "scripts": [
-                            "./node_modules/monaco-editor/min/vs/loader.js"
-                        ],
                         "stylePreprocessorOptions": {
                             "includePaths": ["node_modules"]
                         }
