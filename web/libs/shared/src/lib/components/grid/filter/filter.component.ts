@@ -187,8 +187,6 @@ export class FilterComponent implements OnInit, OnChanges, AfterContentInit {
 
     reset() {
         this.selectedFilterValues$.next([]);
-        this.changeValue.emit({ field: this.field, value: [] });
-        this.filterPopover.hide(0);
     }
 
     private sortByEnabledState(selectedValues: string[]) {
