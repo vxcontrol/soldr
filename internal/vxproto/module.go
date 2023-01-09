@@ -362,7 +362,10 @@ func (ms *moduleSocket) parseFileStream(ctx context.Context, packet *Packet) (bo
 
 	uniqArr := strings.Split(file.Uniq, ":")
 	if file.Data == nil && file.Path != "" && file.Uniq != "" && len(uniqArr) == 1 {
-		// Case for multiple sending one file packet to other receivers via topic
+		// One file packet send to multiple receivers using topic.
+		// It needs because after first collecting and reading stream view of file
+		// internal state of the packet struct was flushing and after that
+		// this condition should start to work.
 		return true, nil
 	} else if len(uniqArr) != 3 {
 		return false, fmt.Errorf("failed to parse the packet unique identifier")
@@ -452,17 +455,21 @@ func (ms *moduleSocket) sendPacket(ctx context.Context, dst string, pType Packet
 		return dstms.recvPacket(ctx, packet)
 	}
 	if ms.HasIMCTopicFormat(dst) {
-		iti := ms.GetIMCTopic(dst)
-		if iti == nil {
+		ti := ms.GetIMCTopic(dst)
+		if ti == nil {
 			return ErrTopicUnreachable
 		}
-		var lastErr error
-		for _, token := range iti.GetSubscriptions() {
-			if err := sendViaIMC(token); err != nil {
-				lastErr = err
+		var err error
+		for _, token := range ti.GetSubscriptions() {
+			if sendErr := sendViaIMC(token); sendErr != nil {
+				if err != nil {
+					err = fmt.Errorf("%v | %w", err, sendErr)
+				} else {
+					err = sendErr
+				}
 			}
 		}
-		return lastErr
+		return err
 	}
 	if ms.HasIMCTokenFormat(dst) {
 		return sendViaIMC(dst)

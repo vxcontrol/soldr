@@ -1687,7 +1687,7 @@ func TestIMCTopicsAPI(t *testing.T) {
 			t.Fatal("failed to prepare topic token")
 		}
 
-		// On publisher side: check is topic available
+		// On publisher side: check topic availability
 		if tokenInfo := moduleSocket.GetIMCTopic(topicToken); tokenInfo != nil {
 			// This topic doesn't contain any subscribers and doesn't register in VXProto
 			t.Fatal("unregistered topic must return nil as an info")
@@ -1696,17 +1696,17 @@ func TestIMCTopicsAPI(t *testing.T) {
 		// On publisher side: test sending packet to unavailable topic
 		err := moduleSocket.SendDataTo(ctx, topicToken, &Data{Data: testData})
 		if !errors.Is(err, ErrTopicUnreachable) {
-			// This call to send any packets to unavailable topic must raise the error
+			// Sending a packet to unavailable topic must raise ErrTopicUnreachable error
 			t.Fatal("send data call returned unexpected error", err)
 		}
 
-		// On subscriber side: subsribe to the topic and add an IMC token to the list
+		// On subscriber side: subscribe to the topic and add an IMC token to the list
 		if !moduleSocket.SubscribeIMCToTopic(topicName, groupID, imcToken) {
-			// This topic was unregistered and must be free to subscribe on it
-			t.Fatal("unregistered topic must be available to subsribing")
+			// Subscription to an unregistered topic should succeed
+			t.Fatal("unregistered topic must be available to subscribing")
 		}
 
-		// On publisher side: double check is topic available
+		// On publisher side: double check that topic is available
 		if topicInfoR := moduleSocket.GetIMCTopic(topicToken); topicInfoR == nil {
 			// This topic must be registered in VXProto after previosly SubscribeIMC* call
 			t.Fatal("registered topic must return info about itself")
@@ -1718,7 +1718,7 @@ func TestIMCTopicsAPI(t *testing.T) {
 			t.Fatal("registered topic must contain IMC token which was added")
 		}
 
-		// On subscriber side: run routine to receive an packet
+		// On subscriber side: run routine to receive a packet
 		go func() {
 			src, data, err := moduleSocket.RecvData(ctx, 1000)
 			if err != nil || src != imcToken || !bytes.Equal(data.Data, testData) {
@@ -1726,25 +1726,25 @@ func TestIMCTopicsAPI(t *testing.T) {
 			}
 		}()
 
-		// On publisher side: test sending packet to available topic
+		// On publisher side: test sending packet to a available topic
 		if err := moduleSocket.SendDataTo(ctx, topicToken, &Data{Data: testData}); err != nil {
-			// This call to send any packets to available topic must not raise an error
+			// Sending packets to a registered topics should not raise any errors
 			t.Fatal("send data call returned an error", err)
 		}
 
 		// On subscriber side: unsubscribe from the topic and delete an IMC token from the list
 		if !moduleSocket.UnsubscribeIMCFromTopic(topicName, groupID, imcToken) {
-			t.Fatal("registered topic must be available to unsubscribing")
+			t.Fatal("registered topic must be available for unsubscribing")
 		}
 	}
 
 	if len(proto.GetIMCTopics()) != 0 {
-		t.Fatal("registered topics list must be empty after each was unsubscribed")
+		t.Fatal("registered topics list must be empty once everyone got unsubscribed")
 	}
 
-	// Just it checks API while there is nothing to unsubscribe
+	// Check an API when there are nothing to unsubscribe
 	if !moduleSocket.UnsubscribeIMCFromAllTopics(imcToken) {
-		t.Fatal("registered topic must be available to unsubscribing")
+		t.Fatal("failed to unsubscribe while there should be no subscriptions")
 	}
 }
 

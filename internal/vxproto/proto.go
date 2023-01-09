@@ -124,7 +124,7 @@ type IIMC interface {
 	GetIMCModuleIDsByGID(gid string) []string
 }
 
-// ITopicInfo is interface for describe topic registration per each record
+// ITopicInfo is an interface for an object that can give topic registration information
 type ITopicInfo interface {
 	GetName() string
 	GetGroupID() string
@@ -850,22 +850,14 @@ func (vxp *vxProto) NewToken(agentID string, agentType AgentType) (string, error
 	return token, nil
 }
 
-// HasIMCTokenFormat is function which validate imc token format
+// HasIMCTokenFormat is a IMC token format validation function
 func (vxp *vxProto) HasIMCTokenFormat(token string) bool {
-	if len(token) != 40 || !strings.HasPrefix(token, "ffffffff") {
-		return false
-	}
-
-	return true
+	return len(token) == 40 && strings.HasPrefix(token, "ffffffff")
 }
 
-// HasIMCTopicFormat is function which validate imc topic format
+// HasIMCTopicFormat is a IMC topic format validation function
 func (vxp *vxProto) HasIMCTopicFormat(topic string) bool {
-	if len(topic) != 40 || !strings.HasPrefix(topic, "ffff7777") {
-		return false
-	}
-
-	return true
+	return len(topic) == 40 && strings.HasPrefix(topic, "ffff7777")
 }
 
 // GetIMCModule is function which get module socket for imc token
@@ -906,19 +898,19 @@ func (vxp *vxProto) GetIMCTopic(topic string) ITopicInfo {
 	return nil
 }
 
-// MakeIMCToken is function which get new imc token
+// MakeIMCToken generates new IMC token
 func (vxp *vxProto) MakeIMCToken(name, gid string) string {
 	hash := md5.Sum(append([]byte(gid+":"+name+":"), vxp.tokenKey...))
 	return "ffffffff" + hex.EncodeToString(hash[:])
 }
 
-// MakeIMCTopic is function which get new imc topic
+// MakeIMCTopic generates new IMC topic
 func (vxp *vxProto) MakeIMCTopic(name, gid string) string {
 	hash := md5.Sum(append([]byte(gid+":"+name+":"), vxp.tokenKey...))
 	return "ffff7777" + hex.EncodeToString(hash[:])
 }
 
-// SubscribeIMCToTopic is function to make or extend record about topic in vxproto
+// SubscribeIMCToTopic appends IMC topic subscription if it is not registered yet
 func (vxp *vxProto) SubscribeIMCToTopic(name, gid, token string) bool {
 	if !vxp.HasIMCTokenFormat(token) {
 		return false
@@ -943,7 +935,7 @@ func (vxp *vxProto) SubscribeIMCToTopic(name, gid, token string) bool {
 	return true
 }
 
-// UnsubscribeIMCFromTopic is function to remove record about topic in vxproto
+// UnsubscribeIMCFromTopic removes IMC topic subscription
 func (vxp *vxProto) UnsubscribeIMCFromTopic(name, gid, token string) bool {
 	if !vxp.HasIMCTokenFormat(token) {
 		return false
@@ -972,7 +964,7 @@ func (vxp *vxProto) UnsubscribeIMCFromTopic(name, gid, token string) bool {
 	return true
 }
 
-// UnsubscribeIMCFromAllTopics is function to remove all topic records by imc token
+// UnsubscribeIMCFromAllTopics removes all topic records for IMC token
 func (vxp *vxProto) UnsubscribeIMCFromAllTopics(token string) bool {
 	if !vxp.HasIMCTokenFormat(token) {
 		return false
@@ -1009,7 +1001,7 @@ func (vxp *vxProto) unsubscribeIMCFromAllTopics(token string) {
 	}
 }
 
-// GetIMCTopics is function to get all registered topic IDs from vxproto
+// GetIMCTopics returns all registered IMC topics identifiers
 func (vxp *vxProto) GetIMCTopics() []string {
 	vxp.mutex.RLock()
 	defer vxp.mutex.RUnlock()

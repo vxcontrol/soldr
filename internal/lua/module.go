@@ -329,7 +329,7 @@ func (m *Module) getIMCSubscriptions(topic string) []string {
 	if info := m.socket.GetIMCTopic(topic); info != nil {
 		return info.GetSubscriptions()
 	}
-	return make([]string, 0)
+	return []string{}
 }
 
 func (m *Module) getIMCTopics() []string {
@@ -400,6 +400,9 @@ func (m *Module) tryPacketUnlock(dst string) {
 }
 
 func (m *Module) filterVXProtoErrors(err error) bool {
+	// to decrease errors rate because these errors are systematic
+	// e.g. topic is creating since first subscribe so
+	// while there are nothing subscribers all api send_* calls raise the error
 	return errors.Is(err, vxproto.ErrTopicUnreachable)
 }
 
