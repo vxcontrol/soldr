@@ -40,6 +40,16 @@ var binariesSQLMappers = map[string]interface{}{
 		"`{{table}}`.files)",
 }
 
+type BinariesService struct {
+	db *gorm.DB
+}
+
+func NewBinariesService(db *gorm.DB) *BinariesService {
+	return &BinariesService{
+		db: db,
+	}
+}
+
 // GetAgentBinaries is a function to return agent binaries list
 // @Summary Retrieve agent binaries list by filters
 // @Tags Binaries
@@ -50,10 +60,9 @@ var binariesSQLMappers = map[string]interface{}{
 // @Failure 403 {object} utils.errorResp "getting agent binaries not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting agent binaries"
 // @Router /binaries/vxagent [get]
-func GetAgentBinaries(c *gin.Context) {
+func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	var (
 		err   error
-		gDB   *gorm.DB
 		query utils.TableQuery
 		resp  binaries
 	)
@@ -61,11 +70,6 @@ func GetAgentBinaries(c *gin.Context) {
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrAgentBinariesInvalidRequest, err)
-		return
-	}
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
 		return
 	}
 
@@ -78,7 +82,7 @@ func GetAgentBinaries(c *gin.Context) {
 		},
 	})
 
-	if resp.Total, err = query.Query(gDB, &resp.Binaries); err != nil {
+	if resp.Total, err = query.Query(s.db, &resp.Binaries); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent binaries")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -108,7 +112,7 @@ func GetAgentBinaries(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "agent binary file not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting agent binary file"
 // @Router /binaries/vxagent/{os}/{arch}/{version} [get]
-func GetAgentBinaryFile(c *gin.Context) {
+func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 	var (
 		agentOS      = c.Param("os")
 		agentArch    = c.Param("arch")
@@ -118,7 +122,6 @@ func GetAgentBinaryFile(c *gin.Context) {
 		chksums      models.BinaryChksum
 		data         []byte
 		err          error
-		gDB          *gorm.DB
 		ok           bool
 		resultName   string
 		s3           storage.IStorage
@@ -150,11 +153,6 @@ func GetAgentBinaryFile(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
-		return
-	}
-
 	tid, _ := utils.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		db = db.Where("tenant_id IN (?)", []uint64{0, tid}).Where("type LIKE ?", "vxagent")
@@ -165,7 +163,7 @@ func GetAgentBinaryFile(c *gin.Context) {
 		}
 	}
 
-	err = gDB.Scopes(scope).Model(&binary).Take(&binary).Error
+	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", agentVersion)
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileNotFound, err, uaf)

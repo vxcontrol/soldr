@@ -161,10 +161,9 @@ func validOptions(c *gin.Context, value interface{}) bool {
 	return true
 }
 
-func getOption(c *gin.Context, option string, value interface{}) (uint64, *srverrors.HttpError) {
+func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (uint64, *srverrors.HttpError) {
 	var (
 		err   error
-		gDB   *gorm.DB
 		query utils.TableQuery
 		sv    *models.Service
 		total uint64
@@ -173,10 +172,6 @@ func getOption(c *gin.Context, option string, value interface{}) (uint64, *srver
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		return 0, srverrors.ErrOptionsInvalidRequestData
-	}
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		return 0, srverrors.ErrInternalDBNotFound
 	}
 
 	if sv = getService(c); sv == nil {
@@ -211,7 +206,7 @@ func getOption(c *gin.Context, option string, value interface{}) (uint64, *srver
 				Joins("INNER JOIN ? AS list ON ? AND ?", subQuery, cond_name, cond_version)
 		},
 	}
-	if total, err = query.Query(gDB, value, funcs...); err != nil {
+	if total, err = query.Query(db, value, funcs...); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding global %s list", option)
 		return 0, srverrors.ErrOptionsInvalidQuery
 	}
@@ -221,6 +216,14 @@ func getOption(c *gin.Context, option string, value interface{}) (uint64, *srver
 	}
 
 	return total, nil
+}
+
+type OptionService struct {
+	db *gorm.DB
+}
+
+func NewOptionService(db *gorm.DB) *OptionService {
+	return &OptionService{db: db}
 }
 
 // GetOptionsActions is a function to return global action list
@@ -233,9 +236,9 @@ func getOption(c *gin.Context, option string, value interface{}) (uint64, *srver
 // @Failure 403 {object} utils.errorResp "getting global action list not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting global action list"
 // @Router /options/actions [get]
-func GetOptionsActions(c *gin.Context) {
+func (s *OptionService) GetOptionsActions(c *gin.Context) {
 	var resp optionsActions
-	ext, err := getOption(c, "action", &resp.Actions)
+	ext, err := getOption(c, s.db, "action", &resp.Actions)
 	if err != nil {
 		utils.HTTPError(c, err, nil)
 	}
@@ -254,9 +257,9 @@ func GetOptionsActions(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "getting global event list not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting global event list"
 // @Router /options/events [get]
-func GetOptionsEvents(c *gin.Context) {
+func (s *OptionService) GetOptionsEvents(c *gin.Context) {
 	var resp optionsEvents
-	ext, err := getOption(c, "event", &resp.Events)
+	ext, err := getOption(c, s.db, "event", &resp.Events)
 	if err != nil {
 		utils.HTTPError(c, err, nil)
 	}
@@ -275,9 +278,9 @@ func GetOptionsEvents(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "getting global field list not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting global field list"
 // @Router /options/fields [get]
-func GetOptionsFields(c *gin.Context) {
+func (s *OptionService) GetOptionsFields(c *gin.Context) {
 	var resp optionsFields
-	ext, err := getOption(c, "field", &resp.Fields)
+	ext, err := getOption(c, s.db, "field", &resp.Fields)
 	if err != nil {
 		utils.HTTPError(c, err, nil)
 	}
@@ -296,9 +299,9 @@ func GetOptionsFields(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "getting global tag list not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting global tag list"
 // @Router /options/tags [get]
-func GetOptionsTags(c *gin.Context) {
+func (s *OptionService) GetOptionsTags(c *gin.Context) {
 	var resp optionsTags
-	ext, err := getOption(c, "tag", &resp.Tags)
+	ext, err := getOption(c, s.db, "tag", &resp.Tags)
 	if err != nil {
 		utils.HTTPError(c, err, nil)
 	}
@@ -317,9 +320,9 @@ func GetOptionsTags(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "getting global version list not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting global version list"
 // @Router /options/versions [get]
-func GetOptionsVersions(c *gin.Context) {
+func (s *OptionService) GetOptionsVersions(c *gin.Context) {
 	var resp optionsVersions
-	ext, err := getOption(c, "version", &resp.Versions)
+	ext, err := getOption(c, s.db, "version", &resp.Versions)
 	if err != nil {
 		utils.HTTPError(c, err, nil)
 	}

@@ -139,6 +139,16 @@ func getTagJoinFuncs(table string, useGroup, useModule, usePolicy bool) []func(d
 	return []func(db *gorm.DB) *gorm.DB{}
 }
 
+type TagService struct {
+	db *gorm.DB
+}
+
+func NewTagService(db *gorm.DB) *TagService {
+	return &TagService{
+		db: db,
+	}
+}
+
 // GetTags is a function to return tags list by type filter query key
 // @Summary Retrieve tags list by filters
 // @Tags Tags
@@ -149,7 +159,7 @@ func getTagJoinFuncs(table string, useGroup, useModule, usePolicy bool) []func(d
 // @Failure 403 {object} utils.errorResp "getting tags not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting tags"
 // @Router /tags/ [get]
-func GetTags(c *gin.Context) {
+func (s *TagService) GetTags(c *gin.Context) {
 	var (
 		err        error
 		iDB        *gorm.DB
