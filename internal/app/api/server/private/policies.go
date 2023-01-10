@@ -161,6 +161,14 @@ func getPolicyName(c *gin.Context, hash string) (string, error) {
 	return policy.Info.Name.En, nil
 }
 
+type PolicyService struct {
+	db *gorm.DB
+}
+
+func NewPolicyService(db *gorm.DB) *PolicyService {
+	return &PolicyService{db: db}
+}
+
 // GetPolicies is a function to return policy list view on dashboard
 // @Summary Retrieve policies list by filters
 // @Tags Policies
@@ -172,11 +180,10 @@ func getPolicyName(c *gin.Context, hash string) (string, error) {
 // @Failure 404 {object} utils.errorResp "policies not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting policies"
 // @Router /policies/ [get]
-func GetPolicies(c *gin.Context) {
+func (s *PolicyService) GetPolicies(c *gin.Context) {
 	var (
 		err          error
 		groups       []models.Group
-		gDB          *gorm.DB
 		iDB          *gorm.DB
 		modules      []models.ModuleSShort
 		modulesa     []models.ModuleAShort
@@ -197,11 +204,6 @@ func GetPolicies(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
 	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
 		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
 		return
@@ -217,7 +219,7 @@ func GetPolicies(c *gin.Context) {
 		return db.Where("tenant_id = ? AND service_type = ?", tid, sv.Type)
 	}
 
-	if err = gDB.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading system modules latest version")
 		utils.HTTPError(c, srverrors.ErrGetPoliciesSystemModulesNotFound, err)
 		return
@@ -399,21 +401,15 @@ func GetPolicies(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "policy not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting policy"
 // @Router /policies/{hash} [get]
-func GetPolicy(c *gin.Context) {
+func (s *PolicyService) GetPolicy(c *gin.Context) {
 	var (
 		err     error
-		gDB     *gorm.DB
 		hash    = c.Param("hash")
 		iDB     *gorm.DB
 		modules []models.ModuleSShort
 		resp    policy
 		sv      *models.Service
 	)
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
 
 	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
 		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
@@ -430,7 +426,7 @@ func GetPolicy(c *gin.Context) {
 		return db.Where("tenant_id = ? AND service_type = ?", tid, sv.Type)
 	}
 
-	if err = gDB.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading system modules latest version")
 		utils.HTTPError(c, srverrors.ErrGetPolicySystemModulesNotFound, err)
 		return
@@ -506,7 +502,7 @@ func GetPolicy(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "policy not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating policy"
 // @Router /policies/{hash} [put]
-func PatchPolicy(c *gin.Context) {
+func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	var (
 		count  int64
 		err    error
@@ -582,7 +578,7 @@ func PatchPolicy(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "policy or group not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating policy group"
 // @Router /policies/{hash}/groups [put]
-func PatchPolicyGroup(c *gin.Context) {
+func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 	var (
 		err    error
 		form   policyGroupPatch
@@ -667,7 +663,7 @@ func PatchPolicyGroup(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "creating policy not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on creating policy"
 // @Router /policies/ [post]
-func CreatePolicy(c *gin.Context) {
+func (s *PolicyService) CreatePolicy(c *gin.Context) {
 	var (
 		err        error
 		info       policyInfo
@@ -774,7 +770,7 @@ func CreatePolicy(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "policy not found"
 // @Failure 500 {object} utils.errorResp "internal error on deleting policy"
 // @Router /policies/{hash} [delete]
-func DeletePolicy(c *gin.Context) {
+func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	var (
 		err     error
 		hash    = c.Param("hash")
@@ -868,7 +864,7 @@ func DeletePolicy(c *gin.Context) {
 // @Success 200 {object} utils.successResp{data=policyCount} "groups of counted agents policies successfully"
 // @Failure 500 {object} utils.errorResp "internal error"
 // @Router /policies/count [get]
-func GetPoliciesCount(c *gin.Context) {
+func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 	var (
 		err  error
 		iDB  *gorm.DB
