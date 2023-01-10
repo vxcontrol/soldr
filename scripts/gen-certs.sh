@@ -15,6 +15,7 @@ mkdir -p \
     "${CRTS_DIR}"/server/sc \
     "${CRTS_DIR}"/server/sca \
     "${CRTS_DIR}"/agent \
+    "${CRTS_DIR}"/api/aggregate \
     "${CRTS_DIR}"/api/browser \
     "${CRTS_DIR}"/api/external \
     "${TMP_DIR}"
@@ -41,8 +42,11 @@ cp "${GEN_CERTS_DIR}"/iac.cert "${CRTS_DIR}"/agent/
 cp "${GEN_CERTS_DIR}"/iac.key "${CRTS_DIR}"/agent/
 
 cp "${GEN_CERTS_DIR}"/vxca.cert "${CRTS_DIR}"/api/
+cp "${GEN_CERTS_DIR}"/ca.cert "${CRTS_DIR}"/api/aggregate/
 cp "${GEN_CERTS_DIR}"/ca.cert "${CRTS_DIR}"/api/browser/
 cp "${GEN_CERTS_DIR}"/ca.cert "${CRTS_DIR}"/api/external/
+cp "${GEN_CERTS_DIR}"/ltac_aggregate.cert "${CRTS_DIR}"/api/aggregate/ltac.cert
+cp "${GEN_CERTS_DIR}"/ltac_aggregate.key "${CRTS_DIR}"/api/aggregate/ltac.key
 cp "${GEN_CERTS_DIR}"/ltac_browser.cert "${CRTS_DIR}"/api/browser/ltac.cert
 cp "${GEN_CERTS_DIR}"/ltac_browser.key "${CRTS_DIR}"/api/browser/ltac.key
 cp "${GEN_CERTS_DIR}"/ltac_external.cert "${CRTS_DIR}"/api/external/ltac.cert

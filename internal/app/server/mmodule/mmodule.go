@@ -96,6 +96,11 @@ type AgentInfoDB struct {
 	DeletedAt  *time.Time
 }
 
+type GroupInfoDB struct {
+	GID       string `gorm:"column:gid"`
+	DeletedAt *time.Time
+}
+
 type AgentBinary struct {
 	AgentHash string       `gorm:"column:agent_hash"`
 	AgentInfo *AgentInfoDB `gorm:"embedded"`
@@ -267,6 +272,16 @@ func (mm *MainModule) HasAgentInfoValid(ctx context.Context, asocket vxproto.IAg
 
 	if info.Type == vxproto.VXAgent && !checkAgentInfo(info.Info) {
 		log.Error("failed to validate agent Info")
+		return utilsErrors.ErrFailedResponseCorrupted
+	}
+
+	if info.Type == vxproto.Aggregate {
+		ginfodb := mm.getGroupInfoDB(validCtx, info.ID)
+		if ginfodb != nil {
+			asocket.SetGroupID(ginfodb.GID)
+			return nil
+		}
+		log.Errorf("requested group '%s' is not exist in DB", info.ID)
 		return utilsErrors.ErrFailedResponseCorrupted
 	}
 
@@ -876,6 +891,28 @@ func (mm *MainModule) getAgentInfoDB(ctx context.Context, aid string) *AgentInfo
 	return &agentInfo
 }
 
+func (mm *MainModule) getGroupInfoDB(ctx context.Context, gid string) *GroupInfoDB {
+	if mm.gdbc == nil {
+		// TODO: here need to get agent info according to config file
+		return &GroupInfoDB{
+			GID: "",
+		}
+	}
+
+	var groupInfo GroupInfoDB
+	err := mm.gdbc.
+		Table("groups").
+		Select("IFNULL(hash, '') as gid").
+		Where("deleted_at IS NULL AND hash = ?", gid).
+		First(&groupInfo).Error
+	if err != nil {
+		logrus.WithContext(ctx).WithError(err).WithField("group_id", gid).
+			Error("failed to get group info by ID")
+		return nil
+	}
+	return &groupInfo
+}
+
 func (mm *MainModule) pushEventToQueue(ctx context.Context, aid, gid, pid, mname, info string) bool {
 	log := logrus.WithContext(ctx).WithFields(logrus.Fields{
 		"agent_id":    aid,
@@ -1188,6 +1225,10 @@ func (mm *MainModule) syncAgents() {
 }
 
 func (mm *MainModule) updateAgentsStatusWithDBInfo(ctx context.Context, agentsList map[string]*agentInfo) {
+	gids := make(map[string]struct{})
+	for _, gid := range mm.getGroupsList(ctx) {
+		gids[gid] = struct{}{}
+	}
 	ids, err := mm.getAgentsList(ctx)
 	if err != nil {
 		logrus.WithContext(ctx).WithError(err).Error("failed to get agents changes from DB")
@@ -1198,6 +1239,15 @@ func (mm *MainModule) updateAgentsStatusWithDBInfo(ctx context.Context, agentsLi
 	connectedAgents := make(map[string]struct{}, len(agentsList))
 	for _, ainfo := range agentsList {
 		if ainfo == nil || ainfo.isfin {
+			continue
+		}
+		if ainfo.info.Type == vxproto.Aggregate {
+			if _, ok := gids[ainfo.info.GID]; !ok {
+				agentsToDrop[ainfo.info.ID] = ""
+				ainfo.update <- struct{}{}
+			} else {
+				connectedAgents[ainfo.info.ID] = struct{}{}
+			}
 			continue
 		}
 		if ainfoDB, ok := ids[ainfo.info.ID]; !ok || ainfoDB.AuthStatus != dbAgentStatusAuthorized {
@@ -1278,6 +1328,12 @@ func (mm *MainModule) syncGroups() {
 
 		break
 	}
+}
+
+// controlAggregate is a dummy function to enumerate all aggregate/group connections
+// and linking those to the group modules state to make update notifications
+func (mm *MainModule) controlAggregate(dst string, syncRun chan struct{}, ainfo *agentInfo) {
+	mm.controlProxy(dst, syncRun, ainfo)
 }
 
 // controlBrowser is a dummy function to enumerate all browser connections
@@ -1591,6 +1647,9 @@ func (mm *MainModule) handlerAgentConnected(ctx context.Context, info *vxproto.A
 
 	mm.wgControl.Add(1)
 	switch info.Type {
+	case vxproto.Aggregate:
+		go mm.controlAggregate(info.Dst, agentControlSync, ainfo)
+		defer func() { <-agentControlSync }()
 	case vxproto.Browser:
 		go mm.controlBrowser(info.Dst, agentControlSync, ainfo)
 		defer func() { <-agentControlSync }()

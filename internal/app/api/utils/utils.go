@@ -78,6 +78,18 @@ func GetAgentName(c *gin.Context, hash string) (string, error) {
 	return agent.Description, nil
 }
 
+func GetGroupName(c *gin.Context, hash string) (string, error) {
+	iDB := GetGormDB(c, "iDB")
+	if iDB == nil {
+		return "", errors.New("can't connect to database")
+	}
+	var group models.Group
+	if err := iDB.Take(&group, "hash = ?", hash).Error; err != nil {
+		return "", err
+	}
+	return group.Info.Name.En, nil
+}
+
 type GroupedData struct {
 	Grouped []string `json:"grouped"`
 	Total   uint64   `json:"total"`

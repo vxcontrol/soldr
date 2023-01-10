@@ -35,6 +35,7 @@ func TestExtractABIFromDBBinaryPath(t *testing.T) {
 		"%s/vxagent",
 	}
 	notAgentSuffix := []string{
+		"aggregate",
 		"browser",
 		"external",
 	}

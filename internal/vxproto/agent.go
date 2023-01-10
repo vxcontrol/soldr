@@ -41,10 +41,11 @@ type AgentType int32
 
 // Enumerate agent types
 const (
-	VXAgent  AgentType = 0
-	Browser  AgentType = 1
-	External AgentType = 2
-	VXServer AgentType = 3
+	VXAgent   AgentType = 0
+	Browser   AgentType = 1
+	External  AgentType = 2
+	VXServer  AgentType = 3
+	Aggregate AgentType = 4
 )
 
 // Constants for ping sender functionality
@@ -58,13 +59,15 @@ var agentTypeName = map[int32]string{
 	1: "Browser",
 	2: "External",
 	3: "VXServer",
+	4: "Aggregate",
 }
 
 var agentTypeValue = map[string]int32{
-	"VXAgent":  0,
-	"Browser":  1,
-	"External": 2,
-	"VXServer": 3,
+	"VXAgent":   0,
+	"Browser":   1,
+	"External":  2,
+	"VXServer":  3,
+	"Aggregate": 4,
 }
 
 func (at AgentType) String() string {

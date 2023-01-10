@@ -36,11 +36,11 @@ import (
 const protoVersion string = "v1"
 
 type ctxVXConnection struct {
-	agentID  string
+	sockID   string
+	sockType string
 	authReq  *protoagent.AuthenticationRequest
 	connType vxproto.AgentType
 	ctx      context.Context
-	sockType string
 	sv       *models.Service
 	logger   *logrus.Entry
 }
@@ -57,7 +57,7 @@ func getAgentSocketURL(ctxConn *ctxVXConnection) (*url.URL, error) {
 	var u url.URL
 	u.Scheme = ctxConn.sv.Info.Server.Proto
 	u.Host = fmt.Sprintf("%s:%d", ctxConn.sv.Info.Server.Host, ctxConn.sv.Info.Server.Port)
-	u.Path = fmt.Sprintf("/api/%s/vxpws/%s/%s/", protoVersion, ctxConn.sockType, ctxConn.agentID)
+	u.Path = fmt.Sprintf("/api/%s/vxpws/%s/%s/", protoVersion, ctxConn.sockType, ctxConn.sockID)
 	return &u, nil
 }
 
@@ -134,7 +134,7 @@ func doVXServerConnection(
 	}
 
 	version := version.GetBinaryVersion()
-	connValidator := connValidator.NewValidator(ctxConn.agentID, version, hardeningVM)
+	connValidator := connValidator.NewValidator(ctxConn.sockID, version, hardeningVM)
 	tlsConfig, err := hardeningVM.GetTLSConfigForConnection()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate TLS config: %w", err)
@@ -147,7 +147,7 @@ func doVXServerConnection(
 	}
 
 	serverConn := &socket{
-		id:            ctxConn.agentID,
+		id:            ctxConn.sockID,
 		ip:            ctxConn.sv.Info.Server.Host,
 		src:           ctxConn.authReq.GetAtoken(),
 		at:            ctxConn.connType,
@@ -163,7 +163,7 @@ func doVXServerConnection(
 	}
 	ctxConn.logger.Debug("try OnConnect")
 	if err := connValidator.OnConnect(
-		context.WithValue(ctxConn.ctx, vm.CTXAgentIDKey, ctxConn.agentID),
+		context.WithValue(ctxConn.ctx, vm.CTXSockIDKey, ctxConn.sockID),
 		serverConn,
 		packEncryptor,
 		setPinger,
@@ -205,42 +205,22 @@ func sendAuthResp(ctx context.Context, conn vxproto.IConnection, authRespMessage
 	return nil
 }
 
-func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockType string, uaf utils.UserActionFields) {
+func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, sockType string, uaf utils.UserActionFields) {
 	var (
-		agent      models.Agent
 		err        error
-		iDB        *gorm.DB
 		serverConn *socket
-		agentID    = c.Param("agent_id")
 		sv         *models.Service
 		validate   = models.GetValidator()
 	)
 
-	uaf.ObjectId = agentID
-
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
-		return
-	}
-
-	if err = iDB.Take(&agent, "hash = ?", agentID).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, err, uaf)
-		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
-		}
-	}
-	uaf.ObjectDisplayName = agent.Description
-
 	logger := utils.FromContext(c).WithFields(logrus.Fields{
-		"agent_id":  agentID,
+		"sock_id":   sockID,
 		"sock_type": sockType,
 		"conn_id":   getRandomID(),
 	})
 
-	if err := validate.Var(agentID, "len=32,hexadecimal,lowercase,required"); err != nil {
-		logger.WithError(err).Error("failed to validate agent ID")
+	if err := validate.Var(sockID, "len=32,hexadecimal,lowercase,required"); err != nil {
+		logger.WithError(err).Error("failed to validate sock ID (agent or group)")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoInvalidAgentID, err, uaf)
 		return
 	}
@@ -285,7 +265,7 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockType st
 	}
 
 	ctxConn := &ctxVXConnection{
-		agentID:  agentID,
+		sockID:   sockID,
 		authReq:  authReq,
 		connType: connType,
 		ctx:      c.Request.Context(),
@@ -336,44 +316,101 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockType st
 	uaf.Success = true
 }
 
-func BrowserWSConnect(c *gin.Context) {
+func AggregateWSConnect(c *gin.Context) {
+	sockID := c.Param("group_id")
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
 		ObjectType:        "agent",
+		ObjectId:          sockID,
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
+	}
+
+	name, err := utils.GetGroupName(c, sockID)
+	if err == nil {
+		uaf.ObjectDisplayName = name
+	} else {
+		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, nil, uaf)
+		} else {
+			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		}
+		return
+	}
+
+	sockType, ok := utils.GetString(c, "cpt")
+	if !ok || sockType != "aggregate" {
+		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoSockMismatch, nil, uaf)
+		return
+	}
+
+	wsConnectToVXServer(c, vxproto.Aggregate, sockID, sockType, uaf)
+}
+
+func BrowserWSConnect(c *gin.Context) {
+	sockID := c.Param("agent_id")
+	uaf := utils.UserActionFields{
+		Domain:            "agent",
+		ObjectType:        "agent",
+		ObjectId:          sockID,
+		ActionCode:        "interactive interaction",
+		ObjectDisplayName: utils.UnknownObjectDisplayName,
+	}
+
+	name, err := utils.GetAgentName(c, sockID)
+	if err == nil {
+		uaf.ObjectDisplayName = name
+	} else {
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, nil, uaf)
+		} else {
+			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		}
+		return
 	}
 
 	sockType, ok := utils.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
-		name, nameErr := utils.GetAgentName(c, c.Param("agent_id"))
-		if nameErr == nil {
-			uaf.ObjectDisplayName = name
-		}
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incommint token type")
+		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoSockMismatch, nil, uaf)
 		return
 	}
-	wsConnectToVXServer(c, vxproto.Browser, sockType, uaf)
+
+	wsConnectToVXServer(c, vxproto.Browser, sockID, sockType, uaf)
 }
 
 func ExternalWSConnect(c *gin.Context) {
+	sockID := c.Param("agent_id")
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
 		ObjectType:        "agent",
+		ObjectId:          sockID,
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
+	name, err := utils.GetAgentName(c, sockID)
+	if err == nil {
+		uaf.ObjectDisplayName = name
+	} else {
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, nil, uaf)
+		} else {
+			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		}
+		return
+	}
+
 	sockType, ok := utils.GetString(c, "cpt")
 	if !ok || sockType != "external" {
-		name, nameErr := utils.GetAgentName(c, c.Param("agent_id"))
-		if nameErr == nil {
-			uaf.ObjectDisplayName = name
-		}
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incommint token type")
+		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoSockMismatch, nil, uaf)
 		return
 	}
-	wsConnectToVXServer(c, vxproto.External, sockType, uaf)
+
+	wsConnectToVXServer(c, vxproto.External, sockID, sockType, uaf)
 }

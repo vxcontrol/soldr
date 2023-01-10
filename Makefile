@@ -130,9 +130,10 @@ db-create:
 
 .PHONY: db-seed
 db-seed:
-	grep -ve "^DROP TABLE" -ve "^--" $(CURDIR)/db/api/migrations/0001_initial.sql | mysql --host=$(DB_HOST) --user=$(DB_USER) --password=$(DB_PASS) --port=$(DB_PORT) --batch $(DB_NAME)
+	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/api/migrations/0001_initial.sql | mysql --host=$(DB_HOST) --user=$(DB_USER) --password=$(DB_PASS) --port=$(DB_PORT) --batch $(DB_NAME)
 	mysql --host=$(DB_HOST) --user=$(DB_USER) --password=$(DB_PASS) --port=$(DB_PORT) $(DB_NAME) < $(CURDIR)/db/api/seed.sql
-	grep -ve "^DROP TABLE" -ve "^--" $(CURDIR)/db/server/migrations/0001_initial.sql | mysql --host=$(DB_HOST) --user=$(AGENT_SERVER_DB_USER) --password=$(AGENT_SERVER_DB_PASS) --port=$(DB_PORT) $(AGENT_SERVER_DB_NAME)
+	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/server/migrations/0001_initial.sql | mysql --host=$(DB_HOST) --user=$(AGENT_SERVER_DB_USER) --password=$(AGENT_SERVER_DB_PASS) --port=$(DB_PORT) $(AGENT_SERVER_DB_NAME)
+	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/server/migrations/0002_aggregate_conn_type.sql | mysql --host=$(DB_HOST) --user=$(AGENT_SERVER_DB_USER) --password=$(AGENT_SERVER_DB_PASS) --port=$(DB_PORT) $(AGENT_SERVER_DB_NAME)
 
 .PHONY: s3-init
 s3-init: $(GOMINIO_BIN)

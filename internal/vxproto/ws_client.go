@@ -46,7 +46,7 @@ func (vxp *vxProto) openAgentSocket(
 	tunnelEncrypter tunnel.PackEncryptor,
 	infoGetter system.AgentInfoGetter,
 ) (socket *agentSocket, cleanup func(), err error) {
-	if config.Type == "browser" || config.Type == "external" {
+	if config.Type == "aggregate" || config.Type == "browser" || config.Type == "external" {
 		return nil, nil, fmt.Errorf("connection initialization for the browser type is NYI")
 	}
 	dialer := websocket.Dialer{
@@ -171,7 +171,7 @@ const (
 )
 
 func openAgentSocketToInitConnection(ctx context.Context, logger *logrus.Entry, config *ClientInitConfig) (SyncWS, error) {
-	if config.Type == "browser" || config.Type == "external" {
+	if config.Type == "aggregate" || config.Type == "browser" || config.Type == "external" {
 		return nil, fmt.Errorf("connection initialization for the browser type is NYI")
 	}
 	dialer := websocket.Dialer{

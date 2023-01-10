@@ -231,6 +231,10 @@ func setVXProtoGroup(parent *gin.RouterGroup) {
 	vxProtoGroup.Use(authTokenProtoRequired())
 	vxProtoGroup.Use(setServiceInfo())
 	{
+		protoAggregateGroup := vxProtoGroup.Group("/vxpws")
+		{
+			protoAggregateGroup.GET("/aggregate/:group_id/", proto.AggregateWSConnect)
+		}
 		protoBrowserGroup := vxProtoGroup.Group("/vxpws")
 		{
 			protoBrowserGroup.GET("/browser/:agent_id/", proto.BrowserWSConnect)

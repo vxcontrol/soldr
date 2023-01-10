@@ -8,7 +8,7 @@ while true; do
         break
     fi
     echo "failed to connect to mysql"
-    sleep 20
+    sleep 10
 done
 
 echo "Creating user for vxserver"
@@ -96,5 +96,19 @@ IGNORE INTO \`users\` (
 );
 
 EOT
-mysql --host=${DB_HOST} --user=${MYSQL_ROOT_USER} --password=${MYSQL_ROOT_PASSWORD} --port=${DB_PORT} "$DB_NAME" < /opt/vxdbmigrate/seed.sql
+
+# Waiting migrations from vxui into mysql to upload seed data
+GET_MIGRATION="SELECT count(*) FROM gorp_migrations WHERE id = '0001_initial.sql';"
+while true; do
+    MIGRATION=$(mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -Nse "$GET_MIGRATION" 2>/dev/null)
+    if [[ $? -eq 0 && $MIGRATION -eq 1 ]]; then
+        echo "vxapi migrations was found"
+        break
+    fi
+    echo "wait vxapi service initialization"
+    sleep 1
+done
+
+mysql --host=${DB_HOST} --user=${DB_USER} --password=${DB_PASS} --port=${DB_PORT} "$DB_NAME" < /opt/vxdbmigrate/seed.sql
+
 sleep infinity

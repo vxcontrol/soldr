@@ -146,7 +146,7 @@ func generateCertificatesSuite(c *CertsSuiteConfig, expTimeConfig ExpirationTime
 	if !isIACNew {
 		logrus.Info("reusing an existing IAC")
 	}
-	for _, certType := range []string{"external", "browser"} {
+	for _, certType := range []string{"aggregate", "external", "browser"} {
 		isLTACNew, err := generateLTAC(caKey, isCANew, certType)
 		if err != nil {
 			return fmt.Errorf("failed to generate the %s LTAC certificate: %w", certType, err)

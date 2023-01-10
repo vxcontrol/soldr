@@ -111,7 +111,7 @@ export class VXAPI {
         this.pb = pb;
         this.pp = params.protocolProto.lookupType('protocol.Packet');
         this.pcc = params.protocolProto.lookupType('protocol.Packet.Content');
-        this.endpoint = `${params.hostPort}/api/v1/vxpws/browser/${params.agentHash}/`;
+        this.endpoint = `${params.hostPort}/api/v1/vxpws/${params.type}/${params.hash}/`;
         this._socket = null;
         this._state = 0; // init state of socket connection
         this.publicAPI = new PublicAPI(this);
