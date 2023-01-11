@@ -3716,7 +3716,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); s.db == nil {
+	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
 		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
 		return
 	}
