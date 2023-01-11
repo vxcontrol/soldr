@@ -6,8 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
+	"soldr/internal/app/api/client"
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -256,6 +258,16 @@ func doQuery(iDB *gorm.DB, query *utils.TableQuery, resp *events, funcs []func(d
 	return err
 }
 
+type EventService struct {
+	serverConnector *client.AgentServerClient
+}
+
+func NewEventService(serverConnector *client.AgentServerClient) *EventService {
+	return &EventService{
+		serverConnector: serverConnector,
+	}
+}
+
 // GetEvents is a function to return event list view on dashboard
 // @Summary Retrieve events list by filters
 // @Tags Events
@@ -266,15 +278,13 @@ func doQuery(iDB *gorm.DB, query *utils.TableQuery, resp *events, funcs []func(d
 // @Failure 403 {object} utils.errorResp "getting events not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting events"
 // @Router /events/ [get]
-func GetEvents(c *gin.Context) {
+func (s *EventService) GetEvents(c *gin.Context) {
 	var (
 		aids        []uint64
-		err         error
 		eaids       []uint64
 		emids       []uint64
 		epids       []uint64
 		gids        []uint64
-		iDB         *gorm.DB
 		mids        []uint64
 		pids        []uint64
 		query       utils.TableQuery
@@ -282,14 +292,22 @@ func GetEvents(c *gin.Context) {
 		groupedResp utils.GroupedData
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrEventsInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 

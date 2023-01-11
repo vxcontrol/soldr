@@ -9,7 +9,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -32,6 +33,16 @@ var usersSQLMappers = map[string]interface{}{
 		"`{{table}}`.status)",
 }
 
+type UserService struct {
+	db *gorm.DB
+}
+
+func NewUserService(db *gorm.DB) *UserService {
+	return &UserService{
+		db: db,
+	}
+}
+
 // GetCurrentUser is a function to return account information
 // @Summary Retrieve current user information
 // @Tags Users
@@ -41,21 +52,15 @@ var usersSQLMappers = map[string]interface{}{
 // @Failure 404 {object} utils.errorResp "current user not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting current user"
 // @Router /user/ [get]
-func GetCurrentUser(c *gin.Context) {
+func (s *UserService) GetCurrentUser(c *gin.Context) {
 	var (
 		err  error
-		gDB  *gorm.DB
 		resp models.UserRoleTenant
 	)
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
+	uid, _ := srvcontext.GetUint64(c, "uid")
 
-	uid, _ := utils.GetUint64(c, "uid")
-
-	err = gDB.Take(&resp.User, "id = ?", uid).
+	err = s.db.Take(&resp.User, "id = ?", uid).
 		Related(&resp.Role).
 		Related(&resp.Tenant).Error
 	if err != nil {
@@ -87,12 +92,11 @@ func GetCurrentUser(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "current user not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating account password"
 // @Router /user/password [put]
-func ChangePasswordCurrentUser(c *gin.Context) {
+func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	var (
 		encPass []byte
 		err     error
 		form    models.Password
-		gDB     *gorm.DB
 		user    models.UserPassword
 	)
 
@@ -105,17 +109,12 @@ func ChangePasswordCurrentUser(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
-		return
-	}
-
-	uid, _ := utils.GetUint64(c, "uid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("id = ?", uid)
 	}
 
-	if err = gDB.Scopes(scope).Take(&user).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
@@ -143,7 +142,7 @@ func ChangePasswordCurrentUser(c *gin.Context) {
 		return
 	}
 
-	if err = gDB.Scopes(scope).Select("password").Save(&user).Error; err != nil {
+	if err = s.db.Scopes(scope).Select("password").Save(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating password for current user")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -162,10 +161,9 @@ func ChangePasswordCurrentUser(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "getting users not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting users"
 // @Router /users/ [get]
-func GetUsers(c *gin.Context) {
+func (s *UserService) GetUsers(c *gin.Context) {
 	var (
 		err    error
-		gDB    *gorm.DB
 		query  utils.TableQuery
 		resp   users
 		rids   []uint64
@@ -180,16 +178,11 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
 	query.Init("users", usersSQLMappers)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -211,7 +204,7 @@ func GetUsers(c *gin.Context) {
 		return
 	}
 
-	if resp.Total, err = query.Query(gDB, &resp.Users); err != nil {
+	if resp.Total, err = query.Query(s.db, &resp.Users); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding users")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -222,13 +215,13 @@ func GetUsers(c *gin.Context) {
 		tids = append(tids, user.TenantID)
 	}
 
-	if err = gDB.Find(&roles, "id IN (?)", rids).Error; err != nil {
+	if err = s.db.Find(&roles, "id IN (?)", rids).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked roles")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
 	}
 
-	if err = gDB.Find(&tenans, "id IN (?)", tids).Error; err != nil {
+	if err = s.db.Find(&tenans, "id IN (?)", tids).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked tenants")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -273,22 +266,16 @@ func GetUsers(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "user not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting user"
 // @Router /users/{hash} [get]
-func GetUser(c *gin.Context) {
+func (s *UserService) GetUser(c *gin.Context) {
 	var (
 		err  error
-		gDB  *gorm.DB
 		hash string = c.Param("hash")
 		resp models.UserRoleTenant
 	)
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -303,7 +290,7 @@ func GetUser(c *gin.Context) {
 		}
 	}
 
-	if err = gDB.Scopes(scope).Take(&resp.User).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
@@ -312,7 +299,7 @@ func GetUser(c *gin.Context) {
 		}
 		return
 	}
-	if err = gDB.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
+	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrGetUserModelsNotFound, err)
@@ -341,11 +328,10 @@ func GetUser(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "creating user not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on creating user"
 // @Router /users/ [post]
-func CreateUser(c *gin.Context) {
+func (s *UserService) CreateUser(c *gin.Context) {
 	var (
 		encPassword []byte
 		err         error
-		gDB         *gorm.DB
 		resp        models.UserRoleTenant
 		user        models.UserPassword
 	)
@@ -356,13 +342,8 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -395,13 +376,13 @@ func CreateUser(c *gin.Context) {
 		user.Password = string(encPassword)
 	}
 
-	if err = gDB.Create(&user).Error; err != nil {
+	if err = s.db.Create(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating user")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
 	}
 
-	err = gDB.Take(&resp.User, "hash = ?", user.Hash).
+	err = s.db.Take(&resp.User, "hash = ?", user.Hash).
 		Related(&resp.Role).
 		Related(&resp.Tenant).Error
 	if err != nil {
@@ -429,10 +410,9 @@ func CreateUser(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "user not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating user"
 // @Router /users/{hash} [put]
-func PatchUser(c *gin.Context) {
+func (s *UserService) PatchUser(c *gin.Context) {
 	var (
 		err  error
-		gDB  *gorm.DB
 		hash = c.Param("hash")
 		resp models.UserRoleTenant
 		user models.UserPassword
@@ -456,14 +436,9 @@ func PatchUser(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -488,9 +463,9 @@ func PatchUser(c *gin.Context) {
 			user.Password = string(encPassword)
 			public_info = append(public_info, "password")
 		}
-		err = gDB.Scopes(scope).Select("", public_info...).Save(&user).Error
+		err = s.db.Scopes(scope).Select("", public_info...).Save(&user).Error
 	} else {
-		err = gDB.Scopes(scope).Select("", public_info...).Save(&user.User).Error
+		err = s.db.Scopes(scope).Select("", public_info...).Save(&user.User).Error
 	}
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
@@ -503,7 +478,7 @@ func PatchUser(c *gin.Context) {
 		return
 	}
 
-	if err = gDB.Scopes(scope).Take(&resp.User).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
@@ -512,7 +487,7 @@ func PatchUser(c *gin.Context) {
 		}
 		return
 	}
-	if err = gDB.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
+	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrPatchUserModelsNotFound, err)
@@ -540,22 +515,16 @@ func PatchUser(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "user not found"
 // @Failure 500 {object} utils.errorResp "internal error on deleting user"
 // @Router /users/{hash} [delete]
-func DeleteUser(c *gin.Context) {
+func (s *UserService) DeleteUser(c *gin.Context) {
 	var (
 		err  error
-		gDB  *gorm.DB
 		hash string = c.Param("hash")
 		user models.UserRoleTenant
 	)
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -570,7 +539,7 @@ func DeleteUser(c *gin.Context) {
 		}
 	}
 
-	if err = gDB.Scopes(scope).Take(&user.User).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&user.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
@@ -579,7 +548,7 @@ func DeleteUser(c *gin.Context) {
 		}
 		return
 	}
-	if err = gDB.Model(&user.User).Related(&user.Role).Related(&user.Tenant).Error; err != nil {
+	if err = s.db.Model(&user.User).Related(&user.Role).Related(&user.Tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrDeleteUserModelsNotFound, err)
@@ -594,7 +563,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err = gDB.Delete(&user.User).Error; err != nil {
+	if err = s.db.Delete(&user.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting user by hash '%s'", hash)
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return

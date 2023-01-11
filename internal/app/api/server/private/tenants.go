@@ -8,7 +8,8 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -25,6 +26,16 @@ var tenantsSQLMappers = map[string]interface{}{
 		"`{{table}}`.status)",
 }
 
+type TenantService struct {
+	db *gorm.DB
+}
+
+func NewTenantService(db *gorm.DB) *TenantService {
+	return &TenantService{
+		db: db,
+	}
+}
+
 // GetTenants is a function to return tenants list view on dashboard
 // @Summary Retrieve tenants list
 // @Tags Tenants
@@ -35,10 +46,9 @@ var tenantsSQLMappers = map[string]interface{}{
 // @Failure 403 {object} utils.errorResp "getting tenants not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting tenants"
 // @Router /tenants/ [get]
-func GetTenants(c *gin.Context) {
+func (s *TenantService) GetTenants(c *gin.Context) {
 	var (
 		err   error
-		gDB   *gorm.DB
 		query utils.TableQuery
 		resp  tenants
 	)
@@ -49,15 +59,10 @@ func GetTenants(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
 	query.Init("tenants", tenantsSQLMappers)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -75,7 +80,7 @@ func GetTenants(c *gin.Context) {
 		return
 	}
 
-	if resp.Total, err = query.Query(gDB, &resp.Tenants); err != nil {
+	if resp.Total, err = query.Query(s.db, &resp.Tenants); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding tenants")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -102,21 +107,15 @@ func GetTenants(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "tenant not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting tenant"
 // @Router /tenants/{hash} [get]
-func GetTenant(c *gin.Context) {
+func (s *TenantService) GetTenant(c *gin.Context) {
 	var (
 		err  error
-		gDB  *gorm.DB
 		hash string = c.Param("hash")
 		resp models.Tenant
 	)
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -131,7 +130,7 @@ func GetTenant(c *gin.Context) {
 		}
 	}
 
-	if err = gDB.Scopes(scope).Take(&resp).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding tenant by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrTenantsNotFound, err)
@@ -159,10 +158,9 @@ func GetTenant(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "creating tenant not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on creating tenant"
 // @Router /tenants/ [post]
-func CreateTenant(c *gin.Context) {
+func (s *TenantService) CreateTenant(c *gin.Context) {
 	var (
 		err    error
-		gDB    *gorm.DB
 		tenant models.Tenant
 	)
 
@@ -172,15 +170,10 @@ func CreateTenant(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
 	tenant.ID = 0
 	tenant.Hash = utils.MakeTenantHash(tenant.Description)
 
-	if err = gDB.Create(&tenant).Error; err != nil {
+	if err = s.db.Create(&tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating tenant")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -201,10 +194,9 @@ func CreateTenant(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "tenant not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating tenant"
 // @Router /tenant/{hash} [put]
-func PatchTenant(c *gin.Context) {
+func (s *TenantService) PatchTenant(c *gin.Context) {
 	var (
 		err    error
-		gDB    *gorm.DB
 		hash   string = c.Param("hash")
 		tenant models.Tenant
 	)
@@ -223,13 +215,8 @@ func PatchTenant(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -245,8 +232,7 @@ func PatchTenant(c *gin.Context) {
 	}
 
 	public_info := []interface{}{"description", "status"}
-	err = gDB.Scopes(scope).Select("", public_info...).Save(&tenant).Error
-
+	err = s.db.Scopes(scope).Select("", public_info...).Save(&tenant).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating tenant by hash '%s', tenant not found", hash)
 		utils.HTTPError(c, srverrors.ErrTenantsNotFound, err)
@@ -270,21 +256,15 @@ func PatchTenant(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "tenant not found"
 // @Failure 500 {object} utils.errorResp "internal error on deleting tenant"
 // @Router /tenants/{hash} [delete]
-func DeleteTenant(c *gin.Context) {
+func (s *TenantService) DeleteTenant(c *gin.Context) {
 	var (
 		err    error
-		gDB    *gorm.DB
 		hash   string = c.Param("hash")
 		tenant models.Tenant
 	)
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
-		return
-	}
-
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -299,7 +279,7 @@ func DeleteTenant(c *gin.Context) {
 		}
 	}
 
-	if err = gDB.Scopes(scope).Take(&tenant).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding tenant by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrTenantsNotFound, err)
@@ -313,7 +293,7 @@ func DeleteTenant(c *gin.Context) {
 		return
 	}
 
-	if err = gDB.Delete(&tenant).Error; err != nil {
+	if err = s.db.Delete(&tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting tenant by hash '%s'", hash)
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return

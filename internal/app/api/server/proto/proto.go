@@ -19,8 +19,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	context2 "soldr/internal/app/api/server/context"
 	"soldr/internal/app/api/server/proto/vm"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 	"soldr/internal/hardening/luavm/certs"
 	vxcommonVM "soldr/internal/hardening/luavm/vm"
@@ -344,7 +345,7 @@ func BrowserWSConnect(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	sockType, ok := utils.GetString(c, "cpt")
+	sockType, ok := context2.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
 		name, nameErr := utils.GetAgentName(c, c.Param("agent_id"))
 		if nameErr == nil {
@@ -365,7 +366,7 @@ func ExternalWSConnect(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	sockType, ok := utils.GetString(c, "cpt")
+	sockType, ok := context2.GetString(c, "cpt")
 	if !ok || sockType != "external" {
 		name, nameErr := utils.GetAgentName(c, c.Param("agent_id"))
 		if nameErr == nil {

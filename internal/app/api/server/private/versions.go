@@ -7,7 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
-	srverrors "soldr/internal/app/api/server/errors"
+	"soldr/internal/app/api/client"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -49,6 +51,18 @@ func getVersionMappers(query *utils.TableQuery) (string, map[string]interface{},
 	return table, sqlMappers, nil
 }
 
+type VersionService struct {
+	db              *gorm.DB
+	serverConnector *client.AgentServerClient
+}
+
+func NewVersionService(db *gorm.DB, serverConnector *client.AgentServerClient) *VersionService {
+	return &VersionService{
+		db:              db,
+		serverConnector: serverConnector,
+	}
+}
+
 // GetVersions is a function to return versions list by type filter query key
 // @Summary Retrieve versions list by filters
 // @Tags Versions
@@ -59,24 +73,30 @@ func getVersionMappers(query *utils.TableQuery) (string, map[string]interface{},
 // @Failure 403 {object} utils.errorResp "getting versions not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting versions"
 // @Router /versions/ [get]
-func GetVersions(c *gin.Context) {
+func (s *VersionService) GetVersions(c *gin.Context) {
 	var (
-		err        error
-		iDB        *gorm.DB
 		query      utils.TableQuery
 		resp       versions
 		sqlMappers map[string]interface{}
 		table      string
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrVersionsInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 

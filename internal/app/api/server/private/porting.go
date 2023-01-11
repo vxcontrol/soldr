@@ -16,7 +16,8 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -88,6 +89,16 @@ func getModuleTemplates(zipArchive *multipart.FileHeader, moduleName, version st
 	return result, nil
 }
 
+type PortingService struct {
+	db *gorm.DB
+}
+
+func NewPortingService(db *gorm.DB) *PortingService {
+	return &PortingService{
+		db: db,
+	}
+}
+
 // ExportModule is a function to export system module as a zip archive
 // @Summary Export of zip archive which contains selected system module and versions
 // @Tags Modules,Export
@@ -99,10 +110,9 @@ func getModuleTemplates(zipArchive *multipart.FileHeader, moduleName, version st
 // @Failure 404 {object} utils.errorResp "system module or version not found"
 // @Failure 500 {object} utils.errorResp "internal error on exporting system module"
 // @Router /export/modules/{module_name}/versions/{version} [post]
-func ExportModule(c *gin.Context) {
+func (s *PortingService) ExportModule(c *gin.Context) {
 	var (
 		err        error
-		gDB        *gorm.DB
 		modules    []models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
@@ -116,22 +126,17 @@ func ExportModule(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
-		return
-	}
-
 	if sv = getService(c); sv == nil {
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalServiceNotFound, nil, uaf)
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = gDB.Scopes(FilterModulesByVersion(version), scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Find(&modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
 		return
@@ -217,10 +222,9 @@ func ExportModule(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "system module or version in archive not found"
 // @Failure 500 {object} utils.errorResp "internal error on importing system module"
 // @Router /import/modules/{module_name}/versions/{version} [post]
-func ImportModule(c *gin.Context) {
+func (s *PortingService) ImportModule(c *gin.Context) {
 	var (
 		err        error
-		gDB        *gorm.DB
 		modules    []models.ModuleS
 		moduleName = c.Param("module_name")
 		nmodules   []*models.ModuleS
@@ -236,22 +240,17 @@ func ImportModule(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
-		return
-	}
-
 	if sv = getService(c); sv == nil {
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalServiceNotFound, nil, uaf)
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = gDB.Scopes(FilterModulesByVersion("all"), scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(FilterModulesByVersion("all"), scope).Find(&modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
 		return
@@ -325,9 +324,9 @@ func ImportModule(c *gin.Context) {
 		}
 		if svModule != nil {
 			module.ID = svModule.ID
-			err = gDB.Omit("last_update").Save(module).Error
+			err = s.db.Omit("last_update").Save(module).Error
 		} else {
-			err = gDB.Create(module).Error
+			err = s.db.Create(module).Error
 		}
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error storing system module to DB")
