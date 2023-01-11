@@ -22,6 +22,16 @@ var rolesSQLMappers = map[string]interface{}{
 	"data": "`{{table}}`.name",
 }
 
+type RoleService struct {
+	db *gorm.DB
+}
+
+func NewRoleService(db *gorm.DB) *RoleService {
+	return &RoleService{
+		db: db,
+	}
+}
+
 // GetRoles is a function to return roles list
 // @Summary Retrieve roles list
 // @Tags Roles
@@ -32,10 +42,9 @@ var rolesSQLMappers = map[string]interface{}{
 // @Failure 403 {object} utils.errorResp "getting roles not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting roles"
 // @Router /roles/ [get]
-func GetRoles(c *gin.Context) {
+func (s *RoleService) GetRoles(c *gin.Context) {
 	var (
 		err   error
-		gDB   *gorm.DB
 		query utils.TableQuery
 		resp  roles
 	)
@@ -46,14 +55,9 @@ func GetRoles(c *gin.Context) {
 		return
 	}
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
-
 	query.Init("roles", rolesSQLMappers)
 
-	if resp.Total, err = query.Query(gDB, &resp.Roles); err != nil {
+	if resp.Total, err = query.Query(s.db, &resp.Roles); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding roles")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return

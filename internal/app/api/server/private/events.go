@@ -256,6 +256,13 @@ func doQuery(iDB *gorm.DB, query *utils.TableQuery, resp *events, funcs []func(d
 	return err
 }
 
+type EventService struct {
+}
+
+func NewEventService() *EventService {
+	return &EventService{}
+}
+
 // GetEvents is a function to return event list view on dashboard
 // @Summary Retrieve events list by filters
 // @Tags Events
@@ -266,7 +273,7 @@ func doQuery(iDB *gorm.DB, query *utils.TableQuery, resp *events, funcs []func(d
 // @Failure 403 {object} utils.errorResp "getting events not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting events"
 // @Router /events/ [get]
-func GetEvents(c *gin.Context) {
+func (s *EventService) GetEvents(c *gin.Context) {
 	var (
 		aids        []uint64
 		err         error
