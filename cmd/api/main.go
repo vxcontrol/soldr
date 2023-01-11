@@ -163,7 +163,7 @@ func main() {
 	)
 	db, err := mysql.New(&mysql.Config{DSN: secret.NewString(dsn)})
 	if err != nil {
-		logger.WithError(err).Error("could not apply migrations")
+		logger.WithError(err).Error("could not create DB instance")
 		return
 	}
 	if err = db.RetryConnect(ctx, 10, 100*time.Millisecond); err != nil {
@@ -189,8 +189,8 @@ func main() {
 	}
 
 	// storages
-	serviceDBConnectionStorage := mem.NewServiceDBConnectionStorage()
-	serviceS3ConnectionStorage := mem.NewServiceS3ConnectionStorage()
+	dbConnectionStorage := mem.NewDBConnectionStorage()
+	s3ConnectionStorage := mem.NewS3ConnectionStorage()
 
 	tracerClient := observability.NewProxyTracerClient(
 		observability.NewOtlpTracerAndLoggerClient(cfg.Tracing.Addr),
@@ -288,8 +288,8 @@ func main() {
 	router := server.NewRouter(
 		dbWithORM,
 		exchanger,
-		serviceDBConnectionStorage,
-		serviceS3ConnectionStorage,
+		dbConnectionStorage,
+		s3ConnectionStorage,
 	)
 
 	srvg, ctx := errgroup.WithContext(ctx)

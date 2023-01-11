@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 	"soldr/internal/version"
 )

@@ -15,7 +15,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	"soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -203,8 +204,8 @@ func AuthSwitchService(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
-	exp, _ := utils.GetInt64(c, "exp")
+	tid, _ := context.GetUint64(c, "tid")
+	exp, _ := context.GetInt64(c, "exp")
 	expires := int(time.Until(time.Unix(exp, 0)) / time.Second)
 
 	if err = gDB.Take(&tenant, "id = ?", tid).Error; err != nil {

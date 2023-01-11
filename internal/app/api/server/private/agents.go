@@ -9,9 +9,10 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/jinzhu/gorm"
 
+	"soldr/internal/app/api/client"
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
-	"soldr/internal/app/api/storage/mem"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -216,20 +217,14 @@ func fillAgentUserActionFields(agents []models.Agent, actionCode string) []utils
 }
 
 type AgentService struct {
-	db             *gorm.DB
-	serviceDBConns *mem.ServiceDBConnectionStorage
-	serviceS3Conns *mem.ServiceS3ConnectionStorage
+	db              *gorm.DB
+	serverConnector *client.AgentServerClient
 }
 
-func NewAgentService(
-	db *gorm.DB,
-	serviceDBConns *mem.ServiceDBConnectionStorage,
-	serviceS3Conns *mem.ServiceS3ConnectionStorage,
-) *AgentService {
+func NewAgentService(db *gorm.DB, serverConnector *client.AgentServerClient) *AgentService {
 	return &AgentService{
-		db:             db,
-		serviceDBConns: serviceDBConns,
-		serviceS3Conns: serviceS3Conns,
+		db:              db,
+		serverConnector: serverConnector,
 	}
 }
 
@@ -246,12 +241,10 @@ func NewAgentService(
 func (s *AgentService) GetAgents(c *gin.Context) {
 	var (
 		aids        []uint64
-		err         error
 		gids        []uint64
 		gpss        []models.GroupToPolicy
 		groups      = make(map[uint64]*models.Group)
 		groupsa     []models.Group
-		iDB         *gorm.DB
 		modules     = make(map[uint64][]models.ModuleAShort)
 		modulesa    []models.ModuleAShort
 		policies    = make(map[uint64][]models.Policy)
@@ -265,14 +258,22 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		usePolicy   bool
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -499,8 +500,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 func (s *AgentService) PatchAgents(c *gin.Context) {
 	var (
 		action AgentsAction
-		err    error
-		iDB    *gorm.DB
+
 		query  utils.TableQuery
 		resp   agentsActionResult
 		uafArr = []utils.UserActionFields{
@@ -513,15 +513,23 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		}
 	)
 
-	if err = c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
+	if err := c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsInvalidAction, err, uafArr)
 		return
 	}
 	uafArr[0].ActionCode = getActionCode(action.Action)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrInternalDBNotFound, nil, uafArr)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -656,13 +664,20 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 		err   error
 		group models.Group
 		hash  = c.Param("hash")
-		iDB   *gorm.DB
 		resp  agent
 		task  models.AgentUpgradeTask
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -768,7 +783,6 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 		count  int64
 		err    error
 		hash   = c.Param("hash")
-		iDB    *gorm.DB
 	)
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
@@ -799,8 +813,16 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -870,9 +892,16 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = info.Name
 
-	agentServerDB := utils.GetGormDB(c, "iDB")
-	if agentServerDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -907,7 +936,7 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 	}
 	uaf.ObjectId = newAgent.Hash
 
-	if err := agentServerDB.Create(&newAgent).Error; err != nil {
+	if err = iDB.Create(&newAgent).Error; err != nil {
 		logger.WithError(err).Errorf("error creating agent")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateAgentCreateError, err, uaf)
 		return
@@ -929,9 +958,8 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 func (s *AgentService) DeleteAgent(c *gin.Context) {
 	var (
 		agent models.Agent
-		err   error
-		hash  = c.Param("hash")
-		iDB   *gorm.DB
+
+		hash = c.Param("hash")
 	)
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
@@ -941,8 +969,16 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -978,11 +1014,8 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 // @Failure 500 {object} utils.errorResp "internal error"
 // @Router /agents/count [get]
 func (s *AgentService) GetAgentsCount(c *gin.Context) {
-	var (
-		err  error
-		iDB  *gorm.DB
-		resp agentCount
-	)
+	var resp agentCount
+
 	logger := utils.FromContext(c)
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
@@ -991,8 +1024,16 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 

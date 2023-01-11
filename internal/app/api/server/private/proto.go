@@ -9,27 +9,28 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
 func makeTokenClaims(c *gin.Context, cpt string) (*models.ProtoAuthTokenClaims, error) {
-	rid, okRID := utils.GetUint64(c, "rid")
+	rid, okRID := srvcontext.GetUint64(c, "rid")
 	if !okRID || rid == 0 {
 		return nil, fmt.Errorf("input RID invalid %d", rid)
 	}
 
-	sid, okSID := utils.GetUint64(c, "sid")
+	sid, okSID := srvcontext.GetUint64(c, "sid")
 	if !okSID || sid == 0 {
 		return nil, fmt.Errorf("input SID invalid %d", sid)
 	}
 
-	tid, okTID := utils.GetUint64(c, "tid")
+	tid, okTID := srvcontext.GetUint64(c, "tid")
 	if !okTID || tid == 0 {
 		return nil, fmt.Errorf("input TID invalid %d", tid)
 	}
 
-	uid, okUID := utils.GetUint64(c, "uid")
+	uid, okUID := srvcontext.GetUint64(c, "uid")
 	if !okUID || uid == 0 {
 		return nil, fmt.Errorf("input UID invalid %d", uid)
 	}

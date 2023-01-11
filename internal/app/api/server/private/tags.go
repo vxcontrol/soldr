@@ -8,7 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
-	srverrors "soldr/internal/app/api/server/errors"
+	"soldr/internal/app/api/client"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -140,12 +142,14 @@ func getTagJoinFuncs(table string, useGroup, useModule, usePolicy bool) []func(d
 }
 
 type TagService struct {
-	db *gorm.DB
+	db              *gorm.DB
+	serverConnector *client.AgentServerClient
 }
 
-func NewTagService(db *gorm.DB) *TagService {
+func NewTagService(db *gorm.DB, serverConnector *client.AgentServerClient) *TagService {
 	return &TagService{
-		db: db,
+		db:              db,
+		serverConnector: serverConnector,
 	}
 }
 
@@ -161,8 +165,6 @@ func NewTagService(db *gorm.DB) *TagService {
 // @Router /tags/ [get]
 func (s *TagService) GetTags(c *gin.Context) {
 	var (
-		err        error
-		iDB        *gorm.DB
 		query      utils.TableQuery
 		resp       tags
 		sqlMappers map[string]interface{}
@@ -172,14 +174,22 @@ func (s *TagService) GetTags(c *gin.Context) {
 		usePolicy  bool
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrTagsInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
 		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 

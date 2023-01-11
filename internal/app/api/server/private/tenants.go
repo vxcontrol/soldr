@@ -8,7 +8,8 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -60,8 +61,8 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 
 	query.Init("tenants", tenantsSQLMappers)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -113,8 +114,8 @@ func (s *TenantService) GetTenant(c *gin.Context) {
 		resp models.Tenant
 	)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -214,8 +215,8 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 		return
 	}
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -262,8 +263,8 @@ func (s *TenantService) DeleteTenant(c *gin.Context) {
 		tenant models.Tenant
 	)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
