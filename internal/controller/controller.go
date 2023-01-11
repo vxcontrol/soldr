@@ -329,7 +329,7 @@ func (s *sController) StopSharedModules(shutdown bool) ([]string, error) {
 	for idx := range s.modules {
 		module := s.modules[idx]
 		if module.config.GroupID == "" {
-			if err := s.stopModule(module); err != nil {
+			if err := s.stopModule(module, "agent_stop"); err != nil {
 				return nil, err
 			}
 		}
@@ -356,7 +356,7 @@ func (s *sController) StopModulesForGroup(groupID string, shutdown bool) ([]stri
 	for mdx := range s.modules {
 		module := s.modules[mdx]
 		if module.config.GroupID == groupID {
-			if err := s.stopModule(module); err != nil {
+			if err := s.stopModule(module, "agent_stop"); err != nil {
 				return nil, err
 			}
 		}
@@ -382,7 +382,7 @@ func (s *sController) StopAllModules(shutdown bool) ([]string, error) {
 	var ids []string
 	for idx := range s.modules {
 		module := s.modules[idx]
-		if err := s.stopModule(module); err != nil {
+		if err := s.stopModule(module, "agent_stop"); err != nil {
 			return nil, err
 		}
 		ids = append(ids, module.id)
@@ -477,15 +477,15 @@ func (s *sController) startModule(module *Module) error {
 	return s.loader.Start(module.id)
 }
 
-// stopModule is internal function for stop the module
-func (s *sController) stopModule(module *Module) error {
+// stopModule stops the module
+func (s *sController) stopModule(module *Module, stopReason string) error {
 	var state *loader.ModuleState
 	name := module.config.Name
 	if state = s.loader.Get(module.id); state == nil {
 		return nil
 	}
 
-	if err := s.loader.Stop(module.id); err != nil {
+	if err := s.loader.Stop(module.id, stopReason); err != nil {
 		return fmt.Errorf("failed to stop '%s' Module State: %w", name, err)
 	}
 
@@ -493,16 +493,16 @@ func (s *sController) stopModule(module *Module) error {
 		return fmt.Errorf("failed to unregister extra API for '%s': %w", name, err)
 	}
 
-	if !s.loader.Del(module.id) {
+	if !s.loader.Del(module.id, stopReason) {
 		return fmt.Errorf("failed to delete '%s' Module State from loader", name)
 	}
 
 	return nil
 }
 
-// updateModule is internal function for update the module state
-func (s *sController) updateModule(module *Module) error {
-	if err := s.stopModule(module); err != nil {
+// updateModule performs module state update by doing start/stop for a module
+func (s *sController) updateModule(module *Module, stopReason string) error {
+	if err := s.stopModule(module, stopReason); err != nil {
 		return err
 	}
 
@@ -627,7 +627,7 @@ func (s *sController) checkStopModules(config []*loader.ModuleConfig) {
 					continue
 				}
 
-				if err := s.stopModule(module); err != nil {
+				if err := s.stopModule(module, "module_remove"); err != nil {
 					break
 				}
 
@@ -690,7 +690,7 @@ func (s *sController) checkUpdateModules(config []*loader.ModuleConfig) {
 		for mdx, module := range s.modules {
 			if module.id == id {
 				s.modules[mdx] = s.newModule(mc, files[idx])
-				if err := s.updateModule(s.modules[mdx]); err == nil {
+				if err := s.updateModule(s.modules[mdx], "module_update"); err == nil {
 					mupdate[mc.GroupID] = struct{}{}
 				}
 				break

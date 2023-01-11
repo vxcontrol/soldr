@@ -143,13 +143,13 @@ func (ms *ModuleState) Start() error {
 	return nil
 }
 
-// Stop is function for stopping server module
-func (ms *ModuleState) Stop() error {
+// Stop stops server module
+func (ms *ModuleState) Stop(stopReason string) error {
 	switch ms.status {
 	case protoagent.ModuleStatus_LOADED:
 		ms.status = protoagent.ModuleStatus_STOPPED
 	case protoagent.ModuleStatus_RUNNING:
-		ms.luaModule.Stop()
+		ms.luaModule.Stop(stopReason)
 		if !ms.cbStop() {
 			return genFailedToStopModuleErr(ms.name)
 		}
@@ -163,11 +163,11 @@ func (ms *ModuleState) Stop() error {
 	return nil
 }
 
-// Close is function for release module object
-func (ms *ModuleState) Close() error {
+// Close releases module object, stop the module beforehand if it is in a RUNNING state
+func (ms *ModuleState) Close(stopReason string) error {
 	switch ms.status {
 	case protoagent.ModuleStatus_RUNNING:
-		ms.luaModule.Stop()
+		ms.luaModule.Stop(stopReason)
 		if !ms.cbStop() {
 			return genFailedToStopModuleErr(ms.name)
 		}
@@ -176,7 +176,7 @@ func (ms *ModuleState) Close() error {
 	case protoagent.ModuleStatus_STOPPED:
 		ms.wg.Wait()
 		luar.Register(ms.luaState.L, "__config", luar.Map{})
-		ms.luaModule.Close()
+		ms.luaModule.Close(stopReason)
 		ms.luaState = nil
 		ms.status = protoagent.ModuleStatus_FREED
 	case protoagent.ModuleStatus_UNKNOWN, protoagent.ModuleStatus_LOADED, protoagent.ModuleStatus_FREED:
