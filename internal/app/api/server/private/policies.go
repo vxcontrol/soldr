@@ -8,8 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
+	"soldr/internal/app/api/client"
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -149,24 +151,24 @@ func getPolicyConsistency(modules []models.ModuleAShort) (bool, []models.PolicyD
 	return rdeps, pdeps
 }
 
-func getPolicyName(c *gin.Context, hash string) (string, error) {
-	iDB := utils.GetGormDB(c, "iDB")
-	if iDB == nil {
-		return "", errors.New("can't connect to database")
-	}
+func getPolicyName(db *gorm.DB, hash string) (string, error) {
 	var policy models.Policy
-	if err := iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
+	if err := db.Take(&policy, "hash = ?", hash).Error; err != nil {
 		return "", err
 	}
 	return policy.Info.Name.En, nil
 }
 
 type PolicyService struct {
-	db *gorm.DB
+	db              *gorm.DB
+	serverConnector *client.AgentServerClient
 }
 
-func NewPolicyService(db *gorm.DB) *PolicyService {
-	return &PolicyService{db: db}
+func NewPolicyService(db *gorm.DB, serverConnector *client.AgentServerClient) *PolicyService {
+	return &PolicyService{
+		db:              db,
+		serverConnector: serverConnector,
+	}
 }
 
 // GetPolicies is a function to return policy list view on dashboard
@@ -182,9 +184,7 @@ func NewPolicyService(db *gorm.DB) *PolicyService {
 // @Router /policies/ [get]
 func (s *PolicyService) GetPolicies(c *gin.Context) {
 	var (
-		err          error
 		groups       []models.Group
-		iDB          *gorm.DB
 		modules      []models.ModuleSShort
 		modulesa     []models.ModuleAShort
 		pgss         []models.GroupToPolicy
@@ -198,14 +198,22 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 		useGroupName bool
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrPoliciesInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -214,7 +222,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("tenant_id = ? AND service_type = ?", tid, sv.Type)
 	}
@@ -403,16 +411,22 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 // @Router /policies/{hash} [get]
 func (s *PolicyService) GetPolicy(c *gin.Context) {
 	var (
-		err     error
 		hash    = c.Param("hash")
-		iDB     *gorm.DB
 		modules []models.ModuleSShort
 		resp    policy
 		sv      *models.Service
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -421,7 +435,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("tenant_id = ? AND service_type = ?", tid, sv.Type)
 	}
@@ -505,9 +519,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	var (
 		count  int64
-		err    error
 		hash   = c.Param("hash")
-		iDB    *gorm.DB
 		policy models.Policy
 	)
 	uaf := utils.UserActionFields{
@@ -518,11 +530,24 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		return
+	}
+
 	if err = c.ShouldBindJSON(&policy); err != nil || policy.Valid() != nil {
 		if err == nil {
 			err = policy.Valid()
 		}
-		name, nameErr := getPolicyName(c, hash)
+		name, nameErr := getPolicyName(iDB, hash)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -535,11 +560,6 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	if hash != policy.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch policy hash to requested one")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrPoliciesInvalidRequest, err, uaf)
-		return
-	}
-
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
 		return
 	}
 
@@ -580,11 +600,9 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 // @Router /policies/{hash}/groups [put]
 func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 	var (
-		err    error
 		form   policyGroupPatch
 		group  models.Group
 		hash   = c.Param("hash")
-		iDB    *gorm.DB
 		policy models.Policy
 	)
 	uaf := utils.UserActionFields{
@@ -594,8 +612,22 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 		ActionCode:        "undefined action",
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
+
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		return
+	}
+
 	if err = c.ShouldBindJSON(&form); err != nil {
-		name, nameErr := getPolicyName(c, hash)
+		name, nameErr := getPolicyName(iDB, hash)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -607,11 +639,6 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 		uaf.ActionCode = "creation of the connection with the group"
 	} else {
 		uaf.ActionCode = "deletion of the connection with the group"
-	}
-
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
-		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
@@ -665,9 +692,7 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 // @Router /policies/ [post]
 func (s *PolicyService) CreatePolicy(c *gin.Context) {
 	var (
-		err        error
 		info       policyInfo
-		iDB        *gorm.DB
 		policyFrom models.Policy
 	)
 	uaf := utils.UserActionFields{
@@ -677,15 +702,23 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err = c.ShouldBindJSON(&info); err != nil {
+	if err := c.ShouldBindJSON(&info); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrPoliciesInvalidRequest, err, uaf)
 		return
 	}
 	uaf.ObjectDisplayName = info.Name
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -772,9 +805,7 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 // @Router /policies/{hash} [delete]
 func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	var (
-		err     error
 		hash    = c.Param("hash")
-		iDB     *gorm.DB
 		modules []models.ModuleAShort
 		policy  models.Policy
 		sv      *models.Service
@@ -787,8 +818,16 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -866,8 +905,6 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 // @Router /policies/count [get]
 func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 	var (
-		err  error
-		iDB  *gorm.DB
 		resp policyCount
 	)
 	logger := utils.FromContext(c)
@@ -878,8 +915,16 @@ func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 

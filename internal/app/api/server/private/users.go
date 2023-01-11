@@ -9,7 +9,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -57,7 +58,7 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 		resp models.UserRoleTenant
 	)
 
-	uid, _ := utils.GetUint64(c, "uid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 
 	err = s.db.Take(&resp.User, "id = ?", uid).
 		Related(&resp.Role).
@@ -108,7 +109,7 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 		return
 	}
 
-	uid, _ := utils.GetUint64(c, "uid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("id = ?", uid)
 	}
@@ -180,9 +181,9 @@ func (s *UserService) GetUsers(c *gin.Context) {
 
 	query.Init("users", usersSQLMappers)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -273,9 +274,9 @@ func (s *UserService) GetUser(c *gin.Context) {
 		resp models.UserRoleTenant
 	)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -342,8 +343,8 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		return
 	}
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -436,9 +437,9 @@ func (s *UserService) PatchUser(c *gin.Context) {
 		return
 	}
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -522,9 +523,9 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		user models.UserRoleTenant
 	)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
-	uid, _ := utils.GetUint64(c, "uid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
+	uid, _ := srvcontext.GetUint64(c, "uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:

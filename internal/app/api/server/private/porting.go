@@ -16,7 +16,8 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -130,7 +131,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
@@ -244,7 +245,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}

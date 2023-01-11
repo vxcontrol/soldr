@@ -19,8 +19,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
 	"soldr/internal/app/api/server/proto/vm"
+	"soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 	"soldr/internal/hardening/luavm/certs"
 	vxcommonVM "soldr/internal/hardening/luavm/vm"
@@ -221,31 +222,31 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 
 	if err := validate.Var(sockID, "len=32,hexadecimal,lowercase,required"); err != nil {
 		logger.WithError(err).Error("failed to validate sock ID (agent or group)")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoInvalidAgentID, err, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoInvalidAgentID, err, uaf)
 		return
 	}
 
 	if val, ok := c.Get("SV"); !ok {
 		logger.Error("error getting vxservice instance from context")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoNoServiceInfo, nil, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoNoServiceInfo, nil, uaf)
 		return
 	} else if sv = val.(*models.Service); sv == nil {
 		logger.Error("got nil value vxservice instance from context")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoNoServiceInfo, nil, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoNoServiceInfo, nil, uaf)
 		return
 	}
 
 	agentInfo, err := system.GetAgentInfo(c)
 	if err != nil {
 		logger.WithError(err).Error("failed to get the agent info")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoNoServiceInfo, err, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoNoServiceInfo, err, uaf)
 		return
 	}
 	logger.Debug("try prepareClientWSConn")
 	clientConn, err := prepareClientWSConn(c.Writer, c.Request)
 	if err != nil {
 		logger.WithError(err).Error("failed to upgrade to websockets")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoUpgradeFail, err, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoUpgradeFail, err, uaf)
 		return
 	}
 	defer clientConn.Close(c.Request.Context())
@@ -332,17 +333,17 @@ func AggregateWSConnect(c *gin.Context) {
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, nil, uaf)
+			utils.HTTPErrorWithUAFields(c, response.ErrAgentsNotFound, nil, uaf)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
 		}
 		return
 	}
 
-	sockType, ok := utils.GetString(c, "cpt")
+	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoSockMismatch, nil, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoSockMismatch, nil, uaf)
 		return
 	}
 
@@ -365,17 +366,17 @@ func BrowserWSConnect(c *gin.Context) {
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, nil, uaf)
+			utils.HTTPErrorWithUAFields(c, response.ErrAgentsNotFound, nil, uaf)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
 		}
 		return
 	}
 
-	sockType, ok := utils.GetString(c, "cpt")
+	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoSockMismatch, nil, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoSockMismatch, nil, uaf)
 		return
 	}
 
@@ -398,17 +399,17 @@ func ExternalWSConnect(c *gin.Context) {
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, nil, uaf)
+			utils.HTTPErrorWithUAFields(c, response.ErrAgentsNotFound, nil, uaf)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
 		}
 		return
 	}
 
-	sockType, ok := utils.GetString(c, "cpt")
+	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "external" {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrProtoSockMismatch, nil, uaf)
+		utils.HTTPErrorWithUAFields(c, response.ErrProtoSockMismatch, nil, uaf)
 		return
 	}
 

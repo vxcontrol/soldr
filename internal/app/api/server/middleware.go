@@ -13,8 +13,9 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	"soldr/internal/app/api/server/context"
 	"soldr/internal/app/api/server/private"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 	"soldr/internal/app/api/utils/dbencryptor"
 )
@@ -205,44 +206,29 @@ func setSecureConfigEncryptor() gin.HandlerFunc {
 	}
 }
 
-func setServiceInfo() gin.HandlerFunc {
-	var mx sync.Mutex
-	mDB := make(map[uint64]*gorm.DB)
-	mSV := make(map[uint64]*models.Service)
-	getInstanceDB := func(c *gin.Context) (*gorm.DB, *models.Service) {
-		mx.Lock()
-		defer mx.Unlock()
+// Deprecated
+func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
+	var mu sync.Mutex
+	serviceCache := make(map[uint64]*models.Service)
 
-		var gDB *gorm.DB
-		if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-			return nil, nil
-		}
+	getService := func(c *gin.Context) (*models.Service, error) {
+		mu.Lock()
+		defer mu.Unlock()
 
-		sid, ok := utils.GetUint64(c, "sid")
+		sid, ok := context.GetUint64(c, "sid")
 		if !ok || sid == 0 {
-			return nil, nil
+			return nil, errors.New("sid cannot be 0 or absent")
 		}
 
-		if iDB, ok := mDB[sid]; !ok {
+		service, ok := serviceCache[sid]
+		if !ok {
 			var s models.Service
-			if err := gDB.Take(&s, "id = ?", sid).Error; err != nil {
-				return nil, nil
+			if err := db.Take(&s, "id = ?", sid).Error; err != nil {
+				return nil, fmt.Errorf("could not fetch service: %w", err)
 			}
-
-			iDB = utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
-				strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
-			if iDB != nil {
-				mDB[sid] = iDB
-				mSV[sid] = &s
-				return iDB, &s
-			}
-		} else {
-			if sv, ok := mSV[sid]; ok {
-				return iDB, sv
-			}
+			serviceCache[sid] = &s
 		}
-
-		return nil, nil
+		return service, nil
 	}
 
 	return func(c *gin.Context) {
@@ -250,9 +236,13 @@ func setServiceInfo() gin.HandlerFunc {
 			return
 		}
 
-		iDB, sv := getInstanceDB(c)
-		c.Set("iDB", iDB)
-		c.Set("SV", sv)
+		service, err := getService(c)
+		if err != nil {
+			utils.HTTPError(c, srverrors.ErrInternalServiceNotFound, nil)
+			return
+		}
+
+		c.Set("SV", service)
 		c.Next()
 	}
 }

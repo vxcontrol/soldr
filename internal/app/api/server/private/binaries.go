@@ -10,11 +10,11 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/jinzhu/gorm"
 
-	"soldr/internal/storage"
-
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
+	"soldr/internal/storage"
 )
 
 type binaries struct {
@@ -101,7 +101,7 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	patchOrderingByVersion(&query)
 
 	query.Init("binaries", binariesSQLMappers)
@@ -185,7 +185,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		db = db.Where("tenant_id IN (?)", []uint64{0, tid}).Where("type LIKE ?", "vxagent")
 		if agentVersion == "latest" {

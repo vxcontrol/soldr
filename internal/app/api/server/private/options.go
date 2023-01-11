@@ -9,7 +9,8 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -178,7 +179,7 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 		return 0, srverrors.ErrInternalServiceNotFound
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	query.Init("modules", getOptionsMappers(option))
 	query.SetFilters([]func(db *gorm.DB) *gorm.DB{
