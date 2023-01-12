@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -1470,6 +1471,134 @@ func TestIMCSendRecvPackets(t *testing.T) {
 	wg.Wait()
 }
 
+func TestIMCSendRecvPacketsToTopic(t *testing.T) {
+	ctx := context.Background()
+	proto, err := getVXProto()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer proto.Close(ctx)
+
+	topicName := "test_topic"
+	topicToken := proto.MakeIMCTopic(topicName, groupID)
+	module1Token := proto.MakeIMCToken("test1", groupID)
+	moduleSocket1 := proto.NewModule("test1", groupID)
+	if moduleSocket1 != nil {
+		if !proto.AddModule(moduleSocket1) {
+			t.Fatal("failed to add sender Module Socket object")
+		}
+	} else {
+		t.Fatal("failed to initialize sender Module Socket object")
+	}
+	defer func() {
+		if !proto.DelModule(moduleSocket1) {
+			t.Fatal("failed to delete sender Module Socket object")
+		}
+	}()
+
+	receivers := make([]IModuleSocket, 0)
+	for idx := 0; idx < 5; idx++ {
+		moduleID := fmt.Sprintf("test%d", idx+2)
+		moduleSocket := proto.NewModule(moduleID, groupID)
+		if moduleSocket != nil {
+			if !proto.AddModule(moduleSocket) {
+				t.Fatalf("failed to add receiver[%d] Module Socket object", idx)
+			}
+		} else {
+			t.Fatalf("failed to initialize receiver[%d] Module Socket object", idx)
+		}
+		defer func() {
+			if !proto.DelModule(moduleSocket) {
+				t.Fatalf("failed to delete receiver[%d] Module Socket object", idx)
+			}
+		}()
+		if !moduleSocket.SubscribeIMCToTopic(topicName, groupID, moduleSocket.GetIMCToken()) {
+			t.Fatalf("failed to subscribe receiver[%d] Module Socket object to topic", idx)
+		}
+		receivers = append(receivers, moduleSocket)
+	}
+
+	var wg sync.WaitGroup
+	testData := []byte("test data message")
+	actName := "test_action_name"
+	textName := "test_text_name"
+	fileName := "test_file_name.tmp"
+	msgType := MTDebug
+	recvSyncChan := make(chan struct{})
+
+	batchReceive := func(ms IModuleSocket, src, dst string) {
+		checkRoutingInfo := func(packet *Packet) {
+			if packet.Src != src || packet.Dst != dst {
+				t.Fatal("failed to routing info of received packet on " + ms.GetName())
+			}
+		}
+
+		var packet *Packet
+		packet = <-ms.GetReceiver()
+		if !bytes.Equal(packet.GetData().Data, testData) {
+			t.Fatal("failed to compare of received data on " + ms.GetName())
+		}
+		packet.SetAck()
+		checkRoutingInfo(packet)
+		packet = <-ms.GetReceiver()
+		if !bytes.Equal(packet.GetText().Data, testData) || packet.GetText().Name != textName {
+			t.Fatal("failed to compare of received text on " + ms.GetName())
+		}
+		packet.SetAck()
+		checkRoutingInfo(packet)
+		packet = <-ms.GetReceiver()
+		if !checkFileData(packet.GetFile().Path, testData) || packet.GetFile().Name != fileName || packet.GetFile().Data != nil {
+			t.Fatal("failed to compare of received file on " + ms.GetName())
+		}
+		packet.SetAck()
+		checkRoutingInfo(packet)
+		packet = <-ms.GetReceiver()
+		if !bytes.Equal(packet.GetMsg().Data, testData) || packet.GetMsg().MType != msgType {
+			t.Fatal("failed to compare of received message on " + ms.GetName())
+		}
+		packet.SetAck()
+		checkRoutingInfo(packet)
+		packet = <-ms.GetReceiver()
+		if !bytes.Equal(packet.GetAction().Data, testData) || packet.GetAction().Name != actName {
+			t.Fatal("failed to compare of received action on " + ms.GetName())
+		}
+		packet.SetAck()
+		checkRoutingInfo(packet)
+	}
+
+	batchSend := func(ms IModuleSocket, dst string) {
+		if err := ms.SendDataTo(ctx, dst, &Data{Data: testData}); err != nil {
+			t.Fatal("failed to send data packet to modude via imc:", err.Error())
+		}
+		if err := ms.SendTextTo(ctx, dst, &Text{Data: testData, Name: textName}); err != nil {
+			t.Fatal("failed to send text packet to modude via imc:", err.Error())
+		}
+		if err := ms.SendFileTo(ctx, dst, &File{Data: testData, Name: fileName, Path: ""}); err != nil {
+			t.Fatal("failed to send file packet to modude via imc:", err.Error())
+		}
+		if err := ms.SendMsgTo(ctx, dst, &Msg{Data: testData, MType: msgType}); err != nil {
+			t.Fatal("failed to send message packet to modude via imc:", err.Error())
+		}
+		if err := ms.SendActionTo(ctx, dst, &Action{Data: testData, Name: actName}); err != nil {
+			t.Fatal("failed to send action packet to modude via imc:", err.Error())
+		}
+	}
+
+	for _, mod := range receivers {
+		wg.Add(1)
+		go func(module IModuleSocket) {
+			defer wg.Done()
+			<-recvSyncChan
+			batchReceive(module, module1Token, topicToken)
+		}(mod)
+	}
+
+	close(recvSyncChan)
+	batchSend(moduleSocket1, topicToken)
+
+	wg.Wait()
+}
+
 func TestIMCSendToUnknownDestination(t *testing.T) {
 	ctx := context.Background()
 	proto, err := getVXProto()
@@ -1481,34 +1610,141 @@ func TestIMCSendToUnknownDestination(t *testing.T) {
 	moduleSocket := proto.NewModule("test", groupID)
 	if moduleSocket != nil {
 		if !proto.AddModule(moduleSocket) {
-			t.Fatal("Failed add Module Socket object")
+			t.Fatal("failed to add Module Socket object")
 		}
 	} else {
-		t.Fatal("Failed initialize Module Socket object")
+		t.Fatal("failed to initialize Module Socket object")
 	}
 	defer func() {
 		if !proto.DelModule(moduleSocket) {
-			t.Fatal("Failed delete Module Socket object")
+			t.Fatal("failed to delete Module Socket object")
 		}
 	}()
 
+	type destination struct {
+		token  string
+		expect error
+	}
+	dsts := []destination{
+		{proto.MakeIMCToken("unknown", groupID), ErrDstUnreachable},
+		{proto.MakeIMCTopic("unknown", groupID), ErrTopicUnreachable},
+	}
 	testData := []byte("test data message")
 	textName := "test_text_name"
 	fileName := "test_file_name.tmp"
 	msgType := MTDebug
-	dst := proto.MakeIMCToken("unknown", agentID)
 
-	if err := moduleSocket.SendDataTo(ctx, dst, &Data{Data: testData}); err == nil {
-		t.Fatal("Failed send data packet to modude via imc:", err.Error())
+	for _, d := range dsts {
+		dst := d.token
+		err := moduleSocket.SendDataTo(ctx, dst, &Data{Data: testData})
+		if !errors.Is(err, d.expect) {
+			t.Fatal("failed to send data packet to modude via imc", err)
+		}
+		err = moduleSocket.SendTextTo(ctx, dst, &Text{Data: testData, Name: textName})
+		if !errors.Is(err, d.expect) {
+			t.Fatal("failed to send text packet to modude via imc", err)
+		}
+		err = moduleSocket.SendFileTo(ctx, dst, &File{Data: testData, Name: fileName, Path: ""})
+		if !errors.Is(err, d.expect) {
+			t.Fatal("failed to send file packet to modude via imc", err)
+		}
+		err = moduleSocket.SendMsgTo(ctx, dst, &Msg{Data: testData, MType: msgType})
+		if !errors.Is(err, d.expect) {
+			t.Fatal("failed to send message packet to modude via imc", err)
+		}
 	}
-	if err := moduleSocket.SendTextTo(ctx, dst, &Text{Data: testData, Name: textName}); err == nil {
-		t.Fatal("Failed send text packet to modude via imc:", err.Error())
+}
+
+func TestIMCTopicsAPI(t *testing.T) {
+	ctx := context.Background()
+	proto, err := getVXProto()
+	if err != nil {
+		t.Fatal(err)
 	}
-	if err := moduleSocket.SendFileTo(ctx, dst, &File{Data: testData, Name: fileName, Path: ""}); err == nil {
-		t.Fatal("Failed send file packet to modude via imc:", err.Error())
+	defer proto.Close(ctx)
+
+	moduleSocket := proto.NewModule("test", groupID)
+	if moduleSocket != nil {
+		if !proto.AddModule(moduleSocket) {
+			t.Fatal("failed to add Module Socket object")
+		}
+	} else {
+		t.Fatal("failed to initialize Module Socket object")
 	}
-	if err := moduleSocket.SendMsgTo(ctx, dst, &Msg{Data: testData, MType: msgType}); err == nil {
-		t.Fatal("Failed send message packet to modude via imc:", err.Error())
+	defer func() {
+		if !proto.DelModule(moduleSocket) {
+			t.Fatal("failed to delete Module Socket object")
+		}
+	}()
+
+	imcToken := moduleSocket.GetIMCToken()
+	testData := []byte("test data message")
+	for idx := 0; idx < 10000; idx++ {
+		// On publisher side: should make topic token
+		topicName := fmt.Sprintf("test_topic%d", idx)
+		topicToken := moduleSocket.MakeIMCTopic(topicName, groupID)
+		if !strings.HasPrefix(topicToken, "ffff7777") {
+			t.Fatal("failed to prepare topic token")
+		}
+
+		// On publisher side: check topic availability
+		if tokenInfo := moduleSocket.GetIMCTopic(topicToken); tokenInfo != nil {
+			// This topic doesn't contain any subscribers and doesn't register in VXProto
+			t.Fatal("unregistered topic must return nil as an info")
+		}
+
+		// On publisher side: test sending packet to unavailable topic
+		err := moduleSocket.SendDataTo(ctx, topicToken, &Data{Data: testData})
+		if !errors.Is(err, ErrTopicUnreachable) {
+			// Sending a packet to unavailable topic must raise ErrTopicUnreachable error
+			t.Fatal("send data call returned unexpected error", err)
+		}
+
+		// On subscriber side: subscribe to the topic and add an IMC token to the list
+		if !moduleSocket.SubscribeIMCToTopic(topicName, groupID, imcToken) {
+			// Subscription to an unregistered topic should succeed
+			t.Fatal("unregistered topic must be available to subscribing")
+		}
+
+		// On publisher side: double check that topic is available
+		if topicInfoR := moduleSocket.GetIMCTopic(topicToken); topicInfoR == nil {
+			// This topic must be registered in VXProto after previosly SubscribeIMC* call
+			t.Fatal("registered topic must return info about itself")
+		} else if topicInfoR.GetName() != topicName || topicInfoR.GetGroupID() != groupID {
+			// This topic contains mismatch name or group ID
+			t.Fatal("registered topic must return correct info about itself")
+		} else if !stringInSlice(imcToken, topicInfoR.GetSubscriptions()) {
+			// Current IMC token must contain in the topic subscriptions list
+			t.Fatal("registered topic must contain IMC token which was added")
+		}
+
+		// On subscriber side: run routine to receive a packet
+		go func() {
+			src, data, err := moduleSocket.RecvData(ctx, 1000)
+			if err != nil || src != imcToken || !bytes.Equal(data.Data, testData) {
+				t.Error("error reading packet from topic")
+			}
+		}()
+
+		// On publisher side: test sending packet to a available topic
+		if err := moduleSocket.SendDataTo(ctx, topicToken, &Data{Data: testData}); err != nil {
+			// Sending packets to a registered topics should not raise any errors
+			t.Fatal("send data call returned an error", err)
+		}
+
+		// On subscriber side: unsubscribe from the topic and delete an IMC token from the list
+		if !moduleSocket.UnsubscribeIMCFromTopic(topicName, groupID, imcToken) {
+			t.Fatal("registered topic must be available for unsubscribing")
+		}
+	}
+
+	if len(proto.GetIMCTopics()) != 0 {
+		t.Fatal("registered topics list must be empty once everyone got unsubscribed")
+	}
+
+	// Check an API when there are nothing to unsubscribe
+	if !moduleSocket.UnsubscribeIMCFromAllTopics(imcToken) {
+		t.Fatal("failed to unsubscribe while there should be no subscriptions")
 	}
 }
 
