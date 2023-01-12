@@ -50,6 +50,34 @@ func NewBinariesService(db *gorm.DB) *BinariesService {
 	}
 }
 
+func patchOrderingByVersion(query *utils.TableQuery) {
+	if query.Sort.Prop != "version" {
+		return
+	}
+
+	var arrow string
+	switch query.Sort.Order {
+	case "ascending":
+		arrow = "ASC"
+	case "descending":
+		arrow = "DESC"
+	}
+	query.Sort.Order = ""
+	query.Sort.Prop = ""
+	query.SetOrders([]func(db *gorm.DB) *gorm.DB{
+		func(db *gorm.DB) *gorm.DB {
+			if arrow == "" {
+				return db
+			}
+			return db.
+				Order(fmt.Sprintf("ver_major %s", arrow)).
+				Order(fmt.Sprintf("ver_minor %s", arrow)).
+				Order(fmt.Sprintf("ver_patch %s", arrow)).
+				Order(fmt.Sprintf("ver_build %s", arrow))
+		},
+	})
+}
+
 // GetAgentBinaries is a function to return agent binaries list
 // @Summary Retrieve agent binaries list by filters
 // @Tags Binaries
@@ -74,6 +102,7 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	}
 
 	tid, _ := utils.GetUint64(c, "tid")
+	patchOrderingByVersion(&query)
 
 	query.Init("binaries", binariesSQLMappers)
 	query.SetFilters([]func(db *gorm.DB) *gorm.DB{
