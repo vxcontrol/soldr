@@ -55,9 +55,9 @@ export const selectEnableModuleError = createSelector(selectModulesInstancesStat
 export const selectUpdateModuleError = createSelector(selectModulesInstancesState, (state) => state.updateModuleError);
 export const selectSavingModuleError = createSelector(selectModulesInstancesState, (state) => state.savingModuleError);
 
-export const selectEventFilterItemAgentIds = createSelector(
+export const selectEventFilterItemAgentNames = createSelector(
     selectModulesInstancesState,
-    (state) => state.eventFilterItemAgentIds
+    (state) => state.eventFilterItemAgentNames
 );
 export const selectEventFilterItemGroupIds = createSelector(
     selectModulesInstancesState,

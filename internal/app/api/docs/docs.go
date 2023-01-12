@@ -8782,12 +8782,6 @@ const docTemplate = `{
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
                 },
-                "today": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
                 "update": {
                     "type": "boolean"
                 }
@@ -8969,12 +8963,6 @@ const docTemplate = `{
                 },
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
-                },
-                "today": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
                 },
                 "update": {
                     "type": "boolean"
@@ -9293,12 +9281,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                },
-                "today": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
                 },
                 "update": {
                     "type": "boolean"

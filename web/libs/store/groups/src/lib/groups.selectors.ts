@@ -129,9 +129,9 @@ export const selectEventFilterItemModuleIds = createSelector(
     selectGroupsState,
     (state) => state.eventFilterItemModuleIds
 );
-export const selectEventFilterItemAgentIds = createSelector(
+export const selectEventFilterItemAgentNames = createSelector(
     selectGroupsState,
-    (state) => state.eventFilterItemAgentIds
+    (state) => state.eventFilterItemAgentNames
 );
 export const selectEventFilterItemPolicyIds = createSelector(
     selectGroupsState,

@@ -74,8 +74,6 @@ export class GroupModulePageComponent implements OnInit, OnDestroy {
             this.modulesInstancesFacade.fetchModuleEventsFilterItems();
         });
         this.subscription.add(groupSubscription);
-
-        this.sharedFacade.fetchAllAgents();
     }
 
     ngOnDestroy(): void {

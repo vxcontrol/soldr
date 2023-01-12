@@ -589,7 +589,7 @@ export class GroupsEffects {
                     this.eventsService.fetchEvents(
                         allGroupedListQuery(
                             { filters: [...filters, { field: GROUP_FILTER_FIELD_ID, value: [id] }] },
-                            EventsSQLMappers.AgentId
+                            EventsSQLMappers.AgentName
                         )
                     ),
                     this.eventsService.fetchEvents(
@@ -607,7 +607,7 @@ export class GroupsEffects {
                         ]) =>
                             GroupsActions.fetchEventFilterItemsSuccess({
                                 moduleIds: modulesResponse.data.grouped,
-                                agentIds: agentsResponse.data.grouped,
+                                agentNames: agentsResponse.data.grouped,
                                 policyIds: policiesResponse.data.grouped
                             })
                     ),

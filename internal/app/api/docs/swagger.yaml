@@ -1449,10 +1449,6 @@ definitions:
         type: string
       policy:
         $ref: '#/definitions/models.Policy'
-      today:
-        type: integer
-      total:
-        type: integer
       update:
         type: boolean
     type: object
@@ -1572,10 +1568,6 @@ definitions:
         type: string
       policy:
         $ref: '#/definitions/models.Policy'
-      today:
-        type: integer
-      total:
-        type: integer
       update:
         type: boolean
     type: object
@@ -1789,10 +1781,6 @@ definitions:
         type: boolean
       name:
         type: string
-      today:
-        type: integer
-      total:
-        type: integer
       update:
         type: boolean
     type: object

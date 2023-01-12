@@ -49,7 +49,8 @@ func loadServices(gDB *gorm.DB, mSV map[uint64]*service) map[uint64]*service {
 		return mSV
 	}
 
-	for _, sv := range svs {
+	for idx := range svs {
+		sv := svs[idx]
 		if _, ok := mSV[sv.ID]; ok {
 			continue
 		}
@@ -256,7 +257,10 @@ func SyncBinariesAndExtConns(ctx context.Context, gDB *gorm.DB) {
 
 	syncBinariesToInstanceDB := func(s *service) {
 		scope := func(db *gorm.DB) *gorm.DB {
-			return db.Where("tenant_id IN (0, ?)", s.sv.TenantID).Where("type LIKE ?", "vxagent")
+			return db.
+				Where("tenant_id IN (0, ?)", s.sv.TenantID).
+				Where("type LIKE ?", "vxagent").
+				Where("NOT ISNULL(version)")
 		}
 		if err := gDB.Scopes(scope).Find(&s.bns).Error; err != nil {
 			return

@@ -197,7 +197,7 @@ export const fetchAgentFilterItemsFailure = createAction(
 export const fetchEventFilterItems = createAction(ActionType.FetchEventFilterItems);
 export const fetchEventFilterItemsSuccess = createAction(
     ActionType.FetchEventFilterItemsSuccess,
-    props<{ moduleIds: string[]; agentIds: string[]; groupIds: string[] }>()
+    props<{ moduleIds: string[]; agentNames: string[]; groupIds: string[] }>()
 );
 export const fetchEventFilterItemsFailure = createAction(
     ActionType.FetchEventFilterItemsFailure,

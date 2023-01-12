@@ -28,7 +28,7 @@ export interface State {
     isLoadingModuleVersions: boolean;
     isSavingModuleConfig: boolean;
     isUpdatingModule: boolean;
-    eventFilterItemAgentIds: string[];
+    eventFilterItemAgentNames: string[];
     eventFilterItemGroupIds: string[];
     moduleName: string;
     moduleVersions: ModelsModuleSShort[];
@@ -58,7 +58,7 @@ export const initialState: State = {
     isLoadingModuleVersions: false,
     isSavingModuleConfig: false,
     isUpdatingModule: false,
-    eventFilterItemAgentIds: [],
+    eventFilterItemAgentNames: [],
     eventFilterItemGroupIds: [],
     moduleName: undefined,
     moduleVersions: [],
@@ -84,10 +84,10 @@ export const reducer = createReducer(
     on(Actions.fetchEventsFailure, (state) => ({ ...state, isLoadingEvents: false })),
 
     on(Actions.fetchModuleEventsFilterItems, (state) => ({ ...state, isLoadingModuleEventsFilterItems: true })),
-    on(Actions.fetchModuleEventsFilterItemsSuccess, (state, { agentIds, groupIds }) => ({
+    on(Actions.fetchModuleEventsFilterItemsSuccess, (state, { agentNames, groupIds }) => ({
         ...state,
         isLoadingModuleEventsFilterItems: false,
-        eventFilterItemAgentIds: agentIds,
+        eventFilterItemAgentNames: agentNames,
         eventFilterItemGroupIds: groupIds
     })),
     on(Actions.fetchModuleEventsFilterItemsFailure, (state) => ({ ...state, isLoadingModuleEventsFilterItems: false })),

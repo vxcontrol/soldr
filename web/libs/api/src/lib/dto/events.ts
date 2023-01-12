@@ -31,6 +31,7 @@ export interface PrivateEvents {
 
 export enum EventsSQLMappers {
     AgentId = 'agent_id',
+    AgentName = 'agent_name',
     PolicyId = 'policy_id',
     ModuleId = 'module_id',
     GroupId = 'group_id'

@@ -165,7 +165,6 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
         this.policiesFacade.fetchPolicy(this.activatedRoute.snapshot.params.hash as string);
         this.sharedFacade.fetchAllModules();
         this.sharedFacade.fetchAllGroups();
-        this.sharedFacade.fetchAllAgents();
         this.sharedFacade.fetchLatestAgentBinary();
     }
 

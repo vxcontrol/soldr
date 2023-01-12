@@ -93,7 +93,7 @@ export class ModulesInstancesEffects {
                             {
                                 filters: [...this.getEventsFiltration(viewMode, entityId, moduleName), ...filtration]
                             },
-                            EventsSQLMappers.AgentId
+                            EventsSQLMappers.AgentName
                         )
                     ),
                     this.eventsService.fetchEvents(
@@ -111,7 +111,7 @@ export class ModulesInstancesEffects {
                             SuccessResponse<GroupedData>
                         ]) =>
                             ModulesInstancesActions.fetchModuleEventsFilterItemsSuccess({
-                                agentIds: agentsResponse.data.grouped,
+                                agentNames: agentsResponse.data.grouped,
                                 groupIds: policiesResponse.data.grouped
                             })
                     ),

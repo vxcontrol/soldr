@@ -12,7 +12,7 @@ import {
     selectDisableModuleError,
     selectEnableModuleError,
     selectEntityId,
-    selectEventFilterItemAgentIds,
+    selectEventFilterItemAgentNames,
     selectEventFilterItemGroupIds,
     selectEvents,
     selectEventsGridFiltration,
@@ -57,7 +57,7 @@ export class ModulesInstancesFacade {
     isLoadingModuleVersion$ = this.store.select(selectIsLoadingModuleVersions);
     isSavingModule$ = this.store.select(selectIsSavingModule);
     isUpdatingModule$ = this.store.select(selectIsUpdatingModule);
-    moduleEventsFilterItemAgentIds$ = this.store.select(selectEventFilterItemAgentIds);
+    moduleEventsFilterItemAgentNames$ = this.store.select(selectEventFilterItemAgentNames);
     moduleEventsFilterItemGroupIds$ = this.store.select(selectEventFilterItemGroupIds);
     moduleName$ = this.store.select(selectModuleName);
     moduleVersions$ = this.store.select(selectModuleVersions);
