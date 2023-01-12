@@ -1986,6 +1986,8 @@ definitions:
     properties:
       develop:
         type: boolean
+      password_change_required:
+        type: boolean
       privileges:
         items:
           type: string
