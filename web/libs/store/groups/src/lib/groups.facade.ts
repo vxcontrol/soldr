@@ -86,7 +86,7 @@ import {
     selectPolicyFilterItemModuleNames,
     selectPolicyFilterItemTags,
     selectEventFilterItemModuleIds,
-    selectEventFilterItemAgentIds,
+    selectEventFilterItemAgentNames,
     selectEventFilterItemPolicyIds,
     selectCreatedGroup
 } from './groups.selectors';
@@ -234,24 +234,23 @@ export class GroupsFacade {
     );
     eventGridFilterItems$ = combineLatest([
         this.groupModules$,
-        this.sharedFacade.allAgents$,
         this.sharedFacade.allPolicies$,
         this.store.select(selectEventFilterItemModuleIds),
-        this.store.select(selectEventFilterItemAgentIds),
+        this.store.select(selectEventFilterItemAgentNames),
         this.store.select(selectEventFilterItemPolicyIds)
     ]).pipe(
-        filter(([modules, allAgents, allPolicies]) => !!modules.length && !!allAgents.length && !!allPolicies.length),
-        map(([modules, allAgents, allPolicies, moduleIds, agentIds, policyIds]) => ({
-            agents: agentIds?.map((id) => allAgents.find((agent) => agent.id === parseInt(id))) || [],
+        filter(([modules, allPolicies]) => !!modules.length && !!allPolicies.length),
+        map(([modules, allPolicies, moduleIds, agentNames, policyIds]) => ({
+            agents: agentNames || [],
             modules: moduleIds?.map((id) => modules.find((module) => module.id === parseInt(id))) || [],
             policies: policyIds?.map((id) => allPolicies.find((policy) => policy.id === parseInt(id))) || []
         }))
     );
     eventGridColumnFilterItems$ = this.eventGridFilterItems$.pipe(
         map(({ agents, modules, policies }): { [field: string]: GridColumnFilterItem[] } => ({
-            agents: agents.map((agent) => ({
-                label: agent?.description,
-                value: agent?.id
+            agents: agents.map((name) => ({
+                label: name,
+                value: name
             })),
             modules: modules.map((module) => ({
                 label: module?.locale.module[this.languageService.lang].title,
@@ -263,20 +262,16 @@ export class GroupsFacade {
             }))
         }))
     );
-    moduleEventsGridFilterItems$ = combineLatest([
-        this.sharedFacade.allAgents$,
-        this.modulesInstancesFacade.moduleEventsFilterItemAgentIds$
-    ]).pipe(
-        filter(([allAgents]) => !!allAgents.length),
-        map(([allAgents, agentIds]) => ({
-            agents: agentIds?.map((id) => allAgents.find((agent) => agent.id === parseInt(id))) || []
+    moduleEventsGridFilterItems$ = this.modulesInstancesFacade.moduleEventsFilterItemAgentNames$.pipe(
+        map((agentNames) => ({
+            agents: agentNames || []
         }))
     );
     moduleEventsGridColumnFilterItems$ = this.moduleEventsGridFilterItems$.pipe(
         map(({ agents }) => ({
-            agents: agents?.map((agent) => ({
-                label: agent?.description,
-                value: agent?.id
+            agents: agents?.map((agentName) => ({
+                label: agentName,
+                value: agentName
             }))
         }))
     );

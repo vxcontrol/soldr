@@ -92,7 +92,7 @@
                     <soldr-column
                         *ngIf="viewMode !== viewModeEnum.Agents"
                         field="agent_name"
-                        filtrationField="agent_id"
+                        filtrationField="agent_name"
                         [headerName]="tShared('Shared.EventsView.GridColumnsTitle.Agent')"
                         [template]="agentCell"
                         [width]="200"
@@ -160,11 +160,11 @@
 
                     <soldr-filter
                         *ngIf="viewMode === viewModeEnum.Groups || viewMode === viewModeEnum.Policies"
-                        [field]="'agent_id'"
+                        [field]="'agent_name'"
                         [title]="tShared('Shared.EventsView.DropdownButtonText.Agents')"
                         [placeholder]="tShared('Shared.EventsView.InputPlaceholder.FilterByAgent')"
                         [multiple]="true"
-                        [selectedValues]="gridFiltrationByFields?.agent_id?.value"
+                        [selectedValues]="gridFiltrationByFields?.agent_name?.value"
                         (changeValue)="onGridFilter($event)">
                         <soldr-filter-item
                             *ngFor="let item of gridColumnsFilters.agents"

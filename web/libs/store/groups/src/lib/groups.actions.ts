@@ -265,7 +265,7 @@ export const fetchPolicyFilterItemsFailure = createAction(
 export const fetchEventFilterItems = createAction(ActionType.FetchEventFilterItems);
 export const fetchEventFilterItemsSuccess = createAction(
     ActionType.FetchEventFilterItemsSuccess,
-    props<{ moduleIds: string[]; agentIds: string[]; policyIds: string[] }>()
+    props<{ moduleIds: string[]; agentNames: string[]; policyIds: string[] }>()
 );
 export const fetchEventFilterItemsFailure = createAction(
     ActionType.FetchEventFilterItemsFailure,

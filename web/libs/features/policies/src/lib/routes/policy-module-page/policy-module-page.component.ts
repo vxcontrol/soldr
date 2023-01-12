@@ -183,7 +183,6 @@ export class PolicyModulePageComponent implements OnInit, OnDestroy {
         this.fetchPolicyModules();
         this.modulesInstancesFacade.fetchEvents();
         this.modulesInstancesFacade.fetchModuleEventsFilterItems();
-        this.sharedFacade.fetchAllAgents();
         this.sharedFacade.fetchAllGroups();
     }
 

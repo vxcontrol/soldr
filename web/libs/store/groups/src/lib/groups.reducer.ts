@@ -34,7 +34,7 @@ export interface State {
     createError: ErrorResponse;
     createdGroup: ModelsGroup;
     deleteError: ErrorResponse;
-    eventFilterItemAgentIds: string[];
+    eventFilterItemAgentNames: string[];
     eventFilterItemModuleIds: string[];
     eventFilterItemPolicyIds: string[];
     eventsGridFiltration: Filtration[];
@@ -105,7 +105,7 @@ export const initialState: State = {
     createError: undefined,
     createdGroup: undefined,
     deleteError: undefined,
-    eventFilterItemAgentIds: [],
+    eventFilterItemAgentNames: [],
     eventFilterItemModuleIds: [],
     eventFilterItemPolicyIds: [],
     eventsGridFiltration: [],
@@ -296,11 +296,11 @@ export const reducer = createReducer(
     })),
 
     on(GroupsActions.fetchEventFilterItems, (state: State) => ({ ...state, isLoadingEventFilterItems: true })),
-    on(GroupsActions.fetchEventFilterItemsSuccess, (state: State, { moduleIds, agentIds, policyIds }) => ({
+    on(GroupsActions.fetchEventFilterItemsSuccess, (state: State, { moduleIds, agentNames, policyIds }) => ({
         ...state,
         isLoadingEventFilterItems: false,
         eventFilterItemModuleIds: moduleIds,
-        eventFilterItemAgentIds: agentIds,
+        eventFilterItemAgentNames: agentNames,
         eventFilterItemPolicyIds: policyIds
     })),
     on(GroupsActions.fetchEventFilterItemsFailure, (state: State) => ({ ...state, isLoadingEventFilterItems: false })),

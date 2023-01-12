@@ -66,7 +66,7 @@ export const fetchEventsFailure = createAction(ActionType.FetchEventsFailure);
 export const fetchModuleEventsFilterItems = createAction(ActionType.FetchModuleEventsFilterItems);
 export const fetchModuleEventsFilterItemsSuccess = createAction(
     ActionType.FetchModuleEventFiltersItemsSuccess,
-    props<{ agentIds: string[]; groupIds: string[] }>()
+    props<{ agentNames: string[]; groupIds: string[] }>()
 );
 export const fetchModuleEventsFilterItemsFailure = createAction(
     ActionType.FetchModuleEventFiltersItemsFailure,

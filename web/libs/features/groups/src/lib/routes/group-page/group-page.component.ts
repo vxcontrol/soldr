@@ -104,7 +104,6 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
         });
         this.subscription.add(paramsSubscription);
         this.sharedFacade.fetchAllGroups();
-        this.sharedFacade.fetchAllAgents();
     }
 
     ngOnInit(): void {
@@ -159,7 +158,6 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
     refreshData() {
         this.groupsFacade.fetchGroup(this.activatedRoute.snapshot.params.hash as string);
         this.sharedFacade.fetchAllModules();
-        this.sharedFacade.fetchAllAgents();
         this.sharedFacade.fetchAllPolicies();
         this.sharedFacade.fetchLatestAgentBinary();
     }
