@@ -329,7 +329,8 @@ func loadServices(gDB *gorm.DB, existingServices map[uint64]*service) map[uint64
 	if err := gDB.Find(&svs).Error; err != nil {
 		return existingServices
 	}
-	for _, sv := range svs {
+	for idx := range svs {
+		sv := svs[idx]
 		if _, ok := existingServices[sv.ID]; ok {
 			continue
 		}

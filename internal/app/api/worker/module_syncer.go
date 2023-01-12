@@ -49,7 +49,8 @@ func loadServices(gDB *gorm.DB, mSV map[uint64]*service) map[uint64]*service {
 		return mSV
 	}
 
-	for _, sv := range svs {
+	for idx := range svs {
+		sv := svs[idx]
 		if _, ok := mSV[sv.ID]; ok {
 			continue
 		}
