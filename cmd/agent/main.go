@@ -160,7 +160,7 @@ func (a *Agent) Stop() (err error) {
 	stopSpan.End()
 
 	if a.module != nil {
-		if err = a.module.Stop(); err != nil {
+		if err = a.module.Stop("agent_stop"); err != nil {
 			return
 		}
 	}

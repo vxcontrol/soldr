@@ -8,13 +8,13 @@ import (
 // ILoader is interface control modules
 type ILoader interface {
 	Add(id string, ms *ModuleState) bool
-	Del(id string) bool
+	Del(id, stopReason string) bool
 	Get(id string) *ModuleState
 	List() []string
 	Start(id string) error
 	StartAll() error
-	Stop(id string) error
-	StopAll() error
+	Stop(id, stopReason string) error
+	StopAll(stopReason string) error
 }
 
 // sLoader is container for modules loader
@@ -53,15 +53,15 @@ func (l *sLoader) Add(id string, ms *ModuleState) bool {
 	return true
 }
 
-// Del is function that delete module state from loader
-func (l *sLoader) Del(id string) bool {
+// Del deletes module state from a loader
+func (l *sLoader) Del(id, stopReason string) bool {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	if ms := l.get(id); ms == nil {
 		return false
 	} else {
-		if ms.Close() != nil {
+		if ms.Close(stopReason) != nil {
 			return false
 		}
 		delete(l.states, id)
@@ -117,25 +117,25 @@ func (l *sLoader) StartAll() error {
 	return nil
 }
 
-// Stop is function that stop module state which was running in loader
-func (l *sLoader) Stop(id string) error {
+// Stop stops module state in a loader
+func (l *sLoader) Stop(id, stopReason string) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	if ms := l.get(id); ms != nil {
-		return ms.Stop()
+		return ms.Stop(stopReason)
 	}
 
 	return genModuleStateNotFoundErr(id)
 }
 
-// StopAll is function that stop all modules state from loader
-func (l *sLoader) StopAll() error {
+// StopAll stops all modules states in a loader
+func (l *sLoader) StopAll(stopReason string) error {
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
 
 	for _, ms := range l.states {
-		if err := ms.Stop(); err != nil {
+		if err := ms.Stop(stopReason); err != nil {
 			return err
 		}
 	}
