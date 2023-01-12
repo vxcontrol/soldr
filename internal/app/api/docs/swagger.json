@@ -8773,12 +8773,6 @@
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
                 },
-                "today": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
                 "update": {
                     "type": "boolean"
                 }
@@ -8960,12 +8954,6 @@
                 },
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
-                },
-                "today": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
                 },
                 "update": {
                     "type": "boolean"
@@ -9284,12 +9272,6 @@
                 },
                 "name": {
                     "type": "string"
-                },
-                "today": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
                 },
                 "update": {
                     "type": "boolean"

@@ -30,24 +30,18 @@ import (
 
 type agentModuleDetails struct {
 	Name   string        `json:"name"`
-	Today  uint64        `json:"today"`
-	Total  uint64        `json:"total"`
 	Update bool          `json:"update"`
 	Policy models.Policy `json:"policy"`
 }
 
 type groupModuleDetails struct {
 	Name   string        `json:"name"`
-	Today  uint64        `json:"today"`
-	Total  uint64        `json:"total"`
 	Update bool          `json:"update"`
 	Policy models.Policy `json:"policy"`
 }
 
 type policyModuleDetails struct {
 	Name      string `json:"name"`
-	Today     uint64 `json:"today"`
-	Total     uint64 `json:"total"`
 	Active    bool   `json:"active"`
 	Exists    bool   `json:"exists"`
 	Update    bool   `json:"update"`
@@ -114,20 +108,7 @@ type systemModuleFilePatch struct {
 
 const sqlAgentModuleDetails = `
 	SELECT
-		m.name,
-		(SELECT COUNT(id)
-		 FROM events AS e1
-		 WHERE
-			e1.module_id = m.id AND
-			e1.agent_id = a.id AND
-			DATE(e1.date) = CURDATE()
-		) AS today,
-		(SELECT COUNT(id)
-		 FROM events e2
-		 WHERE
-			e2.module_id = m.id AND
-			e2.agent_id = a.id
-		) AS total
+		m.name
 	FROM modules AS m
 		LEFT JOIN policies p ON m.policy_id = p.id AND p.deleted_at IS NULL
 		LEFT JOIN groups_to_policies AS gtp ON p.id = gtp.policy_id
@@ -137,20 +118,7 @@ const sqlAgentModuleDetails = `
 
 const sqlGroupModuleDetails = `
 	SELECT
-		m.name,
-		SUM((SELECT COUNT(id)
-			FROM events AS e1
-			WHERE
-			e1.module_id = m.id AND
-			e1.agent_id = a.id AND
-			DATE(e1.date) = CURDATE()
-		)) AS today,
-		SUM((SELECT COUNT(id)
-			FROM events e2
-			WHERE
-			e2.module_id = m.id AND
-			e2.agent_id = a.id
-		)) AS total
+		m.name
 	FROM modules AS m
 		LEFT JOIN policies p ON m.policy_id = p.id AND p.deleted_at IS NULL
 		LEFT JOIN groups_to_policies AS gtp ON p.id = gtp.policy_id
@@ -161,19 +129,7 @@ const sqlGroupModuleDetails = `
 
 const sqlPolicyModuleDetails = `
 	SELECT
-		m.name,
-		(1 = 1) AS 'exists',
-		(m.status = "joined") AS active,
-		(SELECT COUNT(id)
-		 FROM events AS e1
-		 WHERE
-			e1.module_id = m.id AND
-			DATE(e1.date) = CURDATE()
-		) AS today,
-		(SELECT COUNT(id)
-		 FROM events e2
-		 WHERE e2.module_id = m.id
-		) AS total
+		m.name
 	FROM modules AS m
 		LEFT JOIN policies p ON m.policy_id = p.id AND p.deleted_at IS NULL
 	WHERE p.id = ? AND m.deleted_at IS NULL`
