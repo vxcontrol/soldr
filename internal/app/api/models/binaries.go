@@ -144,7 +144,7 @@ type ExtConn struct {
 	ID   uint64      `form:"id" json:"id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL;PRIMARY_KEY;AUTO_INCREMENT"`
 	Hash string      `form:"hash" json:"hash" validate:"len=32,hexadecimal,lowercase,omitempty" gorm:"type:VARCHAR(32);NOT NULL"`
 	Desc string      `form:"description" json:"description" validate:"required,max=255" gorm:"column:description;type:VARCHAR(255);NOT NULL"`
-	Type string      `form:"type" json:"type" validate:"required,oneof=browser external" gorm:"type:ENUM('browser','external');NOT NULL"`
+	Type string      `form:"type" json:"type" validate:"required,oneof=aggregate browser external" gorm:"type:ENUM('aggregate','browser','external');NOT NULL"`
 	Info ExtConnInfo `form:"info" json:"info" validate:"required" gorm:"type:JSON;NOT NULL"`
 }
 

@@ -21,7 +21,7 @@ func (pat ProtoAuthToken) Valid() error {
 // ProtoAuthToken is model to contain information to authorize vxproto connections
 type ProtoAuthTokenRequest struct {
 	TTL  uint64 `form:"ttl" json:"ttl" validate:"min=1,max=94608000,required" default:"31536000"`
-	Type string `form:"type" json:"type" validate:"oneof=browser external,required" default:"browser"`
+	Type string `form:"type" json:"type" validate:"oneof=aggregate browser external,required" default:"browser"`
 }
 
 // Valid is function to control input/output data
@@ -35,7 +35,7 @@ type ProtoAuthTokenClaims struct {
 	SID uint64 `form:"sid" json:"sid" validate:"min=0,max=10000"`
 	TID uint64 `form:"tid" json:"tid" validate:"min=0,max=10000"`
 	UID uint64 `form:"uid" json:"uid" validate:"min=0,max=10000"`
-	CPT string `form:"cpt" json:"cpt" validate:"oneof=browser external,required"`
+	CPT string `form:"cpt" json:"cpt" validate:"oneof=aggregate browser external,required"`
 	jwt.StandardClaims
 }
 

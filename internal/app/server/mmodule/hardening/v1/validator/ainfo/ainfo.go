@@ -36,7 +36,8 @@ func (f *AgentInfoFetcher) GetAgentConnectionInfo(
 	if info == nil {
 		return nil, fmt.Errorf("passed info object is nil")
 	}
-	ctx = context.WithValue(ctx, ctxKeyAgentID, info.ID)
+	ctx = context.WithValue(ctx, ctxKeyConnID, info.ID)
+	ctx = context.WithValue(ctx, ctxKeyConnType, info.Type)
 	connInfoIface, err := f.storeConn.Fetch(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch the agent connection info: %w", err)
@@ -51,36 +52,61 @@ func (f *AgentInfoFetcher) GetAgentConnectionInfo(
 type ctxKey int
 
 const (
-	ctxKeyAgentID ctxKey = iota + 1
+	ctxKeyConnID ctxKey = iota + 1
+	ctxKeyConnType
 )
 
 func fetchAgentInfoFromDB(ctx context.Context, store *gorm.DB) (interface{}, error) {
-	agentID, ok := ctx.Value(ctxKeyAgentID).(string)
+	var (
+		err  error
+		info *vxproto.AgentConnectionInfo
+	)
+
+	connID, ok := ctx.Value(ctxKeyConnID).(string)
 	if !ok {
-		return nil, fmt.Errorf("not agent ID found in the passed context")
+		return nil, fmt.Errorf("not connection ID found in the passed context")
 	}
-	agent := &models.Agent{}
+	connType, ok := ctx.Value(ctxKeyConnType).(string)
+	if !ok {
+		return nil, fmt.Errorf("not connection type found in the passed context")
+	}
 
 	// TODO(SSH): we should use the context passed to the function in this operation.
 	// We can either:
 	// 1. user gorm v2 (as it supports passing context to operations), or
 	// 2. use a transaction with BeginTx (we used it before and it caused connection lags,
 	// 		we should use a non-restrictive isolation level if we decide to bring it back)
-	err := store.
-		Select("group_id, auth_status").
-		Where("hash = ?", agentID).
-		First(&agent).
-		Error
+	switch connType {
+	case "agent":
+		agent := &models.Agent{}
+		err = store.
+			Select("group_id, auth_status").
+			Where("hash = ?", connID).
+			First(&agent).
+			Error
+		info = &vxproto.AgentConnectionInfo{
+			ID:         connID,
+			GroupID:    agent.GroupID,
+			AuthStatus: agent.AuthStatus,
+		}
+	case "group":
+		group := &models.Group{}
+		err = store.
+			Select("id").
+			Where("hash = ?", connID).
+			First(&group).
+			Error
+		info = &vxproto.AgentConnectionInfo{
+			ID:         connID,
+			GroupID:    group.ID,
+			AuthStatus: "authorized",
+		}
+	}
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return nil, fmt.Errorf("agent %s not found in the DB: %w", agentID, errors.ErrRecordNotFound)
+			return nil, fmt.Errorf("conn ID '%s' not found in the DB: %w", connID, errors.ErrRecordNotFound)
 		}
-		return nil, fmt.Errorf("failed to fetch the agent %s from the DB: %w", agentID, err)
-	}
-	info := &vxproto.AgentConnectionInfo{
-		ID:         agentID,
-		GroupID:    agent.GroupID,
-		AuthStatus: agent.AuthStatus,
+		return nil, fmt.Errorf("failed to fetch the conn ID '%s' from the DB: %w", connID, err)
 	}
 	return info, nil
 }

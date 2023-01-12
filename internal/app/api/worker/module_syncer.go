@@ -239,7 +239,7 @@ func getExtConnmodels() []models.ExtConn {
 		},
 	}
 	extConns := make([]models.ExtConn, 0, 2)
-	for _, ctype := range []string{"browser", "external"} {
+	for _, ctype := range []string{"aggregate", "browser", "external"} {
 		extConns = append(extConns, models.ExtConn{
 			Hash: utils.MakeMD5Hash(extConnVersionString+ctype, "ext_conns"),
 			Desc: "vxapi connection",

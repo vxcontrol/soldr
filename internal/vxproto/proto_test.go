@@ -285,7 +285,7 @@ func TestTokenValidation(t *testing.T) {
 
 	agentID := system.MakeAgentID()
 	agentSocket := makeAgentSocket(proto)
-	for _, agentType := range []AgentType{VXAgent, VXServer, Browser, External} {
+	for _, agentType := range []AgentType{VXAgent, VXServer, Aggregate, Browser, External} {
 		token, err := agentSocket.NewToken(agentID, agentType)
 		if token == "" || err != nil {
 			t.Fatal("Failed generate token")
@@ -312,7 +312,7 @@ func TestTokenGeneration(t *testing.T) {
 
 	agentID := system.MakeAgentID()
 	agentSocket := makeAgentSocket(proto)
-	for _, agentType := range []AgentType{VXAgent, VXServer, Browser, External} {
+	for _, agentType := range []AgentType{VXAgent, VXServer, Aggregate, Browser, External} {
 		token1, err := agentSocket.NewToken(agentID, agentType)
 		if token1 == "" || err != nil {
 			t.Fatal("Failed generate first token")
@@ -327,7 +327,7 @@ func TestTokenGeneration(t *testing.T) {
 			if token1 != token2 {
 				t.Fatal("Failed to match tokens with VXAgent type")
 			}
-		case Browser, External:
+		case Aggregate, Browser, External:
 			// must be different
 			if token1 == token2 {
 				t.Fatal("Failed to match tokens with non VXAgent type")

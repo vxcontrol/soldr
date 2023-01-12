@@ -129,16 +129,27 @@ export class ModuleInteractivePartComponent implements OnInit {
         );
         const subview = modulesAPI.getView(this.module.info.name);
         let protoAPI: VXAPI;
+        let vxHostPort: string;
+        if (window.location.protocol === 'https:') {
+            vxHostPort = `wss://${window.location.host}`;
+        } else {
+            vxHostPort = `ws://${window.location.host}`;
+        }
 
+        console.log("on init interactive view", this.viewMode, this.viewMode === ViewMode.Agents, this.viewMode === ViewMode.Groups);
         if (this.viewMode === ViewMode.Agents) {
-            let vxHostPort: string;
-            if (window.location.protocol === 'https:') {
-                vxHostPort = `wss://${window.location.host}`;
-            } else {
-                vxHostPort = `ws://${window.location.host}`;
-            }
             protoAPI = new VXAPI({
-                agentHash: this.entity.hash,
+                hash: this.entity.hash,
+                type: "browser",
+                moduleName: this.module.info.name,
+                hostPort: vxHostPort,
+                agentProto,
+                protocolProto
+            });
+        } else if (this.viewMode === ViewMode.Groups) {
+            protoAPI = new VXAPI({
+                hash: this.entity.hash,
+                type: "aggregate",
                 moduleName: this.module.info.name,
                 hostPort: vxHostPort,
                 agentProto,

@@ -51,28 +51,7 @@ func (a *ABH) GetABH(t vxproto.AgentType, id *types.AgentBinaryID) ([]byte, erro
 	switch t {
 	case vxproto.VXAgent:
 		abi = id.String()
-	case vxproto.Browser, vxproto.External:
-		abi = id.Version
-	default:
-		return nil, fmt.Errorf("unknown connection type: %d", t)
-	}
-	abh, err := abhList.Get(t, abi)
-	if err != nil {
-		return nil, err
-	}
-	return abh, nil
-}
-
-func GetABH(cache *cache2.Cache, t vxproto.AgentType, id *types.AgentBinaryID) ([]byte, error) {
-	abhList, ok := cache.Dump().(*ABHList)
-	if !ok {
-		return nil, fmt.Errorf("failed to get the ABH list from cache: the stored object is not of the type *abhList")
-	}
-	var abi string
-	switch t {
-	case vxproto.VXAgent:
-		abi = id.String()
-	case vxproto.Browser, vxproto.External:
+	case vxproto.Aggregate, vxproto.Browser, vxproto.External:
 		abi = id.Version
 	default:
 		return nil, fmt.Errorf("unknown connection type: %d", t)
