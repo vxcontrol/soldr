@@ -184,6 +184,13 @@ func getGroupName(c *gin.Context, hash string) (string, error) {
 	return group.Info.Name.En, nil
 }
 
+type GroupService struct {
+}
+
+func NewGroupService() *GroupService {
+	return &GroupService{}
+}
+
 // GetGroups is a function to return group list view on dashboard
 // @Summary Retrieve groups list by filters
 // @Tags Groups
@@ -195,7 +202,7 @@ func getGroupName(c *gin.Context, hash string) (string, error) {
 // @Failure 404 {object} utils.errorResp "groups not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting groups"
 // @Router /groups/ [get]
-func GetGroups(c *gin.Context) {
+func (s *GroupService) GetGroups(c *gin.Context) {
 	var (
 		err           error
 		gids          []uint64
@@ -404,7 +411,7 @@ func GetGroups(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "group not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting group"
 // @Router /groups/{hash} [get]
-func GetGroup(c *gin.Context) {
+func (s *GroupService) GetGroup(c *gin.Context) {
 	var (
 		err  error
 		hash = c.Param("hash")
@@ -485,7 +492,7 @@ func GetGroup(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "group not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating group"
 // @Router /groups/{hash} [put]
-func PatchGroup(c *gin.Context) {
+func (s *GroupService) PatchGroup(c *gin.Context) {
 	var (
 		count int64
 		err   error
@@ -562,7 +569,7 @@ func PatchGroup(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "group or policy not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting updating group policy"
 // @Router /groups/{hash}/policies [put]
-func PatchGroupPolicy(c *gin.Context) {
+func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	var (
 		err    error
 		form   groupPolicyPatch
@@ -645,7 +652,7 @@ func PatchGroupPolicy(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "creating group not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on creating group"
 // @Router /groups/ [post]
-func CreateGroup(c *gin.Context) {
+func (s *GroupService) CreateGroup(c *gin.Context) {
 	var (
 		err       error
 		groupFrom models.Group
@@ -752,7 +759,7 @@ func CreateGroup(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "group not found"
 // @Failure 500 {object} utils.errorResp "internal error on deleting group"
 // @Router /groups/{hash} [delete]
-func DeleteGroup(c *gin.Context) {
+func (s *GroupService) DeleteGroup(c *gin.Context) {
 	var (
 		err   error
 		group models.Group

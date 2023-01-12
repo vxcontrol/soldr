@@ -49,6 +49,14 @@ func getVersionMappers(query *utils.TableQuery) (string, map[string]interface{},
 	return table, sqlMappers, nil
 }
 
+type VersionService struct {
+	db *gorm.DB
+}
+
+func NewVersionService(db *gorm.DB) *VersionService {
+	return &VersionService{db: db}
+}
+
 // GetVersions is a function to return versions list by type filter query key
 // @Summary Retrieve versions list by filters
 // @Tags Versions
@@ -59,7 +67,7 @@ func getVersionMappers(query *utils.TableQuery) (string, map[string]interface{},
 // @Failure 403 {object} utils.errorResp "getting versions not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting versions"
 // @Router /versions/ [get]
-func GetVersions(c *gin.Context) {
+func (s *VersionService) GetVersions(c *gin.Context) {
 	var (
 		err        error
 		iDB        *gorm.DB

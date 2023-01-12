@@ -39,6 +39,16 @@ var servicesSQLMappers = map[string]interface{}{
 		"`{{table}}`.status)",
 }
 
+type ServicesService struct {
+	db *gorm.DB
+}
+
+func NewServicesService(db *gorm.DB) *ServicesService {
+	return &ServicesService{
+		db: db,
+	}
+}
+
 // GetServices is a function to return services list view on dashboard
 // @Summary Retrieve services list by filters
 // @Tags Services
@@ -49,10 +59,9 @@ var servicesSQLMappers = map[string]interface{}{
 // @Failure 403 {object} utils.errorResp "getting services not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting services"
 // @Router /services/ [get]
-func GetServices(c *gin.Context) {
+func (s *ServicesService) GetServices(c *gin.Context) {
 	var (
 		err   error
-		gDB   *gorm.DB
 		query utils.TableQuery
 		resp  services
 	)
@@ -60,11 +69,6 @@ func GetServices(c *gin.Context) {
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
-		return
-	}
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -87,7 +91,7 @@ func GetServices(c *gin.Context) {
 		return
 	}
 
-	if resp.Total, err = query.Query(gDB, &resp.Services); err != nil {
+	if resp.Total, err = query.Query(s.db, &resp.Services); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding services")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -114,18 +118,12 @@ func GetServices(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "service not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting service"
 // @Router /services/{hash} [get]
-func GetService(c *gin.Context) {
+func (s *ServicesService) GetService(c *gin.Context) {
 	var (
 		err  error
-		gDB  *gorm.DB
 		hash string = c.Param("hash")
 		resp models.Service
 	)
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
 
 	rid, _ := utils.GetUint64(c, "rid")
 	tid, _ := utils.GetUint64(c, "tid")
@@ -141,7 +139,7 @@ func GetService(c *gin.Context) {
 		}
 	}
 
-	if err = gDB.Scopes(scope).Take(&resp).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrServicesNotFound, err)
@@ -169,21 +167,15 @@ func GetService(c *gin.Context) {
 // @Failure 403 {object} utils.errorResp "creating service not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on creating service"
 // @Router /services/ [post]
-func CreateService(c *gin.Context) {
+func (s *ServicesService) CreateService(c *gin.Context) {
 	var (
 		err     error
-		gDB     *gorm.DB
 		service models.Service
 	)
 
 	if err = c.ShouldBindJSON(&service); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
-		return
-	}
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
 		return
 	}
 
@@ -202,7 +194,7 @@ func CreateService(c *gin.Context) {
 
 	service.Hash = utils.MakeServiceHash(service.Name)
 
-	if err = gDB.Create(&service).Error; err != nil {
+	if err = s.db.Create(&service).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating service")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -223,10 +215,9 @@ func CreateService(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "service not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating service"
 // @Router /services/{hash} [put]
-func PatchService(c *gin.Context) {
+func (s *ServicesService) PatchService(c *gin.Context) {
 	var (
 		err     error
-		gDB     *gorm.DB
 		hash    string = c.Param("hash")
 		service models.Service
 	)
@@ -242,11 +233,6 @@ func PatchService(c *gin.Context) {
 	} else if err = service.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating service JSON")
 		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
-		return
-	}
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
 		return
 	}
 
@@ -270,8 +256,7 @@ func PatchService(c *gin.Context) {
 	}
 
 	public_info := []interface{}{"info", "name", "status"}
-	err = gDB.Scopes(scope).Select("", public_info...).Save(&service).Error
-
+	err = s.db.Scopes(scope).Select("", public_info...).Save(&service).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating service by hash '%s', service not found", hash)
 		utils.HTTPError(c, srverrors.ErrServicesNotFound, err)
@@ -295,18 +280,12 @@ func PatchService(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "service not found"
 // @Failure 500 {object} utils.errorResp "internal error on deleting service"
 // @Router /services/{hash} [delete]
-func DeleteService(c *gin.Context) {
+func (s *ServicesService) DeleteService(c *gin.Context) {
 	var (
 		err     error
-		gDB     *gorm.DB
 		hash    string = c.Param("hash")
 		service models.Service
 	)
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
-		return
-	}
 
 	rid, _ := utils.GetUint64(c, "rid")
 	tid, _ := utils.GetUint64(c, "tid")
@@ -327,7 +306,7 @@ func DeleteService(c *gin.Context) {
 		}
 	}
 
-	if err = gDB.Scopes(scope).Take(&service).Error; err != nil {
+	if err = s.db.Scopes(scope).Take(&service).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrServicesNotFound, err)
@@ -341,7 +320,7 @@ func DeleteService(c *gin.Context) {
 		return
 	}
 
-	if err = gDB.Delete(&service).Error; err != nil {
+	if err = s.db.Delete(&service).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting service by hash '%s'", hash)
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return

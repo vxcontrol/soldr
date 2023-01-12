@@ -49,6 +49,16 @@ var upgradesAgentsSQLMappers = map[string]interface{}{
 	"version":  "`{{table}}`.version",
 }
 
+type UpgradeService struct {
+	db *gorm.DB
+}
+
+func NewUpgradeService(db *gorm.DB) *UpgradeService {
+	return &UpgradeService{
+		db: db,
+	}
+}
+
 // GetUpgradesAgents is a function to return agents upgrades list
 // @Summary Retrieve agents upgrades list
 // @Tags Upgrades,Agents
@@ -59,7 +69,7 @@ var upgradesAgentsSQLMappers = map[string]interface{}{
 // @Failure 403 {object} utils.errorResp "getting agents upgrades not permitted"
 // @Failure 500 {object} utils.errorResp "internal error on getting agents upgrades"
 // @Router /upgrades/agents [get]
-func GetAgentsUpgrades(c *gin.Context) {
+func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 	var (
 		err   error
 		iDB   *gorm.DB
@@ -109,11 +119,10 @@ func GetAgentsUpgrades(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "agent binary file not found"
 // @Failure 500 {object} utils.errorResp "internal error on requesting agents to upgrade"
 // @Router /upgrades/agents [post]
-func CreateAgentsUpgrades(c *gin.Context) {
+func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	var (
 		binary     models.Binary
 		err        error
-		gDB        *gorm.DB
 		iDB        *gorm.DB
 		s3         storage.IStorage
 		sv         *models.Service
@@ -129,11 +138,6 @@ func CreateAgentsUpgrades(c *gin.Context) {
 			},
 		}
 	)
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrInternalDBNotFound, nil, uafArr)
-		return
-	}
 
 	if err = c.ShouldBindJSON(&upgradeReq); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
@@ -170,7 +174,7 @@ func CreateAgentsUpgrades(c *gin.Context) {
 			return db.Where("version LIKE ?", upgradeReq.Version)
 		}
 	}
-	err = gDB.Scopes(scope).Model(&binary).Take(&binary).Error
+	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
 		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrCreateAgentsUpgradesAgentNotFound, err, uafArr)
@@ -244,7 +248,7 @@ func CreateAgentsUpgrades(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "agent or group or task not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting last agent upgrade information"
 // @Router /upgrades/agents/{hash}/last [get]
-func GetLastAgentUpgrade(c *gin.Context) {
+func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 	var (
 		err  error
 		iDB  *gorm.DB
@@ -314,12 +318,11 @@ func GetLastAgentUpgrade(c *gin.Context) {
 // @Failure 404 {object} utils.errorResp "agent or group or task not found"
 // @Failure 500 {object} utils.errorResp "internal error on updating last agent upgrade information"
 // @Router /upgrades/agents/{hash}/last [put]
-func PatchLastAgentUpgrade(c *gin.Context) {
+func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	var (
 		agent  models.Agent
 		binary models.Binary
 		err    error
-		gDB    *gorm.DB
 		iDB    *gorm.DB
 		hash   = c.Param("hash")
 		s3     storage.IStorage
@@ -372,11 +375,6 @@ func PatchLastAgentUpgrade(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = agent.Description
 
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
-		return
-	}
-
 	if sv = getService(c); sv == nil {
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalServiceNotFound, nil, uaf)
 		return
@@ -393,7 +391,7 @@ func PatchLastAgentUpgrade(c *gin.Context) {
 				return db.Where("version LIKE ?", task.Version)
 			}
 		}
-		err = gDB.Scopes(scope).Model(&binary).Take(&binary).Error
+		err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", task.Version)
 			utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeAgentBinaryNotFound, err, uaf)
@@ -427,7 +425,6 @@ func PatchLastAgentUpgrade(c *gin.Context) {
 		"reason": reason,
 	}
 	err = iDB.Model(&task).UpdateColumns(update_info).Error
-
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeLastUpgradeInfoNotFound, err, uaf)

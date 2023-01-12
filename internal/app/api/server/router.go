@@ -145,11 +145,25 @@ func NewRouter(
 	}
 
 	// services
-	agentsService := private.NewAgentService(
+	agentService := private.NewAgentService(
 		db,
 		serviceDBConns,
 		serviceS3Conns,
 	)
+	binariesService := private.NewBinariesService(db)
+	eventService := private.NewEventService()
+	groupService := private.NewGroupService()
+	moduleService := private.NewModuleService(db)
+	optionService := private.NewOptionService(db)
+	policyService := private.NewPolicyService(db)
+	portingService := private.NewPortingService(db)
+	roleService := private.NewRoleService(db)
+	upgradeService := private.NewUpgradeService(db)
+	tagService := private.NewTagService(db)
+	versionService := private.NewVersionService(db)
+	servicesService := private.NewServicesService(db)
+	tenantService := private.NewTenantService(db)
+	userService := private.NewUserService(db)
 
 	// set api handlers
 	api := router.Group(utils.PrefixPathAPI)
@@ -168,33 +182,33 @@ func NewRouter(
 	{
 		setTokenGroup(privateGroup)
 
-		setBinariesGroup(privateGroup)
-		setUpgradesGroup(privateGroup)
-		setAgentsGroup(privateGroup, agentsService)
+		setBinariesGroup(privateGroup, binariesService)
+		setUpgradesGroup(privateGroup, upgradeService)
+		setAgentsGroup(privateGroup, agentService, moduleService)
 
-		setGroupsGroup(privateGroup)
+		setGroupsGroup(privateGroup, groupService, moduleService)
 
-		setPoliciesGroup(privateGroup)
+		setPoliciesGroup(privateGroup, policyService, moduleService)
 
 		// collected events by policy modules
-		setEventsGroup(privateGroup)
+		setEventsGroup(privateGroup, eventService)
 
 		// system modules groups
-		setSystemModulesGroup(privateGroup)
-		setExportGroup(privateGroup)
-		setImportGroup(privateGroup)
-		setOptionsGroup(privateGroup)
+		setSystemModulesGroup(privateGroup, moduleService)
+		setExportGroup(privateGroup, portingService)
+		setImportGroup(privateGroup, portingService)
+		setOptionsGroup(privateGroup, optionService)
 
 		setNotificationsGroup(privateGroup, exchanger)
 
-		setTagsGroup(privateGroup)
-		setVersionsGroup(privateGroup)
+		setTagsGroup(privateGroup, tagService)
+		setVersionsGroup(privateGroup, versionService)
 
 		// system objects
-		setRolesGroup(privateGroup)
-		setServicesGroup(privateGroup)
-		setTenanesGroup(privateGroup)
-		setUsersGroup(privateGroup)
+		setRolesGroup(privateGroup, roleService)
+		setServicesGroup(privateGroup, servicesService)
+		setTenanesGroup(privateGroup, tenantService)
+		setUsersGroup(privateGroup, userService)
 	}
 
 	return router
@@ -254,247 +268,259 @@ func setTokenGroup(parent *gin.RouterGroup) {
 	}
 }
 
-func setBinariesGroup(parent *gin.RouterGroup) {
+func setBinariesGroup(parent *gin.RouterGroup, svc *private.BinariesService) {
 	binariesGroup := parent.Group("/binaries")
 	binariesGroup.Use(privilegesRequired("vxapi.agents.downloads"))
 	{
-		binariesGroup.GET("/vxagent", private.GetAgentBinaries)
-		binariesGroup.GET("/vxagent/:os/:arch/:version", private.GetAgentBinaryFile)
+		binariesGroup.GET("/vxagent", svc.GetAgentBinaries)
+		binariesGroup.GET("/vxagent/:os/:arch/:version", svc.GetAgentBinaryFile)
 	}
 }
 
-func setUpgradesGroup(parent *gin.RouterGroup) {
+func setUpgradesGroup(parent *gin.RouterGroup, svc *private.UpgradeService) {
 	upgradesGroup := parent.Group("/upgrades")
 	upgradesGroup.Use(privilegesRequired("vxapi.agents.api.edit"))
 	{
-		upgradesGroup.GET("/agents", private.GetAgentsUpgrades)
-		upgradesGroup.POST("/agents", private.CreateAgentsUpgrades)
-		upgradesGroup.GET("/agents/:hash/last", private.GetLastAgentUpgrade)
-		upgradesGroup.PUT("/agents/:hash/last", private.PatchLastAgentUpgrade)
+		upgradesGroup.GET("/agents", svc.GetAgentsUpgrades)
+		upgradesGroup.POST("/agents", svc.CreateAgentsUpgrades)
+		upgradesGroup.GET("/agents/:hash/last", svc.GetLastAgentUpgrade)
+		upgradesGroup.PUT("/agents/:hash/last", svc.PatchLastAgentUpgrade)
 	}
 }
 
-func setAgentsGroup(parent *gin.RouterGroup, service *private.AgentService) {
+func setAgentsGroup(
+	parent *gin.RouterGroup,
+	agentService *private.AgentService,
+	moduleService *private.ModuleService,
+) {
 	agentsCreateGroup := parent.Group("/agents")
 	agentsCreateGroup.Use(privilegesRequired("vxapi.agents.api.create"))
 	{
-		agentsCreateGroup.POST("/", service.CreateAgent)
+		agentsCreateGroup.POST("/", agentService.CreateAgent)
 	}
 
 	agentsDeleteGroup := parent.Group("/agents")
 	agentsDeleteGroup.Use(privilegesRequired("vxapi.agents.api.delete"))
 	{
-		agentsDeleteGroup.DELETE("/:hash", service.DeleteAgent)
+		agentsDeleteGroup.DELETE("/:hash", agentService.DeleteAgent)
 	}
 
 	agentsEditGroup := parent.Group("/agents")
 	agentsEditGroup.Use(privilegesRequired("vxapi.agents.api.edit"))
 	{
-		agentsEditGroup.PUT("/:hash", service.PatchAgent)
+		agentsEditGroup.PUT("/:hash", agentService.PatchAgent)
 	}
 
 	agentsEditOrDeleteGroup := parent.Group("/agents")
 	agentsEditOrDeleteGroup.Use(privilegesRequiredPatchAgents())
 	{
-		agentsEditOrDeleteGroup.PUT("/", service.PatchAgents)
+		agentsEditOrDeleteGroup.PUT("/", agentService.PatchAgents)
 	}
 
 	agentsViewGroup := parent.Group("/agents")
 	agentsViewGroup.Use(privilegesRequired("vxapi.agents.api.view"))
 	{
-		agentsViewGroup.GET("/", service.GetAgents)
-		agentsViewGroup.GET("/:hash", service.GetAgent)
-		agentsViewGroup.GET("/count", service.GetAgentsCount)
+		agentsViewGroup.GET("/", agentService.GetAgents)
+		agentsViewGroup.GET("/:hash", agentService.GetAgent)
+		agentsViewGroup.GET("/count", agentService.GetAgentsCount)
 	}
 
 	agentsModulesViewGroup := parent.Group("/agents")
 	agentsModulesViewGroup.Use(privilegesRequired("vxapi.policies.api.view"))
 	{
-		agentsModulesViewGroup.GET("/:hash/modules", private.GetAgentModules)
-		agentsModulesViewGroup.GET("/:hash/modules/:module_name", private.GetAgentModule)
-		agentsModulesViewGroup.GET("/:hash/modules/:module_name/bmodule.vue", private.GetAgentBModule)
+		agentsModulesViewGroup.GET("/:hash/modules", moduleService.GetAgentModules)
+		agentsModulesViewGroup.GET("/:hash/modules/:module_name", moduleService.GetAgentModule)
+		agentsModulesViewGroup.GET("/:hash/modules/:module_name/bmodule.vue", moduleService.GetAgentBModule)
 	}
 }
 
-func setGroupsGroup(parent *gin.RouterGroup) {
+func setGroupsGroup(
+	parent *gin.RouterGroup,
+	groupService *private.GroupService,
+	moduleService *private.ModuleService,
+) {
 	groupsCreateGroup := parent.Group("/groups")
 	groupsCreateGroup.Use(privilegesRequired("vxapi.groups.api.create"))
 	{
-		groupsCreateGroup.POST("/", private.CreateGroup)
+		groupsCreateGroup.POST("/", groupService.CreateGroup)
 	}
 
 	groupsDeleteGroup := parent.Group("/groups")
 	groupsDeleteGroup.Use(privilegesRequired("vxapi.groups.api.delete"))
 	{
-		groupsDeleteGroup.DELETE("/:hash", private.DeleteGroup)
+		groupsDeleteGroup.DELETE("/:hash", groupService.DeleteGroup)
 	}
 
 	groupsEditGroup := parent.Group("/groups")
 	groupsEditGroup.Use(privilegesRequired("vxapi.groups.api.edit"))
 	{
-		groupsEditGroup.PUT("/:hash", private.PatchGroup)
+		groupsEditGroup.PUT("/:hash", groupService.PatchGroup)
 	}
 
 	groupsViewGroup := parent.Group("/groups")
 	groupsViewGroup.Use(privilegesRequired("vxapi.groups.api.view"))
 	{
-		groupsViewGroup.GET("/", private.GetGroups)
-		groupsViewGroup.GET("/:hash", private.GetGroup)
+		groupsViewGroup.GET("/", groupService.GetGroups)
+		groupsViewGroup.GET("/:hash", groupService.GetGroup)
 	}
 
 	groupsModulesViewGroup := parent.Group("/groups")
 	groupsModulesViewGroup.Use(privilegesRequired("vxapi.policies.api.view"))
 	{
-		groupsModulesViewGroup.GET("/:hash/modules", private.GetGroupModules)
-		groupsModulesViewGroup.GET("/:hash/modules/:module_name", private.GetGroupModule)
-		groupsModulesViewGroup.GET("/:hash/modules/:module_name/bmodule.vue", private.GetGroupBModule)
+		groupsModulesViewGroup.GET("/:hash/modules", moduleService.GetGroupModules)
+		groupsModulesViewGroup.GET("/:hash/modules/:module_name", moduleService.GetGroupModule)
+		groupsModulesViewGroup.GET("/:hash/modules/:module_name/bmodule.vue", moduleService.GetGroupBModule)
 	}
 
 	groupsPoliciesLinkGroup := parent.Group("/groups")
 	groupsPoliciesLinkGroup.Use(privilegesRequired("vxapi.policies.control.link"))
 	{
-		groupsPoliciesLinkGroup.PUT("/:hash/policies", private.PatchGroupPolicy)
+		groupsPoliciesLinkGroup.PUT("/:hash/policies", groupService.PatchGroupPolicy)
 	}
 }
 
-func setPoliciesGroup(parent *gin.RouterGroup) {
+func setPoliciesGroup(
+	parent *gin.RouterGroup,
+	policyService *private.PolicyService,
+	moduleService *private.ModuleService,
+) {
 	parent = parent.Group("/")
 	parent.Use(setSecureConfigEncryptor())
 
 	policiesCreateGroup := parent.Group("/policies")
 	policiesCreateGroup.Use(privilegesRequired("vxapi.policies.api.create"))
 	{
-		policiesCreateGroup.POST("/", private.CreatePolicy)
+		policiesCreateGroup.POST("/", policyService.CreatePolicy)
 	}
 
 	policiesDeleteGroup := parent.Group("/policies")
 	policiesDeleteGroup.Use(privilegesRequired("vxapi.policies.api.delete"))
 	{
-		policiesDeleteGroup.DELETE("/:hash", private.DeletePolicy)
+		policiesDeleteGroup.DELETE("/:hash", policyService.DeletePolicy)
 	}
 
 	policiesEditGroup := parent.Group("/policies")
 	policiesEditGroup.Use(privilegesRequired("vxapi.policies.api.edit"))
 	{
-		policiesEditGroup.PUT("/:hash", private.PatchPolicy)
-		policiesEditGroup.DELETE("/:hash/modules/:module_name", private.DeletePolicyModule)
+		policiesEditGroup.PUT("/:hash", policyService.PatchPolicy)
+		policiesEditGroup.DELETE("/:hash/modules/:module_name", moduleService.DeletePolicyModule)
 	}
 
 	policiesInconcurrentEditGroup := policiesEditGroup.Group("/")
 	policiesInconcurrentEditGroup.Use(inconcurrentRequest())
 	{
-		policiesInconcurrentEditGroup.PUT("/:hash/modules/:module_name", private.PatchPolicyModule)
+		policiesInconcurrentEditGroup.PUT("/:hash/modules/:module_name", moduleService.PatchPolicyModule)
 	}
 
 	policiesViewGroup := parent.Group("/policies")
 	policiesViewGroup.Use(privilegesRequired("vxapi.policies.api.view"))
 	{
-		policiesViewGroup.GET("/", private.GetPolicies)
-		policiesViewGroup.GET("/:hash", private.GetPolicy)
-		policiesViewGroup.GET("/count", private.GetPoliciesCount)
+		policiesViewGroup.GET("/", policyService.GetPolicies)
+		policiesViewGroup.GET("/:hash", policyService.GetPolicy)
+		policiesViewGroup.GET("/count", policyService.GetPoliciesCount)
 	}
 
 	policiesModulesViewGroup := parent.Group("/policies")
 	policiesModulesViewGroup.Use(privilegesRequired("vxapi.policies.api.view"))
 	{
-		policiesModulesViewGroup.GET("/:hash/modules", private.GetPolicyModules)
-		policiesModulesViewGroup.GET("/:hash/modules/:module_name", private.GetPolicyModule)
-		policiesModulesViewGroup.GET("/:hash/modules/:module_name/bmodule.vue", private.GetPolicyBModule)
+		policiesModulesViewGroup.GET("/:hash/modules", moduleService.GetPolicyModules)
+		policiesModulesViewGroup.GET("/:hash/modules/:module_name", moduleService.GetPolicyModule)
+		policiesModulesViewGroup.GET("/:hash/modules/:module_name/bmodule.vue", moduleService.GetPolicyBModule)
 	}
 
 	policiesGroupsLinkGroup := parent.Group("/policies")
 	policiesGroupsLinkGroup.Use(privilegesRequired("vxapi.policies.control.link"))
 	{
-		policiesGroupsLinkGroup.PUT("/:hash/groups", private.PatchPolicyGroup)
+		policiesGroupsLinkGroup.PUT("/:hash/groups", policyService.PatchPolicyGroup)
 	}
 
 	policiesSecureConfigViewGroup := parent.Group("/policies")
 	policiesSecureConfigViewGroup.Use(privilegesRequired("vxapi.policies.api.edit", "vxapi.modules.secure-config.view"))
 	{
-		policiesSecureConfigViewGroup.GET("/:hash/modules/:module_name/secure_config/:param_name", private.GetPolicyModuleSecureConfigValue)
+		policiesSecureConfigViewGroup.GET("/:hash/modules/:module_name/secure_config/:param_name", moduleService.GetPolicyModuleSecureConfigValue)
 	}
 
 	policiesSecureConfigEditGroup := parent.Group("/policies")
 	policiesSecureConfigEditGroup.Use(privilegesRequired("vxapi.policies.api.edit", "vxapi.modules.secure-config.edit"))
 	{
-		policiesSecureConfigEditGroup.POST("/:hash/modules/:module_name/secure_config", private.SetPolicyModuleSecureConfigValue)
+		policiesSecureConfigEditGroup.POST("/:hash/modules/:module_name/secure_config", moduleService.SetPolicyModuleSecureConfigValue)
 	}
 }
 
-func setEventsGroup(parent *gin.RouterGroup) {
+func setEventsGroup(parent *gin.RouterGroup, svc *private.EventService) {
 	eventsGroup := parent.Group("/events")
 	eventsGroup.Use(privilegesRequired("vxapi.modules.events"))
 	{
-		eventsGroup.GET("/", private.GetEvents)
+		eventsGroup.GET("/", svc.GetEvents)
 	}
 }
 
-func setSystemModulesGroup(parent *gin.RouterGroup) {
+func setSystemModulesGroup(parent *gin.RouterGroup, svc *private.ModuleService) {
 	parent = parent.Group("/")
 	parent.Use(setSecureConfigEncryptor())
 
 	systemModulesCreateGroup := parent.Group("/modules")
 	systemModulesCreateGroup.Use(privilegesRequired("vxapi.modules.api.create"))
 	{
-		systemModulesCreateGroup.POST("/", private.CreateModule)
+		systemModulesCreateGroup.POST("/", svc.CreateModule)
 	}
 
 	systemModulesDeleteGroup := parent.Group("/modules")
 	systemModulesDeleteGroup.Use(privilegesRequired("vxapi.modules.api.delete"))
 	{
-		systemModulesDeleteGroup.DELETE("/:module_name", private.DeleteModule)
+		systemModulesDeleteGroup.DELETE("/:module_name", svc.DeleteModule)
 	}
 
 	systemModulesEditGroup := parent.Group("/modules")
 	systemModulesEditGroup.Use(privilegesRequired("vxapi.modules.api.edit"))
 	{
-		systemModulesEditGroup.POST("/:module_name/versions/:version", private.CreateModuleVersion)
-		systemModulesEditGroup.PUT("/:module_name/versions/:version", private.PatchModuleVersion)
-		systemModulesEditGroup.DELETE("/:module_name/versions/:version", private.DeleteModuleVersion)
+		systemModulesEditGroup.POST("/:module_name/versions/:version", svc.CreateModuleVersion)
+		systemModulesEditGroup.PUT("/:module_name/versions/:version", svc.PatchModuleVersion)
+		systemModulesEditGroup.DELETE("/:module_name/versions/:version", svc.DeleteModuleVersion)
 
-		systemModulesEditGroup.GET("/:module_name/versions/:version/files", private.GetModuleVersionFiles)
-		systemModulesEditGroup.GET("/:module_name/versions/:version/files/file", private.GetModuleVersionFile)
-		systemModulesEditGroup.PUT("/:module_name/versions/:version/files/file", private.PatchModuleVersionFile)
+		systemModulesEditGroup.GET("/:module_name/versions/:version/files", svc.GetModuleVersionFiles)
+		systemModulesEditGroup.GET("/:module_name/versions/:version/files/file", svc.GetModuleVersionFile)
+		systemModulesEditGroup.PUT("/:module_name/versions/:version/files/file", svc.PatchModuleVersionFile)
 
-		systemModulesEditGroup.GET("/:module_name/versions/:version/updates", private.GetModuleVersionUpdates)
-		systemModulesEditGroup.POST("/:module_name/versions/:version/updates", private.CreateModuleVersionUpdates)
+		systemModulesEditGroup.GET("/:module_name/versions/:version/updates", svc.GetModuleVersionUpdates)
+		systemModulesEditGroup.POST("/:module_name/versions/:version/updates", svc.CreateModuleVersionUpdates)
 	}
 
 	systemModulesViewGroup := parent.Group("/modules")
 	systemModulesViewGroup.Use(privilegesRequired("vxapi.modules.api.view"))
 	{
-		systemModulesViewGroup.GET("/", private.GetModules)
-		systemModulesViewGroup.GET("/:module_name/versions/", private.GetModuleVersions)
-		systemModulesViewGroup.GET("/:module_name/versions/:version", private.GetModuleVersion)
-		systemModulesViewGroup.GET("/:module_name/versions/:version/options/:option_name", private.GetModuleVersionOption)
+		systemModulesViewGroup.GET("/", svc.GetModules)
+		systemModulesViewGroup.GET("/:module_name/versions/", svc.GetModuleVersions)
+		systemModulesViewGroup.GET("/:module_name/versions/:version", svc.GetModuleVersion)
+		systemModulesViewGroup.GET("/:module_name/versions/:version/options/:option_name", svc.GetModuleVersionOption)
 	}
 }
 
-func setExportGroup(parent *gin.RouterGroup) {
+func setExportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
 	exportGroup := parent.Group("/export")
 	exportGroup.Use(privilegesRequired("vxapi.modules.control.export"))
 	{
-		exportGroup.POST("/modules/:module_name/versions/:version", private.ExportModule)
+		exportGroup.POST("/modules/:module_name/versions/:version", svc.ExportModule)
 	}
 }
 
-func setImportGroup(parent *gin.RouterGroup) {
+func setImportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
 	importGroup := parent.Group("/import")
 	importGroup.Use(privilegesRequired("vxapi.modules.control.import"))
 	{
-		importGroup.POST("/modules/:module_name/versions/:version", private.ImportModule)
+		importGroup.POST("/modules/:module_name/versions/:version", svc.ImportModule)
 	}
 }
 
-func setOptionsGroup(parent *gin.RouterGroup) {
+func setOptionsGroup(parent *gin.RouterGroup, svc *private.OptionService) {
 	optionsGroup := parent.Group("/options")
 	optionsGroup.Use(privilegesRequired("vxapi.modules.api.view"))
 	{
-		optionsGroup.GET("/actions", private.GetOptionsActions)
-		optionsGroup.GET("/events", private.GetOptionsEvents)
-		optionsGroup.GET("/fields", private.GetOptionsFields)
-		optionsGroup.GET("/tags", private.GetOptionsTags)
-		optionsGroup.GET("/versions", private.GetOptionsVersions)
+		optionsGroup.GET("/actions", svc.GetOptionsActions)
+		optionsGroup.GET("/events", svc.GetOptionsEvents)
+		optionsGroup.GET("/fields", svc.GetOptionsFields)
+		optionsGroup.GET("/tags", svc.GetOptionsTags)
+		optionsGroup.GET("/versions", svc.GetOptionsVersions)
 	}
 }
 
@@ -537,7 +563,7 @@ func setNotificationsGroup(parent *gin.RouterGroup, exchanger *srvevents.Exchang
 	}
 }
 
-func setTagsGroup(parent *gin.RouterGroup) {
+func setTagsGroup(parent *gin.RouterGroup, svc *private.TagService) {
 	tagsGroup := parent.Group("/tags")
 	tagsGroup.Use(privilegesRequiredByQueryTypeField(
 		map[string][]string{
@@ -548,11 +574,11 @@ func setTagsGroup(parent *gin.RouterGroup) {
 		},
 	))
 	{
-		tagsGroup.GET("/", private.GetTags)
+		tagsGroup.GET("/", svc.GetTags)
 	}
 }
 
-func setVersionsGroup(parent *gin.RouterGroup) {
+func setVersionsGroup(parent *gin.RouterGroup, svc *private.VersionService) {
 	versionsGroup := parent.Group("/versions")
 	versionsGroup.Use(privilegesRequiredByQueryTypeField(
 		map[string][]string{
@@ -561,106 +587,106 @@ func setVersionsGroup(parent *gin.RouterGroup) {
 		},
 	))
 	{
-		versionsGroup.GET("/", private.GetVersions)
+		versionsGroup.GET("/", svc.GetVersions)
 	}
 }
 
-func setRolesGroup(parent *gin.RouterGroup) {
+func setRolesGroup(parent *gin.RouterGroup, svc *private.RoleService) {
 	rolesGroup := parent.Group("/roles")
 	rolesGroup.Use(privilegesRequired("vxapi.roles.api.view"))
 	{
-		rolesGroup.GET("/", private.GetRoles)
+		rolesGroup.GET("/", svc.GetRoles)
 	}
 }
 
-func setServicesGroup(parent *gin.RouterGroup) {
+func setServicesGroup(parent *gin.RouterGroup, svc *private.ServicesService) {
 	servicesCreateGroup := parent.Group("/services")
 	servicesCreateGroup.Use(privilegesRequired("vxapi.services.api.create"))
 	{
-		servicesCreateGroup.POST("/", private.CreateService)
+		servicesCreateGroup.POST("/", svc.CreateService)
 	}
 
 	servicesDeleteGroup := parent.Group("/services")
 	servicesDeleteGroup.Use(privilegesRequired("vxapi.services.api.delete"))
 	{
-		servicesDeleteGroup.DELETE("/:hash", private.DeleteService)
+		servicesDeleteGroup.DELETE("/:hash", svc.DeleteService)
 	}
 
 	servicesEditGroup := parent.Group("/services")
 	servicesEditGroup.Use(privilegesRequired("vxapi.services.api.edit"))
 	{
-		servicesEditGroup.PUT("/:hash", private.PatchService)
+		servicesEditGroup.PUT("/:hash", svc.PatchService)
 	}
 
 	servicesViewGroup := parent.Group("/services")
 	servicesViewGroup.Use(privilegesRequired("vxapi.services.api.view"))
 	{
-		servicesViewGroup.GET("/", private.GetServices)
-		servicesViewGroup.GET("/:hash", private.GetService)
+		servicesViewGroup.GET("/", svc.GetServices)
+		servicesViewGroup.GET("/:hash", svc.GetService)
 	}
 }
 
-func setTenanesGroup(parent *gin.RouterGroup) {
+func setTenanesGroup(parent *gin.RouterGroup, svc *private.TenantService) {
 	tenantsCreateGroup := parent.Group("/tenants")
 	tenantsCreateGroup.Use(privilegesRequired("vxapi.tenants.api.create"))
 	{
-		tenantsCreateGroup.POST("/", private.CreateTenant)
+		tenantsCreateGroup.POST("/", svc.CreateTenant)
 	}
 
 	tenantsDeleteGroup := parent.Group("/tenants")
 	tenantsDeleteGroup.Use(privilegesRequired("vxapi.tenants.api.delete"))
 	{
-		tenantsDeleteGroup.DELETE("/:hash", private.DeleteTenant)
+		tenantsDeleteGroup.DELETE("/:hash", svc.DeleteTenant)
 	}
 
 	tenantsEditGroup := parent.Group("/tenants")
 	tenantsEditGroup.Use(privilegesRequired("vxapi.tenants.api.edit"))
 	{
-		tenantsEditGroup.PUT("/:hash", private.PatchTenant)
+		tenantsEditGroup.PUT("/:hash", svc.PatchTenant)
 	}
 
 	tenantsViewGroup := parent.Group("/tenants")
 	tenantsViewGroup.Use(privilegesRequired("vxapi.tenants.api.view"))
 	{
-		tenantsViewGroup.GET("/", private.GetTenants)
-		tenantsViewGroup.GET("/:hash", private.GetTenant)
+		tenantsViewGroup.GET("/", svc.GetTenants)
+		tenantsViewGroup.GET("/:hash", svc.GetTenant)
 	}
 }
 
-func setUsersGroup(parent *gin.RouterGroup) {
+func setUsersGroup(parent *gin.RouterGroup, svc *private.UserService) {
 	usersCreateGroup := parent.Group("/users")
 	usersCreateGroup.Use(privilegesRequired("vxapi.users.api.create"))
 	{
-		usersCreateGroup.POST("/", private.CreateUser)
+		usersCreateGroup.POST("/", svc.CreateUser)
 	}
 
 	usersDeleteGroup := parent.Group("/users")
 	usersDeleteGroup.Use(privilegesRequired("vxapi.users.api.delete"))
 	{
-		usersDeleteGroup.DELETE("/:hash", private.DeleteUser)
+		usersDeleteGroup.DELETE("/:hash", svc.DeleteUser)
 	}
 
 	usersEditGroup := parent.Group("/users")
 	usersEditGroup.Use(privilegesRequired("vxapi.users.api.edit"))
 	{
-		usersEditGroup.PUT("/:hash", private.PatchUser)
+		usersEditGroup.PUT("/:hash", svc.PatchUser)
 	}
 
 	usersViewGroup := parent.Group("/users")
 	usersViewGroup.Use(privilegesRequired("vxapi.users.api.view"))
 	{
-		usersViewGroup.GET("/", private.GetUsers)
-		usersViewGroup.GET("/:hash", private.GetUser)
+		usersViewGroup.GET("/", svc.GetUsers)
+		usersViewGroup.GET("/:hash", svc.GetUser)
 	}
 
 	userViewGroup := parent.Group("/user")
 	{
-		userViewGroup.GET("/", private.GetCurrentUser)
+		userViewGroup.GET("/", svc.GetCurrentUser)
 	}
 
 	userEditGroup := parent.Group("/user")
 	userEditGroup.Use(localUserRequired())
 	{
-		userEditGroup.PUT("/password", private.ChangePasswordCurrentUser)
+		userEditGroup.PUT("/password", svc.ChangePasswordCurrentUser)
 	}
 }
