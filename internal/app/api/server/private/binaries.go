@@ -74,7 +74,10 @@ func GetAgentBinaries(c *gin.Context) {
 	query.Init("binaries", binariesSQLMappers)
 	query.SetFilters([]func(db *gorm.DB) *gorm.DB{
 		func(db *gorm.DB) *gorm.DB {
-			return db.Where("tenant_id IN (0, ?)", tid).Where("type LIKE ?", "vxagent")
+			return db.
+				Where("tenant_id IN (0, ?)", tid).
+				Where("type LIKE ?", "vxagent").
+				Where("NOT ISNULL(version)")
 		},
 	})
 
