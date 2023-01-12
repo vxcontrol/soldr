@@ -6,14 +6,15 @@ import (
 
 // User is model to contain user information
 type User struct {
-	ID       uint64 `form:"id" json:"id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL;PRIMARY_KEY;AUTO_INCREMENT"`
-	Mail     string `form:"mail" json:"mail" validate:"max=50,vmail,required" gorm:"type:VARCHAR(50);NOT NULL;UNIQUE_INDEX"`
-	Name     string `form:"name" json:"name" validate:"max=70,required" gorm:"type:VARCHAR(70);NOT NULL;default:''"`
-	Status   string `form:"status" json:"status" validate:"oneof=created active blocked,required" gorm:"type:ENUM('created','active','blocked');NOT NULL"`
-	Type     string `form:"type" json:"type" validate:"oneof=local oauth,required" gorm:"type:ENUM('local','oauth');NOT NULL"`
-	RoleID   uint64 `form:"role_id" json:"role_id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL;default:2"`
-	TenantID uint64 `form:"tenant_id" json:"tenant_id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL"`
-	Hash     string `form:"hash" json:"hash" validate:"len=32,hexadecimal,lowercase,omitempty" gorm:"type:VARCHAR(32);NOT NULL"`
+	ID                     uint64 `form:"id" json:"id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL;PRIMARY_KEY;AUTO_INCREMENT"`
+	Mail                   string `form:"mail" json:"mail" validate:"max=50,vmail,required" gorm:"type:VARCHAR(50);NOT NULL;UNIQUE_INDEX"`
+	Name                   string `form:"name" json:"name" validate:"max=70,required" gorm:"type:VARCHAR(70);NOT NULL;default:''"`
+	Status                 string `form:"status" json:"status" validate:"oneof=created active blocked,required" gorm:"type:ENUM('created','active','blocked');NOT NULL"`
+	Type                   string `form:"type" json:"type" validate:"oneof=local oauth,required" gorm:"type:ENUM('local','oauth');NOT NULL"`
+	RoleID                 uint64 `form:"role_id" json:"role_id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL;default:2"`
+	TenantID               uint64 `form:"tenant_id" json:"tenant_id" validate:"min=0,numeric" gorm:"type:INT(10) UNSIGNED;NOT NULL"`
+	Hash                   string `form:"hash" json:"hash" validate:"len=32,hexadecimal,lowercase,omitempty" gorm:"type:VARCHAR(32);NOT NULL"`
+	PasswordChangeRequired bool   `form:"password_change_required" json:"password_change_required" gorm:"type:BOOL;NOT NULL"`
 }
 
 // TableName returns the table name string to guaranty use correct table

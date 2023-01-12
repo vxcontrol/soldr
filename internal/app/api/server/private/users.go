@@ -137,6 +137,7 @@ func ChangePasswordCurrentUser(c *gin.Context) {
 
 	if encPass, err = utils.EncryptPassword(form.Password); err == nil {
 		user.Password = string(encPass)
+		user.PasswordChangeRequired = false
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error making new password for current user")
 		utils.HTTPError(c, srverrors.ErrChangePasswordCurrentUserInvalidNewPassword, err)

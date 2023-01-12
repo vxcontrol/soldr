@@ -16,15 +16,14 @@ import (
 )
 
 type info struct {
-	Type                   string            `json:"type"`
-	Service                *models.Service   `json:"service"`
-	Develop                bool              `json:"develop"`
-	User                   models.User       `json:"user"`
-	Role                   models.Role       `json:"role"`
-	Tenant                 models.Tenant     `json:"tenant"`
-	Privs                  []string          `json:"privileges"`
-	Services               []*models.Service `json:"services"`
-	PasswordChangeRequired bool              `json:"password_change_required"`
+	Type     string            `json:"type"`
+	Service  *models.Service   `json:"service"`
+	Develop  bool              `json:"develop"`
+	User     models.User       `json:"user"`
+	Role     models.Role       `json:"role"`
+	Tenant   models.Tenant     `json:"tenant"`
+	Privs    []string          `json:"privileges"`
+	Services []*models.Service `json:"services"`
 }
 
 func refreshCookie(c *gin.Context, resp *info, privs []string) error {
@@ -124,17 +123,6 @@ func Info(c *gin.Context) {
 			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
 			utils.HTTPError(c, srverrors.ErrInfoInvalidUserData, err)
 			return
-		}
-
-		if resp.User.ID == 1 {
-			var userPassword models.UserPassword
-			if err = gDB.Take(&userPassword, "id = ?", resp.User.ID).Error; err != nil {
-				utils.HTTPError(c, srverrors.ErrInfoUserNotFound, err)
-				return
-			}
-			// NOTE: password from seed defaults, see db/api/seed.sql
-			resp.PasswordChangeRequired =
-				(userPassword.Password == "$2a$10$deVOk0o1nYRHpaVXjIcyCuRmaHvtoMN/2RUT7w5XbZTeiWKEbXx9q")
 		}
 
 		if err = gDB.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
