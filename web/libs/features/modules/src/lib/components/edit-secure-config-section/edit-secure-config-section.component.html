@@ -5,7 +5,7 @@
                 <div class="mc-subheading flex-auto">{{ t('Modules.ModuleEdit.Label.Schema') }}</div>
 
                 <button *ngIf="!readOnly" e2e-id="btnAddParamToSecureConfig" mc-button (click)="addParamToConfig()">
-                    <i mc-icon="product-icons-plus_16" class="product-icons"></i>
+                    <i mc-icon="soldr-icons-plus_16" class="soldr-icons"></i>
                     {{ tCommon('Common.Pseudo.ButtonText.Add') }}
                 </button>
 
@@ -14,7 +14,7 @@
                         e2e-id="btnRemoveAllParamsFromSecureConfig"
                         mc-button
                         [disabled]="params.length === 0" (click)="removeAllSecureParamsFromConfig()">
-                        <i mc-icon="product-icons-delete_16" class="product-icons"></i>
+                        <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
                         {{ tCommon('Common.Pseudo.ButtonText.DeleteAll') }}
                     </button>
                 </div>
@@ -52,7 +52,7 @@
                                             class="mc-button_transparent"
                                             [style.visibility]="(readOnly || (paramsTabs.selectedIndex !== index && highlightedTabIndex !== index)) ? 'hidden': undefined"
                                             (click)="$event.stopPropagation(); removeParamFromConfig(param.value.name)">
-                                            <i mc-icon="product-icons-delete_16" class="product-icons"></i>
+                                            <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
                                         </button>
                                     </div>
                                 </ng-template>
