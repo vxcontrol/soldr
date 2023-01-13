@@ -527,7 +527,7 @@ func Example_topics_api() {
 	proto, _ := vxproto.New(&FakeMainModule{})
 	module, _ := initModule(files, args, "test_module", proto)
 	fmt.Println("Result: ", runModule(module))
-	module.Close()
+	module.Close("")
 	proto.Close(ctx)
 	// Output:
 	//Received: test_data
@@ -1223,9 +1223,9 @@ func TestIMCSendDataToTopic(t *testing.T) {
 			wg.Done()
 		}()
 		wg.Wait()
-		module1.Close()
+		module1.Close("")
 		for _, module := range module2 {
-			module.Close()
+			module.Close("")
 		}
 		proto.Close(ctx)
 	}
