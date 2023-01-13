@@ -9575,6 +9575,9 @@ const docTemplate = `{
                 "develop": {
                     "type": "boolean"
                 },
+                "password_change_required": {
+                    "type": "boolean"
+                },
                 "privileges": {
                     "type": "array",
                     "items": {
