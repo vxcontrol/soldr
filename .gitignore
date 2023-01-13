@@ -45,7 +45,7 @@ web/out-tsc/*
 security/certs
 security/vconf/lic/sbh.json
 security/vconf/hardening/abh.json
-internal/app/api/utils/dbencryptor/sec-store-key.txt
+pkg/app/api/utils/dbencryptor/sec-store-key.txt
 
 # misc
 web/.angular

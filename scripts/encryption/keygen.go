@@ -13,7 +13,7 @@ func main() {
 		panic(err)
 	}
 
-	const path = "internal/app/api/utils/dbencryptor/sec-store-key.txt"
+	const path = "pkg/app/api/utils/dbencryptor/sec-store-key.txt"
 	err = ioutil.WriteFile(path, []byte(key), 0644)
 	if err != nil {
 		panic(err)

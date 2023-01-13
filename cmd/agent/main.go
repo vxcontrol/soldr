@@ -18,15 +18,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"soldr/internal/app/agent/config"
-	"soldr/internal/app/agent/mmodule"
-	readinessChecker "soldr/internal/app/agent/readiness_checker"
-	"soldr/internal/app/agent/service"
-	"soldr/internal/app/agent/upgrader"
-	"soldr/internal/observability"
-	"soldr/internal/protoagent"
-	"soldr/internal/system"
-	"soldr/internal/utils"
+	"soldr/pkg/app/agent/config"
+	"soldr/pkg/app/agent/mmodule"
+	readinessChecker "soldr/pkg/app/agent/readiness_checker"
+	"soldr/pkg/app/agent/service"
+	"soldr/pkg/app/agent/upgrader"
+	"soldr/pkg/observability"
+	"soldr/pkg/protoagent"
+	"soldr/pkg/system"
+	"soldr/pkg/utils"
 )
 
 const (

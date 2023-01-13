@@ -22,16 +22,16 @@ case "$BRANCH" in
  "release-"* ) DEVELOP="false";;
 esac
 
-DB_ENCRYPT_KEY=$(<"$ROOT_DIR/internal/app/api/utils/dbencryptor/sec-store-key.txt")
+DB_ENCRYPT_KEY=$(<"$ROOT_DIR/pkg/app/api/utils/dbencryptor/sec-store-key.txt")
 
 [ "$DEBUG" = "true" ] && DEBUG_FLAGS=(-gcflags=all="-N -l")
 OUT_BIN="${OUT_BIN:-"$ROOT_DIR/build/bin/vxapi"}"
 
 go build "${DEBUG_FLAGS[@]}" -ldflags "
-    -X soldr/internal/version.IsDevelop=$DEVELOP \
-    -X soldr/internal/version.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
-    -X soldr/internal/version.PackageRev=$PACKAGE_REV \
-    -X soldr/internal/app/server/mmodule/hardening/v1/crypto.DBEncryptKey=$DB_ENCRYPT_KEY" \
+    -X soldr/pkg/version.IsDevelop=$DEVELOP \
+    -X soldr/pkg/version.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
+    -X soldr/pkg/version.PackageRev=$PACKAGE_REV \
+    -X soldr/pkg/app/server/mmodule/hardening/v1/crypto.DBEncryptKey=$DB_ENCRYPT_KEY" \
     -o "$OUT_BIN" "$ROOT_DIR/cmd/api"
 
 ABH=$(sha256sum $OUT_BIN | awk '{print $1}')
