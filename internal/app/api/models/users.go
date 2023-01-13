@@ -98,7 +98,7 @@ func (ps PermissionsService) Valid() error {
 
 // Password is model to contain user password to change it
 type Password struct {
-	CurrentPassword string `form:"current_password" json:"current_password" validate:"nefield=Password,min=8,max=100,required" gorm:"-"`
+	CurrentPassword string `form:"current_password" json:"current_password" validate:"nefield=Password,min=5,max=100,required" gorm:"-"`
 	Password        string `form:"password" json:"password" validate:"stpass,max=100,required" gorm:"type:VARCHAR(100)"`
 	ConfirmPassword string `form:"confirm_password" json:"confirm_password" validate:"eqfield=Password" gorm:"-"`
 }
