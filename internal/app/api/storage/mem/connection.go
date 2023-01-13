@@ -9,8 +9,6 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-var ErrNotFound = errors.New("not found")
-
 type DBConnectionStorage struct {
 	mu    sync.RWMutex // protects map below
 	store map[string]*gorm.DB
@@ -27,7 +25,7 @@ func (s *DBConnectionStorage) Get(hash string) (*gorm.DB, error) {
 	defer s.mu.RUnlock()
 	conns, found := s.store[hash]
 	if !found {
-		return nil, ErrNotFound
+		return nil, errors.New("not found")
 	}
 	return conns, nil
 }
@@ -55,7 +53,7 @@ func (s *S3ConnectionStorage) Get(hash string) (storage.IStorage, error) {
 	defer s.mu.RUnlock()
 	conn, found := s.store[hash]
 	if !found {
-		return nil, ErrNotFound
+		return nil, errors.New("not found")
 	}
 	return conn, nil
 }
