@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"soldr/internal/app/server/mmodule/hardening/v1/sbher"
+	"soldr/pkg/app/server/mmodule/hardening/v1/sbher"
 )
 
 type Config struct {

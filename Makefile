@@ -95,7 +95,7 @@ generate-all: generate-certs generate-keys generate-ssl generate
 .PHONY: generate
 generate: $(GOSWAGGER_BIN)
 	go generate -v ./...
-	$(GOSWAGGER_BIN) init -d cmd/api/ -g ../../internal/app/api/server/router.go -o internal/app/api/docs/ --parseDependency --parseInternal --parseDepth 2
+	$(GOSWAGGER_BIN) init -d cmd/api/ -g ../../pkg/app/api/server/router.go -o pkg/app/api/docs/ --parseDependency --parseInternal --parseDepth 2
 	make -C $(CURDIR)/scripts/errgen generate
 
 .PHONY: generate-ssl
@@ -186,4 +186,4 @@ clean-sec:
 		security/certs \
 		security/vconf/hardening/abh.json \
 		security/vconf/lic/sbh.json \
-		internal/app/api/utils/dbencryptor/sec-store-key.txt
+		pkg/app/api/utils/dbencryptor/sec-store-key.txt

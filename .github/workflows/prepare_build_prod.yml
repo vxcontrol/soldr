@@ -28,4 +28,4 @@ jobs:
             security/certs
             security/vconf/hardening/abh.json
             security/vconf/lic/sbh.json
-            internal/app/api/utils/dbencryptor/sec-store-key.txt
+            pkg/app/api/utils/dbencryptor/sec-store-key.txt

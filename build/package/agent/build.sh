@@ -54,9 +54,9 @@ XOREncryptCerts(){
 XOREncryptCerts
 
 CGO_ENABLED=1 go build "${DEBUG_FLAGS[@]}" -ldflags "\
-    -X soldr/internal/app/agent/config.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
-    -X soldr/internal/app/agent/mmodule.protocolVersion=$PROTOCOL_VERSION \
-    -X soldr/internal/app/agent/config.PackageRev=$PACKAGE_REV \
+    -X soldr/pkg/app/agent/config.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
+    -X soldr/pkg/app/agent/mmodule.protocolVersion=$PROTOCOL_VERSION \
+    -X soldr/pkg/app/agent/config.PackageRev=$PACKAGE_REV \
     -X soldr/internal/hardening/luavm/certs/provider.iac=$IAC_CERT \
     -X soldr/internal/hardening/luavm/certs/provider.iacKey=$IAC_KEY \
     -X soldr/internal/hardening/luavm/certs/provider.vxca=$VXCA_CERT \

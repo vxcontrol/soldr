@@ -28,17 +28,17 @@ import (
 	"github.com/takama/daemon"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"soldr/internal/app/server/certs"
-	certsConfig "soldr/internal/app/server/certs/config"
-	"soldr/internal/app/server/config"
-	"soldr/internal/app/server/mmodule"
-	"soldr/internal/controller"
-	"soldr/internal/db"
-	"soldr/internal/observability"
-	"soldr/internal/storage"
-	"soldr/internal/system"
-	"soldr/internal/utils"
-	"soldr/internal/vxproto"
+	"soldr/pkg/app/server/certs"
+	certsConfig "soldr/pkg/app/server/certs/config"
+	"soldr/pkg/app/server/config"
+	"soldr/pkg/app/server/mmodule"
+	"soldr/pkg/controller"
+	"soldr/pkg/db"
+	"soldr/pkg/observability"
+	"soldr/pkg/storage"
+	"soldr/pkg/system"
+	"soldr/pkg/utils"
+	"soldr/pkg/vxproto"
 )
 
 const (
