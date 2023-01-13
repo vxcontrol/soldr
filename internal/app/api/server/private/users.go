@@ -133,16 +133,15 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 		return
 	}
 
-	if encPass, err = utils.EncryptPassword(form.Password); err == nil {
-		user.Password = string(encPass)
-		user.PasswordChangeRequired = false
-	} else {
+	if encPass, err = utils.EncryptPassword(form.Password); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error making new password for current user")
 		utils.HTTPError(c, srverrors.ErrChangePasswordCurrentUserInvalidNewPassword, err)
 		return
 	}
+	user.Password = string(encPass)
+	user.PasswordChangeRequired = false
 
-	if err = s.db.Scopes(scope).Select("password").Save(&user).Error; err != nil {
+	if err = s.db.Scopes(scope).Select("password", "password_change_required").Save(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating password for current user")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
