@@ -331,11 +331,11 @@ func (mm *MainModule) serveStopModules(ctx context.Context, dst string, data []b
 			return
 		}
 
-		if err = mm.loader.Stop(id); err != nil {
+		if err = mm.loader.Stop(id, "module_remove"); err != nil {
 			return
 		}
 
-		if !mm.loader.Del(id) {
+		if !mm.loader.Del(id, "module_remove") {
 			err = fmt.Errorf(failedToDeleteModuleFromLoaderMsg, id)
 			return
 		}
@@ -378,11 +378,11 @@ func (mm *MainModule) serveUpdateModules(ctx context.Context, dst string, data [
 			return
 		}
 
-		if err = mm.loader.Stop(id); err != nil {
+		if err = mm.loader.Stop(id, "module_update"); err != nil {
 			return
 		}
 
-		if !mm.loader.Del(id) {
+		if !mm.loader.Del(id, "module_update") {
 			err = fmt.Errorf(failedToDeleteModuleFromLoaderMsg, id)
 			return
 		}

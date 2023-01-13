@@ -109,17 +109,19 @@ func (m *Module) Start() {
 	}
 }
 
-// Stop is function which set close state for module
-func (m *Module) Stop() {
+// Stop closes module state
+func (m *Module) Stop(stopReason string) {
 	if m.closed || m.state == nil {
 		return
 	}
 
-	m.logger.WithContext(m.state.ctx).Info("the module wants to stop")
+	m.logger.WithContext(m.state.ctx).Infof("the module wants to stop: %s", stopReason)
 	defer m.logger.WithContext(m.state.ctx).Info("the module stopping has done")
 
 	m.closed = true
-	m.controlMsgCb(m.state.ctx, "quit", "")
+	if _, err := m.controlMsgCb(m.state.ctx, "quit", stopReason); err != nil {
+		m.logger.WithContext(m.state.ctx).WithError(err).Error("failed to send control message")
+	}
 	close(m.quit)
 	close(m.notifier)
 
@@ -127,13 +129,13 @@ func (m *Module) Stop() {
 	m.delCbs([]interface{}{"data", "text", "file", "msg", "control"})
 }
 
-// Close is function which release lua state for module
-func (m *Module) Close() {
+// Close releases Lua state for a module
+func (m *Module) Close(stopReason string) {
 	if m.state == nil {
 		return
 	}
 
-	m.Stop()
+	m.Stop(stopReason)
 	luar.Register(m.state.L, "__api", luar.Map{})
 	luar.Register(m.state.L, "__agents", luar.Map{})
 	luar.Register(m.state.L, "__routes", luar.Map{})

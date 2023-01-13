@@ -272,7 +272,7 @@ func Example_args() {
 	proto, _ := vxproto.New(&FakeMainModule{})
 	module, _ := initModule(files, args, "test_module", proto)
 	fmt.Println("Result: ", runModule(module))
-	module.Close()
+	module.Close("")
 	proto.Close(ctx)
 	// Output:
 	//1 arg1 4
@@ -304,7 +304,7 @@ func Example_module_await() {
 	proto, _ := vxproto.New(&FakeMainModule{})
 	module, _ := initModule(files, args, "test_module", proto)
 	fmt.Println("Result: ", runModule(module))
-	module.Close()
+	module.Close("")
 	proto.Close(ctx)
 	// Output:
 	//test_module
@@ -333,7 +333,7 @@ func Example_module_await_inf() {
 	}()
 
 	time.Sleep(time.Second)
-	module.Close()
+	module.Close("")
 	proto.Close(ctx)
 	wg.Wait()
 	// Output:
@@ -367,7 +367,7 @@ func Test_module_exepath(t *testing.T) {
 		t.Fatalf("failed to get a running executable path: %v", err)
 	}
 	time.Sleep(time.Second)
-	module.Close()
+	module.Close("")
 	proto.Close(ctx)
 	wg.Wait()
 
@@ -453,7 +453,7 @@ func Example_api() {
 	proto, _ := vxproto.New(&FakeMainModule{})
 	module, _ := initModule(files, args, "test_module", proto)
 	fmt.Println("Result: ", runModule(module))
-	module.Close()
+	module.Close("")
 	proto.Close(ctx)
 	// Output:
 	//Result:  success
@@ -811,8 +811,8 @@ func Example_imc() {
 		wg.Done()
 	}()
 	wg.Wait()
-	module1.Close()
-	module2.Close()
+	module1.Close("")
+	module2.Close("")
 	proto.Close(ctx)
 	// Unordered output:
 	//Result1:  success
@@ -1005,8 +1005,8 @@ func TestIMCSendDataFromCallback(t *testing.T) {
 			wg.Done()
 		}()
 		wg.Wait()
-		module1.Close()
-		module2.Close()
+		module1.Close("")
+		module2.Close("")
 		proto.Close(ctx)
 	}
 }
@@ -1460,8 +1460,8 @@ func TestIMCAsyncSendData(t *testing.T) {
 			wg.Done()
 		}()
 		wg.Wait()
-		module1.Close()
-		module2.Close()
+		module1.Close("")
+		module2.Close("")
 		proto.Close(ctx)
 	}
 }
@@ -1479,11 +1479,11 @@ func TestLuaStartStoppedModule(t *testing.T) {
 	if runModule(module) != "success" {
 		t.Fatal("Error on getting result from module (step 1)")
 	}
-	module.Stop()
+	module.Stop("")
 	if runModule(module) != "success" {
 		t.Fatal("Error on getting result from module (step 2)")
 	}
-	module.Close()
+	module.Close("")
 	if err := proto.Close(ctx); err != nil {
 		t.Fatal("Error on close vxproto object: ", err.Error())
 	}
@@ -1524,12 +1524,12 @@ func BenchmarkLuaLoadModuleWithMainModule(b *testing.B) {
 			b.Fatal("Error with getting result: ", result)
 		}
 
-		module.Stop()
+		module.Stop("")
 		if !proto.DelModule(socket) {
 			b.Fatal("Error with deleting module from vxproto")
 		}
 
-		module.Close()
+		module.Close("")
 	}
 
 	for i := 0; i < b.N; i++ {
@@ -1686,7 +1686,7 @@ func BenchmarkLuaLinkAgentToModule(b *testing.B) {
 	b.StopTimer()
 
 	time.Sleep(time.Second)
-	module.Close()
+	module.Close("")
 	if err := proto_server.Close(ctx); err != nil {
 		b.Fatal("Failed to close vxproto object: ", err.Error())
 	}
@@ -1827,8 +1827,8 @@ func BenchmarkIMCSendData(b *testing.B) {
 	}
 
 	wg.Wait()
-	module1.Close()
-	module2.Close()
+	module1.Close("")
+	module2.Close("")
 	proto.Close(ctx)
 }
 
@@ -1963,8 +1963,8 @@ func BenchmarkIMCAsyncSendData(b *testing.B) {
 	}
 
 	wg.Wait()
-	module1.Close()
-	module2.Close()
+	module1.Close("")
+	module2.Close("")
 	proto.Close(ctx)
 }
 

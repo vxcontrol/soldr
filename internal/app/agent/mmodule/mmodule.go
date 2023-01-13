@@ -380,7 +380,7 @@ func (mm *MainModule) performConnection(ctx context.Context, connConfig map[stri
 	connectCtx, mm.stopConnect = context.WithCancel(ctx)
 	if err := mm.proto.Connect(connectCtx, c, mm.connValidator, mm.tunnelEncrypter); err != nil {
 		if errors.Is(err, vxcommonErrors.ErrConnectionInitializationRequired) {
-			if unloadErr := mm.unloadModules(ctx); unloadErr != nil {
+			if unloadErr := mm.unloadModules(ctx, "module_remove"); unloadErr != nil {
 				return fmt.Errorf(
 					"failed to unload modules (%v) while processing the connection error: %w",
 					unloadErr,
@@ -460,8 +460,8 @@ func getConfigHost(c map[string]string) (string, error) {
 	return conn, nil
 }
 
-// Stop is function which stop main logic of MainModule
-func (mm *MainModule) Stop() (err error) {
+// Stop finishes MainModule
+func (mm *MainModule) Stop(stopReason string) (err error) {
 	stopCtx, stopSpan := obs.Observer.NewSpan(mm.ctx, obs.SpanKindInternal, "stop_agent")
 	defer stopSpan.End()
 
@@ -494,7 +494,7 @@ func (mm *MainModule) Stop() (err error) {
 		return
 	}
 
-	if err = mm.unloadModules(stopCtx); err != nil {
+	if err = mm.unloadModules(stopCtx, stopReason); err != nil {
 		err = fmt.Errorf("failed to unload modules: %w", err)
 		return
 	}
@@ -529,14 +529,14 @@ func (mm *MainModule) Stop() (err error) {
 	return nil
 }
 
-func (mm *MainModule) unloadModules(ctx context.Context) error {
-	if err := mm.loader.StopAll(); err != nil {
+func (mm *MainModule) unloadModules(ctx context.Context, stopReason string) error {
+	if err := mm.loader.StopAll(stopReason); err != nil {
 		return fmt.Errorf("failed to stop the loaded modules: %w", err)
 	}
 
 	for _, id := range mm.loader.List() {
 		logrus.WithContext(ctx).Debugf("deleting module %s", id)
-		if !mm.loader.Del(id) {
+		if !mm.loader.Del(id, stopReason) {
 			return fmt.Errorf("failed to delete module %s from loader", id)
 		}
 	}
