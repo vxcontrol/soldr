@@ -627,15 +627,10 @@ export class AssigningActionsMasterComponent implements OnInit, OnDestroy {
 
             return false;
         };
-        module.dynamic_dependencies.forEach((dep, index, list) => {
-            if (dep.type !== DependencyType.ToMakeAction) {
-                return;
-            }
-            if (dep.module_name === 'this' || !lookupDepInEventAction(dep)) {
-                list.splice(index, 1);
 
-                return;
-            }
-        });
+        module.dynamic_dependencies = module.dynamic_dependencies.filter(
+            (dep) =>
+                dep.type !== DependencyType.ToMakeAction || (dep.module_name !== 'this' && lookupDepInEventAction(dep))
+        );
     }
 }
