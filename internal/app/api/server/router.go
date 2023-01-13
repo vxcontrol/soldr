@@ -22,6 +22,8 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
+	"soldr/internal/app/api/client"
+	"soldr/internal/app/api/server/context"
 	srvevents "soldr/internal/app/api/server/events"
 	"soldr/internal/app/api/server/private"
 	"soldr/internal/app/api/server/proto"
@@ -48,8 +50,8 @@ import (
 func NewRouter(
 	db *gorm.DB,
 	exchanger *srvevents.Exchanger,
-	serviceDBConns *mem.ServiceDBConnectionStorage,
-	serviceS3Conns *mem.ServiceS3ConnectionStorage,
+	dbConns *mem.DBConnectionStorage,
+	s3Conns *mem.S3ConnectionStorage,
 
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
@@ -144,23 +146,21 @@ func NewRouter(
 		})
 	}
 
+	serverConnector := client.NewAgentServerClient(db, dbConns, s3Conns)
+
 	// services
-	agentService := private.NewAgentService(
-		db,
-		serviceDBConns,
-		serviceS3Conns,
-	)
+	agentService := private.NewAgentService(db, serverConnector)
 	binariesService := private.NewBinariesService(db)
-	eventService := private.NewEventService()
-	groupService := private.NewGroupService()
-	moduleService := private.NewModuleService(db)
+	eventService := private.NewEventService(serverConnector)
+	groupService := private.NewGroupService(serverConnector)
+	moduleService := private.NewModuleService(db, serverConnector)
 	optionService := private.NewOptionService(db)
-	policyService := private.NewPolicyService(db)
+	policyService := private.NewPolicyService(db, serverConnector)
 	portingService := private.NewPortingService(db)
 	roleService := private.NewRoleService(db)
-	upgradeService := private.NewUpgradeService(db)
-	tagService := private.NewTagService(db)
-	versionService := private.NewVersionService(db)
+	upgradeService := private.NewUpgradeService(db, serverConnector)
+	tagService := private.NewTagService(db, serverConnector)
+	versionService := private.NewVersionService(db, serverConnector)
 	servicesService := private.NewServicesService(db)
 	tenantService := private.NewTenantService(db)
 	userService := private.NewUserService(db)
@@ -173,12 +173,12 @@ func NewRouter(
 
 		setSwaggerGroup(api)
 
-		setVXProtoGroup(api)
+		setVXProtoGroup(api, db)
 	}
 
 	privateGroup := api.Group("/")
 	privateGroup.Use(authRequired())
-	privateGroup.Use(setServiceInfo())
+	privateGroup.Use(setServiceInfo(db))
 	{
 		setTokenGroup(privateGroup)
 
@@ -240,10 +240,10 @@ func setSwaggerGroup(parent *gin.RouterGroup) {
 	}
 }
 
-func setVXProtoGroup(parent *gin.RouterGroup) {
+func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB) {
 	vxProtoGroup := parent.Group("/")
 	vxProtoGroup.Use(authTokenProtoRequired())
-	vxProtoGroup.Use(setServiceInfo())
+	vxProtoGroup.Use(setServiceInfo(db))
 	{
 		protoAggregateGroup := vxProtoGroup.Group("/vxpws")
 		{
@@ -527,7 +527,7 @@ func setOptionsGroup(parent *gin.RouterGroup, svc *private.OptionService) {
 func setNotificationsGroup(parent *gin.RouterGroup, exchanger *srvevents.Exchanger) {
 	notificationsGroup := parent.Group("/notifications")
 	premsFilter := func(c *gin.Context, name srvevents.EventChannelName) bool {
-		prms, ok := utils.GetStringArray(c, "prm")
+		prms, ok := context.GetStringArray(c, "prm")
 		if !ok {
 			return false
 		}

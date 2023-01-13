@@ -21,8 +21,10 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/jinzhu/gorm"
 
+	"soldr/internal/app/api/client"
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 	"soldr/internal/crypto"
 	"soldr/internal/storage"
@@ -1276,7 +1278,7 @@ func getModuleName(c *gin.Context, db *gorm.DB, name string, version string) (st
 		return "", errors.New("can't get service")
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", name, tid, sv.Type)
 	}
@@ -1289,11 +1291,15 @@ func getModuleName(c *gin.Context, db *gorm.DB, name string, version string) (st
 }
 
 type ModuleService struct {
-	db *gorm.DB
+	db              *gorm.DB
+	serverConnector *client.AgentServerClient
 }
 
-func NewModuleService(db *gorm.DB) *ModuleService {
-	return &ModuleService{db: db}
+func NewModuleService(db *gorm.DB, serverConnector *client.AgentServerClient) *ModuleService {
+	return &ModuleService{
+		db:              db,
+		serverConnector: serverConnector,
+	}
 }
 
 // GetAgentModules is a function to return agent module list view on dashboard
@@ -1310,23 +1316,29 @@ func NewModuleService(db *gorm.DB) *ModuleService {
 // @Router /agents/{hash}/modules [get]
 func (s *ModuleService) GetAgentModules(c *gin.Context) {
 	var (
-		err   error
 		hash  = c.Param("hash")
-		iDB   *gorm.DB
 		pids  []uint64
 		query utils.TableQuery
 		resp  agentModules
 		sv    *models.Service
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrModulesInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1394,7 +1406,7 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		modNames = append(modNames, module.Info.Name)
 	}
 	modules := make([]models.ModuleS, 0)
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
 	}
@@ -1450,16 +1462,22 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 // @Router /agents/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetAgentModule(c *gin.Context) {
 	var (
-		err        error
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		pids       []uint64
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1516,11 +1534,9 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 // @Router /agents/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 	var (
-		err        error
 		data       []byte
 		filepath   = path.Join("/", c.DefaultQuery("file", "main.vue"))
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		pids       []uint64
@@ -1537,7 +1553,16 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		c.Data(http.StatusOK, ctype, data)
 	}()
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1603,24 +1628,30 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 // @Router /groups/{hash}/modules [get]
 func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	var (
-		err   error
 		gps   models.GroupPolicies
 		hash  = c.Param("hash")
-		iDB   *gorm.DB
 		pids  []uint64
 		query utils.TableQuery
 		resp  groupModules
 		sv    *models.Service
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrModulesInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1688,7 +1719,7 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		modNames = append(modNames, module.Info.Name)
 	}
 	modules := make([]models.ModuleS, 0)
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
 	}
@@ -1743,17 +1774,23 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 // @Router /groups/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetGroupModule(c *gin.Context) {
 	var (
-		err        error
 		gps        models.GroupPolicies
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		pids       []uint64
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1810,12 +1847,10 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 // @Router /groups/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 	var (
-		err        error
 		data       []byte
 		filepath   = path.Join("/", c.DefaultQuery("file", "main.vue"))
 		gps        models.GroupPolicies
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		pids       []uint64
@@ -1832,7 +1867,16 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		c.Data(http.StatusOK, ctype, data)
 	}()
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1897,9 +1941,7 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 // @Router /policies/{hash}/modules [get]
 func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	var (
-		err      error
 		hash     = c.Param("hash")
-		iDB      *gorm.DB
 		modulesA []models.ModuleA
 		modulesS []models.ModuleS
 		policy   models.Policy
@@ -1908,13 +1950,21 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		sv       *models.Service
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.HTTPError(c, srverrors.ErrModulesInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1937,7 +1987,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	queryA := query
 	queryA.Page = 0
@@ -2067,16 +2117,22 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 // @Router /policies/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 	var (
-		err        error
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		moduleName = c.Param("module_name")
 		module     models.ModuleA
 		policy     models.Policy
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -2119,11 +2175,9 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 // @Router /policies/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 	var (
-		err        error
 		data       []byte
 		filepath   = path.Join("/", c.DefaultQuery("file", "main.vue"))
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		policy     models.Policy
@@ -2140,7 +2194,16 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 		c.Data(http.StatusOK, ctype, data)
 	}()
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -2186,10 +2249,8 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 // @Router /policies/{hash}/modules/{module_name} [put]
 func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	var (
-		err        error
 		form       policyModulePatch
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		moduleA    models.ModuleA
 		moduleName = c.Param("module_name")
 		moduleS    models.ModuleS
@@ -2205,18 +2266,26 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err = c.ShouldBindJSON(&form); err != nil {
-		name, nameErr := getPolicyName(c, hash)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		return
+	}
+
+	if err := c.ShouldBindJSON(&form); err != nil {
+		name, nameErr := getPolicyName(iDB, hash)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesInvalidRequest, err, uaf)
-		return
-	}
-
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
 		return
 	}
 
@@ -2247,7 +2316,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		db = db.Where("name = ? AND tenant_id IN (0, ?) AND service_type = ?", moduleName, tid, sv.Type)
 		switch form.Version {
@@ -2479,9 +2548,7 @@ func compareModulesChanges(moduleIn, moduleDB models.ModuleA, encryptor crypto.I
 // @Router /policies/{hash}/modules/{module_name} [delete]
 func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	var (
-		err        error
 		hash       = c.Param("hash")
-		iDB        *gorm.DB
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		policy     models.Policy
@@ -2495,8 +2562,16 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -2566,9 +2641,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 // @Router /policies/{hash}/modules/{module_name}/secure_config [post]
 func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	var (
-		err        error
 		payload    models.ModuleConfig
-		iDB        *gorm.DB
 		moduleA    models.ModuleA
 		moduleS    models.ModuleS
 		policy     models.Policy
@@ -2585,7 +2658,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		ObjectId:   hash,
 	}
 
-	err = c.ShouldBindJSON(&payload)
+	err := c.ShouldBindJSON(&payload)
 	switch {
 	case err != nil:
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
@@ -2602,8 +2675,16 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 	uaf.ActionCode = fmt.Sprintf("%s, key: %s", uaf.ActionCode, paramName)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -2631,7 +2712,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id IN (0, ?) AND service_type = ?", moduleName, tid, sv.Type).
 			Order("ver_major DESC, ver_minor DESC, ver_patch DESC") // latest
@@ -2714,8 +2795,6 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Router /policies/{hash}/modules/{module_name}/secure_config/{param_name} [get]
 func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	var (
-		err        error
-		iDB        *gorm.DB
 		moduleA    models.ModuleA
 		moduleS    models.ModuleS
 		policy     models.Policy
@@ -2732,8 +2811,16 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		ObjectId:   hash,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -2761,7 +2848,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id IN (0, ?) AND service_type = ?", moduleName, tid, sv.Type).
 			Order("ver_major DESC, ver_minor DESC, ver_patch DESC") // latest
@@ -2822,7 +2909,6 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Router /modules/ [get]
 func (s *ModuleService) GetModules(c *gin.Context) {
 	var (
-		err        error
 		query      utils.TableQuery
 		sv         *models.Service
 		resp       systemModules
@@ -2830,7 +2916,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 		encryptor  crypto.IDBConfigEncryptor
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrModulesInvalidRequest, err)
 		return
@@ -2846,7 +2932,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	query.Init("modules", modulesSQLMappers)
 
@@ -2877,11 +2963,13 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 			return db
 		},
 	}
-	if resp.Total, err = query.Query(s.db, &resp.Modules, funcs...); err != nil {
+	total, err := query.Query(s.db, &resp.Modules, funcs...)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
 		utils.HTTPError(c, srverrors.ErrGetModulesInvalidModulesQuery, err)
 		return
 	}
+	resp.Total = total
 
 	for _, module := range resp.Modules {
 		if err = module.Valid(); err != nil {
@@ -2916,7 +3004,6 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 func (s *ModuleService) CreateModule(c *gin.Context) {
 	var (
 		count     int64
-		err       error
 		info      models.ModuleInfo
 		module    *models.ModuleS
 		sv        *models.Service
@@ -2940,9 +3027,9 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
-	if err = c.ShouldBindJSON(&info); err != nil || info.Valid() != nil {
+	if err := c.ShouldBindJSON(&info); err != nil || info.Valid() != nil {
 		if err == nil {
 			err = info.Valid()
 		}
@@ -2956,7 +3043,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", info.Name, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil {
+	if err := s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding number of system module")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateModuleGetCountFail, err, uaf)
 		return
@@ -2967,6 +3054,8 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	}
 
 	info.System = false
+
+	var err error
 	if template, module, err = LoadModuleSTemplate(&info); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading module")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateModuleLoadFail, err, uaf)
@@ -2989,8 +3078,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return
 	}
 
-	err = module.DecryptSecureParameters(encryptor)
-	if err != nil {
+	if err = module.DecryptSecureParameters(encryptor); err != nil {
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesFailedToEncryptSecureConfig, nil, uaf)
 		return
 	}
@@ -3035,7 +3123,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
@@ -3054,12 +3142,11 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	deletePolicyModule := func(s *models.Service) error {
 		var (
 			err     error
-			iDB     *gorm.DB
 			modules []models.ModuleA
 			s3      storage.IStorage
 		)
 
-		iDB = utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
+		iDB := utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
 			strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
 		if iDB == nil {
 			utils.FromContext(c).WithError(nil).Errorf("error openning connection to instance DB")
@@ -3138,15 +3225,13 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 // @Router /modules/{module_name}/versions/ [get]
 func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 	var (
-		err error
-
 		moduleName = c.Param("module_name")
 		query      utils.TableQuery
 		sv         *models.Service
 		resp       systemShortModules
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrModulesInvalidRequest, err)
 		return
@@ -3157,7 +3242,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	query.Init("modules", modulesSQLMappers)
 	query.SetFilters([]func(db *gorm.DB) *gorm.DB{
@@ -3170,12 +3255,13 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 			return db.Order("ver_major DESC, ver_minor DESC, ver_patch DESC")
 		},
 	})
-	if resp.Total, err = query.Query(s.db, &resp.Modules); err != nil {
+	total, err := query.Query(s.db, &resp.Modules)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
 		utils.HTTPError(c, srverrors.ErrGetModuleVersionsInvalidModulesQuery, err)
-
 		return
 	}
+	resp.Total = total
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
@@ -3202,7 +3288,6 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version} [get]
 func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 	var (
-		err        error
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
@@ -3220,12 +3305,12 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrModulesNotFound, err)
@@ -3240,7 +3325,7 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		return
 	}
 
-	if err = module.DecryptSecureParameters(encryptor); err != nil {
+	if err := module.DecryptSecureParameters(encryptor); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error decrypting module data")
 		utils.HTTPError(c, srverrors.ErrModulesFailedToDecryptSecureConfig, err)
 		return
@@ -3265,7 +3350,6 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	var (
 		cfiles     map[string][]byte
-		err        error
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		form       moduleVersionPatch
@@ -3283,7 +3367,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err = c.ShouldBindJSON(&form); err != nil || form.Module.Valid() != nil {
+	if err := c.ShouldBindJSON(&form); err != nil || form.Module.Valid() != nil {
 		if err == nil {
 			err = form.Module.Valid()
 		}
@@ -3313,12 +3397,12 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesSystemModuleNotFound, err, uaf)
@@ -3355,7 +3439,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		}
 	}
 
-	err = form.Module.EncryptSecureParameters(encryptor)
+	err := form.Module.EncryptSecureParameters(encryptor)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesFailedToEncryptSecureConfig, err, uaf)
@@ -3423,7 +3507,6 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		cfiles     map[string][]byte
 		clver      models.ChangelogVersion
 		count      int64
-		err        error
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
@@ -3449,7 +3532,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return
 	}
 
-	if err = c.ShouldBindJSON(&clver); err != nil || clver.Valid() != nil {
+	if err := c.ShouldBindJSON(&clver); err != nil || clver.Valid() != nil {
 		if err == nil {
 			err = clver.Valid()
 		}
@@ -3462,12 +3545,12 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion("latest"), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion("latest"), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesSystemModuleNotFound, err, uaf)
@@ -3479,7 +3562,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
-	if err = module.Valid(); err != nil {
+	if err := module.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesInvalidSystemModuleData, err, uaf)
 		return
@@ -3489,7 +3572,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return db.Where("state LIKE ?", "draft")
 	}
 
-	if err = s.db.Scopes(scope, draft).Model(&module).Count(&count).Error; err != nil {
+	if err := s.db.Scopes(scope, draft).Model(&module).Count(&count).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding number of system module drafts")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateModuleVersionGetDraftNumberFail, err, uaf)
 		return
@@ -3576,10 +3659,8 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	var (
 		count      int64
-		err        error
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
-		s3         storage.IStorage
 		sv         *models.Service
 		version    = c.Param("version")
 	)
@@ -3596,12 +3677,12 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil || count == 0 {
+	if err := s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil || count == 0 {
 		utils.FromContext(c).WithError(err).Errorf("error finding number of system module versions")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrDeleteModuleVersionGetVersionNumberFail, err, uaf)
 		return
@@ -3611,7 +3692,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		return
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesSystemModuleNotFound, err, uaf)
@@ -3626,13 +3707,14 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
-	if err = s.db.Delete(&module).Error; err != nil {
+	if err := s.db.Delete(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
 		return
 	}
 
-	if s3, err = storage.NewS3(nil); err != nil {
+	s3, err := storage.NewS3(nil)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
 		return
@@ -3661,8 +3743,6 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/updates [get]
 func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	var (
-		err        error
-		iDB        *gorm.DB
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		pids       []uint64
@@ -3672,8 +3752,16 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -3682,7 +3770,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope = func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
@@ -3748,7 +3836,6 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/updates [post]
 func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	var (
-		err        error
 		moduleName = c.Param("module_name")
 		module     models.ModuleS
 		sv         *models.Service
@@ -3767,12 +3854,12 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesSystemModuleNotFound, err, uaf)
@@ -3787,7 +3874,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
-	if err = updatePolicyModulesByModuleS(c, &module, sv); err != nil {
+	if err := updatePolicyModulesByModuleS(c, &module, sv); err != nil {
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
 		return
 	}
@@ -3808,11 +3895,9 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/files [get]
 func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 	var (
-		err        error
 		files      []string
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
-		s3         storage.IStorage
 		sv         *models.Service
 		version    = c.Param("version")
 	)
@@ -3822,12 +3907,12 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrModulesSystemModuleNotFound, err)
@@ -3841,7 +3926,8 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		return
 	}
 
-	if s3, err = storage.NewS3(nil); err != nil {
+	s3, err := storage.NewS3(nil)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -3871,13 +3957,11 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/files/file [get]
 func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 	var (
-		err        error
 		data       string
 		fileData   []byte
 		filePath   = c.Query("path")
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
-		s3         storage.IStorage
 		sv         *models.Service
 		version    = c.Param("version")
 	)
@@ -3887,12 +3971,12 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrModulesSystemModuleNotFound, err)
@@ -3906,7 +3990,8 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		return
 	}
 
-	if s3, err = storage.NewS3(nil); err != nil {
+	s3, err := storage.NewS3(nil)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		utils.HTTPError(c, srverrors.ErrInternal, err)
 		return
@@ -3944,14 +4029,12 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/files/file [put]
 func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	var (
-		err        error
 		data       []byte
 		files      map[string]os.FileInfo
 		form       systemModuleFilePatch
 		info       os.FileInfo
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
-		s3         storage.IStorage
 		sv         *models.Service
 		version    = c.Param("version")
 	)
@@ -3968,12 +4051,12 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPErrorWithUAFields(c, srverrors.ErrModulesSystemModuleNotFound, err, uaf)
@@ -3994,7 +4077,8 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		return
 	}
 
-	if s3, err = storage.NewS3(nil); err != nil {
+	s3, err := storage.NewS3(nil)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
 		return
@@ -4123,8 +4207,6 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/options/{option_name} [get]
 func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	var (
-		err        error
-		data       []byte
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		optionName = c.Param("option_name")
@@ -4137,12 +4219,12 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		return
 	}
 
-	tid, _ := utils.GetUint64(c, "tid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.HTTPError(c, srverrors.ErrModulesSystemModuleNotFound, err)
@@ -4167,7 +4249,8 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	}
 
 	options := make(map[string]json.RawMessage)
-	if data, err = json.Marshal(module); err != nil {
+	data, err := json.Marshal(module)
+	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error building system module JSON")
 		utils.HTTPError(c, srverrors.ErrGetModuleVersionOptionMakeJsonFail, err)
 		return

@@ -2,113 +2,64 @@ package mem
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"sync"
 
 	"soldr/internal/storage"
 
 	"github.com/jinzhu/gorm"
-
-	"soldr/internal/app/api/models"
-	"soldr/internal/app/api/utils"
 )
 
-var ErrNotFound = errors.New("not found")
-
-type ServiceDBConnectionStorage struct {
+type DBConnectionStorage struct {
 	mu    sync.RWMutex // protects map below
 	store map[string]*gorm.DB
 }
 
-func NewServiceDBConnectionStorage() *ServiceDBConnectionStorage {
-	return &ServiceDBConnectionStorage{
+func NewDBConnectionStorage() *DBConnectionStorage {
+	return &DBConnectionStorage{
 		store: make(map[string]*gorm.DB),
 	}
 }
 
-func (s *ServiceDBConnectionStorage) Get(hash string) (*gorm.DB, error) {
+func (s *DBConnectionStorage) Get(hash string) (*gorm.DB, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	conns, found := s.store[hash]
 	if !found {
-		return nil, ErrNotFound
+		return nil, errors.New("not found")
 	}
 	return conns, nil
 }
 
-func (s *ServiceDBConnectionStorage) Load(services []models.Service) error {
-	if len(services) == 0 {
-		return nil
-	}
-
+func (s *DBConnectionStorage) Set(hash string, db *gorm.DB) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range services {
-		service := services[i]
-
-		_, exists := s.store[service.Hash]
-		if exists {
-			continue
-		}
-
-		db := utils.GetDB(
-			service.Info.DB.User,
-			service.Info.DB.Pass,
-			service.Info.DB.Host,
-			strconv.Itoa(int(service.Info.DB.Port)),
-			service.Info.DB.Name,
-		)
-		if db == nil {
-			return fmt.Errorf("could not connect to service database: %d", service.ID)
-		}
-		s.store[service.Hash] = db
-	}
-	return nil
+	s.store[hash] = db
+	s.mu.Unlock()
 }
 
-type ServiceS3ConnectionStorage struct {
-	mu    sync.RWMutex // protects map below
+type S3ConnectionStorage struct {
+	mu sync.RWMutex // protects map below
+	// TODO: store S3 struct instead of interface
 	store map[string]storage.IStorage
 }
 
-func NewServiceS3ConnectionStorage() *ServiceS3ConnectionStorage {
-	return &ServiceS3ConnectionStorage{
+func NewS3ConnectionStorage() *S3ConnectionStorage {
+	return &S3ConnectionStorage{
 		store: make(map[string]storage.IStorage),
 	}
 }
 
-func (s *ServiceS3ConnectionStorage) Get(hash string) (storage.IStorage, error) {
+func (s *S3ConnectionStorage) Get(hash string) (storage.IStorage, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	conn, found := s.store[hash]
 	if !found {
-		return nil, ErrNotFound
+		return nil, errors.New("not found")
 	}
 	return conn, nil
 }
 
-func (s *ServiceS3ConnectionStorage) Load(services []models.Service) error {
-	if len(services) == 0 {
-		return nil
-	}
-
+func (s *S3ConnectionStorage) Set(hash string, s3 storage.IStorage) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	for i := range services {
-		service := services[i]
-
-		_, exists := s.store[service.Hash]
-		if exists {
-			continue
-		}
-
-		// TODO: return S3 struct instead of interface
-		conn, err := storage.NewS3(service.Info.S3.ToS3ConnParams())
-		if err != nil {
-			return fmt.Errorf("could not create service S3 client: %d", service.ID)
-		}
-		s.store[service.Hash] = conn
-	}
-	return nil
+	s.store[hash] = s3
+	s.mu.Unlock()
 }

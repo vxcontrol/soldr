@@ -8,8 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
+	"soldr/internal/app/api/client"
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -172,23 +174,22 @@ func makeGroupPolicyAction(act string, iDB *gorm.DB, g models.Group, p models.Po
 	}
 }
 
-func getGroupName(c *gin.Context, hash string) (string, error) {
-	iDB := utils.GetGormDB(c, "iDB")
-	if iDB == nil {
-		return "", errors.New("can't connect to database")
-	}
+func getGroupName(db *gorm.DB, hash string) (string, error) {
 	var group models.Group
-	if err := iDB.Take(&group, "hash = ?", hash).Error; err != nil {
+	if err := db.Take(&group, "hash = ?", hash).Error; err != nil {
 		return "", err
 	}
 	return group.Info.Name.En, nil
 }
 
 type GroupService struct {
+	serverConnector *client.AgentServerClient
 }
 
-func NewGroupService() *GroupService {
-	return &GroupService{}
+func NewGroupService(serverConnector *client.AgentServerClient) *GroupService {
+	return &GroupService{
+		serverConnector: serverConnector,
+	}
 }
 
 // GetGroups is a function to return group list view on dashboard
@@ -204,10 +205,8 @@ func NewGroupService() *GroupService {
 // @Router /groups/ [get]
 func (s *GroupService) GetGroups(c *gin.Context) {
 	var (
-		err           error
 		gids          []uint64
 		gpss          []models.GroupToPolicy
-		iDB           *gorm.DB
 		modulesa      []models.ModuleAShort
 		policiesa     []models.Policy
 		query         utils.TableQuery
@@ -218,14 +217,22 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		usePolicyName bool
 	)
 
-	if err = c.ShouldBindQuery(&query); err != nil {
+	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		utils.HTTPError(c, srverrors.ErrGroupsInvalidRequest, err)
 		return
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -413,14 +420,20 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 // @Router /groups/{hash} [get]
 func (s *GroupService) GetGroup(c *gin.Context) {
 	var (
-		err  error
 		hash = c.Param("hash")
-		iDB  *gorm.DB
 		resp group
 	)
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -495,10 +508,8 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 func (s *GroupService) PatchGroup(c *gin.Context) {
 	var (
 		count int64
-		err   error
 		group models.Group
 		hash  = c.Param("hash")
-		iDB   *gorm.DB
 	)
 	uaf := utils.UserActionFields{
 		Domain:            "group",
@@ -508,11 +519,24 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err = c.ShouldBindJSON(&group); err != nil || group.Valid() != nil {
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		return
+	}
+
+	if err := c.ShouldBindJSON(&group); err != nil || group.Valid() != nil {
 		if err == nil {
 			err = group.Valid()
 		}
-		name, nameErr := getGroupName(c, hash)
+		name, nameErr := getGroupName(iDB, hash)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -526,11 +550,6 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	if hash != group.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch group hash to requested one")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsValidationFail, nil, uaf)
-		return
-	}
-
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
 		return
 	}
 
@@ -571,11 +590,9 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 // @Router /groups/{hash}/policies [put]
 func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	var (
-		err    error
 		form   groupPolicyPatch
 		group  models.Group
 		hash   = c.Param("hash")
-		iDB    *gorm.DB
 		policy models.Policy
 	)
 	uaf := utils.UserActionFields{
@@ -585,7 +602,7 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err = c.ShouldBindJSON(&form); err != nil {
+	if err := c.ShouldBindJSON(&form); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsInvalidRequest, err, uaf)
 		return
@@ -599,8 +616,16 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	uaf.ObjectId = form.Policy.Hash
 	uaf.ObjectDisplayName = form.Policy.Info.Name.En
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -654,10 +679,8 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 // @Router /groups/ [post]
 func (s *GroupService) CreateGroup(c *gin.Context) {
 	var (
-		err       error
 		groupFrom models.Group
 		info      groupInfo
-		iDB       *gorm.DB
 	)
 	uaf := utils.UserActionFields{
 		Domain:            "group",
@@ -666,15 +689,23 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err = c.ShouldBindJSON(&info); err != nil {
+	if err := c.ShouldBindJSON(&info); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrEventsInvalidRequest, err, uaf)
 		return
 	}
 	uaf.ObjectDisplayName = info.Name
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -761,10 +792,8 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 // @Router /groups/{hash} [delete]
 func (s *GroupService) DeleteGroup(c *gin.Context) {
 	var (
-		err   error
 		group models.Group
 		hash  = c.Param("hash")
-		iDB   *gorm.DB
 	)
 	uaf := utils.UserActionFields{
 		Domain:            "group",
@@ -774,8 +803,16 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if iDB = utils.GetGormDB(c, "iDB"); iDB == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalDBNotFound, nil, uaf)
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 

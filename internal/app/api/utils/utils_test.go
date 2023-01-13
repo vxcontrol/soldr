@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	srverrors "soldr/internal/app/api/server/errors"
+	srverrors "soldr/internal/app/api/server/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

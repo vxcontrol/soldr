@@ -8,7 +8,8 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/internal/app/api/models"
-	srverrors "soldr/internal/app/api/server/errors"
+	srvcontext "soldr/internal/app/api/server/context"
+	srverrors "soldr/internal/app/api/server/response"
 	"soldr/internal/app/api/utils"
 )
 
@@ -74,8 +75,8 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 
 	query.Init("services", servicesSQLMappers)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -125,8 +126,8 @@ func (s *ServicesService) GetService(c *gin.Context) {
 		resp models.Service
 	)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -179,8 +180,8 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 		return
 	}
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -236,8 +237,8 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 		return
 	}
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
 		utils.FromContext(c).WithError(nil).Errorf("error: no rights to patch service")
 		utils.HTTPError(c, srverrors.ErrNotPermitted, nil)
@@ -287,8 +288,8 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 		service models.Service
 	)
 
-	rid, _ := utils.GetUint64(c, "rid")
-	tid, _ := utils.GetUint64(c, "tid")
+	rid, _ := srvcontext.GetUint64(c, "rid")
+	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
 		utils.FromContext(c).WithError(nil).Errorf("error: no rights to delete service")
 		utils.HTTPError(c, srverrors.ErrNotPermitted, nil)
