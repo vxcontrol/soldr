@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
+	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/proto/vm"
@@ -317,7 +318,45 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 	uaf.Success = true
 }
 
-func AggregateWSConnect(c *gin.Context) {
+func getServiceHash(c *gin.Context) (string, error) {
+	tid, ok := srvcontext.GetUint64(c, "tid")
+	if !ok {
+		return "", fmt.Errorf("could not get tenant ID from context")
+	}
+	sid, ok := srvcontext.GetUint64(c, "sid")
+	if !ok {
+		return "", fmt.Errorf("could not get service ID from context")
+	}
+	gDB := utils.GetGormDB(c, "gDB")
+	if gDB == nil {
+		return "", fmt.Errorf("could not get global DB connection from context")
+	}
+
+	var svc models.Service
+	if err := gDB.Where("tenant_id = ? AND id = ?", tid, sid).Take(&svc).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", fmt.Errorf("could not get service record from DB: record not found")
+		}
+		return "", fmt.Errorf("could not get service record from DB: internal error: %w", err)
+	} else if err = svc.Valid(); err != nil {
+		return "", fmt.Errorf("could not validate service record: %w", err)
+	}
+	return svc.Hash, nil
+}
+
+type ProtoService struct {
+	db              *gorm.DB
+	serverConnector *client.AgentServerClient
+}
+
+func NewProtoService(db *gorm.DB, serverConnector *client.AgentServerClient) *ProtoService {
+	return &ProtoService{
+		db:              db,
+		serverConnector: serverConnector,
+	}
+}
+
+func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 	sockID := c.Param("group_id")
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
@@ -327,7 +366,20 @@ func AggregateWSConnect(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	name, err := utils.GetGroupName(c, sockID)
+	serviceHash, err := getServiceHash(c)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPErrorWithUAFields(c, response.ErrInternalDBNotFound, err, uaf)
+		return
+	}
+
+	name, err := utils.GetGroupName(iDB, sockID)
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
@@ -350,7 +402,7 @@ func AggregateWSConnect(c *gin.Context) {
 	wsConnectToVXServer(c, vxproto.Aggregate, sockID, sockType, uaf)
 }
 
-func BrowserWSConnect(c *gin.Context) {
+func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 	sockID := c.Param("agent_id")
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
@@ -360,7 +412,20 @@ func BrowserWSConnect(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	name, err := utils.GetAgentName(c, sockID)
+	serviceHash, err := getServiceHash(c)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPErrorWithUAFields(c, response.ErrInternalDBNotFound, err, uaf)
+		return
+	}
+
+	name, err := utils.GetAgentName(iDB, sockID)
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
@@ -383,7 +448,7 @@ func BrowserWSConnect(c *gin.Context) {
 	wsConnectToVXServer(c, vxproto.Browser, sockID, sockType, uaf)
 }
 
-func ExternalWSConnect(c *gin.Context) {
+func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 	sockID := c.Param("agent_id")
 	uaf := utils.UserActionFields{
 		Domain:            "agent",
@@ -393,7 +458,20 @@ func ExternalWSConnect(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	name, err := utils.GetAgentName(c, sockID)
+	serviceHash, err := getServiceHash(c)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPErrorWithUAFields(c, response.ErrInternalDBNotFound, err, uaf)
+		return
+	}
+
+	name, err := utils.GetAgentName(iDB, sockID)
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {

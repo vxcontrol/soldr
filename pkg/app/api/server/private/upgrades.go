@@ -354,24 +354,6 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
-	if err := c.ShouldBindJSON(&task); err != nil || task.Valid() != nil {
-		if err == nil {
-			err = task.Valid()
-		}
-		name, nameErr := utils.GetAgentName(c, hash)
-		if nameErr == nil {
-			uaf.ObjectDisplayName = name
-		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err, uaf)
-		return
-	}
-	if task.Status == "failed" && task.Reason == "Canceled.By.User" {
-		uaf.ActionCode = "version update task cancellation"
-	} else {
-		uaf.ActionCode = "version update task creation"
-	}
-
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
@@ -383,6 +365,24 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		utils.FromContext(c).WithError(err).Error()
 		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
+	}
+
+	if err := c.ShouldBindJSON(&task); err != nil || task.Valid() != nil {
+		if err == nil {
+			err = task.Valid()
+		}
+		name, nameErr := utils.GetAgentName(iDB, hash)
+		if nameErr == nil {
+			uaf.ObjectDisplayName = name
+		}
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err, uaf)
+		return
+	}
+	if task.Status == "failed" && task.Reason == "Canceled.By.User" {
+		uaf.ActionCode = "version update task cancellation"
+	} else {
+		uaf.ActionCode = "version update task creation"
 	}
 
 	if err = iDB.Take(&agent, "id = ?", task.AgentID).Error; err != nil {

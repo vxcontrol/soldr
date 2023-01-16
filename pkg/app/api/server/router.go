@@ -149,6 +149,7 @@ func NewRouter(
 	serverConnector := client.NewAgentServerClient(db, dbConns, s3Conns)
 
 	// services
+	protoService := proto.NewProtoService(db, serverConnector)
 	agentService := private.NewAgentService(db, serverConnector)
 	binariesService := private.NewBinariesService(db)
 	eventService := private.NewEventService(serverConnector)
@@ -173,7 +174,7 @@ func NewRouter(
 
 		setSwaggerGroup(api)
 
-		setVXProtoGroup(api, db)
+		setVXProtoGroup(api, db, protoService)
 	}
 
 	privateGroup := api.Group("/")
@@ -240,22 +241,22 @@ func setSwaggerGroup(parent *gin.RouterGroup) {
 	}
 }
 
-func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB) {
+func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService) {
 	vxProtoGroup := parent.Group("/")
 	vxProtoGroup.Use(authTokenProtoRequired())
 	vxProtoGroup.Use(setServiceInfo(db))
 	{
 		protoAggregateGroup := vxProtoGroup.Group("/vxpws")
 		{
-			protoAggregateGroup.GET("/aggregate/:group_id/", proto.AggregateWSConnect)
+			protoAggregateGroup.GET("/aggregate/:group_id/", svc.AggregateWSConnect)
 		}
 		protoBrowserGroup := vxProtoGroup.Group("/vxpws")
 		{
-			protoBrowserGroup.GET("/browser/:agent_id/", proto.BrowserWSConnect)
+			protoBrowserGroup.GET("/browser/:agent_id/", svc.BrowserWSConnect)
 		}
 		protoExternalGroup := vxProtoGroup.Group("/vxpws")
 		{
-			protoExternalGroup.GET("/external/:agent_id/", proto.ExternalWSConnect)
+			protoExternalGroup.GET("/external/:agent_id/", svc.ExternalWSConnect)
 		}
 	}
 }

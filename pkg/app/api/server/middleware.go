@@ -121,7 +121,7 @@ func authRequired() gin.HandlerFunc {
 		uname := session.Get("uname")
 		svc := session.Get("svc")
 
-		attrs := []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname}
+		attrs := []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname, svc}
 		for _, attr := range attrs {
 			if attr == nil {
 				utils.HTTPError(c, srverrors.ErrAuthRequired, errors.New("token claim invalid"))

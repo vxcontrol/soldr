@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -66,25 +65,17 @@ type UserActionFields struct {
 
 const UnknownObjectDisplayName = "Undefined object"
 
-func GetAgentName(c *gin.Context, hash string) (string, error) {
-	iDB := GetGormDB(c, "iDB")
-	if iDB == nil {
-		return "", errors.New("can't connect to database")
-	}
+func GetAgentName(db *gorm.DB, hash string) (string, error) {
 	var agent models.Agent
-	if err := iDB.Take(&agent, "hash = ?", hash).Error; err != nil {
+	if err := db.Take(&agent, "hash = ?", hash).Error; err != nil {
 		return "", err
 	}
 	return agent.Description, nil
 }
 
-func GetGroupName(c *gin.Context, hash string) (string, error) {
-	iDB := GetGormDB(c, "iDB")
-	if iDB == nil {
-		return "", errors.New("can't connect to database")
-	}
+func GetGroupName(db *gorm.DB, hash string) (string, error) {
 	var group models.Group
-	if err := iDB.Take(&group, "hash = ?", hash).Error; err != nil {
+	if err := db.Take(&group, "hash = ?", hash).Error; err != nil {
 		return "", err
 	}
 	return group.Info.Name.En, nil

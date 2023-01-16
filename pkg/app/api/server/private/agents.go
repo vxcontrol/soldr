@@ -791,11 +791,24 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 		ObjectDisplayName: utils.UnknownObjectDisplayName,
 	}
 
+	serviceHash, ok := srvcontext.GetString(c, "svc")
+	if !ok {
+		utils.FromContext(c).Errorf("could not get service hash")
+		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		return
+	}
+	iDB, err := s.serverConnector.GetDB(c, serviceHash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Error()
+		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		return
+	}
+
 	if err = c.ShouldBindJSON(&action); err != nil || action.Agent.Valid() != nil {
 		if err == nil {
 			err = action.Agent.Valid()
 		}
-		name, nameErr := utils.GetAgentName(c, hash)
+		name, nameErr := utils.GetAgentName(iDB, hash)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -810,19 +823,6 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	if hash != action.Agent.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch agent hash to requested one")
 		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchAgentValidationError, nil, uaf)
-		return
-	}
-
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
-		return
-	}
-	iDB, err := s.serverConnector.GetDB(c, serviceHash)
-	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
 		return
 	}
 
