@@ -107,7 +107,7 @@ export class EditLocalizationSectionComponent implements OnInit, OnDestroy, Modu
     }
 
     validateForms() {
-        this.formElement.nativeElement.requestSubmit();
+        this.formElement.nativeElement.dispatchEvent(new Event('submit'));
 
         const result$ = this.validationState$.pipe(take(1));
 

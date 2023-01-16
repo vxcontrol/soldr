@@ -64,7 +64,7 @@ export class EditChangelogSectionComponent implements OnInit, OnDestroy, ModuleS
     }
 
     validateForms() {
-        this.formElement.nativeElement.requestSubmit();
+        this.formElement.nativeElement.dispatchEvent(new Event('submit'));
 
         const result$ = this.validationState$.pipe(take(1));
 

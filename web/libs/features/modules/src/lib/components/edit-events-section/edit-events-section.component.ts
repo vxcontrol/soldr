@@ -246,7 +246,7 @@ export class EditEventsSectionComponent implements OnInit, ModuleSection, OnDest
     }
 
     validateForms() {
-        this.formElement.nativeElement.requestSubmit();
+        this.formElement.nativeElement.dispatchEvent(new Event('submit'));
 
         const result$ = this.validationState$.pipe(
             take(2),
