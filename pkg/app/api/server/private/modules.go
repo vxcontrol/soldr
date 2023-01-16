@@ -131,7 +131,9 @@ const sqlGroupModuleDetails = `
 
 const sqlPolicyModuleDetails = `
 	SELECT
-		m.name
+		m.name,
+		(1 = 1) AS 'exists',
+		(m.status = "joined") AS active
 	FROM modules AS m
 		LEFT JOIN policies p ON m.policy_id = p.id AND p.deleted_at IS NULL
 	WHERE p.id = ? AND m.deleted_at IS NULL`
@@ -943,7 +945,7 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 
 	var modules []models.ModuleA
 	scope := func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update NOT LIKE ?",
+		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update != ?",
 			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
 	}
 	if err := iDB.Scopes(scope).Find(&modules).Error; err != nil {
@@ -3790,7 +3792,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	}
 
 	scope = func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update NOT LIKE ?",
+		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update != ?",
 			module.Info.Name, module.Info.Version.String(), module.LastUpdate)
 	}
 	if err = iDB.Scopes(scope).Find(&resp.Modules).Error; err != nil {
