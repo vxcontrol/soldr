@@ -299,21 +299,15 @@ export class ModulesConfigComponent implements OnInit, OnChanges, OnDestroy {
     private defineListsObservables() {
         this.consistencyByModuleName$ = this.dependencies$.pipe(
             map((dependencies) =>
-                dependencies
-                    .filter((dependency) =>
-                        [DependencyType.ToMakeAction, DependencyType.ToReceiveData, DependencyType.ToSendData].includes(
-                            dependency.type
-                        )
-                    )
-                    .reduce((acc, dependency) => {
-                        const prevValue = acc[dependency.source_module_name];
+                dependencies.reduce((acc, dependency) => {
+                    const prevValue = acc[dependency.source_module_name];
 
-                        return {
-                            ...acc,
-                            [dependency.source_module_name]:
-                                prevValue === undefined ? dependency.status : prevValue && dependency.status
-                        };
-                    }, {} as Record<string, boolean>)
+                    return {
+                        ...acc,
+                        [dependency.source_module_name]:
+                            prevValue === undefined ? dependency.status : prevValue && dependency.status
+                    };
+                }, {} as Record<string, boolean>)
             )
         );
 
