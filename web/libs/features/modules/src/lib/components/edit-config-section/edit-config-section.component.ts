@@ -146,7 +146,7 @@ export class EditConfigSectionComponent implements OnInit, OnDestroy, ModuleSect
     }
 
     validateForms() {
-        this.formElement.nativeElement.requestSubmit();
+        this.formElement.nativeElement.dispatchEvent(new Event('submit'));
 
         const result$ = this.validationState$.pipe(
             take(2),
