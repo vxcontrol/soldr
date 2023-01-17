@@ -21,6 +21,7 @@ import (
 	"soldr/pkg/app/api/server"
 	srvevents "soldr/pkg/app/api/server/events"
 	"soldr/pkg/app/api/storage/mem"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils/meter"
 	"soldr/pkg/app/api/worker"
 	"soldr/pkg/log"
@@ -34,14 +35,13 @@ import (
 const serviceName = "vxapi"
 
 type Config struct {
-	Debug            bool `config:"debug"`
-	Develop          bool `config:"is_develop"`
-	Log              LogConfig
-	DB               DBConfig
-	Tracing          TracingConfig
-	PublicAPI        PublicAPIConfig
-	EventWorker      EventWorkerConfig
-	UserActionWorker UserActionWorkerConfig
+	Debug       bool `config:"debug"`
+	Develop     bool `config:"is_develop"`
+	Log         LogConfig
+	DB          DBConfig
+	Tracing     TracingConfig
+	PublicAPI   PublicAPIConfig
+	EventWorker EventWorkerConfig
 }
 
 type LogConfig struct {
@@ -75,10 +75,6 @@ type EventWorkerConfig struct {
 	PollInterval time.Duration `config:"event_worker_poll_interval"`
 }
 
-type UserActionWorkerConfig struct {
-	MaxMessages uint `config:"user_action_worker_max_messages"`
-}
-
 func defaultConfig() Config {
 	return Config{
 		Log: LogConfig{
@@ -95,9 +91,6 @@ func defaultConfig() Config {
 		},
 		EventWorker: EventWorkerConfig{
 			PollInterval: 30 * time.Second,
-		},
-		UserActionWorker: UserActionWorkerConfig{
-			MaxMessages: 100,
 		},
 	}
 }
@@ -285,9 +278,12 @@ func main() {
 	// run worker to synchronize events retention policy to all instance DB
 	go worker.SyncRetentionEvents(ctx, dbWithORM)
 
+	userActionWriter := useraction.NewLogWriter(logger)
+
 	router := server.NewRouter(
 		dbWithORM,
 		exchanger,
+		userActionWriter,
 		dbConnectionStorage,
 		s3ConnectionStorage,
 	)

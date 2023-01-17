@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 
 	"soldr/pkg/app/api/server/private"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -33,13 +33,13 @@ func privilegesRequiredByQueryTypeField(mprivs map[string][]string) gin.HandlerF
 
 		prms, err := getPrms(c)
 		if err != nil {
-			utils.HTTPError(c, srverrors.ErrPrivilegesRequired, err)
+			response.Error(c, response.ErrPrivilegesRequired, err)
 			return
 		}
 
 		var query utils.TableQuery
 		if err := c.ShouldBindQuery(&query); err != nil {
-			utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("error binding query: %w", err))
+			response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("error binding query: %w", err))
 			return
 		}
 		for _, filter := range query.Filters {
@@ -47,12 +47,12 @@ func privilegesRequiredByQueryTypeField(mprivs map[string][]string) gin.HandlerF
 				if privs, ok := mprivs[value]; ok {
 					for _, priv := range privs {
 						if !lookupPerm(prms, priv) {
-							utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", priv))
+							response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", priv))
 							return
 						}
 					}
 				} else {
-					utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("'%s' is not specified", value))
+					response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("'%s' is not specified", value))
 					return
 				}
 			}
@@ -69,23 +69,23 @@ func privilegesRequiredPatchAgents() gin.HandlerFunc {
 
 		prms, err := getPrms(c)
 		if err != nil {
-			utils.HTTPError(c, srverrors.ErrPrivilegesRequired, err)
+			response.Error(c, response.ErrPrivilegesRequired, err)
 			return
 		}
 
 		var action private.AgentsAction
 		if err := c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
-			utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("error binding query: %w", err))
+			response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("error binding query: %w", err))
 			return
 		}
 		if action.Action == "delete" {
 			if !lookupPerm(prms, "vxapi.agents.api.delete") {
-				utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", "vxapi.agents.api.delete"))
+				response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", "vxapi.agents.api.delete"))
 				return
 			}
 		} else {
 			if !lookupPerm(prms, "vxapi.agents.api.edit") {
-				utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", "vxapi.agents.api.edit"))
+				response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", "vxapi.agents.api.edit"))
 				return
 			}
 		}
@@ -102,13 +102,13 @@ func privilegesRequired(privs ...string) gin.HandlerFunc {
 
 		prms, err := getPrms(c)
 		if err != nil {
-			utils.HTTPError(c, srverrors.ErrPrivilegesRequired, err)
+			response.Error(c, response.ErrPrivilegesRequired, err)
 			return
 		}
 
 		for _, priv := range append([]string{}, privs...) {
 			if !lookupPerm(prms, priv) {
-				utils.HTTPError(c, srverrors.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", priv))
+				response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("'%s' is not set", priv))
 				return
 			}
 		}

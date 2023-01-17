@@ -11,7 +11,8 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -108,12 +109,12 @@ func getGroupConsistency(modules []models.ModuleAShort) (bool, []models.GroupDep
 	return rdeps, gdeps
 }
 
-func makeGroupPolicyAction(act string, iDB *gorm.DB, g models.Group, p models.Policy) (*srverrors.HttpError, error) {
+func makeGroupPolicyAction(act string, iDB *gorm.DB, g models.Group, p models.Policy) (*response.HttpError, error) {
 	gps := models.GroupPolicies{
 		Group: g,
 	}
 	if err := iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		return srverrors.ErrGroupPolicyPoliciesNotFound, err
+		return response.ErrGroupPolicyPoliciesNotFound, err
 	}
 
 	isPolicyActive := false
@@ -141,20 +142,20 @@ func makeGroupPolicyAction(act string, iDB *gorm.DB, g models.Group, p models.Po
 			Having("cnt > 1").
 			Find(&cnts)
 		if err := findDupsQuery.Error; err != nil {
-			return srverrors.ErrGroupPolicyMergeModulesFail, err
+			return response.ErrGroupPolicyMergeModulesFail, err
 		}
 
 		if len(cnts) != 0 {
-			return srverrors.ErrGroupPolicyDuplicateModules, nil
+			return response.ErrGroupPolicyDuplicateModules, nil
 		}
 
 		if !isPolicyActive {
 			if err := iDB.Create(&groupToPolicy).Error; err != nil {
-				return srverrors.ErrGroupPolicyLinkFail, err
+				return response.ErrGroupPolicyLinkFail, err
 			}
 			return nil, nil
 		} else {
-			return srverrors.ErrGroupPolicyLinkExists, nil
+			return response.ErrGroupPolicyLinkExists, nil
 		}
 
 	case "deactivate":
@@ -162,15 +163,15 @@ func makeGroupPolicyAction(act string, iDB *gorm.DB, g models.Group, p models.Po
 			err := iDB.Where("policy_id = ? AND group_id = ?", groupToPolicy.PolicyID, groupToPolicy.GroupID).
 				Delete(&groupToPolicy).Error
 			if err != nil {
-				return srverrors.ErrGroupPolicyRemoveLink, err
+				return response.ErrGroupPolicyRemoveLink, err
 			}
 			return nil, nil
 		} else {
-			return srverrors.ErrGroupPolicyLinkNotFound, nil
+			return response.ErrGroupPolicyLinkNotFound, nil
 		}
 
 	default:
-		return srverrors.ErrGroupPolicyUnkownAction, nil
+		return response.ErrGroupPolicyUnkownAction, nil
 	}
 }
 
@@ -183,12 +184,17 @@ func getGroupName(db *gorm.DB, hash string) (string, error) {
 }
 
 type GroupService struct {
-	serverConnector *client.AgentServerClient
+	serverConnector  *client.AgentServerClient
+	userActionWriter useraction.Writer
 }
 
-func NewGroupService(serverConnector *client.AgentServerClient) *GroupService {
+func NewGroupService(
+	serverConnector *client.AgentServerClient,
+	userActionWriter useraction.Writer,
+) *GroupService {
 	return &GroupService{
-		serverConnector: serverConnector,
+		serverConnector:  serverConnector,
+		userActionWriter: userActionWriter,
 	}
 }
 
@@ -219,26 +225,26 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 
 	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrGroupsInvalidRequest, err)
+		response.Error(c, response.ErrGroupsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("groups", groupsSQLMappers); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrGroupsInvalidRequest, err)
+		response.Error(c, response.ErrGroupsInvalidRequest, err)
 		return
 	}
 
@@ -287,16 +293,16 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 	if query.Group == "" {
 		if resp.Total, err = query.Query(iDB, &resp.Groups, funcs...); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding groups")
-			utils.HTTPError(c, srverrors.ErrGroupsInvalidQuery, err)
+			response.Error(c, response.ErrGroupsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding grouped groups")
-			utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
-		utils.HTTPSuccess(c, http.StatusOK, groupedResp)
+		response.Success(c, http.StatusOK, groupedResp)
 		return
 	}
 
@@ -304,7 +310,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		gids = append(gids, resp.Groups[i].ID)
 		if err = resp.Groups[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Groups[i].Hash)
-			utils.HTTPError(c, srverrors.ErrGroupsInvalidData, err)
+			response.Error(c, response.ErrGroupsInvalidData, err)
 			return
 		}
 	}
@@ -312,7 +318,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 	sqlQuery := sqlGroupDetails + ` WHERE g.id IN (?) AND g.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, gids).Scan(&resp.Details).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading groups details")
-		utils.HTTPError(c, srverrors.ErrGetGroupsDetailsNotFound, err)
+		response.Error(c, response.ErrGetGroupsDetailsNotFound, err)
 		return
 	}
 
@@ -323,7 +329,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		Find(&modulesa, "gtp.group_id IN (?) AND status = 'joined'", gids).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding policy modules")
-		utils.HTTPError(c, srverrors.ErrGetGroupsModulesNotFound, err)
+		response.Error(c, response.ErrGetGroupsModulesNotFound, err)
 		return
 	} else {
 		for i := 0; i < len(modulesa); i++ {
@@ -332,7 +338,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 			policy_id := modulesa[i].PolicyID
 			if err = modulesa[i].Valid(); err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
-				utils.HTTPError(c, srverrors.ErrGetGroupsInvalidModuleData, err)
+				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
 				return
 			}
 			if mods, ok := modsToPolicies[policy_id]; ok {
@@ -345,7 +351,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 
 	if err = iDB.Find(&gpss, "group_id IN (?)", gids).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
-		utils.HTTPError(c, srverrors.ErrGroupPolicyGroupsNotFound, err)
+		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
 		return
 	}
 
@@ -356,7 +362,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		Find(&policiesa).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group policies")
-		utils.HTTPError(c, srverrors.ErrGroupPolicyPoliciesNotFound, err)
+		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	} else {
 		for i := 0; i < len(policiesa); i++ {
@@ -364,7 +370,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 			name := policiesa[i].Info.Name
 			if err = policiesa[i].Valid(); err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
-				utils.HTTPError(c, srverrors.ErrGetGroupsInvalidModuleData, err)
+				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
 				return
 			}
 			for idx := range gpss {
@@ -405,7 +411,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		details.Consistency, details.Dependencies = getGroupConsistency(details.Modules)
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetGroup is a function to return group info and details view
@@ -427,34 +433,34 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Group, "hash = ?", hash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrGroupsNotFound, err)
+			response.Error(c, response.ErrGroupsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = resp.Group.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Group.Hash)
-		utils.HTTPError(c, srverrors.ErrGroupsInvalidData, err)
+		response.Error(c, response.ErrGroupsInvalidData, err)
 		return
 	}
 
 	sqlQuery := sqlGroupDetails + ` WHERE g.hash = ? AND g.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, hash).Scan(&resp.Details).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading details by group hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrGetGroupDetailsNotFound, err)
+		response.Error(c, response.ErrGetGroupDetailsNotFound, err)
 		return
 	}
 
@@ -464,7 +470,7 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		Find(&resp.Details.Modules, "gtp.group_id = ? AND status = 'joined'", resp.Group.ID).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Group.ID)
-		utils.HTTPError(c, srverrors.ErrGetGroupModulesNotFound, err)
+		response.Error(c, response.ErrGetGroupModulesNotFound, err)
 		return
 	} else {
 		for i := 0; i < len(resp.Details.Modules); i++ {
@@ -472,7 +478,7 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 				id := resp.Details.Modules[i].ID
 				name := resp.Details.Modules[i].Info.Name
 				utils.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
-				utils.HTTPError(c, srverrors.ErrGetGroupsInvalidModuleData, err)
+				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
 				return
 			}
 		}
@@ -484,12 +490,12 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
-		utils.HTTPError(c, srverrors.ErrGetGroupsPoliciesNotFound, err)
+		response.Error(c, response.ErrGetGroupsPoliciesNotFound, err)
 		return
 	}
 	resp.Details.Policies = gps.Policies
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // PatchGroup is a function to update group public info only
@@ -511,24 +517,20 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 		group models.Group
 		hash  = c.Param("hash")
 	)
-	uaf := utils.UserActionFields{
-		Domain:            "group",
-		ObjectType:        "group",
-		ActionCode:        "editing",
-		ObjectId:          hash,
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+
+	uaf := useraction.NewFields(c, "group", "group", "editing", hash, useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -541,7 +543,7 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 			uaf.ObjectDisplayName = name
 		}
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsValidationFail, err, uaf)
+		response.Error(c, response.ErrGroupsValidationFail, err)
 		return
 	}
 
@@ -549,13 +551,13 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 
 	if hash != group.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch group hash to requested one")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsValidationFail, nil, uaf)
+		response.Error(c, response.ErrGroupsValidationFail, nil)
 		return
 	}
 
 	if err = iDB.Model(&group).Count(&count).Error; err != nil || count == 0 {
 		utils.FromContext(c).WithError(nil).Errorf("error updating group by hash '%s', group not found", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsNotFound, err, uaf)
+		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	}
 
@@ -564,15 +566,15 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating group by hash '%s', group not found", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsNotFound, err, uaf)
+		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating group by hash '%s'", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, group, uaf)
+	response.Success(c, http.StatusOK, group)
 }
 
 // PatchGroupPolicy is a function to update group policy linking
@@ -595,16 +597,13 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 		hash   = c.Param("hash")
 		policy models.Policy
 	)
-	uaf := utils.UserActionFields{
-		Domain:            "policy",
-		ObjectType:        "policy",
-		ActionCode:        "undefined action",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+
+	uaf := useraction.NewFields(c, "policy", "policy", "undefined action", "", useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	if err := c.ShouldBindJSON(&form); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsInvalidRequest, err, uaf)
+		response.Error(c, response.ErrGroupsInvalidRequest, err)
 		return
 	}
 
@@ -613,57 +612,57 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	} else {
 		uaf.ActionCode = "deletion of the connection with the group"
 	}
-	uaf.ObjectId = form.Policy.Hash
+	uaf.ObjectID = form.Policy.Hash
 	uaf.ObjectDisplayName = form.Policy.Info.Name.En
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&group, "hash = ?", hash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsNotFound, err, uaf)
+			response.Error(c, response.ErrGroupsNotFound, err)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = group.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsInvalidData, err, uaf)
+		response.Error(c, response.ErrGroupsInvalidData, err)
 		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", form.Policy.Hash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrGetGroupsPoliciesNotFound, err, uaf)
+			response.Error(c, response.ErrGetGroupsPoliciesNotFound, err)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	httpErr, err := makeGroupPolicyAction(form.Action, iDB, group, policy)
 	if httpErr != nil {
 		utils.FromContext(c).WithError(err).Errorf("error patching group policy by action: %s", httpErr.Error())
-		utils.HTTPErrorWithUAFields(c, httpErr, err, uaf)
+		response.Error(c, httpErr, err)
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, struct{}{}, uaf)
+	response.Success(c, http.StatusOK, struct{}{})
 }
 
 // CreateGroup is a function to create new group
@@ -682,16 +681,13 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 		groupFrom models.Group
 		info      groupInfo
 	)
-	uaf := utils.UserActionFields{
-		Domain:            "group",
-		ObjectType:        "group",
-		ActionCode:        "creation",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+
+	uaf := useraction.NewFields(c, "group", "group", "creation", "", useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	if err := c.ShouldBindJSON(&info); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrEventsInvalidRequest, err, uaf)
+		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 	uaf.ObjectDisplayName = info.Name
@@ -699,13 +695,13 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -720,16 +716,16 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 			System: false,
 		},
 	}
-	uaf.ObjectId = group.Hash
+	uaf.ObjectID = group.Hash
 
 	if info.From != 0 {
 		if err = iDB.Take(&groupFrom, "id = ?", info.From).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding source group by ID")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateGroupSourceNotFound, err, uaf)
+			response.Error(c, response.ErrCreateGroupSourceNotFound, err)
 			return
 		} else if err = groupFrom.Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", groupFrom.Hash)
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrGetAgentInvalidGroupData, err, uaf)
+			response.Error(c, response.ErrGetAgentInvalidGroupData, err)
 			return
 		}
 
@@ -754,7 +750,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 
 	if err = iDB.Create(&group).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating group")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateGroupCreateFail, err, uaf)
+		response.Error(c, response.ErrCreateGroupCreateFail, err)
 		return
 	}
 
@@ -763,7 +759,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 		err = iDB.Where("group_id = ?", groupFrom.ID).Find(&groupToPolicy).Error
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding group policies by group ID")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateGroupGetPolicies, err, uaf)
+			response.Error(c, response.ErrCreateGroupGetPolicies, err)
 			return
 		}
 		for _, gpt := range groupToPolicy {
@@ -771,13 +767,13 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 			gpt.GroupID = group.ID
 			if err = iDB.Create(&gpt).Error; err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error creating group policies")
-				utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateGroupCreatePolicies, err, uaf)
+				response.Error(c, response.ErrCreateGroupCreatePolicies, err)
 				return
 			}
 		}
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusCreated, group, uaf)
+	response.Success(c, http.StatusCreated, group)
 }
 
 // DeleteGroup is a function to cascade delete group
@@ -795,38 +791,34 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 		group models.Group
 		hash  = c.Param("hash")
 	)
-	uaf := utils.UserActionFields{
-		Domain:            "group",
-		ObjectType:        "group",
-		ActionCode:        "deletion",
-		ObjectId:          hash,
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+
+	uaf := useraction.NewFields(c, "group", "group", "deletion", hash, useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&group, "hash = ?", hash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsNotFound, err, uaf)
+			response.Error(c, response.ErrGroupsNotFound, err)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = group.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrGroupsInvalidData, err, uaf)
+		response.Error(c, response.ErrGroupsInvalidData, err)
 		return
 	}
 
@@ -834,9 +826,9 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 
 	if err = iDB.Delete(&group).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting group by hash '%s'", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, struct{}{}, uaf)
+	response.Success(c, http.StatusOK, struct{}{})
 }

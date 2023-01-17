@@ -9,7 +9,7 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -294,40 +294,40 @@ func (s *EventService) GetEvents(c *gin.Context) {
 
 	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidRequest, err)
+		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("events", eventsSQLMappers); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidRequest, err)
+		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
 	emids, epids, err = getModuleIDs(iDB, &query)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting modules list by filter")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
 	eaids, err = getAgentIDs(iDB, &query, epids)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting agents list by filter")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
@@ -342,7 +342,7 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	copyEventsSQLMappers["policy_id"] = "`modules`.policy_id"
 	if err = query.Init("events", copyEventsSQLMappers); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidRequest, err)
+		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
@@ -356,16 +356,16 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	if query.Group == "" {
 		if err = doQuery(iDB, &query, &resp, funcs); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding events")
-			utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+			response.Error(c, response.ErrEventsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding grouped events")
-			utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+			response.Error(c, response.ErrEventsInvalidQuery, err)
 			return
 		}
-		utils.HTTPSuccess(c, http.StatusOK, groupedResp)
+		response.Success(c, http.StatusOK, groupedResp)
 		return
 	}
 
@@ -374,20 +374,20 @@ func (s *EventService) GetEvents(c *gin.Context) {
 		mids = append(mids, resp.Events[i].ModuleID)
 		if resp.Events[i].Valid() != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating event data")
-			utils.HTTPError(c, srverrors.ErrEventsInvalidData, err)
+			response.Error(c, response.ErrEventsInvalidData, err)
 			return
 		}
 	}
 	aids = utils.UniqueUint64InSlice(aids)
 	if err = iDB.Where("id IN (?)", aids).Find(&resp.Agents).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked agents")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 	mids = utils.UniqueUint64InSlice(mids)
 	if err = iDB.Where("id IN (?)", mids).Find(&resp.Modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked modules")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
@@ -397,7 +397,7 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	gids = utils.UniqueUint64InSlice(gids)
 	if err = iDB.Where("id IN (?)", gids).Find(&resp.Groups).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked gloups")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
@@ -407,9 +407,9 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	pids = utils.UniqueUint64InSlice(pids)
 	if err = iDB.Where("id IN (?)", pids).Find(&resp.Policies).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked policies")
-		utils.HTTPError(c, srverrors.ErrEventsInvalidQuery, err)
+		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }

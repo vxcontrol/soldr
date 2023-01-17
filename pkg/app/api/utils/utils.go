@@ -4,13 +4,11 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,7 +23,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
-	obs "soldr/pkg/observability"
 	"soldr/pkg/storage"
 	"soldr/pkg/system"
 	"soldr/pkg/version"
@@ -52,18 +49,6 @@ const (
 	// URL prefix for each REST API endpoint
 	PrefixPathAPI = "/api/v1"
 )
-
-type UserActionFields struct {
-	Domain            string
-	ObjectType        string
-	ObjectId          string
-	ObjectDisplayName string
-	ActionCode        string
-	Success           bool
-	FailReason        string
-}
-
-const UnknownObjectDisplayName = "Undefined object"
 
 func GetAgentName(db *gorm.DB, hash string) (string, error) {
 	var agent models.Agent
@@ -490,83 +475,6 @@ func CompareVersions(sourceVersion, targetVersion string) int {
 		return TargetVersionGreat
 	default:
 		return CompareVersionError
-	}
-}
-
-func GetHttpClient() *http.Client {
-	return &http.Client{
-		Timeout: 10 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		},
-	}
-}
-
-// HTTPSuccess is function as a main part of public REST API (success response)
-func HTTPSuccess(c *gin.Context, code int, data interface{}) {
-	HTTPSuccessWithUAFieldsSlice(c, code, data, nil)
-}
-
-func HTTPSuccessWithUAFields(c *gin.Context, code int, data interface{}, uaFields UserActionFields) {
-	HTTPSuccessWithUAFieldsSlice(c, code, data, []UserActionFields{uaFields})
-}
-
-func HTTPSuccessWithUAFieldsSlice(c *gin.Context, code int, data interface{}, uaFields []UserActionFields) {
-	if !c.IsAborted() {
-		if uaFields != nil {
-			for i := range uaFields {
-				uaFields[i].Success = true
-			}
-			c.Set("uaf", uaFields)
-		}
-		c.JSON(code, gin.H{"status": "success", "data": data})
-		c.Abort()
-	}
-}
-
-type HttpError interface {
-	Code() string
-	HttpCode() int
-	Msg() string
-}
-
-// HTTPError is function as a main part of public REST API (failed response)
-func HTTPError(c *gin.Context, err HttpError, original error) {
-	HTTPErrorWithUAFieldsSlice(c, err, original, nil)
-}
-
-func HTTPErrorWithUAFields(c *gin.Context, err HttpError, original error, uaFields UserActionFields) {
-	HTTPErrorWithUAFieldsSlice(c, err, original, []UserActionFields{uaFields})
-}
-
-func HTTPErrorWithUAFieldsSlice(c *gin.Context, err HttpError, original error, uaFields []UserActionFields) {
-	if !c.IsAborted() {
-		if uaFields != nil {
-			for i := range uaFields {
-				uaFields[i].Success = false
-				uaFields[i].FailReason = err.Msg()
-
-			}
-			c.Set("uaf", uaFields)
-		}
-		body := gin.H{"status": "error", "code": err.Code()}
-
-		if version.IsDevelop == "true" {
-			body["msg"] = err.Msg()
-			if original != nil {
-				body["error"] = original.Error()
-			}
-		}
-
-		traceID := obs.Observer.SpanContextFromContext(c.Request.Context()).TraceID()
-		if traceID.IsValid() {
-			body["trace_id"] = traceID.String()
-		}
-
-		c.JSON(err.HttpCode(), body)
-		c.Abort()
 	}
 }
 

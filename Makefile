@@ -86,7 +86,7 @@ lint: $(GOLANGCI_BIN)
 	$(GOLANGCI_BIN) run ./...
 
 .PHONY: test
-test: generate-keys
+test:
 	go test -v ./...
 
 .PHONY: generate-all

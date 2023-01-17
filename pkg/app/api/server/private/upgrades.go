@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
@@ -13,7 +14,8 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/storage"
 )
@@ -52,14 +54,20 @@ var upgradesAgentsSQLMappers = map[string]interface{}{
 }
 
 type UpgradeService struct {
-	db              *gorm.DB
-	serverConnector *client.AgentServerClient
+	db               *gorm.DB
+	serverConnector  *client.AgentServerClient
+	userActionWriter useraction.Writer
 }
 
-func NewUpgradeService(db *gorm.DB, serverConnector *client.AgentServerClient) *UpgradeService {
+func NewUpgradeService(
+	db *gorm.DB,
+	serverConnector *client.AgentServerClient,
+	userActionWriter useraction.Writer,
+) *UpgradeService {
 	return &UpgradeService{
-		db:              db,
-		serverConnector: serverConnector,
+		db:               db,
+		serverConnector:  serverConnector,
+		userActionWriter: userActionWriter,
 	}
 }
 
@@ -81,20 +89,20 @@ func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 
 	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrGetAgentsUpgradesInvalidRequest, err)
+		response.Error(c, response.ErrGetAgentsUpgradesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -102,19 +110,19 @@ func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 
 	if resp.Total, err = query.Query(iDB, &resp.Tasks); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agents upgrades")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Tasks); i++ {
 		if err = resp.Tasks[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating agents upgrades data '%d'", resp.Tasks[i].ID)
-			utils.HTTPError(c, srverrors.ErrGetAgentsUpgradesInvalidData, err)
+			response.Error(c, response.ErrGetAgentsUpgradesInvalidData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // CreateUpgradesAgents is a function to request agents upgrades to a specific verison
@@ -136,37 +144,39 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 		query      utils.TableQuery
 		upgradeReq upgradesAgentsAction
 		upgradeRes upgradesAgentsActionResult
-		uafArr     = []utils.UserActionFields{
-			{
-				Domain:            "agent",
-				ObjectType:        "agent",
-				ActionCode:        "version update task creation",
-				ObjectDisplayName: utils.UnknownObjectDisplayName,
-			},
-		}
 	)
+
+	tStart := time.Now()
+
+	uaf := useraction.NewFields(c, "agent", "agent", "version update task creation", "", useraction.UnknownObjectDisplayName)
+	uafArr := []useraction.Fields{uaf}
+	defer func() {
+		for i := range uafArr {
+			s.userActionWriter.WriteUserAction(uafArr[i])
+		}
+	}()
 
 	if err := c.ShouldBindJSON(&upgradeReq); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrCreateAgentsUpgradesInvalidRequest, err, uafArr)
+		response.Error(c, response.ErrCreateAgentsUpgradesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if sv = getService(c); sv == nil {
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrInternalServiceNotFound, nil, uafArr)
+		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
@@ -174,7 +184,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	batchRaw := make([]byte, 32)
 	if _, err := rand.Read(batchRaw); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("failed to get random batch id")
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrInternal, err, uafArr)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	batchHash := md5.Sum(batchRaw)
@@ -191,11 +201,11 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrCreateAgentsUpgradesAgentNotFound, err, uafArr)
+		response.Error(c, response.ErrCreateAgentsUpgradesAgentNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", upgradeReq.Version)
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrInternal, err, uafArr)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
@@ -211,9 +221,10 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 			SubQuery()).Find(&agents).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error collecting agents by filter")
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsInvalidQuery, err, uafArr)
+		response.Error(c, response.ErrPatchAgentsInvalidQuery, err)
 	}
-	uafArr = fillAgentUserActionFields(agents, "version update task creation")
+
+	uafArr = fillAgentUserActionFields(c, agents, "version update task creation", tStart)
 
 	sqlInsertResult := iDB.Exec("INSERT INTO upgrade_tasks(agent_id, version, batch) ?", iDB.
 		Scopes(agentsScope).
@@ -228,7 +239,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 
 	if err = sqlInsertResult.Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error inserting new upgrade tasks into the table")
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrCreateAgentsUpgradesCreateTaskFail, err, uafArr)
+		response.Error(c, response.ErrCreateAgentsUpgradesCreateTaskFail, err)
 		return
 	}
 
@@ -236,19 +247,19 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 		s3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
-			utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrInternal, err, uafArr)
+			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = utils.UploadAgentBinariesToInstBucket(binary, s3); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error uploading agent binaries to S3 instance bucket")
-			utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrCreateAgentsUpgradesUpdateAgentBinariesFail, err, uafArr)
+			response.Error(c, response.ErrCreateAgentsUpgradesUpdateAgentBinariesFail, err)
 			return
 		}
 	}
 
 	upgradeRes.Total = sqlInsertResult.RowsAffected
-	utils.HTTPSuccessWithUAFieldsSlice(c, http.StatusCreated, upgradeRes, uafArr)
+	response.Success(c, http.StatusCreated, upgradeRes)
 }
 
 // GetLastUpgradeAgent is a function to return last agent upgrade information
@@ -271,13 +282,13 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -291,21 +302,21 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 
 	if err = sqlQueryResult.Error; err != nil || sqlQueryResult.RowsAffected == 0 {
 		utils.FromContext(c).WithError(err).Errorf("error finding last agent upgrade information")
-		utils.HTTPError(c, srverrors.ErrGetLastAgentUpgradeLastUpgradeNotFound, err)
+		response.Error(c, response.ErrGetLastAgentUpgradeLastUpgradeNotFound, err)
 		return
 	} else if err = resp.Task.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating last agent upgrade data '%d'", resp.Task.ID)
-		utils.HTTPError(c, srverrors.ErrGetLastAgentUpgradeInvalidLastData, err)
+		response.Error(c, response.ErrGetLastAgentUpgradeInvalidLastData, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Details.Agent, "id = ?", resp.Task.AgentID).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent")
-		utils.HTTPError(c, srverrors.ErrGetLastAgentUpgradeAgentNotFound, err)
+		response.Error(c, response.ErrGetLastAgentUpgradeAgentNotFound, err)
 		return
 	} else if err = resp.Details.Agent.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Details.Agent.Hash)
-		utils.HTTPError(c, srverrors.ErrGetLastAgentUpgradeInvalidAgentData, err)
+		response.Error(c, response.ErrGetLastAgentUpgradeInvalidAgentData, err)
 		return
 	}
 
@@ -313,16 +324,16 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 		resp.Details.Group = &models.Group{}
 		if err = iDB.Take(resp.Details.Group, "id = ?", resp.Details.Agent.GroupID).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding group")
-			utils.HTTPError(c, srverrors.ErrGetLastAgentUpgradeGroupNotFound, err)
+			response.Error(c, response.ErrGetLastAgentUpgradeGroupNotFound, err)
 			return
 		} else if err = resp.Details.Group.Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Details.Group.Hash)
-			utils.HTTPError(c, srverrors.ErrGetLastAgentUpgradeInvalidGroupData, err)
+			response.Error(c, response.ErrGetLastAgentUpgradeInvalidGroupData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // PatchLastAgentUpgrade is a function to update last agent upgrade information
@@ -346,24 +357,20 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		sv     *models.Service
 		task   models.AgentUpgradeTask
 	)
-	uaf := utils.UserActionFields{
-		Domain:            "agent",
-		ObjectType:        "agent",
-		ActionCode:        "undefined action",
-		ObjectId:          hash,
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+
+	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", hash, useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -376,7 +383,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 			uaf.ObjectDisplayName = name
 		}
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err, uaf)
+		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err)
 		return
 	}
 	if task.Status == "failed" && task.Reason == "Canceled.By.User" {
@@ -387,21 +394,21 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 
 	if err = iDB.Take(&agent, "id = ?", task.AgentID).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeAgentNotFound, err, uaf)
+		response.Error(c, response.ErrPatchLastAgentUpgradeAgentNotFound, err)
 		return
 	} else if err = agent.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeInvalidAgentData, err, uaf)
+		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentData, err)
 		return
 	} else if hash != agent.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch agent hash to requested one")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err, uaf)
+		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err)
 		return
 	}
 	uaf.ObjectDisplayName = agent.Description
 
 	if sv = getService(c); sv == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalServiceNotFound, nil, uaf)
+		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
@@ -419,24 +426,24 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 			utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", task.Version)
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeAgentBinaryNotFound, err, uaf)
+			response.Error(c, response.ErrPatchLastAgentUpgradeAgentBinaryNotFound, err)
 			return
 		} else if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", task.Version)
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		s3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = utils.UploadAgentBinariesToInstBucket(binary, s3); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error uploading agent binaries to S3 instance bucket")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeUpdateAgentBinariesFail, err, uaf)
+			response.Error(c, response.ErrPatchLastAgentUpgradeUpdateAgentBinariesFail, err)
 			return
 		}
 	}
@@ -452,13 +459,13 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	err = iDB.Model(&task).UpdateColumns(update_info).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchLastAgentUpgradeLastUpgradeInfoNotFound, err, uaf)
+		response.Error(c, response.ErrPatchLastAgentUpgradeLastUpgradeInfoNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating last agent upgrade information by id '%d'", task.ID)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, task, uaf)
+	response.Success(c, http.StatusOK, task)
 }

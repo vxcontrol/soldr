@@ -13,8 +13,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvevents "soldr/pkg/app/api/server/events"
-	srverrors "soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/server/response"
 )
 
 type PermissionsFilter func(*gin.Context, srvevents.EventChannelName) bool
@@ -43,28 +42,28 @@ func SubscribeHandler(exchanger *srvevents.Exchanger, permsFilter PermissionsFil
 
 		if len(subscribes) == 0 {
 			logger.Errorf("subscribes empty list after filtering: %s", subscribeString)
-			utils.HTTPError(c, srverrors.ErrNotificationsSubscribesEmptyList, nil)
+			response.Error(c, response.ErrNotificationsSubscribesEmptyList, nil)
 			return
 		}
 
 		conn, _, _, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			logger.WithError(err).Errorf("failed to updgrade ws conn")
-			utils.HTTPError(c, srverrors.ErrNotificationsUpgradeWSConnFail, err)
+			response.Error(c, response.ErrNotificationsUpgradeWSConnFail, err)
 			return
 		}
 
 		svc, exists := c.Get("SV")
 		if !exists {
 			logger.Errorf("service not found in session: %#v", c.Keys)
-			utils.HTTPError(c, srverrors.ErrNotificationsServiceNotFound, nil)
+			response.Error(c, response.ErrNotificationsServiceNotFound, nil)
 			return
 		}
 
 		service, ok := svc.(*models.Service)
 		if !ok {
 			logger.Errorf("unexpected service value: %#v", svc)
-			utils.HTTPError(c, srverrors.ErrNotificationsInvalidServiceValue, nil)
+			response.Error(c, response.ErrNotificationsInvalidServiceValue, nil)
 			return
 		}
 

@@ -16,7 +16,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -47,61 +47,61 @@ func AuthLogin(c *gin.Context) {
 			err = data.Valid()
 		}
 		utils.FromContext(c).WithError(err).Errorf("error validating request data")
-		utils.HTTPError(c, srverrors.ErrAuthInvalidLoginRequest, err)
+		response.Error(c, response.ErrAuthInvalidLoginRequest, err)
 		return
 	}
 
 	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+		response.Error(c, response.ErrInternalDBNotFound, nil)
 		return
 	}
 
 	if err = gDB.Take(&user, "(mail = ? OR name = ?) AND password IS NOT NULL", data.Mail, data.Mail).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting user by mail '%s'", data.Mail)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidCredentials, err)
+		response.Error(c, response.ErrAuthInvalidCredentials, err)
 		return
 	} else if err = user.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidUserData, err)
+		response.Error(c, response.ErrAuthInvalidUserData, err)
 		return
 	} else if user.RoleID == 100 {
 		utils.FromContext(c).WithError(err).Errorf("can't authorize external user '%s'", user.Hash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidUserData, fmt.Errorf("user is external"))
+		response.Error(c, response.ErrAuthInvalidUserData, fmt.Errorf("user is external"))
 		return
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data.Password)); err != nil {
 		utils.FromContext(c).Errorf("error matching user input password")
-		utils.HTTPError(c, srverrors.ErrAuthInvalidCredentials, err)
+		response.Error(c, response.ErrAuthInvalidCredentials, err)
 		return
 	}
 
 	if user.Status != "active" {
 		utils.FromContext(c).Errorf("error checking active state for user '%s'", user.Status)
-		utils.HTTPError(c, srverrors.ErrAuthInactiveUser, fmt.Errorf("user is inactive"))
+		response.Error(c, response.ErrAuthInactiveUser, fmt.Errorf("user is inactive"))
 		return
 	}
 
 	if service, err = getService(c, gDB, data.Service, &user.User); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading service data by hash '%s'", data.Service)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidServiceData, err)
+		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	} else if err = service.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidServiceData, err)
+		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	}
 
 	if err = gDB.Table("privileges").Where("role_id = ?", user.RoleID).Pluck("name", &privs).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", user.Hash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidServiceData, err)
+		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	}
 
 	uuid, err := utils.MakeUuidStrFromHash(user.Hash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidUserData, err)
+		response.Error(c, response.ErrAuthInvalidUserData, err)
 		return
 	}
 
@@ -138,7 +138,7 @@ func AuthLogin(c *gin.Context) {
 		}).
 		Infof("user made successful local login for '%s'", data.Mail)
 
-	utils.HTTPSuccess(c, http.StatusOK, struct{}{})
+	response.Success(c, http.StatusOK, struct{}{})
 }
 
 // AuthLogout is function to logout current user
@@ -195,12 +195,12 @@ func AuthSwitchService(c *gin.Context) {
 	serviceHash := c.PostForm("service")
 	if err := models.GetValidator().Var(serviceHash, "len=32,hexadecimal,lowercase,required"); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating input data")
-		utils.HTTPError(c, srverrors.ErrAuthInvalidSwitchServiceHash, err)
+		response.Error(c, response.ErrAuthInvalidSwitchServiceHash, err)
 		return
 	}
 
 	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+		response.Error(c, response.ErrInternalDBNotFound, nil)
 		return
 	}
 
@@ -210,21 +210,21 @@ func AuthSwitchService(c *gin.Context) {
 
 	if err = gDB.Take(&tenant, "id = ?", tid).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading tenant data '%d'", tid)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidTenantData, err)
+		response.Error(c, response.ErrAuthInvalidTenantData, err)
 		return
 	} else if err = tenant.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating tenant data '%d:%s'", tid, tenant.Hash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidTenantData, err)
+		response.Error(c, response.ErrAuthInvalidTenantData, err)
 		return
 	}
 
 	if err = gDB.Take(&service, "hash LIKE ? AND status = 'active'", serviceHash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading service data '%s'", serviceHash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidServiceData, err)
+		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	} else if err = service.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", serviceHash)
-		utils.HTTPError(c, srverrors.ErrAuthInvalidServiceData, err)
+		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	}
 
@@ -253,7 +253,7 @@ func AuthSwitchService(c *gin.Context) {
 		Infof("session was refreshed and service was switched to '%s'", serviceHash)
 
 	service.Info = nil
-	utils.HTTPSuccess(c, http.StatusOK, service)
+	response.Success(c, http.StatusOK, service)
 }
 
 func resetSession(c *gin.Context) {

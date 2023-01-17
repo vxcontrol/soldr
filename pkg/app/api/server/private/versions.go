@@ -9,7 +9,7 @@ import (
 
 	"soldr/pkg/app/api/client"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -83,27 +83,27 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 
 	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrVersionsInvalidRequest, err)
+		response.Error(c, response.ErrVersionsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getVersionMappers(&query)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting version mappers by query")
-		utils.HTTPError(c, srverrors.ErrVersionsMapperNotFound, err)
+		response.Error(c, response.ErrVersionsMapperNotFound, err)
 		return
 	}
 
@@ -131,9 +131,9 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 
 	if resp.Total, err = query.Query(iDB, &resp.Versions, funcs...); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding versions")
-		utils.HTTPError(c, srverrors.ErrVersionsInvalidQuery, err)
+		response.Error(c, response.ErrVersionsInvalidQuery, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }

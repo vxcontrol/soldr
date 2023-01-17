@@ -10,7 +10,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -100,23 +100,23 @@ func CreateAuthToken(c *gin.Context) {
 	var req models.ProtoAuthTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrProtoInvalidRequest, err)
+		response.Error(c, response.ErrProtoInvalidRequest, err)
 		return
 	} else if err := req.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating JSON")
-		utils.HTTPError(c, srverrors.ErrProtoInvalidRequest, err)
+		response.Error(c, response.ErrProtoInvalidRequest, err)
 		return
 	}
 
 	token, err := MakeToken(c, &req)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error on making token")
-		utils.HTTPError(c, srverrors.ErrProtoCreateTokenFail, err)
+		response.Error(c, response.ErrProtoCreateTokenFail, err)
 		return
 	}
 	if _, err := ValidateToken(token); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error on validating token")
-		utils.HTTPError(c, srverrors.ErrProtoInvalidToken, err)
+		response.Error(c, response.ErrProtoInvalidToken, err)
 		return
 	}
 
@@ -125,5 +125,5 @@ func CreateAuthToken(c *gin.Context) {
 		TTL:         req.TTL,
 		CreatedDate: time.Now(),
 	}
-	utils.HTTPSuccess(c, http.StatusCreated, pat)
+	response.Success(c, http.StatusCreated, pat)
 }

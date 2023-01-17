@@ -10,7 +10,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -162,7 +162,7 @@ func validOptions(c *gin.Context, value interface{}) bool {
 	return true
 }
 
-func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (uint64, *srverrors.HttpError) {
+func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (uint64, *response.HttpError) {
 	var (
 		err   error
 		query utils.TableQuery
@@ -172,11 +172,11 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		return 0, srverrors.ErrOptionsInvalidRequestData
+		return 0, response.ErrOptionsInvalidRequestData
 	}
 
 	if sv = getService(c); sv == nil {
-		return 0, srverrors.ErrInternalServiceNotFound
+		return 0, response.ErrInternalServiceNotFound
 	}
 
 	tid, _ := srvcontext.GetUint64(c, "tid")
@@ -209,11 +209,11 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 	}
 	if total, err = query.Query(db, value, funcs...); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding global %s list", option)
-		return 0, srverrors.ErrOptionsInvalidQuery
+		return 0, response.ErrOptionsInvalidQuery
 	}
 
 	if !validOptions(c, value) {
-		return 0, srverrors.ErrOptionsInvalidData
+		return 0, response.ErrOptionsInvalidData
 	}
 
 	return total, nil
@@ -241,11 +241,11 @@ func (s *OptionService) GetOptionsActions(c *gin.Context) {
 	var resp optionsActions
 	ext, err := getOption(c, s.db, "action", &resp.Actions)
 	if err != nil {
-		utils.HTTPError(c, err, nil)
+		response.Error(c, err, nil)
 	}
 
 	resp.Total = ext
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetOptionsEvents is a function to return global event list
@@ -262,11 +262,11 @@ func (s *OptionService) GetOptionsEvents(c *gin.Context) {
 	var resp optionsEvents
 	ext, err := getOption(c, s.db, "event", &resp.Events)
 	if err != nil {
-		utils.HTTPError(c, err, nil)
+		response.Error(c, err, nil)
 	}
 
 	resp.Total = ext
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetOptionsFields is a function to return global field list
@@ -283,11 +283,11 @@ func (s *OptionService) GetOptionsFields(c *gin.Context) {
 	var resp optionsFields
 	ext, err := getOption(c, s.db, "field", &resp.Fields)
 	if err != nil {
-		utils.HTTPError(c, err, nil)
+		response.Error(c, err, nil)
 	}
 
 	resp.Total = ext
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetOptionsTags is a function to return global tag list
@@ -304,11 +304,11 @@ func (s *OptionService) GetOptionsTags(c *gin.Context) {
 	var resp optionsTags
 	ext, err := getOption(c, s.db, "tag", &resp.Tags)
 	if err != nil {
-		utils.HTTPError(c, err, nil)
+		response.Error(c, err, nil)
 	}
 
 	resp.Total = ext
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetOptionsVersions is a function to return global version list
@@ -325,9 +325,9 @@ func (s *OptionService) GetOptionsVersions(c *gin.Context) {
 	var resp optionsVersions
 	ext, err := getOption(c, s.db, "version", &resp.Versions)
 	if err != nil {
-		utils.HTTPError(c, err, nil)
+		response.Error(c, err, nil)
 	}
 
 	resp.Total = ext
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }

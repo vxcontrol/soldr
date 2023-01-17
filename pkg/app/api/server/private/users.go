@@ -10,7 +10,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -66,18 +66,18 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
+			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
-		utils.HTTPError(c, srverrors.ErrUsersInvalidData, err)
+		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // ChangePasswordCurrentUser is a function to update account password
@@ -105,7 +105,7 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 			err = form.Valid()
 		}
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrChangePasswordCurrentUserInvalidPassword, err)
+		response.Error(c, response.ErrChangePasswordCurrentUserInvalidPassword, err)
 		return
 	}
 
@@ -117,26 +117,26 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
+			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = user.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
-		utils.HTTPError(c, srverrors.ErrUsersInvalidData, err)
+		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.CurrentPassword)); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error checking password for current user")
-		utils.HTTPError(c, srverrors.ErrChangePasswordCurrentUserInvalidCurrentPassword, err)
+		response.Error(c, response.ErrChangePasswordCurrentUserInvalidCurrentPassword, err)
 		return
 	}
 
 	if encPass, err = utils.EncryptPassword(form.Password); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error making new password for current user")
-		utils.HTTPError(c, srverrors.ErrChangePasswordCurrentUserInvalidNewPassword, err)
+		response.Error(c, response.ErrChangePasswordCurrentUserInvalidNewPassword, err)
 		return
 	}
 	user.Password = string(encPass)
@@ -144,11 +144,11 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 
 	if err = s.db.Scopes(scope).Select("password", "password_change_required").Save(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating password for current user")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, struct{}{})
+	response.Success(c, http.StatusOK, struct{}{})
 }
 
 // GetUsers returns users list
@@ -174,7 +174,7 @@ func (s *UserService) GetUsers(c *gin.Context) {
 
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrUsersInvalidRequest, err)
+		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
 
@@ -200,13 +200,13 @@ func (s *UserService) GetUsers(c *gin.Context) {
 		})
 	default:
 		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Users); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding users")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
@@ -217,13 +217,13 @@ func (s *UserService) GetUsers(c *gin.Context) {
 
 	if err = s.db.Find(&roles, "id IN (?)", rids).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked roles")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.db.Find(&tenans, "id IN (?)", tids).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked tenants")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
@@ -248,12 +248,12 @@ func (s *UserService) GetUsers(c *gin.Context) {
 	for i := 0; i < len(resp.Users); i++ {
 		if err = resp.Users[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Users[i].Hash)
-			utils.HTTPError(c, srverrors.ErrUsersInvalidData, err)
+			response.Error(c, response.ErrUsersInvalidData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetUser is a function to return user by hash
@@ -293,28 +293,28 @@ func (s *UserService) GetUser(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
+			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
 	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrGetUserModelsNotFound, err)
+			response.Error(c, response.ErrGetUserModelsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
 	if err = resp.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
-		utils.HTTPError(c, srverrors.ErrUsersInvalidData, err)
+		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // CreateUser is a function to create new user
@@ -338,7 +338,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&user); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrUsersInvalidRequest, err)
+		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
 
@@ -356,7 +356,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		user.TenantID = tid
 	default:
 		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
@@ -364,13 +364,13 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	user.Hash = utils.MakeUserHash(user.Name)
 	if err = user.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user")
-		utils.HTTPError(c, srverrors.ErrCreateUserInvalidUser, err)
+		response.Error(c, response.ErrCreateUserInvalidUser, err)
 		return
 	}
 
 	if encPassword, err = utils.EncryptPassword(user.Password); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error encoding password")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
 		user.Password = string(encPassword)
@@ -378,7 +378,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 
 	if err = s.db.Create(&user).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating user")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
@@ -387,15 +387,15 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		Related(&resp.Tenant).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	} else if err = resp.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
-		utils.HTTPError(c, srverrors.ErrUsersInvalidData, err)
+		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusCreated, resp)
+	response.Success(c, http.StatusCreated, resp)
 }
 
 // PatchUser is a function to update user by hash
@@ -420,19 +420,19 @@ func (s *UserService) PatchUser(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&user); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrUsersInvalidRequest, err)
+		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if hash != user.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch user hash to requested one")
-		utils.HTTPError(c, srverrors.ErrUsersInvalidRequest, nil)
+		response.Error(c, response.ErrUsersInvalidRequest, nil)
 		return
 	} else if err = user.User.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user JSON")
-		utils.HTTPError(c, srverrors.ErrUsersInvalidRequest, err)
+		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if err = user.Valid(); user.Password != "" && err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user password")
-		utils.HTTPError(c, srverrors.ErrUsersInvalidRequest, err)
+		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
 
@@ -457,7 +457,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	if user.Password != "" {
 		if encPassword, err := utils.EncryptPassword(user.Password); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error encoding password")
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 			return
 		} else {
 			user.Password = string(encPassword)
@@ -470,39 +470,39 @@ func (s *UserService) PatchUser(c *gin.Context) {
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating user by hash '%s', user not found", hash)
-		utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
+		response.Error(c, response.ErrUsersNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating user by hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
+			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
 	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrPatchUserModelsNotFound, err)
+			response.Error(c, response.ErrPatchUserModelsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
 	if err = resp.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // DeleteUser is a function to delete user by hash
@@ -542,32 +542,32 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&user.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrUsersNotFound, err)
+			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
 	if err = s.db.Model(&user.User).Related(&user.Role).Related(&user.Tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrDeleteUserModelsNotFound, err)
+			response.Error(c, response.ErrDeleteUserModelsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
 	if err = user.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
-		utils.HTTPError(c, srverrors.ErrUsersInvalidData, err)
+		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&user.User).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting user by hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, struct{}{})
+	response.Success(c, http.StatusOK, struct{}{})
 }
