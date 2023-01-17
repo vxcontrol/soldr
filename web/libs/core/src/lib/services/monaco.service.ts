@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 
 import { Themes } from '@soldr/api';
 import { capitalize } from '@soldr/shared';
@@ -19,7 +20,7 @@ export class MonacoService {
             background: tokens[`${prefix}ColorSchemeBackgroundBackground`]
         };
 
-        (window as any).monaco.editor.defineTheme('soldrJsonTheme', {
+        monaco.editor.defineTheme('soldrJsonTheme', {
             base: theme === Themes.Dark ? 'vs-dark' : 'vs',
             inherit: true,
             rules: [
@@ -40,15 +41,15 @@ export class MonacoService {
             }
         });
 
-        (window as any).monaco.editor.defineTheme('soldrTheme', {
+        monaco.editor.defineTheme('soldrTheme', {
             base: theme === Themes.Dark ? 'vs-dark' : 'vs',
             inherit: true,
-            rules: [{ background: colors.background }],
+            rules: [{ token: '', background: colors.background }],
             colors: {
                 'editor.background': colors.background
             }
         });
 
-      (window as any).monaco.editor.setTheme('soldrTheme');
+        monaco.editor.setTheme('soldrTheme');
     }
 }
