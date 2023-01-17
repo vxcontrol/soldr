@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
@@ -88,20 +89,20 @@ func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logrus.WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGetAgentsUpgradesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -109,14 +110,14 @@ func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 	query.Init("upgrade_tasks", upgradesAgentsSQLMappers)
 
 	if resp.Total, err = query.Query(iDB, &resp.Tasks); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agents upgrades")
+		logrus.WithError(err).Errorf("error finding agents upgrades")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Tasks); i++ {
 		if err = resp.Tasks[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating agents upgrades data '%d'", resp.Tasks[i].ID)
+			logrus.WithError(err).Errorf("error validating agents upgrades data '%d'", resp.Tasks[i].ID)
 			response.Error(c, response.ErrGetAgentsUpgradesInvalidData, err)
 			return
 		}
@@ -157,20 +158,20 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	}()
 
 	if err := c.ShouldBindJSON(&upgradeReq); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logrus.WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrCreateAgentsUpgradesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -183,7 +184,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	batchRaw := make([]byte, 32)
 	if _, err := rand.Read(batchRaw); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to get random batch id")
+		logrus.WithError(err).Errorf("failed to get random batch id")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -200,11 +201,11 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	}
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
+		logrus.WithError(nil).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
 		response.Error(c, response.ErrCreateAgentsUpgradesAgentNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", upgradeReq.Version)
+		logrus.WithError(err).Errorf("error getting binary info by version '%s'", upgradeReq.Version)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -220,7 +221,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 			Where("status IN (?)", []string{"new", "running"}).
 			SubQuery()).Find(&agents).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error collecting agents by filter")
+		logrus.WithError(err).Errorf("error collecting agents by filter")
 		response.Error(c, response.ErrPatchAgentsInvalidQuery, err)
 	}
 
@@ -238,7 +239,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 		QueryExpr())
 
 	if err = sqlInsertResult.Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error inserting new upgrade tasks into the table")
+		logrus.WithError(err).Errorf("error inserting new upgrade tasks into the table")
 		response.Error(c, response.ErrCreateAgentsUpgradesCreateTaskFail, err)
 		return
 	}
@@ -246,13 +247,13 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	if sqlInsertResult.RowsAffected != 0 {
 		s3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+			logrus.WithError(err).Errorf("error openning connection to S3")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = utils.UploadAgentBinariesToInstBucket(binary, s3); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error uploading agent binaries to S3 instance bucket")
+			logrus.WithError(err).Errorf("error uploading agent binaries to S3 instance bucket")
 			response.Error(c, response.ErrCreateAgentsUpgradesUpdateAgentBinariesFail, err)
 			return
 		}
@@ -281,13 +282,13 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -301,21 +302,21 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 		Take(&resp.Task, "`agents`.hash = ? AND NOT (?) AND (? OR ?)", hash, versionExpr, statusExpr, timeExpr)
 
 	if err = sqlQueryResult.Error; err != nil || sqlQueryResult.RowsAffected == 0 {
-		utils.FromContext(c).WithError(err).Errorf("error finding last agent upgrade information")
+		logrus.WithError(err).Errorf("error finding last agent upgrade information")
 		response.Error(c, response.ErrGetLastAgentUpgradeLastUpgradeNotFound, err)
 		return
 	} else if err = resp.Task.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating last agent upgrade data '%d'", resp.Task.ID)
+		logrus.WithError(err).Errorf("error validating last agent upgrade data '%d'", resp.Task.ID)
 		response.Error(c, response.ErrGetLastAgentUpgradeInvalidLastData, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Details.Agent, "id = ?", resp.Task.AgentID).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent")
+		logrus.WithError(err).Errorf("error finding agent")
 		response.Error(c, response.ErrGetLastAgentUpgradeAgentNotFound, err)
 		return
 	} else if err = resp.Details.Agent.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Details.Agent.Hash)
+		logrus.WithError(err).Errorf("error validating agent data '%s'", resp.Details.Agent.Hash)
 		response.Error(c, response.ErrGetLastAgentUpgradeInvalidAgentData, err)
 		return
 	}
@@ -323,11 +324,11 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 	if resp.Details.Agent.GroupID != 0 {
 		resp.Details.Group = &models.Group{}
 		if err = iDB.Take(resp.Details.Group, "id = ?", resp.Details.Agent.GroupID).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding group")
+			logrus.WithError(err).Errorf("error finding group")
 			response.Error(c, response.ErrGetLastAgentUpgradeGroupNotFound, err)
 			return
 		} else if err = resp.Details.Group.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Details.Group.Hash)
+			logrus.WithError(err).Errorf("error validating group data '%s'", resp.Details.Group.Hash)
 			response.Error(c, response.ErrGetLastAgentUpgradeInvalidGroupData, err)
 			return
 		}
@@ -363,13 +364,13 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -382,7 +383,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logrus.WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err)
 		return
 	}
@@ -393,15 +394,15 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&agent, "id = ?", task.AgentID).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent")
+		logrus.WithError(err).Errorf("error finding agent")
 		response.Error(c, response.ErrPatchLastAgentUpgradeAgentNotFound, err)
 		return
 	} else if err = agent.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
+		logrus.WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentData, err)
 		return
 	} else if hash != agent.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch agent hash to requested one")
+		logrus.WithError(nil).Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err)
 		return
 	}
@@ -425,24 +426,24 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		}
 		err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", task.Version)
+			logrus.WithError(nil).Errorf("error getting binary info by version '%s', record not found", task.Version)
 			response.Error(c, response.ErrPatchLastAgentUpgradeAgentBinaryNotFound, err)
 			return
 		} else if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", task.Version)
+			logrus.WithError(err).Errorf("error getting binary info by version '%s'", task.Version)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		s3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+			logrus.WithError(err).Errorf("error openning connection to S3")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = utils.UploadAgentBinariesToInstBucket(binary, s3); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error uploading agent binaries to S3 instance bucket")
+			logrus.WithError(err).Errorf("error uploading agent binaries to S3 instance bucket")
 			response.Error(c, response.ErrPatchLastAgentUpgradeUpdateAgentBinariesFail, err)
 			return
 		}
@@ -458,11 +459,11 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	}
 	err = iDB.Model(&task).UpdateColumns(update_info).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
+		logrus.WithError(nil).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
 		response.Error(c, response.ErrPatchLastAgentUpgradeLastUpgradeInfoNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating last agent upgrade information by id '%d'", task.ID)
+		logrus.WithError(err).Errorf("error updating last agent upgrade information by id '%d'", task.ID)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

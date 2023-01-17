@@ -6,10 +6,12 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/context"
@@ -243,5 +245,33 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 
 		c.Set("SV", service)
 		c.Next()
+	}
+}
+
+func WithLogger(skipPaths []string) gin.HandlerFunc {
+	skip := make(map[string]struct{}, len(skipPaths))
+	for _, path := range skipPaths {
+		skip[path] = struct{}{}
+	}
+
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
+
+		c.Next()
+
+		if _, ok := skip[path]; !ok {
+			if raw != "" {
+				path = path + "?" + raw
+			}
+			logrus.WithFields(logrus.Fields{
+				"client_ip":   c.ClientIP(),
+				"latency":     time.Now().Sub(start),
+				"path":        path,
+				"method":      c.Request.Method,
+				"status_code": c.Writer.Status(),
+			}).Info()
+		}
 	}
 }

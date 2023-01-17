@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
@@ -293,40 +294,40 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logrus.WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("events", eventsSQLMappers); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logrus.WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
 	emids, epids, err = getModuleIDs(iDB, &query)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting modules list by filter")
+		logrus.WithError(err).Errorf("error getting modules list by filter")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
 	eaids, err = getAgentIDs(iDB, &query, epids)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting agents list by filter")
+		logrus.WithError(err).Errorf("error getting agents list by filter")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
@@ -341,7 +342,7 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	copyEventsSQLMappers["module_id"] = "`events`.module_id"
 	copyEventsSQLMappers["policy_id"] = "`modules`.policy_id"
 	if err = query.Init("events", copyEventsSQLMappers); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logrus.WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
@@ -355,13 +356,13 @@ func (s *EventService) GetEvents(c *gin.Context) {
 
 	if query.Group == "" {
 		if err = doQuery(iDB, &query, &resp, funcs); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding events")
+			logrus.WithError(err).Errorf("error finding events")
 			response.Error(c, response.ErrEventsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding grouped events")
+			logrus.WithError(err).Errorf("error finding grouped events")
 			response.Error(c, response.ErrEventsInvalidQuery, err)
 			return
 		}
@@ -373,20 +374,20 @@ func (s *EventService) GetEvents(c *gin.Context) {
 		aids = append(aids, resp.Events[i].AgentID)
 		mids = append(mids, resp.Events[i].ModuleID)
 		if resp.Events[i].Valid() != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating event data")
+			logrus.WithError(err).Errorf("error validating event data")
 			response.Error(c, response.ErrEventsInvalidData, err)
 			return
 		}
 	}
 	aids = utils.UniqueUint64InSlice(aids)
 	if err = iDB.Where("id IN (?)", aids).Find(&resp.Agents).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked agents")
+		logrus.WithError(err).Errorf("error finding linked agents")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 	mids = utils.UniqueUint64InSlice(mids)
 	if err = iDB.Where("id IN (?)", mids).Find(&resp.Modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked modules")
+		logrus.WithError(err).Errorf("error finding linked modules")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
@@ -396,7 +397,7 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	}
 	gids = utils.UniqueUint64InSlice(gids)
 	if err = iDB.Where("id IN (?)", gids).Find(&resp.Groups).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked gloups")
+		logrus.WithError(err).Errorf("error finding linked gloups")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
@@ -406,7 +407,7 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	}
 	pids = utils.UniqueUint64InSlice(pids)
 	if err = iDB.Where("id IN (?)", pids).Find(&resp.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked policies")
+		logrus.WithError(err).Errorf("error finding linked policies")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}

@@ -2,16 +2,12 @@ package useraction
 
 import (
 	"github.com/sirupsen/logrus"
-
-	"soldr/pkg/log"
 )
 
-type LogWriter struct {
-	logger log.Logger
-}
+type LogWriter struct{}
 
-func NewLogWriter(logger log.Logger) *LogWriter {
-	return &LogWriter{logger: logger}
+func NewLogWriter() *LogWriter {
+	return &LogWriter{}
 }
 
 func (w *LogWriter) WriteUserAction(uaf Fields) error {
@@ -27,6 +23,6 @@ func (w *LogWriter) WriteUserAction(uaf Fields) error {
 		"success":             uaf.Success,
 		"fail_reason":         uaf.FailReason,
 	}
-	w.logger.WithFields(fields).Info()
+	logrus.WithFields(fields).Info()
 	return nil
 }

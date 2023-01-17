@@ -215,7 +215,7 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 		validate   = models.GetValidator()
 	)
 
-	logger := utils.FromContext(c).WithFields(logrus.Fields{
+	logger := logrus.WithFields(logrus.Fields{
 		"sock_id":   sockID,
 		"sock_type": sockType,
 		"conn_id":   getRandomID(),
@@ -376,13 +376,13 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		logrus.WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -391,7 +391,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logrus.WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -402,7 +402,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		logrus.WithError(nil).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -424,13 +424,13 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		logrus.WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -439,7 +439,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logrus.WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -451,7 +451,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		logrus.WithError(nil).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -472,13 +472,13 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		logrus.WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -487,7 +487,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logrus.WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -498,7 +498,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "external" {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		logrus.WithError(nil).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
+	"soldr/pkg/logger"
 	"soldr/pkg/storage"
 	"soldr/pkg/system"
 	"soldr/pkg/version"
@@ -91,11 +92,6 @@ func IsUseSSL() bool {
 	return os.Getenv("API_USE_SSL") == "true"
 }
 
-// FromContext is function to get logrus Entry with context
-func FromContext(c *gin.Context) *logrus.Entry {
-	return logrus.WithContext(c.Request.Context())
-}
-
 // UniqueUint64InSlice is function to remove duplicates in slice of uint64
 func UniqueUint64InSlice(slice []uint64) []uint64 {
 	keys := make(map[uint64]bool)
@@ -144,7 +140,12 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 			Errorf("error opening gorm connection: %v", err)
 		return nil
 	}
-	conn.LogMode(true) // avoid annoying logs
+
+	conn.SetLogger(&logger.GormLogger{})
+	if _, exists := os.LookupEnv("DEBUG"); exists {
+		conn.LogMode(true)
+	}
+
 	validations.RegisterCallbacks(conn)
 
 	conn.DB().SetMaxIdleConns(10)
@@ -153,7 +154,6 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 
 	meter.ApplyGorm(conn)
 
-	// conn.SetLogger(logrus.StandardLogger())
 	return conn
 }
 

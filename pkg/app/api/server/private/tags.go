@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	srvcontext "soldr/pkg/app/api/server/context"
@@ -175,27 +176,27 @@ func (s *TagService) GetTags(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logrus.WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrTagsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getTagMappers(&query)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting tag mappers by query")
+		logrus.WithError(err).Errorf("error getting tag mappers by query")
 		response.Error(c, response.ErrTagsMappersNotFound, err)
 		return
 	}
@@ -237,7 +238,7 @@ func (s *TagService) GetTags(c *gin.Context) {
 	funcs := getTagFilters(&query)
 	funcs = append(funcs, getTagJoinFuncs(table, useGroup, useModule, usePolicy)...)
 	if resp.Total, err = query.Query(iDB, &resp.Tags, funcs...); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding tags")
+		logrus.WithError(err).Errorf("error finding tags")
 		response.Error(c, response.ErrTagsInvalidQuery, err)
 		return
 	}

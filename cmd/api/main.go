@@ -4,16 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"os/signal"
-	"path"
 	"syscall"
 	"time"
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
-	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/sync/errgroup"
@@ -24,7 +21,7 @@ import (
 	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils/meter"
 	"soldr/pkg/app/api/worker"
-	"soldr/pkg/log"
+	"soldr/pkg/logger"
 	"soldr/pkg/observability"
 	"soldr/pkg/secret"
 	"soldr/pkg/storage/mysql"
@@ -57,7 +54,6 @@ type DBConfig struct {
 	Port int    `config:"db_port,required"`
 }
 
-// TODO: refactor old env names
 type PublicAPIConfig struct {
 	Addr            string        `config:"api_listen_http"`
 	AddrHTTPS       string        `config:"api_listen_https"`
@@ -121,32 +117,22 @@ func main() {
 		version.IsDevelop = "true"
 	}
 
+	logLevels := []logrus.Level{
+		logrus.PanicLevel,
+		logrus.FatalLevel,
+		logrus.ErrorLevel,
+		logrus.WarnLevel,
+		logrus.InfoLevel,
+	}
 	if cfg.Debug {
+		logLevels = append(logLevels, logrus.DebugLevel)
 		cfg.Log.Level = "debug"
+		cfg.Log.Format = "text"
 	}
-	logLevel, err := log.ParseLevel(cfg.Log.Level)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not parse log level: %s", err)
-		return
-	}
-	logFormat, err := log.ParseFormat(cfg.Log.Format)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not parse log format: %s", err)
-		return
-	}
-	logDir := "logs"
-	if dir, ok := os.LookupEnv("LOG_DIR"); ok {
-		logDir = dir
-	}
-	logFile := &lumberjack.Logger{
-		Filename:   path.Join(logDir, "app.log"),
-		MaxSize:    100,
-		MaxBackups: 7,
-		MaxAge:     14,
-		Compress:   true,
-	}
-	logger := log.New(log.Config{Level: logLevel, Format: logFormat}, io.MultiWriter(os.Stdout, logFile))
-	ctx = log.AttachToContext(ctx, logger)
+
+	logrus.SetLevel(logger.ParseLevel(cfg.Log.Level))
+	logrus.SetFormatter(logger.ParseFormat(cfg.Log.Format))
+	logrus.SetOutput(os.Stdout)
 
 	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true",
 		cfg.DB.User,
@@ -156,11 +142,11 @@ func main() {
 	)
 	db, err := mysql.New(&mysql.Config{DSN: secret.NewString(dsn)})
 	if err != nil {
-		logger.WithError(err).Error("could not create DB instance")
+		logrus.WithError(err).Error("could not create DB instance")
 		return
 	}
 	if err = db.RetryConnect(ctx, 10, 100*time.Millisecond); err != nil {
-		logger.WithError(err).Error("could not connect to database")
+		logrus.WithError(err).Error("could not connect to database")
 		return
 	}
 
@@ -169,12 +155,12 @@ func main() {
 		migrationDir = dir
 	}
 	if err = db.Migrate(migrationDir); err != nil {
-		logger.WithError(err).Error("could not apply migrations")
+		logrus.WithError(err).Error("could not apply migrations")
 		return
 	}
-	dbWithORM, err := db.WithORM(ctx)
+	dbWithORM, err := db.WithORM()
 	if err != nil {
-		logger.WithError(err).Error("could not create ORM")
+		logrus.WithError(err).Error("could not create ORM")
 		return
 	}
 	if cfg.Debug {
@@ -202,7 +188,7 @@ func main() {
 		attr,
 	)
 	if err != nil {
-		logger.WithError(err).Error("could not create tracer provider")
+		logrus.WithError(err).Error("could not create tracer provider")
 		return
 	}
 	meterClient := observability.NewProxyMeterClient(
@@ -214,7 +200,7 @@ func main() {
 		}),
 	)
 	if err != nil {
-		logger.WithError(err).Error("could not create meter client")
+		logrus.WithError(err).Error("could not create meter client")
 		return
 	}
 	meterProvider, err := observability.NewMeterProvider(
@@ -225,20 +211,10 @@ func main() {
 		attr,
 	)
 	if err != nil {
-		logger.WithError(err).Error("could not create meter provider")
+		logrus.WithError(err).Error("could not create meter provider")
 		return
 	}
 
-	logLevels := []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-	}
-	if cfg.Debug {
-		logLevels = append(logLevels, logrus.DebugLevel)
-	}
 	observability.InitObserver(
 		ctx,
 		tracerProvider,
@@ -252,7 +228,7 @@ func main() {
 
 	gormMeter := meterProvider.Meter("vxapi-meter")
 	if err = meter.InitGormMetrics(gormMeter); err != nil {
-		logger.WithError(err).Error("could not initialize vxapi-meter")
+		logrus.WithError(err).Error("could not initialize vxapi-meter")
 		return
 	}
 
@@ -265,7 +241,7 @@ func main() {
 	eventWorker := srvevents.NewEventPoller(exchanger, cfg.EventWorker.PollInterval, dbWithORM)
 	go func() {
 		if err = eventWorker.Run(ctx); err != nil {
-			logger.WithError(err).Error("could not start event worker")
+			logrus.WithError(err).Error("could not start event worker")
 		}
 	}()
 
@@ -278,7 +254,7 @@ func main() {
 	// run worker to synchronize events retention policy to all instance DB
 	go worker.SyncRetentionEvents(ctx, dbWithORM)
 
-	userActionWriter := useraction.NewLogWriter(logger)
+	userActionWriter := useraction.NewLogWriter()
 
 	router := server.NewRouter(
 		dbWithORM,
@@ -305,7 +281,7 @@ func main() {
 			}.ListenAndServeTLS(ctx, router)
 		})
 	}
-	if err := srvg.Wait(); err != nil {
-		logger.WithError(err).Error("failed to start server")
+	if err = srvg.Wait(); err != nil {
+		logrus.WithError(err).Error("failed to start server")
 	}
 }

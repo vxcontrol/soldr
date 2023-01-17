@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	srvcontext "soldr/pkg/app/api/server/context"
@@ -82,27 +83,27 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logrus.WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrVersionsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+		logrus.Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logrus.WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getVersionMappers(&query)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting version mappers by query")
+		logrus.WithError(err).Errorf("error getting version mappers by query")
 		response.Error(c, response.ErrVersionsMapperNotFound, err)
 		return
 	}
@@ -130,7 +131,7 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 	}
 
 	if resp.Total, err = query.Query(iDB, &resp.Versions, funcs...); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding versions")
+		logrus.WithError(err).Errorf("error finding versions")
 		response.Error(c, response.ErrVersionsInvalidQuery, err)
 		return
 	}

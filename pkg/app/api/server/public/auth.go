@@ -46,7 +46,7 @@ func AuthLogin(c *gin.Context) {
 		if err == nil {
 			err = data.Valid()
 		}
-		utils.FromContext(c).WithError(err).Errorf("error validating request data")
+		logrus.WithError(err).Errorf("error validating request data")
 		response.Error(c, response.ErrAuthInvalidLoginRequest, err)
 		return
 	}
@@ -57,50 +57,50 @@ func AuthLogin(c *gin.Context) {
 	}
 
 	if err = gDB.Take(&user, "(mail = ? OR name = ?) AND password IS NOT NULL", data.Mail, data.Mail).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting user by mail '%s'", data.Mail)
+		logrus.WithError(err).Errorf("error getting user by mail '%s'", data.Mail)
 		response.Error(c, response.ErrAuthInvalidCredentials, err)
 		return
 	} else if err = user.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
+		logrus.WithError(err).Errorf("error validating user data '%s'", user.Hash)
 		response.Error(c, response.ErrAuthInvalidUserData, err)
 		return
 	} else if user.RoleID == 100 {
-		utils.FromContext(c).WithError(err).Errorf("can't authorize external user '%s'", user.Hash)
+		logrus.WithError(err).Errorf("can't authorize external user '%s'", user.Hash)
 		response.Error(c, response.ErrAuthInvalidUserData, fmt.Errorf("user is external"))
 		return
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(data.Password)); err != nil {
-		utils.FromContext(c).Errorf("error matching user input password")
+		logrus.Errorf("error matching user input password")
 		response.Error(c, response.ErrAuthInvalidCredentials, err)
 		return
 	}
 
 	if user.Status != "active" {
-		utils.FromContext(c).Errorf("error checking active state for user '%s'", user.Status)
+		logrus.Errorf("error checking active state for user '%s'", user.Status)
 		response.Error(c, response.ErrAuthInactiveUser, fmt.Errorf("user is inactive"))
 		return
 	}
 
 	if service, err = getService(c, gDB, data.Service, &user.User); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading service data by hash '%s'", data.Service)
+		logrus.WithError(err).Errorf("error loading service data by hash '%s'", data.Service)
 		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	} else if err = service.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
+		logrus.WithError(err).Errorf("error validating service data '%s'", service.Hash)
 		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	}
 
 	if err = gDB.Table("privileges").Where("role_id = ?", user.RoleID).Pluck("name", &privs).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", user.Hash)
+		logrus.WithError(err).Errorf("error getting user privileges list '%s'", user.Hash)
 		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	}
 
 	uuid, err := utils.MakeUuidStrFromHash(user.Hash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
+		logrus.WithError(err).Errorf("error validating user data '%s'", user.Hash)
 		response.Error(c, response.ErrAuthInvalidUserData, err)
 		return
 	}
@@ -125,7 +125,7 @@ func AuthLogin(c *gin.Context) {
 	})
 	session.Save()
 
-	utils.FromContext(c).
+	logrus.
 		WithFields(logrus.Fields{
 			"age": expires,
 			"uid": user.ID,
@@ -157,7 +157,7 @@ func AuthLogout(c *gin.Context) {
 	}
 
 	session := sessions.Default(c)
-	utils.FromContext(c).
+	logrus.
 		WithFields(logrus.Fields{
 			"uid": session.Get("uid"),
 			"rid": session.Get("rid"),
@@ -194,7 +194,7 @@ func AuthSwitchService(c *gin.Context) {
 
 	serviceHash := c.PostForm("service")
 	if err := models.GetValidator().Var(serviceHash, "len=32,hexadecimal,lowercase,required"); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating input data")
+		logrus.WithError(err).Errorf("error validating input data")
 		response.Error(c, response.ErrAuthInvalidSwitchServiceHash, err)
 		return
 	}
@@ -209,21 +209,21 @@ func AuthSwitchService(c *gin.Context) {
 	expires := int(time.Until(time.Unix(exp, 0)) / time.Second)
 
 	if err = gDB.Take(&tenant, "id = ?", tid).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading tenant data '%d'", tid)
+		logrus.WithError(err).Errorf("error loading tenant data '%d'", tid)
 		response.Error(c, response.ErrAuthInvalidTenantData, err)
 		return
 	} else if err = tenant.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating tenant data '%d:%s'", tid, tenant.Hash)
+		logrus.WithError(err).Errorf("error validating tenant data '%d:%s'", tid, tenant.Hash)
 		response.Error(c, response.ErrAuthInvalidTenantData, err)
 		return
 	}
 
 	if err = gDB.Take(&service, "hash LIKE ? AND status = 'active'", serviceHash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading service data '%s'", serviceHash)
+		logrus.WithError(err).Errorf("error loading service data '%s'", serviceHash)
 		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	} else if err = service.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", serviceHash)
+		logrus.WithError(err).Errorf("error validating service data '%s'", serviceHash)
 		response.Error(c, response.ErrAuthInvalidServiceData, err)
 		return
 	}
@@ -239,7 +239,7 @@ func AuthSwitchService(c *gin.Context) {
 	})
 	session.Save()
 
-	utils.FromContext(c).
+	logrus.
 		WithFields(logrus.Fields{
 			"age": expires,
 			"uid": session.Get("uid"),
