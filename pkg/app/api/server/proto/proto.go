@@ -402,7 +402,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
-		logrus.WithError(nil).Errorf("mismatch socket type to incoming token type")
+		logrus.Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -451,7 +451,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
-		logrus.WithError(nil).Errorf("mismatch socket type to incoming token type")
+		logrus.Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -498,7 +498,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "external" {
-		logrus.WithError(nil).Errorf("mismatch socket type to incoming token type")
+		logrus.Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}

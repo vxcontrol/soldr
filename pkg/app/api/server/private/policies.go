@@ -567,13 +567,13 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if hash != policy.Hash {
-		logrus.WithError(nil).Errorf("mismatch policy hash to requested one")
+		logrus.Errorf("mismatch policy hash to requested one")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
 
 	if err = iDB.Model(&policy).Count(&count).Error; err != nil || count == 0 {
-		logrus.WithError(nil).Errorf("error updating policy by hash '%s', group not found", hash)
+		logrus.Errorf("error updating policy by hash '%s', group not found", hash)
 		response.Error(c, response.ErrPoliciesNotFound, err)
 		return
 	}
@@ -582,7 +582,7 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&policy).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error updating policy by hash '%s', policy not found", hash)
+		logrus.Errorf("error updating policy by hash '%s', policy not found", hash)
 		response.Error(c, response.ErrPoliciesNotFound, err)
 		return
 	} else if err != nil {
@@ -864,7 +864,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if policy.Info.System {
-		logrus.WithError(nil).Errorf("error removing system policy")
+		logrus.Errorf("error removing system policy")
 		response.Error(c, response.ErrDeletePolicySystemPolicy, err)
 		return
 	}
@@ -878,7 +878,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		return
 	}
 	if len(pgs.Groups) != 0 {
-		logrus.WithError(nil).Errorf("error removing policy which linked to groups")
+		logrus.Errorf("error removing policy which linked to groups")
 		response.Error(c, response.ErrDeletePolicyPolicyLinkedToGroups, err)
 		return
 	}

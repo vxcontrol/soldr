@@ -834,14 +834,14 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf.ObjectDisplayName = action.Agent.Description
 
 	if hash != action.Agent.Hash {
-		logrus.WithError(nil).Errorf("mismatch agent hash to requested one")
+		logrus.Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchAgentValidationError, nil)
 		return
 	}
 
 	var count int64
 	if err = iDB.Model(&action.Agent).Count(&count).Error; err != nil || count == 0 {
-		logrus.WithError(nil).Errorf("error updating agent by hash '%s', agent not found", hash)
+		logrus.Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	}
@@ -866,7 +866,7 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&action.Agent).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error updating agent by hash '%s', agent not found", hash)
+		logrus.Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	} else if err != nil {

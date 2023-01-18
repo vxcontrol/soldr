@@ -201,7 +201,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	}
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
+		logrus.Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
 		response.Error(c, response.ErrCreateAgentsUpgradesAgentNotFound, err)
 		return
 	} else if err != nil {
@@ -402,7 +402,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentData, err)
 		return
 	} else if hash != agent.Hash {
-		logrus.WithError(nil).Errorf("mismatch agent hash to requested one")
+		logrus.Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err)
 		return
 	}
@@ -426,7 +426,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		}
 		err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-			logrus.WithError(nil).Errorf("error getting binary info by version '%s', record not found", task.Version)
+			logrus.Errorf("error getting binary info by version '%s', record not found", task.Version)
 			response.Error(c, response.ErrPatchLastAgentUpgradeAgentBinaryNotFound, err)
 			return
 		} else if err != nil {
@@ -459,7 +459,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	}
 	err = iDB.Model(&task).UpdateColumns(update_info).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
+		logrus.Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
 		response.Error(c, response.ErrPatchLastAgentUpgradeLastUpgradeInfoNotFound, err)
 		return
 	} else if err != nil {

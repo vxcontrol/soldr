@@ -551,13 +551,13 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	uaf.ObjectDisplayName = group.Info.Name.En
 
 	if hash != group.Hash {
-		logrus.WithError(nil).Errorf("mismatch group hash to requested one")
+		logrus.Errorf("mismatch group hash to requested one")
 		response.Error(c, response.ErrGroupsValidationFail, nil)
 		return
 	}
 
 	if err = iDB.Model(&group).Count(&count).Error; err != nil || count == 0 {
-		logrus.WithError(nil).Errorf("error updating group by hash '%s', group not found", hash)
+		logrus.Errorf("error updating group by hash '%s', group not found", hash)
 		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	}
@@ -566,7 +566,7 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&group).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error updating group by hash '%s', group not found", hash)
+		logrus.Errorf("error updating group by hash '%s', group not found", hash)
 		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	} else if err != nil {

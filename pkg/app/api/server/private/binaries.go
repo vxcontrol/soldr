@@ -201,7 +201,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error getting binary info by version '%s', record not found", agentVersion)
+		logrus.Errorf("error getting binary info by version '%s', record not found", agentVersion)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, err)
 		return
 	} else if err != nil {
@@ -213,7 +213,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentName)
 	if chksums, ok = binary.Info.Chksums[path]; !ok {
-		logrus.WithError(nil).Errorf("error getting agent binary file check sums: '%s' not found", path)
+		logrus.Errorf("error getting agent binary file check sums: '%s' not found", path)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, nil)
 		return
 	}

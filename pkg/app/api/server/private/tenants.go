@@ -76,7 +76,7 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 			},
 		})
 	default:
-		logrus.WithError(nil).Errorf("error filtering user role services: unexpected role")
+		logrus.Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -207,7 +207,7 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	} else if hash != tenant.Hash {
-		logrus.WithError(nil).Errorf("mismatch tenant hash to requested one")
+		logrus.Errorf("mismatch tenant hash to requested one")
 		response.Error(c, response.ErrTenantsInvalidRequest, nil)
 		return
 	} else if err = tenant.Valid(); err != nil {
@@ -235,7 +235,7 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 	public_info := []interface{}{"description", "status"}
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&tenant).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error updating tenant by hash '%s', tenant not found", hash)
+		logrus.Errorf("error updating tenant by hash '%s', tenant not found", hash)
 		response.Error(c, response.ErrTenantsNotFound, err)
 		return
 	} else if err != nil {

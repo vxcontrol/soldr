@@ -176,9 +176,9 @@ func getService(c *gin.Context) *models.Service {
 	var sv *models.Service
 
 	if val, ok := c.Get("SV"); !ok {
-		logrus.WithError(nil).Errorf("error getting vxservice instance from context")
+		logrus.Errorf("error getting vxservice instance from context")
 	} else if sv = val.(*models.Service); sv == nil {
-		logrus.WithError(nil).Errorf("got nil value vxservice instance from context")
+		logrus.Errorf("got nil value vxservice instance from context")
 	}
 
 	return sv
@@ -188,9 +188,9 @@ func getDBEncryptor(c *gin.Context) crypto.IDBConfigEncryptor {
 	var encryptor crypto.IDBConfigEncryptor
 
 	if cr, ok := c.Get("crp"); !ok {
-		logrus.WithError(nil).Errorf("error getting secure config encryptor from context")
+		logrus.Errorf("error getting secure config encryptor from context")
 	} else if encryptor = cr.(crypto.IDBConfigEncryptor); encryptor == nil {
-		logrus.WithError(nil).Errorf("got nil value secure config encryptor from context")
+		logrus.Errorf("got nil value secure config encryptor from context")
 	}
 
 	return encryptor
@@ -934,14 +934,14 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	iDB := utils.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 		strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 	if iDB == nil {
-		logrus.WithError(nil).Errorf("error openning connection to instance DB")
+		logrus.Errorf("error openning connection to instance DB")
 		return errors.New("failed to connect to instance DB")
 	}
 	defer iDB.Close()
 
 	encryptor := getDBEncryptor(c)
 	if encryptor == nil {
-		logrus.WithError(nil).Errorf("encryptor not found")
+		logrus.Errorf("encryptor not found")
 		return errors.New("encryptor not found")
 	}
 
@@ -2357,7 +2357,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if moduleA.ID == 0 && form.Action != "activate" {
-		logrus.WithError(nil).Errorf("error on %s module, policy module not found", form.Action)
+		logrus.Errorf("error on %s module, policy module not found", form.Action)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2430,7 +2430,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 
 		for _, ch := range changes {
 			if ch {
-				logrus.WithError(nil).Errorf("error accepting module changes")
+				logrus.Errorf("error accepting module changes")
 				response.Error(c, response.ErrPatchPolicyModuleAcceptFail, nil)
 				return
 			}
@@ -2451,7 +2451,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	case "update":
 		moduleVersion := moduleA.Info.Version.String()
 		if moduleVersion == moduleS.Info.Version.String() {
-			logrus.WithError(nil).Errorf("error updating module to the same version: %s", moduleVersion)
+			logrus.Errorf("error updating module to the same version: %s", moduleVersion)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -2495,7 +2495,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		}
 
 	default:
-		logrus.WithError(nil).Errorf("error making unknown action on module")
+		logrus.Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchPolicyModuleActionNotFound, nil)
 		return
 	}
@@ -3042,7 +3042,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		response.Error(c, response.ErrCreateModuleGetCountFail, err)
 		return
 	} else if count >= 1 {
-		logrus.WithError(nil).Errorf("error creating second system module")
+		logrus.Errorf("error creating second system module")
 		response.Error(c, response.ErrCreateModuleSecondSystemModule, err)
 		return
 	}
@@ -3139,7 +3139,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		iDB := utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
 			strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
 		if iDB == nil {
-			logrus.WithError(nil).Errorf("error openning connection to instance DB")
+			logrus.Errorf("error openning connection to instance DB")
 			return errors.New("failed to connect to instance DB")
 		}
 		defer iDB.Close()
@@ -3403,7 +3403,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 
 	if module.State == "release" {
-		logrus.WithError(nil).Errorf("error changing released system module")
+		logrus.Errorf("error changing released system module")
 		response.Error(c, response.ErrPatchModuleVersionAcceptReleaseChangesFail, nil)
 		return
 	}
@@ -3419,7 +3419,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 	for _, ch := range changes {
 		if ch {
-			logrus.WithError(nil).Errorf("error accepting system module changes")
+			logrus.Errorf("error accepting system module changes")
 			response.Error(c, response.ErrPatchModuleVersionAcceptSystemChangesFail, nil)
 			return
 		}
@@ -3559,7 +3559,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		response.Error(c, response.ErrCreateModuleVersionGetDraftNumberFail, err)
 		return
 	} else if count >= 1 {
-		logrus.WithError(nil).Errorf("error creating system module second draft")
+		logrus.Errorf("error creating system module second draft")
 		response.Error(c, response.ErrCreateModuleVersionSecondSystemModuleDraft, err)
 		return
 	}
@@ -3574,7 +3574,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	switch utils.CompareVersions(module.Info.Version.String(), version) {
 	case utils.TargetVersionGreat:
 	default:
-		logrus.WithError(nil).Errorf("error validating new version '%s' -> '%s'",
+		logrus.Errorf("error validating new version '%s' -> '%s'",
 			module.Info.Version.String(), version)
 		response.Error(c, response.ErrCreateModuleVersionInvalidModuleVersion, nil)
 		return
@@ -3665,7 +3665,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		response.Error(c, response.ErrDeleteModuleVersionGetVersionNumberFail, err)
 		return
 	} else if count == 1 {
-		logrus.WithError(nil).Errorf("error deleting last system module version")
+		logrus.Errorf("error deleting last system module version")
 		response.Error(c, response.ErrDeleteModuleVersionDeleteLastVersionFail, nil)
 		return
 	}
@@ -3973,7 +3973,7 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(filePath, prefix) || strings.Contains(filePath, "..") {
-		logrus.WithError(nil).Errorf("error parsing path to file: mismatch base prefix")
+		logrus.Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrGetModuleVersionFileParsePathFail, nil)
 		return
 	}
@@ -4042,7 +4042,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if module.State == "release" {
-		logrus.WithError(nil).Errorf("error patching released module")
+		logrus.Errorf("error patching released module")
 		response.Error(c, response.ErrPatchModuleVersionFileUpdateFail, nil)
 		return
 	}
@@ -4062,7 +4062,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(form.Path, prefix) || strings.Contains(form.Path, "..") {
-		logrus.WithError(nil).Errorf("error parsing path to file: mismatch base prefix")
+		logrus.Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrPatchModuleVersionFileParsePathFail, nil)
 		return
 	}
@@ -4090,7 +4090,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 
 	case "move":
 		if !strings.HasPrefix(form.NewPath, prefix) || strings.Contains(form.NewPath, "..") {
-			logrus.WithError(nil).Errorf("error parsing path to file: mismatch base prefix")
+			logrus.Errorf("error parsing path to file: mismatch base prefix")
 			response.Error(c, response.ErrPatchModuleVersionFileParseNewpathFail, nil)
 			return
 		}
@@ -4105,7 +4105,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				logrus.WithError(nil).Errorf("error moving file in S3: newpath is identical to path")
+				logrus.Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
@@ -4124,7 +4124,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				logrus.WithError(nil).Errorf("error moving file in S3: newpath is identical to path")
+				logrus.Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
@@ -4149,7 +4149,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		}
 
 	default:
-		logrus.WithError(nil).Errorf("error making unknown action on module")
+		logrus.Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchModuleVersionFileActionNotFound, nil)
 		return
 	}

@@ -150,7 +150,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		return
 	} else {
 		if len(modules) == 0 {
-			logrus.WithError(nil).Errorf("system module by name and version not found: %s : %s", moduleName, version)
+			logrus.Errorf("system module by name and version not found: %s : %s", moduleName, version)
 			response.Error(c, response.ErrPortingModuleNotFound, nil)
 			return
 		}
@@ -288,7 +288,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		return
 	}
 	if len(templates) == 0 {
-		logrus.WithError(nil).Errorf("system module by name and version not found: %s : %s", moduleName, version)
+		logrus.Errorf("system module by name and version not found: %s : %s", moduleName, version)
 		response.Error(c, response.ErrPortingModuleNotFound, nil)
 		return
 	}
@@ -316,7 +316,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 
 		svModule := getModule(module.Info.Version)
 		if svModule != nil && !rewrite {
-			logrus.WithError(nil).Errorf("error overriding system module version: %s", module.Info.Version.String())
+			logrus.Errorf("error overriding system module version: %s", module.Info.Version.String())
 			response.Error(c, response.ErrImportOverrideNotPermitted, err)
 			return
 		}

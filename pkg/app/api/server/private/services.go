@@ -88,7 +88,7 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 			},
 		})
 	default:
-		logrus.WithError(nil).Errorf("error filtering user role services: unexpected role")
+		logrus.Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -189,7 +189,7 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 	case models.RoleUser, models.RoleAdmin, models.RoleExternal:
 		service.TenantID = tid
 	default:
-		logrus.WithError(nil).Errorf("error filtering user role services: unexpected role")
+		logrus.Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -229,7 +229,7 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	} else if hash != service.Hash {
-		logrus.WithError(nil).Errorf("mismatch service hash to requested one")
+		logrus.Errorf("mismatch service hash to requested one")
 		response.Error(c, response.ErrServicesInvalidRequest, nil)
 		return
 	} else if err = service.Valid(); err != nil {
@@ -241,7 +241,7 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	rid, _ := srvcontext.GetUint64(c, "rid")
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
-		logrus.WithError(nil).Errorf("error: no rights to patch service")
+		logrus.Errorf("error: no rights to patch service")
 		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
@@ -260,7 +260,7 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	public_info := []interface{}{"info", "name", "status"}
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&service).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithError(nil).Errorf("error updating service by hash '%s', service not found", hash)
+		logrus.Errorf("error updating service by hash '%s', service not found", hash)
 		response.Error(c, response.ErrServicesNotFound, err)
 		return
 	} else if err != nil {
@@ -292,7 +292,7 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 	rid, _ := srvcontext.GetUint64(c, "rid")
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
-		logrus.WithError(nil).Errorf("error: no rights to delete service")
+		logrus.Errorf("error: no rights to delete service")
 		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
