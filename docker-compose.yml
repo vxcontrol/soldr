@@ -186,7 +186,6 @@ services:
       - ${API_SERVER_HOST:-0.0.0.0}:${API_SERVER_PORT_HTTPS:-443}:8443
     volumes:
       - vx-api-server-ssl:/opt/api/ssl:rw
-      - vx-api-server-logs:/opt/api/logs:rw
       - /var/lib/dbus/machine-id:/var/lib/dbus/machine-id:ro
       - /etc/machine-id:/etc/machine-id:ro
     environment:
@@ -315,7 +314,7 @@ services:
     container_name: vx_loki
     hostname: loki.local
     restart: unless-stopped
-    command: 
+    command:
       - -config.file=/etc/loki/config.yaml
     networks:
       - vx-stand
@@ -358,7 +357,7 @@ services:
     image: otel/opentelemetry-collector-contrib:0.68.0
     container_name: vx_otel
     hostname: otel.local
-    restart: unless-stopped    
+    restart: unless-stopped
     networks:
       - vx-stand
     expose:
@@ -454,7 +453,7 @@ services:
     image: prom/node-exporter:v1.5.0
     container_name: vx_node_exporter
     hostname: node-exporter.local
-    restart: unless-stopped    
+    restart: unless-stopped
     command:
       - --path.procfs=/host/proc
       - --path.sysfs=/host/sys
@@ -485,8 +484,6 @@ volumes:
   vx-minio-data:
     driver: local
   vx-api-server-ssl:
-    driver: local
-  vx-api-server-logs:
     driver: local
   vx-server-data:
     driver: local

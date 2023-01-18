@@ -52,7 +52,6 @@ build-web:
 .PHONY: run-api
 run-api: build-api
 	cd $(CURDIR)/build && \
-		LOG_DIR=$(CURDIR)/build/logs \
 		CERTS_PATH=$(CURDIR)/security/certs/api \
 		MIGRATION_DIR=$(CURDIR)/db/api/migrations \
 		TEMPLATES_DIR=$(CURDIR)/build/package/api/templates \
