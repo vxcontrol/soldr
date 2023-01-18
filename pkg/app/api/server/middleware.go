@@ -266,6 +266,7 @@ func WithLogger(skipPaths []string) gin.HandlerFunc {
 				path = path + "?" + raw
 			}
 			logrus.WithFields(logrus.Fields{
+				"component":   "api",
 				"client_ip":   c.ClientIP(),
 				"latency":     time.Now().Sub(start),
 				"path":        path,
