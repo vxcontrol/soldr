@@ -23,6 +23,7 @@ import (
 	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/proto/vm"
 	"soldr/pkg/app/api/server/response"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/hardening/luavm/certs"
 	vxcommonVM "soldr/pkg/hardening/luavm/vm"
@@ -207,9 +208,8 @@ func sendAuthResp(ctx context.Context, conn vxproto.IConnection, authRespMessage
 	return nil
 }
 
-func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, sockType string, uaf utils.UserActionFields) {
+func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, sockType string, uaf useraction.Fields) {
 	var (
-		err        error
 		serverConn *socket
 		sv         *models.Service
 		validate   = models.GetValidator()
@@ -222,37 +222,37 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 	})
 
 	if err := validate.Var(sockID, "len=32,hexadecimal,lowercase,required"); err != nil {
-		logger.WithError(err).Error("failed to validate sock ID (agent or group)")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoInvalidAgentID, err, uaf)
+		logger.WithError(err).Error("failed to validate agent ID")
+		response.Error(c, response.ErrProtoInvalidAgentID, err)
 		return
 	}
 
 	if val, ok := c.Get("SV"); !ok {
 		logger.Error("error getting vxservice instance from context")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoNoServiceInfo, nil, uaf)
+		response.Error(c, response.ErrProtoNoServiceInfo, nil)
 		return
 	} else if sv = val.(*models.Service); sv == nil {
 		logger.Error("got nil value vxservice instance from context")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoNoServiceInfo, nil, uaf)
+		response.Error(c, response.ErrProtoNoServiceInfo, nil)
 		return
 	}
 
 	agentInfo, err := system.GetAgentInfo(c)
 	if err != nil {
 		logger.WithError(err).Error("failed to get the agent info")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoNoServiceInfo, err, uaf)
+		response.Error(c, response.ErrProtoNoServiceInfo, err)
 		return
 	}
 	logger.Debug("try prepareClientWSConn")
 	clientConn, err := prepareClientWSConn(c.Writer, c.Request)
 	if err != nil {
 		logger.WithError(err).Error("failed to upgrade to websockets")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoUpgradeFail, err, uaf)
+		response.Error(c, response.ErrProtoUpgradeFail, err)
 		return
 	}
 	defer clientConn.Close(c.Request.Context())
-	defer func(uaFields *utils.UserActionFields) {
-		c.Set("uaf", []utils.UserActionFields{*uaFields})
+	defer func(uaFields *useraction.Fields) {
+		c.Set("uaf", []useraction.Fields{*uaFields})
 	}(&uaf)
 
 	logger.Debug("try recvAuthReq")
@@ -345,37 +345,45 @@ func getServiceHash(c *gin.Context) (string, error) {
 }
 
 type ProtoService struct {
-	db              *gorm.DB
-	serverConnector *client.AgentServerClient
+	db               *gorm.DB
+	serverConnector  *client.AgentServerClient
+	userActionWriter useraction.Writer
 }
 
-func NewProtoService(db *gorm.DB, serverConnector *client.AgentServerClient) *ProtoService {
+func NewProtoService(
+	db *gorm.DB,
+	serverConnector *client.AgentServerClient,
+	userActionWriter useraction.Writer,
+) *ProtoService {
 	return &ProtoService{
-		db:              db,
-		serverConnector: serverConnector,
+		db:               db,
+		serverConnector:  serverConnector,
+		userActionWriter: userActionWriter,
 	}
 }
 
 func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 	sockID := c.Param("group_id")
-	uaf := utils.UserActionFields{
+
+	uaf := useraction.Fields{
 		Domain:            "agent",
 		ObjectType:        "agent",
-		ObjectId:          sockID,
+		ObjectID:          sockID,
 		ActionCode:        "interactive interaction",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
+		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
-		utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPErrorWithUAFields(c, response.ErrInternalDBNotFound, err, uaf)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -385,17 +393,17 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, response.ErrAgentsNotFound, nil, uaf)
-		} else {
-			utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+			response.Error(c, response.ErrAgentsNotFound, nil)
+			return
 		}
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoSockMismatch, nil, uaf)
+		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
 
@@ -404,24 +412,26 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 	sockID := c.Param("agent_id")
-	uaf := utils.UserActionFields{
+
+	uaf := useraction.Fields{
 		Domain:            "agent",
 		ObjectType:        "agent",
-		ObjectId:          sockID,
+		ObjectID:          sockID,
 		ActionCode:        "interactive interaction",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
+		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
-		utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPErrorWithUAFields(c, response.ErrInternalDBNotFound, err, uaf)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -431,17 +441,18 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, response.ErrAgentsNotFound, nil, uaf)
-		} else {
-			utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+			response.Error(c, response.ErrAgentsNotFound, nil)
+			return
 		}
+
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoSockMismatch, nil, uaf)
+		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
 
@@ -450,24 +461,25 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 	sockID := c.Param("agent_id")
-	uaf := utils.UserActionFields{
+	uaf := useraction.Fields{
 		Domain:            "agent",
 		ObjectType:        "agent",
-		ObjectId:          sockID,
+		ObjectID:          sockID,
 		ActionCode:        "interactive interaction",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
+		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
-		utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPErrorWithUAFields(c, response.ErrInternalDBNotFound, err, uaf)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -477,17 +489,17 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 	} else {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, response.ErrAgentsNotFound, nil, uaf)
-		} else {
-			utils.HTTPErrorWithUAFields(c, response.ErrInternal, err, uaf)
+			response.Error(c, response.ErrAgentsNotFound, nil)
+			return
 		}
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "external" {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
-		utils.HTTPErrorWithUAFields(c, response.ErrProtoSockMismatch, nil, uaf)
+		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
 

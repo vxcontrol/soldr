@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/version"
 )
@@ -86,7 +86,7 @@ func Info(c *gin.Context) {
 	)
 
 	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, nil)
+		response.Error(c, response.ErrInternalDBNotFound, nil)
 		return
 	}
 
@@ -117,23 +117,23 @@ func Info(c *gin.Context) {
 		err = gDB.Take(&resp.User, "id = ?", uid).
 			Related(&resp.Role).Related(&resp.Tenant).Error
 		if err != nil {
-			utils.HTTPError(c, srverrors.ErrInfoUserNotFound, err)
+			response.Error(c, response.ErrInfoUserNotFound, err)
 			return
 		} else if err = resp.User.Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
-			utils.HTTPError(c, srverrors.ErrInfoInvalidUserData, err)
+			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
 		if err = gDB.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
-			utils.HTTPError(c, srverrors.ErrInfoInvalidUserData, err)
+			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
 		if err = gDB.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
-			utils.HTTPError(c, srverrors.ErrInfoInvalidServiceData, err)
+			response.Error(c, response.ErrInfoInvalidServiceData, err)
 			return
 		}
 
@@ -154,7 +154,7 @@ func Info(c *gin.Context) {
 				utils.FromContext(c).WithError(err).Errorf("failed to refresh token")
 				// raise error when there is elapsing last five minutes
 				if nowt >= gtmt+int64(utils.DefaultSessionTimeout)-fiveMins {
-					utils.HTTPError(c, srverrors.ErrInternal, err)
+					response.Error(c, response.ErrInternal, err)
 					return
 				}
 			}
@@ -171,9 +171,9 @@ func Info(c *gin.Context) {
 				"tid": resp.User.TenantID,
 			}).
 			Errorf("failed to get user privileges for '%s' '%s'", resp.User.Mail, resp.User.Name)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }

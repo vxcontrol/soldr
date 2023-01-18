@@ -9,7 +9,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -69,7 +69,7 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
+		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
 
@@ -88,25 +88,25 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 		})
 	default:
 		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Services); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding services")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Services); i++ {
 		if err = resp.Services[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Services[i].Hash)
-			utils.HTTPError(c, srverrors.ErrServicesInvalidData, err)
+			response.Error(c, response.ErrServicesInvalidData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetService is a function to return service by hash
@@ -143,18 +143,18 @@ func (s *ServicesService) GetService(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrServicesNotFound, err)
+			response.Error(c, response.ErrServicesNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Hash)
-		utils.HTTPError(c, srverrors.ErrServicesInvalidData, err)
+		response.Error(c, response.ErrServicesInvalidData, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // CreateService is a function to create new service
@@ -176,7 +176,7 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&service); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
+		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
 
@@ -189,7 +189,7 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 		service.TenantID = tid
 	default:
 		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
@@ -197,11 +197,11 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 
 	if err = s.db.Create(&service).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating service")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusCreated, service)
+	response.Success(c, http.StatusCreated, service)
 }
 
 // PatchService is a function to update service by hash
@@ -225,15 +225,15 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&service); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
+		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	} else if hash != service.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch service hash to requested one")
-		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, nil)
+		response.Error(c, response.ErrServicesInvalidRequest, nil)
 		return
 	} else if err = service.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating service JSON")
-		utils.HTTPError(c, srverrors.ErrServicesInvalidRequest, err)
+		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
 
@@ -241,7 +241,7 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
 		utils.FromContext(c).WithError(nil).Errorf("error: no rights to patch service")
-		utils.HTTPError(c, srverrors.ErrNotPermitted, nil)
+		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
 	scope := func(db *gorm.DB) *gorm.DB {
@@ -260,15 +260,15 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&service).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating service by hash '%s', service not found", hash)
-		utils.HTTPError(c, srverrors.ErrServicesNotFound, err)
+		response.Error(c, response.ErrServicesNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating service by hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, service)
+	response.Success(c, http.StatusOK, service)
 }
 
 // DeleteService is a function to delete service by hash
@@ -292,7 +292,7 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
 		utils.FromContext(c).WithError(nil).Errorf("error: no rights to delete service")
-		utils.HTTPError(c, srverrors.ErrNotPermitted, nil)
+		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
 	scope := func(db *gorm.DB) *gorm.DB {
@@ -310,22 +310,22 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&service).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrServicesNotFound, err)
+			response.Error(c, response.ErrServicesNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = service.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
-		utils.HTTPError(c, srverrors.ErrServicesInvalidData, err)
+		response.Error(c, response.ErrServicesInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&service).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting service by hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, struct{}{})
+	response.Success(c, http.StatusOK, struct{}{})
 }

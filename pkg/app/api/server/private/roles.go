@@ -7,7 +7,7 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/models"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -51,7 +51,7 @@ func (s *RoleService) GetRoles(c *gin.Context) {
 
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrRolesInvalidRequest, err)
+		response.Error(c, response.ErrRolesInvalidRequest, err)
 		return
 	}
 
@@ -59,17 +59,17 @@ func (s *RoleService) GetRoles(c *gin.Context) {
 
 	if resp.Total, err = query.Query(s.db, &resp.Roles); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding roles")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Roles); i++ {
 		if err = resp.Roles[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating role data '%d'", resp.Roles[i].ID)
-			utils.HTTPError(c, srverrors.ErrRolesInvalidData, err)
+			response.Error(c, response.ErrRolesInvalidData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }

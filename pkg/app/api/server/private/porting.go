@@ -17,7 +17,8 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -90,12 +91,17 @@ func getModuleTemplates(zipArchive *multipart.FileHeader, moduleName, version st
 }
 
 type PortingService struct {
-	db *gorm.DB
+	db               *gorm.DB
+	userActionWriter useraction.Writer
 }
 
-func NewPortingService(db *gorm.DB) *PortingService {
+func NewPortingService(
+	db *gorm.DB,
+	userActionWriter useraction.Writer,
+) *PortingService {
 	return &PortingService{
-		db: db,
+		db:               db,
+		userActionWriter: userActionWriter,
 	}
 }
 
@@ -118,16 +124,17 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		sv         *models.Service
 		version    = c.Param("version")
 	)
-	uaf := utils.UserActionFields{
+	uaf := useraction.Fields{
 		Domain:            "module",
 		ObjectType:        "module",
 		ActionCode:        "export",
-		ObjectId:          moduleName,
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
+		ObjectID:          moduleName,
+		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	if sv = getService(c); sv == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalServiceNotFound, nil, uaf)
+		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
@@ -138,18 +145,18 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 
 	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Find(&modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
 		if len(modules) == 0 {
 			utils.FromContext(c).WithError(nil).Errorf("system module by name and version not found: %s : %s", moduleName, version)
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrPortingModuleNotFound, nil, uaf)
+			response.Error(c, response.ErrPortingModuleNotFound, nil)
 			return
 		}
 		for _, module := range modules {
 			if err = module.Valid(); err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
-				utils.HTTPErrorWithUAFields(c, srverrors.ErrExportInvalidModuleData, err, uaf)
+				response.Error(c, response.ErrExportInvalidModuleData, err)
 				return
 			}
 		}
@@ -165,13 +172,13 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		template, err := LoadModuleSFromGlobalS3(&module.Info)
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error loading system module files from S3")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrExportLoadFilesFail, err, uaf)
+			response.Error(c, response.ErrExportLoadFilesFail, err)
 			return
 		}
 		config, err := BuildModuleSConfig(&module)
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error building system module config")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrExportBuildConfigFail, err, uaf)
+			response.Error(c, response.ErrExportBuildConfigFail, err)
 			return
 		}
 		template["config"] = config
@@ -181,13 +188,13 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 				zipFile, err := zipWriter.Create(prefix + "/" + folderName + "/" + fileName)
 				if err != nil {
 					utils.FromContext(c).WithError(err).Errorf("error adding new system module file to zip")
-					utils.HTTPErrorWithUAFields(c, srverrors.ErrExportAddFileFail, err, uaf)
+					response.Error(c, response.ErrExportAddFileFail, err)
 					return
 				}
 
 				if _, err = zipFile.Write(fileContent); err != nil {
 					utils.FromContext(c).WithError(err).Errorf("error writing system module file to zip")
-					utils.HTTPErrorWithUAFields(c, srverrors.ErrExportWriteFileFail, err, uaf)
+					response.Error(c, response.ErrExportWriteFileFail, err)
 					return
 				}
 			}
@@ -195,12 +202,12 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 	}
 	if err = zipWriter.Close(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error closing system module archive")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrExportCloseArchiveFail, err, uaf)
+		response.Error(c, response.ErrExportCloseArchiveFail, err)
 		return
 	}
 
 	uaf.Success = true
-	c.Set("uaf", []utils.UserActionFields{uaf})
+	c.Set("uaf", []useraction.Fields{uaf})
 	date := time.Now().Format("06.01.02")
 	contentDisposition := fmt.Sprintf("attachment; filename=%s.v.%s.%s.zip", moduleName, version, date)
 	c.Writer.Header().Add("Content-Disposition", contentDisposition)
@@ -232,16 +239,18 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		sv         *models.Service
 		version    = c.Param("version")
 	)
-	uaf := utils.UserActionFields{
+
+	uaf := useraction.Fields{
 		Domain:            "module",
 		ObjectType:        "module",
 		ActionCode:        "import",
-		ObjectId:          moduleName,
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
+		ObjectID:          moduleName,
+		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	if sv = getService(c); sv == nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternalServiceNotFound, nil, uaf)
+		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
@@ -252,7 +261,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 
 	if err = s.db.Scopes(FilterModulesByVersion("all"), scope).Find(&modules).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	getModule := func(version models.SemVersion) *models.ModuleS {
@@ -267,26 +276,26 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 	zipArchive, err := c.FormFile("archive")
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error reading system module zip file")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrImportReadArchiveFail, err, uaf)
+		response.Error(c, response.ErrImportReadArchiveFail, err)
 		return
 	}
 
 	templates, err := getModuleTemplates(zipArchive, moduleName, version)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error parsing system module zip file")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrImportParseArchiveFail, err, uaf)
+		response.Error(c, response.ErrImportParseArchiveFail, err)
 		return
 	}
 	if len(templates) == 0 {
 		utils.FromContext(c).WithError(nil).Errorf("system module by name and version not found: %s : %s", moduleName, version)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPortingModuleNotFound, nil, uaf)
+		response.Error(c, response.ErrPortingModuleNotFound, nil)
 		return
 	}
 	for _, template := range templates {
 		module, err := LoadModuleSConfig(template["config"])
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error parsing system module config from zip file")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrImportParseConfigFail, err, uaf)
+			response.Error(c, response.ErrImportParseConfigFail, err)
 			return
 		}
 
@@ -295,19 +304,19 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		module.ServiceType = sv.Type
 		if err = json.Unmarshal(template["config"]["info.json"], &module.Info); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error parsing system module file info")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrImportParseFileFail, err, uaf)
+			response.Error(c, response.ErrImportParseFileFail, err)
 			return
 		}
 		if err = module.Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating system module data")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrImportValidateConfigFail, err, uaf)
+			response.Error(c, response.ErrImportValidateConfigFail, err)
 			return
 		}
 
 		svModule := getModule(module.Info.Version)
 		if svModule != nil && !rewrite {
 			utils.FromContext(c).WithError(nil).Errorf("error overriding system module version: %s", module.Info.Version.String())
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrImportOverrideNotPermitted, err, uaf)
+			response.Error(c, response.ErrImportOverrideNotPermitted, err)
 			return
 		}
 		nmodules = append(nmodules, module)
@@ -319,7 +328,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		svModule := getModule(module.Info.Version)
 		if err = StoreCleanModuleSToGlobalS3(&module.Info, template); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error storing system module to S3")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrImportStoreS3Fail, err, uaf)
+			response.Error(c, response.ErrImportStoreS3Fail, err)
 			return
 		}
 		if svModule != nil {
@@ -330,10 +339,10 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		}
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error storing system module to DB")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrImportStoreDBFail, err, uaf)
+			response.Error(c, response.ErrImportStoreDBFail, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, struct{}{}, uaf)
+	response.Success(c, http.StatusOK, struct{}{})
 }

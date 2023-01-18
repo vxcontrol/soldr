@@ -9,7 +9,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -55,7 +55,7 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidRequest, err)
+		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	}
 
@@ -76,25 +76,25 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 		})
 	default:
 		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Tenants); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding tenants")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Tenants); i++ {
 		if err = resp.Tenants[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating tenant data '%s'", resp.Tenants[i].Hash)
-			utils.HTTPError(c, srverrors.ErrTenantsInvalidData, err)
+			response.Error(c, response.ErrTenantsInvalidData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetTenant returns tenant by hash
@@ -133,18 +133,18 @@ func (s *TenantService) GetTenant(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding tenant by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrTenantsNotFound, err)
+			response.Error(c, response.ErrTenantsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating tenant data '%s'", resp.Hash)
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidData, err)
+		response.Error(c, response.ErrTenantsInvalidData, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // CreateTenant is a function to create new tenant
@@ -166,7 +166,7 @@ func (s *TenantService) CreateTenant(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&tenant); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidRequest, err)
+		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	}
 
@@ -175,11 +175,11 @@ func (s *TenantService) CreateTenant(c *gin.Context) {
 
 	if err = s.db.Create(&tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error creating tenant")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusCreated, tenant)
+	response.Success(c, http.StatusCreated, tenant)
 }
 
 // PatchTenant updates tenant by hash
@@ -203,15 +203,15 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 
 	if err = c.ShouldBindJSON(&tenant); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidRequest, err)
+		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	} else if hash != tenant.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch tenant hash to requested one")
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidRequest, nil)
+		response.Error(c, response.ErrTenantsInvalidRequest, nil)
 		return
 	} else if err = tenant.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating tenant JSON")
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidRequest, err)
+		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	}
 
@@ -235,15 +235,15 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&tenant).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating tenant by hash '%s', tenant not found", hash)
-		utils.HTTPError(c, srverrors.ErrTenantsNotFound, err)
+		response.Error(c, response.ErrTenantsNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating tenant by hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, tenant)
+	response.Success(c, http.StatusOK, tenant)
 }
 
 // DeleteTenant is a function to delete tenant by hash
@@ -282,22 +282,22 @@ func (s *TenantService) DeleteTenant(c *gin.Context) {
 	if err = s.db.Scopes(scope).Take(&tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding tenant by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrTenantsNotFound, err)
+			response.Error(c, response.ErrTenantsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = tenant.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating tenant data '%s'", tenant.Hash)
-		utils.HTTPError(c, srverrors.ErrTenantsInvalidData, err)
+		response.Error(c, response.ErrTenantsInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&tenant).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting tenant by hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, struct{}{})
+	response.Success(c, http.StatusOK, struct{}{})
 }

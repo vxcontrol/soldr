@@ -12,7 +12,8 @@ import (
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/storage"
 )
@@ -41,12 +42,17 @@ var binariesSQLMappers = map[string]interface{}{
 }
 
 type BinariesService struct {
-	db *gorm.DB
+	db               *gorm.DB
+	userActionWriter useraction.Writer
 }
 
-func NewBinariesService(db *gorm.DB) *BinariesService {
+func NewBinariesService(
+	db *gorm.DB,
+	userActionWriter useraction.Writer,
+) *BinariesService {
 	return &BinariesService{
-		db: db,
+		db:               db,
+		userActionWriter: userActionWriter,
 	}
 }
 
@@ -97,7 +103,7 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 
 	if err = c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrAgentBinariesInvalidRequest, err)
+		response.Error(c, response.ErrAgentBinariesInvalidRequest, err)
 		return
 	}
 
@@ -116,19 +122,19 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 
 	if resp.Total, err = query.Query(s.db, &resp.Binaries); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent binaries")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Binaries); i++ {
 		if err = resp.Binaries[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating agent binaries data '%s'", resp.Binaries[i].Hash)
-			utils.HTTPError(c, srverrors.ErrAgentBinariesInvalidData, err)
+			response.Error(c, response.ErrAgentBinariesInvalidData, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetAgentBinaryFile is a function to return agent binary file
@@ -159,11 +165,8 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		s3           storage.IStorage
 		validate     = validator.New()
 	)
-	uaf := utils.UserActionFields{
-		Domain:     "agent",
-		ObjectType: "distribution",
-		ActionCode: "downloading",
-	}
+	uaf := useraction.NewFields(c, "agent", "distribution", "downloading", "", useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	resultName = fmt.Sprintf("%s_%s_%s", agentName, agentOS, agentArch)
 	if agentOS == "windows" {
@@ -173,15 +176,15 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 	uaf.ObjectDisplayName = resultName
 
 	if err := validate.Var(agentOS, "oneof=windows linux darwin,required"); err != nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileInvalidOS, err, uaf)
+		response.Error(c, response.ErrAgentBinaryFileInvalidOS, err)
 		return
 	}
 	if err := validate.Var(agentArch, "oneof=386 amd64,required"); err != nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileInvalidArch, err, uaf)
+		response.Error(c, response.ErrAgentBinaryFileInvalidArch, err)
 		return
 	}
 	if err := validate.Var(agentVersion, "max=25,required"); err != nil {
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileInvalidArch, err, uaf)
+		response.Error(c, response.ErrAgentBinaryFileInvalidArch, err)
 		return
 	}
 
@@ -198,42 +201,42 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", agentVersion)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileNotFound, err, uaf)
+		response.Error(c, response.ErrAgentBinaryFileNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", agentVersion)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
-	uaf.ObjectId = binary.Hash
+	uaf.ObjectID = binary.Hash
 
 	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentName)
 	if chksums, ok = binary.Info.Chksums[path]; !ok {
 		utils.FromContext(c).WithError(nil).Errorf("error getting agent binary file check sums: '%s' not found", path)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileNotFound, nil, uaf)
+		response.Error(c, response.ErrAgentBinaryFileNotFound, nil)
 		return
 	}
 
 	if s3, err = storage.NewS3(nil); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if data, err = s3.ReadFile(path); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error reading agent binary file '%s'", path)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = utils.ValidateBinaryFileByChksums(data, chksums); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating agent binary file by check sums '%s'", path)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentBinaryFileCorrupted, err, uaf)
+		response.Error(c, response.ErrAgentBinaryFileCorrupted, err)
 		return
 	}
 
 	uaf.Success = true
-	c.Set("uaf", []utils.UserActionFields{uaf})
+	c.Set("uaf", []useraction.Fields{uaf})
 	c.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%q", resultName))
 	c.Data(http.StatusOK, "application/octet-stream", data)
 }

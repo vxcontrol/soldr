@@ -14,7 +14,7 @@ import (
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/private"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/app/api/utils/dbencryptor"
 )
@@ -43,17 +43,17 @@ func authTokenProtoRequired() gin.HandlerFunc {
 			attrs := []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname}
 			for _, attr := range attrs {
 				if attr == nil {
-					utils.HTTPError(c, srverrors.ErrNotPermitted, errors.New(msg))
+					response.Error(c, response.ErrNotPermitted, errors.New(msg))
 					return
 				}
 			}
 
 			if prms, ok := prm.([]string); !ok {
-				utils.HTTPError(c, srverrors.ErrNotPermitted, nil)
+				response.Error(c, response.ErrNotPermitted, nil)
 				return
 			} else {
 				if !lookupPerm(prms, privInteractive) {
-					utils.HTTPError(c, srverrors.ErrNotPermitted, nil)
+					response.Error(c, response.ErrNotPermitted, nil)
 					return
 				}
 				c.Set("prm", prms)
@@ -124,13 +124,13 @@ func authRequired() gin.HandlerFunc {
 		attrs := []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname, svc}
 		for _, attr := range attrs {
 			if attr == nil {
-				utils.HTTPError(c, srverrors.ErrAuthRequired, errors.New("token claim invalid"))
+				response.Error(c, response.ErrAuthRequired, errors.New("token claim invalid"))
 				return
 			}
 		}
 
 		if prms, ok := prm.([]string); !ok {
-			utils.HTTPError(c, srverrors.ErrAuthRequired, nil)
+			response.Error(c, response.ErrAuthRequired, nil)
 			return
 		} else {
 			c.Set("prm", prms)
@@ -159,7 +159,7 @@ func localUserRequired() gin.HandlerFunc {
 		rid := session.Get("rid")
 
 		if rid == nil || rid.(uint64) == models.RoleExternal {
-			utils.HTTPError(c, srverrors.ErrLocalUserRequired, nil)
+			response.Error(c, response.ErrLocalUserRequired, nil)
 			return
 		}
 
@@ -237,7 +237,7 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 
 		service, err := getService(c)
 		if err != nil {
-			utils.HTTPError(c, srverrors.ErrInternalServiceNotFound, nil)
+			response.Error(c, response.ErrInternalServiceNotFound, nil)
 			return
 		}
 

@@ -29,6 +29,7 @@ import (
 	"soldr/pkg/app/api/server/proto"
 	"soldr/pkg/app/api/server/public"
 	"soldr/pkg/app/api/storage/mem"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -50,6 +51,7 @@ import (
 func NewRouter(
 	db *gorm.DB,
 	exchanger *srvevents.Exchanger,
+	userActionWriter useraction.Writer,
 	dbConns *mem.DBConnectionStorage,
 	s3Conns *mem.S3ConnectionStorage,
 
@@ -149,17 +151,17 @@ func NewRouter(
 	serverConnector := client.NewAgentServerClient(db, dbConns, s3Conns)
 
 	// services
-	protoService := proto.NewProtoService(db, serverConnector)
-	agentService := private.NewAgentService(db, serverConnector)
-	binariesService := private.NewBinariesService(db)
+	protoService := proto.NewProtoService(db, serverConnector, userActionWriter)
+	agentService := private.NewAgentService(db, serverConnector, userActionWriter)
+	binariesService := private.NewBinariesService(db, userActionWriter)
 	eventService := private.NewEventService(serverConnector)
-	groupService := private.NewGroupService(serverConnector)
-	moduleService := private.NewModuleService(db, serverConnector)
+	groupService := private.NewGroupService(serverConnector, userActionWriter)
+	moduleService := private.NewModuleService(db, serverConnector, userActionWriter)
 	optionService := private.NewOptionService(db)
-	policyService := private.NewPolicyService(db, serverConnector)
-	portingService := private.NewPortingService(db)
+	policyService := private.NewPolicyService(db, serverConnector, userActionWriter)
+	portingService := private.NewPortingService(db, userActionWriter)
 	roleService := private.NewRoleService(db)
-	upgradeService := private.NewUpgradeService(db, serverConnector)
+	upgradeService := private.NewUpgradeService(db, serverConnector, userActionWriter)
 	tagService := private.NewTagService(db, serverConnector)
 	versionService := private.NewVersionService(db, serverConnector)
 	servicesService := private.NewServicesService(db)

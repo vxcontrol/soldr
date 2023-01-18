@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/jinzhu/gorm"
@@ -12,7 +13,8 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
-	srverrors "soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/server/response"
+	useraction "soldr/pkg/app/api/user_action"
 	"soldr/pkg/app/api/utils"
 )
 
@@ -202,29 +204,45 @@ func getActionCode(action string) string {
 	return actionCode
 }
 
-func fillAgentUserActionFields(agents []models.Agent, actionCode string) []utils.UserActionFields {
-	res := make([]utils.UserActionFields, len(agents))
+func fillAgentUserActionFields(c *gin.Context, agents []models.Agent, actionCode string, tStart time.Time) []useraction.Fields {
+	session := sessions.Default(c)
+	uid := session.Get("uuid")
+	uuidstr, _ := uid.(string)
+
+	userName := session.Get("uname")
+	userNamestr, _ := userName.(string)
+	res := make([]useraction.Fields, len(agents))
 	for i, v := range agents {
-		res[i] = utils.UserActionFields{
+		res[i] = useraction.Fields{
+			StartTime:         tStart,
+			UserName:          userNamestr,
+			UserUUID:          uuidstr,
 			Domain:            "agent",
 			ObjectType:        "agent",
-			ObjectId:          v.Hash,
+			ObjectID:          v.Hash,
 			ObjectDisplayName: v.Description,
 			ActionCode:        actionCode,
+			Success:           false,
 		}
 	}
 	return res
 }
 
 type AgentService struct {
-	db              *gorm.DB
-	serverConnector *client.AgentServerClient
+	db               *gorm.DB
+	serverConnector  *client.AgentServerClient
+	userActionWriter useraction.Writer
 }
 
-func NewAgentService(db *gorm.DB, serverConnector *client.AgentServerClient) *AgentService {
+func NewAgentService(
+	db *gorm.DB,
+	serverConnector *client.AgentServerClient,
+	userActionWriter useraction.Writer,
+) *AgentService {
 	return &AgentService{
-		db:              db,
-		serverConnector: serverConnector,
+		db:               db,
+		serverConnector:  serverConnector,
+		userActionWriter: userActionWriter,
 	}
 }
 
@@ -260,26 +278,26 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 
 	if err := c.ShouldBindQuery(&query); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidRequest, err)
+		response.Error(c, response.ErrGetAgentsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("agents", agentsSQLMappers); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding query")
-		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidRequest, err)
+		response.Error(c, response.ErrGetAgentsInvalidRequest, err)
 		return
 	}
 
@@ -326,16 +344,16 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 	if query.Group == "" {
 		if resp.Total, err = query.Query(iDB, &resp.Agents, funcs...); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding agents")
-			utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding grouped agents")
-			utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
-		utils.HTTPSuccess(c, http.StatusOK, groupedResp)
+		response.Success(c, http.StatusOK, groupedResp)
 		return
 	}
 
@@ -344,19 +362,19 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		gids = append(gids, resp.Agents[i].GroupID)
 		if err = resp.Agents[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agents[i].Hash)
-			utils.HTTPError(c, srverrors.ErrAgentsInvalidData, err)
+			response.Error(c, response.ErrAgentsInvalidData, err)
 			return
 		}
 	}
 	if err = iDB.Where("id IN (?)", gids).Find(&groupsa).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked groups")
-		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
 	for i := 0; i < len(groupsa); i++ {
 		if err = groupsa[i].Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", groupsa[i].Hash)
-			utils.HTTPError(c, srverrors.ErrAgentsInvalidData, err)
+			response.Error(c, response.ErrAgentsInvalidData, err)
 			return
 		}
 		groups[groupsa[i].ID] = &groupsa[i]
@@ -365,7 +383,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 	sqlQuery := sqlAgentDetails + ` WHERE a.id IN (?) AND a.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, aids).Scan(&resp.Details).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading details agents")
-		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
 
@@ -380,7 +398,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Find(&tasks).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding linked agent upgrade tasks")
-		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
 
@@ -391,7 +409,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Find(&modulesa, "gtp.group_id IN (?) AND status = 'joined'", gids).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group modules")
-		utils.HTTPError(c, srverrors.ErrGetAgentsInvalidQuery, err)
+		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	} else {
 		for i := 0; i < len(modulesa); i++ {
@@ -400,7 +418,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			policy_id := modulesa[i].PolicyID
 			if err = modulesa[i].Valid(); err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
-				utils.HTTPError(c, srverrors.ErrAgentsInvalidData, err)
+				response.Error(c, response.ErrAgentsInvalidData, err)
 				return
 			}
 			if mods, ok := modsToPolicies[policy_id]; ok {
@@ -413,7 +431,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 
 	if err = iDB.Find(&gpss, "group_id IN (?)", gids).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
-		utils.HTTPError(c, srverrors.ErrGroupPolicyGroupsNotFound, err)
+		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
 		return
 	}
 
@@ -424,7 +442,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Find(&policiesa).Error
 	if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding group policies")
-		utils.HTTPError(c, srverrors.ErrGroupPolicyPoliciesNotFound, err)
+		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	} else {
 		for i := 0; i < len(policiesa); i++ {
@@ -432,7 +450,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			name := policiesa[i].Info.Name
 			if err = policiesa[i].Valid(); err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
-				utils.HTTPError(c, srverrors.ErrGetAgentsInvalidAgentModuleData, err)
+				response.Error(c, response.ErrGetAgentsInvalidAgentModuleData, err)
 				return
 			}
 			for idx := range gpss {
@@ -483,7 +501,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		details.Consistency, details.Dependencies = getAgentConsistency(details.Modules, agent)
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // PatchAgents is a function to update agents public info only by action
@@ -500,22 +518,23 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 func (s *AgentService) PatchAgents(c *gin.Context) {
 	var (
 		action AgentsAction
-
 		query  utils.TableQuery
 		resp   agentsActionResult
-		uafArr = []utils.UserActionFields{
-			{
-				Domain:            "agent",
-				ObjectType:        "agent",
-				ActionCode:        "undefined action",
-				ObjectDisplayName: utils.UnknownObjectDisplayName,
-			},
-		}
 	)
+
+	tStart := time.Now()
+
+	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", "", useraction.UnknownObjectDisplayName)
+	uafArr := []useraction.Fields{uaf}
+	defer func() {
+		for i := range uafArr {
+			s.userActionWriter.WriteUserAction(uafArr[i])
+		}
+	}()
 
 	if err := c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsInvalidAction, err, uafArr)
+		response.Error(c, response.ErrPatchAgentsInvalidAction, err)
 		return
 	}
 	uafArr[0].ActionCode = getActionCode(action.Action)
@@ -523,13 +542,13 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -541,11 +560,11 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	var agents []models.Agent
 	if err = iDB.Scopes(scope).Model(&models.Agent{}).Count(&resp.Total).Find(&agents).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error collecting agents by filter")
-		utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsInvalidQuery, err, uafArr)
+		response.Error(c, response.ErrPatchAgentsInvalidQuery, err)
 		return
 	}
 
-	uafArr = fillAgentUserActionFields(agents, getActionCode(action.Action))
+	uafArr = fillAgentUserActionFields(c, agents, getActionCode(action.Action), tStart)
 
 	updateAuthStatus := func(status string) bool {
 		update_fields := map[string]interface{}{
@@ -567,7 +586,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 				}).Error
 			if err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error updating tasks by filter")
-				utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsUpdateTasksFail, err, uafArr)
+				response.Error(c, response.ErrPatchAgentsUpdateTasksFail, err)
 				return false
 			}
 		}
@@ -575,7 +594,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 			Count(&resp.Total).UpdateColumns(update_fields).Error
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error updating agents by filter")
-			utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsUpdateAgentsFail, err, uafArr)
+			response.Error(c, response.ErrPatchAgentsUpdateAgentsFail, err)
 			return false
 		}
 		return true
@@ -586,7 +605,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		for _, agent := range agents {
 			if err = iDB.Delete(&agent).Error; err != nil {
 				utils.FromContext(c).WithError(err).Errorf("error deleting agents by filter")
-				utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsDeleteAgentsFail, err, uafArr)
+				response.Error(c, response.ErrPatchAgentsDeleteAgentsFail, err)
 				return
 			}
 		}
@@ -608,7 +627,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 			err = iDB.Where("id = ?", action.To).Take(&group).Error
 			if err != nil || group.ID == 0 {
 				utils.FromContext(c).WithError(err).Errorf("error getting agents group")
-				utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsMoveFail, err, uafArr)
+				response.Error(c, response.ErrPatchAgentsMoveFail, err)
 				return
 			}
 		}
@@ -616,10 +635,10 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		for i, v := range agents {
 			agentIds[i] = v.ID
 			if v.AuthStatus == "unauthorized" || v.AuthStatus == "blocked" {
-				uafArr = append(uafArr, utils.UserActionFields{
+				uafArr = append(uafArr, useraction.Fields{
 					Domain:            "agent",
 					ObjectType:        "agent",
-					ObjectId:          v.Hash,
+					ObjectID:          v.Hash,
 					ObjectDisplayName: v.Description,
 					ActionCode:        "authorization",
 				})
@@ -629,7 +648,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 			Delete(&models.Event{}).Error
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error deleting agents on moving")
-			utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsMoveFail, err, uafArr)
+			response.Error(c, response.ErrPatchAgentsMoveFail, err)
 			return
 		}
 		update_fields := map[string]interface{}{
@@ -641,12 +660,12 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 			UpdateColumns(update_fields).Error
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error updating agents on moving")
-			utils.HTTPErrorWithUAFieldsSlice(c, srverrors.ErrPatchAgentsMoveFail, err, uafArr)
+			response.Error(c, response.ErrPatchAgentsMoveFail, err)
 			return
 		}
 	}
 
-	utils.HTTPSuccessWithUAFieldsSlice(c, http.StatusOK, resp, uafArr)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // GetAgent is a function to return agent info and details view
@@ -671,34 +690,34 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Agent, "hash = ?", hash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPError(c, srverrors.ErrAgentsNotFound, err)
+			response.Error(c, response.ErrAgentsNotFound, err)
 		} else {
-			utils.HTTPError(c, srverrors.ErrInternal, err)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = resp.Agent.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agent.Hash)
-		utils.HTTPError(c, srverrors.ErrAgentsInvalidData, err)
+		response.Error(c, response.ErrAgentsInvalidData, err)
 		return
 	}
 
 	sqlQuery := sqlAgentDetails + ` WHERE a.hash = ? AND a.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, hash).Scan(&resp.Details).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error loading details by agent hash '%s'", hash)
-		utils.HTTPError(c, srverrors.ErrGetAgentDetailsNotFound, err)
+		response.Error(c, response.ErrGetAgentDetailsNotFound, err)
 		return
 	}
 
@@ -716,14 +735,14 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 		if err = iDB.Take(&group, "id = ?", resp.Agent.GroupID).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding group by id")
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				utils.HTTPError(c, srverrors.ErrGetAgentGroupNotFound, err)
+				response.Error(c, response.ErrGetAgentGroupNotFound, err)
 			} else {
-				utils.HTTPError(c, srverrors.ErrInternal, err)
+				response.Error(c, response.ErrInternal, err)
 			}
 			return
 		} else if err = group.Valid(); err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
-			utils.HTTPError(c, srverrors.ErrGetAgentInvalidGroupData, err)
+			response.Error(c, response.ErrGetAgentInvalidGroupData, err)
 			return
 		}
 		resp.Details.Group = &group
@@ -735,7 +754,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			Find(&resp.Details.Modules, "gtp.group_id = ? AND status = 'joined'", resp.Agent.GroupID).Error
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Agent.GroupID)
-			utils.HTTPError(c, srverrors.ErrGetAgentGroupModulesNotFound, err)
+			response.Error(c, response.ErrGetAgentGroupModulesNotFound, err)
 			return
 		} else {
 			for i := 0; i < len(resp.Details.Modules); i++ {
@@ -743,7 +762,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 					id := resp.Details.Modules[i].ID
 					name := resp.Details.Modules[i].Info.Name
 					utils.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
-					utils.HTTPError(c, srverrors.ErrGetAgentInvalidAgentModuleData, err)
+					response.Error(c, response.ErrGetAgentInvalidAgentModuleData, err)
 					return
 				}
 			}
@@ -755,13 +774,13 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 		}
 		if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
-			utils.HTTPError(c, srverrors.ErrGetAgentPoliciesNotFound, err)
+			response.Error(c, response.ErrGetAgentPoliciesNotFound, err)
 			return
 		}
 		resp.Details.Policies = gps.Policies
 	}
 
-	utils.HTTPSuccess(c, http.StatusOK, resp)
+	response.Success(c, http.StatusOK, resp)
 }
 
 // PatchAgent is a function to update agent public info only
@@ -778,33 +797,26 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 // @Failure 500 {object} utils.errorResp "internal error on updating agent"
 // @Router /agents/{hash} [put]
 func (s *AgentService) PatchAgent(c *gin.Context) {
-	var (
-		action patchAgentAction
-		count  int64
-		err    error
-		hash   = c.Param("hash")
-	)
-	uaf := utils.UserActionFields{
-		Domain:            "agent",
-		ObjectType:        "agent",
-		ActionCode:        "undefined action",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", "", useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
+
+	hash := c.Param("hash")
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
-	if err = c.ShouldBindJSON(&action); err != nil || action.Agent.Valid() != nil {
+	var action patchAgentAction
+	if err := c.ShouldBindJSON(&action); err != nil || action.Agent.Valid() != nil {
 		if err == nil {
 			err = action.Agent.Valid()
 		}
@@ -813,22 +825,23 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 			uaf.ObjectDisplayName = name
 		}
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchAgentValidationError, err, uaf)
+		response.Error(c, response.ErrPatchAgentValidationError, err)
 		return
 	}
 	uaf.ActionCode = getActionCode(action.Action)
-	uaf.ObjectId = hash
+	uaf.ObjectID = hash
 	uaf.ObjectDisplayName = action.Agent.Description
 
 	if hash != action.Agent.Hash {
 		utils.FromContext(c).WithError(nil).Errorf("mismatch agent hash to requested one")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchAgentValidationError, nil, uaf)
+		response.Error(c, response.ErrPatchAgentValidationError, nil)
 		return
 	}
 
+	var count int64
 	if err = iDB.Model(&action.Agent).Count(&count).Error; err != nil || count == 0 {
 		utils.FromContext(c).WithError(nil).Errorf("error updating agent by hash '%s', agent not found", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, err, uaf)
+		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	}
 
@@ -843,7 +856,7 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 			}).Error
 		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error updating tasks by agent")
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrPatchAgentTaskUpdateFail, err, uaf)
+			response.Error(c, response.ErrPatchAgentTaskUpdateFail, err)
 			return
 		}
 	}
@@ -853,15 +866,15 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
 		utils.FromContext(c).WithError(nil).Errorf("error updating agent by hash '%s', agent not found", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, err, uaf)
+		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	} else if err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error updating agent by hash '%s'", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, action.Agent, uaf)
+	response.Success(c, http.StatusOK, action.Agent)
 }
 
 // CreateAgent is a function to create new agent
@@ -876,18 +889,15 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 // @Failure 500 {object} utils.errorResp "internal error on creating agent"
 // @Router /agents/ [post]
 func (s *AgentService) CreateAgent(c *gin.Context) {
+	uaf := useraction.NewFields(c, "agent", "agent", "creation", "", useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
+
 	logger := utils.FromContext(c)
-	uaf := utils.UserActionFields{
-		Domain:            "agent",
-		ObjectType:        "agent",
-		ActionCode:        "creation",
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
 
 	var info agentInfo
 	if err := c.ShouldBindJSON(&info); err != nil {
 		logger.WithError(err).Errorf("error binding JSON")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateAgentValidationError, err, uaf)
+		response.Error(c, response.ErrCreateAgentValidationError, err)
 		return
 	}
 	uaf.ObjectDisplayName = info.Name
@@ -895,13 +905,13 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -934,15 +944,15 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 			},
 		},
 	}
-	uaf.ObjectId = newAgent.Hash
+	uaf.ObjectID = newAgent.Hash
 
 	if err = iDB.Create(&newAgent).Error; err != nil {
 		logger.WithError(err).Errorf("error creating agent")
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrCreateAgentCreateError, err, uaf)
+		response.Error(c, response.ErrCreateAgentCreateError, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusCreated, newAgent, uaf)
+	response.Success(c, http.StatusCreated, newAgent)
 }
 
 // DeleteAgent is a function to cascade delete agent
@@ -958,52 +968,47 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 func (s *AgentService) DeleteAgent(c *gin.Context) {
 	var (
 		agent models.Agent
-
-		hash = c.Param("hash")
+		hash  = c.Param("hash")
 	)
-	uaf := utils.UserActionFields{
-		Domain:            "agent",
-		ObjectType:        "agent",
-		ActionCode:        "deletion",
-		ObjectId:          hash,
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
-	}
+
+	uaf := useraction.NewFields(c, "agent", "agent", "deletion", "", useraction.UnknownObjectDisplayName)
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&agent, "hash = ?", hash).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsNotFound, err, uaf)
+			response.Error(c, response.ErrAgentsNotFound, err)
 		} else {
-			utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	} else if err = agent.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrAgentsInvalidData, err, uaf)
+		response.Error(c, response.ErrAgentsInvalidData, err)
 		return
 	}
 	uaf.ObjectDisplayName = agent.Description
 
 	if err = iDB.Delete(&agent).Error; err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error deleting agent by hash '%s'", hash)
-		utils.HTTPErrorWithUAFields(c, srverrors.ErrInternal, err, uaf)
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, struct{}{}, uaf)
+	response.Success(c, http.StatusOK, struct{}{})
 }
 
 // GetAgentsCount is a function to return groups of counted agents
@@ -1014,26 +1019,24 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 // @Failure 500 {object} utils.errorResp "internal error"
 // @Router /agents/count [get]
 func (s *AgentService) GetAgentsCount(c *gin.Context) {
-	var resp agentCount
-
-	logger := utils.FromContext(c)
-	uaf := utils.UserActionFields{
+	uaf := useraction.Fields{
 		Domain:            "agent",
 		ObjectType:        "agent",
-		ActionCode:        getActionCode("count"),
-		ObjectDisplayName: utils.UnknownObjectDisplayName,
+		ActionCode:        "counting",
+		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
+	defer s.userActionWriter.WriteUserAction(uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
 		utils.FromContext(c).Errorf("could not get service hash")
-		utils.HTTPError(c, srverrors.ErrInternal, nil)
+		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
 		utils.FromContext(c).WithError(err).Error()
-		utils.HTTPError(c, srverrors.ErrInternalDBNotFound, err)
+		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
@@ -1046,14 +1049,16 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 		SUM(group_id = 0 AND auth_status = 'authorized') AS 'without_groups'
 		FROM agents
 		WHERE deleted_at IS NULL`
+
+	var resp agentCount
 	err = iDB.Raw(q).
 		Scan(&resp).
 		Error
 	if err != nil {
-		logger.WithError(err).Errorf("could not count agents")
-		utils.HTTPError(c, srverrors.ErrInternal, err)
+		utils.FromContext(c).WithError(err).Errorf("could not count agents")
+		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	utils.HTTPSuccessWithUAFields(c, http.StatusOK, resp, uaf)
+	response.Success(c, http.StatusOK, resp)
 }
