@@ -286,7 +286,7 @@ func initGorm(dsn *db.DSN, logDir string) (*gorm.DB, error) {
 	logger := logrus.New()
 	logger.SetOutput(&lumberjack.Logger{
 		Filename:   filepath.Join(logDir, "server-gorm.log"),
-		MaxSize:    100,
+		MaxSize:    10,
 		MaxBackups: 7,
 		MaxAge:     14,
 		Compress:   true,
