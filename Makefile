@@ -52,7 +52,6 @@ build-web:
 .PHONY: run-api
 run-api: build-api
 	cd $(CURDIR)/build && \
-		LOG_DIR=$(CURDIR)/build/logs \
 		CERTS_PATH=$(CURDIR)/security/certs/api \
 		MIGRATION_DIR=$(CURDIR)/db/api/migrations \
 		TEMPLATES_DIR=$(CURDIR)/build/package/api/templates \
@@ -61,7 +60,6 @@ run-api: build-api
 .PHONY: run-server
 run-server: build-server
 	cd $(CURDIR)/build && \
-		LOG_DIR=$(CURDIR)/build/logs \
 		MIGRATION_DIR=$(CURDIR)/db/server/migrations \
 		CERTS_PATH=$(CURDIR)/security/certs/server \
 		VALID_PATH=$(CURDIR)/security/vconf \
@@ -70,7 +68,6 @@ run-server: build-server
 .PHONY: run-agent
 run-agent: build-agent
 	cd $(CURDIR)/build && \
-		LOG_DIR=$(CURDIR)/build/logs \
 		$(CURDIR)/build/bin/vxagent -connect $(CONNECT) $(RUN_ARGS)
 
 .PHONY: run-web

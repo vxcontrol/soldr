@@ -16,7 +16,6 @@
                 "MIGRATION_DIR": "${workspaceFolder}/db/api/migrations",
                 "TEMPLATES_DIR": "${workspaceFolder}/build/package/api/templates",
                 "CERTS_PATH": "${workspaceFolder}/security/certs/api",
-                "LOG_DIR": "${workspaceFolder}/build/logs"
             },
             "args": [],
             "cwd": "${workspaceFolder}/build",
@@ -35,9 +34,8 @@
                 "MIGRATION_DIR": "${workspaceFolder}/db/server/migrations",
                 "CERTS_PATH": "${workspaceFolder}/security/certs/server",
                 "VALID_PATH": "${workspaceFolder}/security/vconf",
-                "LOG_DIR": "${workspaceFolder}/build/logs"
             },
-            "args": ["-debug", "-profiling"], 
+            "args": ["-debug", "-profiling"],
             "cwd": "${workspaceFolder}/build",
             "dlvFlags": ["--check-go-version=false"],
             "preLaunchTask": "build vxserver"
@@ -50,9 +48,8 @@
             "program": "${workspaceFolder}/build/bin/vxagent",
             "envFile": "${workspaceFolder}/.env",
             "env": {
-                "LOG_DIR": "${workspaceFolder}/build/logs"
             },
-            "args": ["-debug"], 
+            "args": ["-debug"],
             "cwd": "${workspaceFolder}/build",
             "dlvFlags": ["--check-go-version=false"],
             "preLaunchTask": "build vxagent"
@@ -78,7 +75,7 @@
                 "--file=${workspaceFolder}/security/vconf/lic/sbh.json",
                 "--version=example",
                 "--force=true"
-            ], 
+            ],
             "cwd": "${workspaceFolder}/scripts/sbh_generator",
             "dlvFlags": ["--check-go-version=false"]
         },

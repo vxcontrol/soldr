@@ -4,13 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
+	"path"
 	"syscall"
 	"time"
 
 	"github.com/heetch/confita"
 	"github.com/heetch/confita/backend/env"
+	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/sync/errgroup"
@@ -44,6 +47,7 @@ type Config struct {
 type LogConfig struct {
 	Level  string `config:"log_level"`
 	Format string `config:"log_format"`
+	Dir    string `config:"log_dir"`
 }
 
 type DBConfig struct {
@@ -76,6 +80,7 @@ func defaultConfig() Config {
 		Log: LogConfig{
 			Level:  "info",
 			Format: "json",
+			Dir:    "logs",
 		},
 		Tracing: TracingConfig{
 			Addr: "otel.local:8148",
@@ -129,10 +134,16 @@ func main() {
 		cfg.Log.Level = "debug"
 		cfg.Log.Format = "text"
 	}
-
+	logFile := &lumberjack.Logger{
+		Filename:   path.Join(cfg.Log.Dir, "app.log"),
+		MaxSize:    100,
+		MaxBackups: 7,
+		MaxAge:     14,
+		Compress:   true,
+	}
 	logrus.SetLevel(logger.ParseLevel(cfg.Log.Level))
 	logrus.SetFormatter(logger.ParseFormat(cfg.Log.Format))
-	logrus.SetOutput(os.Stdout)
+	logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
 	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true",
 		cfg.DB.User,
