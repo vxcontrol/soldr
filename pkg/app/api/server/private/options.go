@@ -155,7 +155,7 @@ func validOptions(c *gin.Context, value interface{}) bool {
 	}
 	for i := 0; i < len(vlist); i++ {
 		if err := vlist[i].Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating response data")
+			logrus.WithContext(c).WithError(err).Errorf("error validating response data")
 			return false
 		}
 	}
@@ -172,7 +172,7 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		return 0, response.ErrOptionsInvalidRequestData
 	}
 
@@ -209,7 +209,7 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 		},
 	}
 	if total, err = query.Query(db, value, funcs...); err != nil {
-		logrus.WithError(err).Errorf("error finding global %s list", option)
+		logrus.WithContext(c).WithError(err).Errorf("error finding global %s list", option)
 		return 0, response.ErrOptionsInvalidQuery
 	}
 

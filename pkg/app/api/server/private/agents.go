@@ -278,26 +278,26 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGetAgentsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("agents", agentsSQLMappers); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGetAgentsInvalidRequest, err)
 		return
 	}
@@ -344,13 +344,13 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 
 	if query.Group == "" {
 		if resp.Total, err = query.Query(iDB, &resp.Agents, funcs...); err != nil {
-			logrus.WithError(err).Errorf("error finding agents")
+			logrus.WithContext(c).WithError(err).Errorf("error finding agents")
 			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
-			logrus.WithError(err).Errorf("error finding grouped agents")
+			logrus.WithContext(c).WithError(err).Errorf("error finding grouped agents")
 			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
@@ -362,19 +362,19 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		aids = append(aids, resp.Agents[i].ID)
 		gids = append(gids, resp.Agents[i].GroupID)
 		if err = resp.Agents[i].Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating agent data '%s'", resp.Agents[i].Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agents[i].Hash)
 			response.Error(c, response.ErrAgentsInvalidData, err)
 			return
 		}
 	}
 	if err = iDB.Where("id IN (?)", gids).Find(&groupsa).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding linked groups")
+		logrus.WithContext(c).WithError(err).Errorf("error finding linked groups")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
 	for i := 0; i < len(groupsa); i++ {
 		if err = groupsa[i].Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating group data '%s'", groupsa[i].Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error validating group data '%s'", groupsa[i].Hash)
 			response.Error(c, response.ErrAgentsInvalidData, err)
 			return
 		}
@@ -383,7 +383,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 
 	sqlQuery := sqlAgentDetails + ` WHERE a.id IN (?) AND a.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, aids).Scan(&resp.Details).Error; err != nil {
-		logrus.WithError(err).Errorf("error loading details agents")
+		logrus.WithContext(c).WithError(err).Errorf("error loading details agents")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
@@ -398,7 +398,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			QueryExpr()).
 		Find(&tasks).Error
 	if err != nil {
-		logrus.WithError(err).Errorf("error finding linked agent upgrade tasks")
+		logrus.WithContext(c).WithError(err).Errorf("error finding linked agent upgrade tasks")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
@@ -409,7 +409,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
 		Find(&modulesa, "gtp.group_id IN (?) AND status = 'joined'", gids).Error
 	if err != nil {
-		logrus.WithError(err).Errorf("error finding group modules")
+		logrus.WithContext(c).WithError(err).Errorf("error finding group modules")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	} else {
@@ -418,7 +418,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			name := modulesa[i].Info.Name
 			policy_id := modulesa[i].PolicyID
 			if err = modulesa[i].Valid(); err != nil {
-				logrus.WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
+				logrus.WithContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
 				response.Error(c, response.ErrAgentsInvalidData, err)
 				return
 			}
@@ -431,7 +431,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 	}
 
 	if err = iDB.Find(&gpss, "group_id IN (?)", gids).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding policy to groups links")
+		logrus.WithContext(c).WithError(err).Errorf("error finding policy to groups links")
 		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
 		return
 	}
@@ -442,7 +442,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = policies.id AND gtp.group_id IN (?)`, gids).
 		Find(&policiesa).Error
 	if err != nil {
-		logrus.WithError(err).Errorf("error finding group policies")
+		logrus.WithContext(c).WithError(err).Errorf("error finding group policies")
 		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	} else {
@@ -450,7 +450,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			id := policiesa[i].ID
 			name := policiesa[i].Info.Name
 			if err = policiesa[i].Valid(); err != nil {
-				logrus.WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
+				logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetAgentsInvalidAgentModuleData, err)
 				return
 			}
@@ -534,7 +534,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	}()
 
 	if err := c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
-		logrus.WithError(err).Errorf("error binding JSON")
+		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPatchAgentsInvalidAction, err)
 		return
 	}
@@ -542,13 +542,13 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -560,7 +560,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 
 	var agents []models.Agent
 	if err = iDB.Scopes(scope).Model(&models.Agent{}).Count(&resp.Total).Find(&agents).Error; err != nil {
-		logrus.WithError(err).Errorf("error collecting agents by filter")
+		logrus.WithContext(c).WithError(err).Errorf("error collecting agents by filter")
 		response.Error(c, response.ErrPatchAgentsInvalidQuery, err)
 		return
 	}
@@ -586,7 +586,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 					"reason": "Canceled.By.User",
 				}).Error
 			if err != nil {
-				logrus.WithError(err).Errorf("error updating tasks by filter")
+				logrus.WithContext(c).WithError(err).Errorf("error updating tasks by filter")
 				response.Error(c, response.ErrPatchAgentsUpdateTasksFail, err)
 				return false
 			}
@@ -594,7 +594,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		err = iDB.Scopes(scope).Model(&models.Agent{}).
 			Count(&resp.Total).UpdateColumns(update_fields).Error
 		if err != nil {
-			logrus.WithError(err).Errorf("error updating agents by filter")
+			logrus.WithContext(c).WithError(err).Errorf("error updating agents by filter")
 			response.Error(c, response.ErrPatchAgentsUpdateAgentsFail, err)
 			return false
 		}
@@ -605,7 +605,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	case "delete":
 		for _, agent := range agents {
 			if err = iDB.Delete(&agent).Error; err != nil {
-				logrus.WithError(err).Errorf("error deleting agents by filter")
+				logrus.WithContext(c).WithError(err).Errorf("error deleting agents by filter")
 				response.Error(c, response.ErrPatchAgentsDeleteAgentsFail, err)
 				return
 			}
@@ -627,7 +627,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 			var group models.Group
 			err = iDB.Where("id = ?", action.To).Take(&group).Error
 			if err != nil || group.ID == 0 {
-				logrus.WithError(err).Errorf("error getting agents group")
+				logrus.WithContext(c).WithError(err).Errorf("error getting agents group")
 				response.Error(c, response.ErrPatchAgentsMoveFail, err)
 				return
 			}
@@ -648,7 +648,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		err = iDB.Where("agent_id IN (?)", agentIds).
 			Delete(&models.Event{}).Error
 		if err != nil {
-			logrus.WithError(err).Errorf("error deleting agents on moving")
+			logrus.WithContext(c).WithError(err).Errorf("error deleting agents on moving")
 			response.Error(c, response.ErrPatchAgentsMoveFail, err)
 			return
 		}
@@ -660,7 +660,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		err = iDB.Scopes(query.DataFilter()).Model(&models.Agent{}).Count(&resp.Total).
 			UpdateColumns(update_fields).Error
 		if err != nil {
-			logrus.WithError(err).Errorf("error updating agents on moving")
+			logrus.WithContext(c).WithError(err).Errorf("error updating agents on moving")
 			response.Error(c, response.ErrPatchAgentsMoveFail, err)
 			return
 		}
@@ -690,19 +690,19 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Agent, "hash = ?", hash).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding agent by hash")
+		logrus.WithContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, err)
 		} else {
@@ -710,14 +710,14 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Agent.Valid(); err != nil {
-		logrus.WithError(err).Errorf("error validating agent data '%s'", resp.Agent.Hash)
+		logrus.WithContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agent.Hash)
 		response.Error(c, response.ErrAgentsInvalidData, err)
 		return
 	}
 
 	sqlQuery := sqlAgentDetails + ` WHERE a.hash = ? AND a.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, hash).Scan(&resp.Details).Error; err != nil {
-		logrus.WithError(err).Errorf("error loading details by agent hash '%s'", hash)
+		logrus.WithContext(c).WithError(err).Errorf("error loading details by agent hash '%s'", hash)
 		response.Error(c, response.ErrGetAgentDetailsNotFound, err)
 		return
 	}
@@ -734,7 +734,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 
 	if resp.Agent.GroupID != 0 {
 		if err = iDB.Take(&group, "id = ?", resp.Agent.GroupID).Error; err != nil {
-			logrus.WithError(err).Errorf("error finding group by id")
+			logrus.WithContext(c).WithError(err).Errorf("error finding group by id")
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Error(c, response.ErrGetAgentGroupNotFound, err)
 			} else {
@@ -742,7 +742,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			}
 			return
 		} else if err = group.Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating group data '%s'", group.Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
 			response.Error(c, response.ErrGetAgentInvalidGroupData, err)
 			return
 		}
@@ -754,7 +754,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
 			Find(&resp.Details.Modules, "gtp.group_id = ? AND status = 'joined'", resp.Agent.GroupID).Error
 		if err != nil {
-			logrus.WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Agent.GroupID)
+			logrus.WithContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Agent.GroupID)
 			response.Error(c, response.ErrGetAgentGroupModulesNotFound, err)
 			return
 		} else {
@@ -762,7 +762,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 				if err = resp.Details.Modules[i].Valid(); err != nil {
 					id := resp.Details.Modules[i].ID
 					name := resp.Details.Modules[i].Info.Name
-					logrus.WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
+					logrus.WithContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
 					response.Error(c, response.ErrGetAgentInvalidAgentModuleData, err)
 					return
 				}
@@ -774,7 +774,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			Group: *resp.Details.Group,
 		}
 		if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-			logrus.WithError(err).Errorf("error finding group policies by group model")
+			logrus.WithContext(c).WithError(err).Errorf("error finding group policies by group model")
 			response.Error(c, response.ErrGetAgentPoliciesNotFound, err)
 			return
 		}
@@ -805,13 +805,13 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -825,7 +825,7 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		logrus.WithError(err).Errorf("error binding JSON")
+		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPatchAgentValidationError, err)
 		return
 	}
@@ -834,14 +834,14 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf.ObjectDisplayName = action.Agent.Description
 
 	if hash != action.Agent.Hash {
-		logrus.Errorf("mismatch agent hash to requested one")
+		logrus.WithContext(c).Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchAgentValidationError, nil)
 		return
 	}
 
 	var count int64
 	if err = iDB.Model(&action.Agent).Count(&count).Error; err != nil || count == 0 {
-		logrus.Errorf("error updating agent by hash '%s', agent not found", hash)
+		logrus.WithContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	}
@@ -856,7 +856,7 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 				"reason": "Canceled.By.User",
 			}).Error
 		if err != nil {
-			logrus.WithError(err).Errorf("error updating tasks by agent")
+			logrus.WithContext(c).WithError(err).Errorf("error updating tasks by agent")
 			response.Error(c, response.ErrPatchAgentTaskUpdateFail, err)
 			return
 		}
@@ -866,11 +866,11 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&action.Agent).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.Errorf("error updating agent by hash '%s', agent not found", hash)
+		logrus.WithContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	} else if err != nil {
-		logrus.WithError(err).Errorf("error updating agent by hash '%s'", hash)
+		logrus.WithContext(c).WithError(err).Errorf("error updating agent by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -895,7 +895,7 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 
 	var info agentInfo
 	if err := c.ShouldBindJSON(&info); err != nil {
-		logrus.WithError(err).Errorf("error binding JSON")
+		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrCreateAgentValidationError, err)
 		return
 	}
@@ -903,13 +903,13 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -946,7 +946,7 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 	uaf.ObjectID = newAgent.Hash
 
 	if err = iDB.Create(&newAgent).Error; err != nil {
-		logrus.WithError(err).Errorf("error creating agent")
+		logrus.WithContext(c).WithError(err).Errorf("error creating agent")
 		response.Error(c, response.ErrCreateAgentCreateError, err)
 		return
 	}
@@ -975,19 +975,19 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&agent, "hash = ?", hash).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding agent by hash")
+		logrus.WithContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, err)
 		} else {
@@ -995,14 +995,14 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 		}
 		return
 	} else if err = agent.Valid(); err != nil {
-		logrus.WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
+		logrus.WithContext(c).WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
 		response.Error(c, response.ErrAgentsInvalidData, err)
 		return
 	}
 	uaf.ObjectDisplayName = agent.Description
 
 	if err = iDB.Delete(&agent).Error; err != nil {
-		logrus.WithError(err).Errorf("error deleting agent by hash '%s'", hash)
+		logrus.WithContext(c).WithError(err).Errorf("error deleting agent by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -1028,13 +1028,13 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1054,7 +1054,7 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 		Scan(&resp).
 		Error
 	if err != nil {
-		logrus.WithError(err).Errorf("could not count agents")
+		logrus.WithContext(c).WithError(err).Errorf("could not count agents")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

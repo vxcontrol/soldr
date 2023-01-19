@@ -120,19 +120,19 @@ func Info(c *gin.Context) {
 			response.Error(c, response.ErrInfoUserNotFound, err)
 			return
 		} else if err = resp.User.Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
 		if err = gDB.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
-			logrus.WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
 		if err = gDB.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
-			logrus.WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidServiceData, err)
 			return
 		}
@@ -151,7 +151,7 @@ func Info(c *gin.Context) {
 		var fiveMins int64 = 5 * 60
 		if nowt >= gtmt+fiveMins && c.Query("refresh_cookie") != "false" {
 			if err = refreshCookie(c, &resp, privs); err != nil {
-				logrus.WithError(err).Errorf("failed to refresh token")
+				logrus.WithContext(c).WithError(err).Errorf("failed to refresh token")
 				// raise error when there is elapsing last five minutes
 				if nowt >= gtmt+int64(utils.DefaultSessionTimeout)-fiveMins {
 					response.Error(c, response.ErrInternal, err)

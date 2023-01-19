@@ -176,27 +176,27 @@ func (s *TagService) GetTags(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrTagsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getTagMappers(&query)
 	if err != nil {
-		logrus.WithError(err).Errorf("error getting tag mappers by query")
+		logrus.WithContext(c).WithError(err).Errorf("error getting tag mappers by query")
 		response.Error(c, response.ErrTagsMappersNotFound, err)
 		return
 	}
@@ -238,7 +238,7 @@ func (s *TagService) GetTags(c *gin.Context) {
 	funcs := getTagFilters(&query)
 	funcs = append(funcs, getTagJoinFuncs(table, useGroup, useModule, usePolicy)...)
 	if resp.Total, err = query.Query(iDB, &resp.Tags, funcs...); err != nil {
-		logrus.WithError(err).Errorf("error finding tags")
+		logrus.WithContext(c).WithError(err).Errorf("error finding tags")
 		response.Error(c, response.ErrTagsInvalidQuery, err)
 		return
 	}

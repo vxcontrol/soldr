@@ -83,27 +83,27 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrVersionsInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.Errorf("could not get service hash")
+		logrus.WithContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		logrus.WithContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getVersionMappers(&query)
 	if err != nil {
-		logrus.WithError(err).Errorf("error getting version mappers by query")
+		logrus.WithContext(c).WithError(err).Errorf("error getting version mappers by query")
 		response.Error(c, response.ErrVersionsMapperNotFound, err)
 		return
 	}
@@ -131,7 +131,7 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 	}
 
 	if resp.Total, err = query.Query(iDB, &resp.Versions, funcs...); err != nil {
-		logrus.WithError(err).Errorf("error finding versions")
+		logrus.WithContext(c).WithError(err).Errorf("error finding versions")
 		response.Error(c, response.ErrVersionsInvalidQuery, err)
 		return
 	}

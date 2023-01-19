@@ -55,7 +55,7 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	}
@@ -76,20 +76,20 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 			},
 		})
 	default:
-		logrus.Errorf("error filtering user role services: unexpected role")
+		logrus.WithContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Tenants); err != nil {
-		logrus.WithError(err).Errorf("error finding tenants")
+		logrus.WithContext(c).WithError(err).Errorf("error finding tenants")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Tenants); i++ {
 		if err = resp.Tenants[i].Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating tenant data '%s'", resp.Tenants[i].Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error validating tenant data '%s'", resp.Tenants[i].Hash)
 			response.Error(c, response.ErrTenantsInvalidData, err)
 			return
 		}
@@ -132,7 +132,7 @@ func (s *TenantService) GetTenant(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding tenant by hash")
+		logrus.WithContext(c).WithError(err).Errorf("error finding tenant by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrTenantsNotFound, err)
 		} else {
@@ -140,7 +140,7 @@ func (s *TenantService) GetTenant(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
-		logrus.WithError(err).Errorf("error validating tenant data '%s'", resp.Hash)
+		logrus.WithContext(c).WithError(err).Errorf("error validating tenant data '%s'", resp.Hash)
 		response.Error(c, response.ErrTenantsInvalidData, err)
 		return
 	}
@@ -166,7 +166,7 @@ func (s *TenantService) CreateTenant(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&tenant); err != nil {
-		logrus.WithError(err).Errorf("error binding JSON")
+		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	}
@@ -175,7 +175,7 @@ func (s *TenantService) CreateTenant(c *gin.Context) {
 	tenant.Hash = utils.MakeTenantHash(tenant.Description)
 
 	if err = s.db.Create(&tenant).Error; err != nil {
-		logrus.WithError(err).Errorf("error creating tenant")
+		logrus.WithContext(c).WithError(err).Errorf("error creating tenant")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -203,15 +203,15 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&tenant); err != nil {
-		logrus.WithError(err).Errorf("error binding JSON")
+		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	} else if hash != tenant.Hash {
-		logrus.Errorf("mismatch tenant hash to requested one")
+		logrus.WithContext(c).Errorf("mismatch tenant hash to requested one")
 		response.Error(c, response.ErrTenantsInvalidRequest, nil)
 		return
 	} else if err = tenant.Valid(); err != nil {
-		logrus.WithError(err).Errorf("error validating tenant JSON")
+		logrus.WithContext(c).WithError(err).Errorf("error validating tenant JSON")
 		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	}
@@ -235,11 +235,11 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 	public_info := []interface{}{"description", "status"}
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&tenant).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.Errorf("error updating tenant by hash '%s', tenant not found", hash)
+		logrus.WithContext(c).Errorf("error updating tenant by hash '%s', tenant not found", hash)
 		response.Error(c, response.ErrTenantsNotFound, err)
 		return
 	} else if err != nil {
-		logrus.WithError(err).Errorf("error updating tenant by hash '%s'", hash)
+		logrus.WithContext(c).WithError(err).Errorf("error updating tenant by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -281,7 +281,7 @@ func (s *TenantService) DeleteTenant(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&tenant).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding tenant by hash")
+		logrus.WithContext(c).WithError(err).Errorf("error finding tenant by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrTenantsNotFound, err)
 		} else {
@@ -289,13 +289,13 @@ func (s *TenantService) DeleteTenant(c *gin.Context) {
 		}
 		return
 	} else if err = tenant.Valid(); err != nil {
-		logrus.WithError(err).Errorf("error validating tenant data '%s'", tenant.Hash)
+		logrus.WithContext(c).WithError(err).Errorf("error validating tenant data '%s'", tenant.Hash)
 		response.Error(c, response.ErrTenantsInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&tenant).Error; err != nil {
-		logrus.WithError(err).Errorf("error deleting tenant by hash '%s'", hash)
+		logrus.WithContext(c).WithError(err).Errorf("error deleting tenant by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

@@ -103,7 +103,7 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		logrus.WithError(err).Errorf("error binding query")
+		logrus.WithContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrAgentBinariesInvalidRequest, err)
 		return
 	}
@@ -122,14 +122,14 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	})
 
 	if resp.Total, err = query.Query(s.db, &resp.Binaries); err != nil {
-		logrus.WithError(err).Errorf("error finding agent binaries")
+		logrus.WithContext(c).WithError(err).Errorf("error finding agent binaries")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Binaries); i++ {
 		if err = resp.Binaries[i].Valid(); err != nil {
-			logrus.WithError(err).Errorf("error validating agent binaries data '%s'", resp.Binaries[i].Hash)
+			logrus.WithContext(c).WithError(err).Errorf("error validating agent binaries data '%s'", resp.Binaries[i].Hash)
 			response.Error(c, response.ErrAgentBinariesInvalidData, err)
 			return
 		}
@@ -201,11 +201,11 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.Errorf("error getting binary info by version '%s', record not found", agentVersion)
+		logrus.WithContext(c).Errorf("error getting binary info by version '%s', record not found", agentVersion)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, err)
 		return
 	} else if err != nil {
-		logrus.WithError(err).Errorf("error getting binary info by version '%s'", agentVersion)
+		logrus.WithContext(c).WithError(err).Errorf("error getting binary info by version '%s'", agentVersion)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -213,25 +213,25 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentName)
 	if chksums, ok = binary.Info.Chksums[path]; !ok {
-		logrus.Errorf("error getting agent binary file check sums: '%s' not found", path)
+		logrus.WithContext(c).Errorf("error getting agent binary file check sums: '%s' not found", path)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, nil)
 		return
 	}
 
 	if s3, err = storage.NewS3(nil); err != nil {
-		logrus.WithError(err).Errorf("error openning connection to S3")
+		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if data, err = s3.ReadFile(path); err != nil {
-		logrus.WithError(err).Errorf("error reading agent binary file '%s'", path)
+		logrus.WithContext(c).WithError(err).Errorf("error reading agent binary file '%s'", path)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = utils.ValidateBinaryFileByChksums(data, chksums); err != nil {
-		logrus.WithError(err).Errorf("error validating agent binary file by check sums '%s'", path)
+		logrus.WithContext(c).WithError(err).Errorf("error validating agent binary file by check sums '%s'", path)
 		response.Error(c, response.ErrAgentBinaryFileCorrupted, err)
 		return
 	}
