@@ -6,10 +6,12 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/context"
@@ -17,6 +19,7 @@ import (
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/app/api/utils/dbencryptor"
+	obs "soldr/pkg/observability"
 )
 
 func authTokenProtoRequired() gin.HandlerFunc {
@@ -243,5 +246,41 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 
 		c.Set("SV", service)
 		c.Next()
+	}
+}
+
+func WithLogger(skipPaths []string) gin.HandlerFunc {
+	skip := make(map[string]struct{}, len(skipPaths))
+	for _, path := range skipPaths {
+		skip[path] = struct{}{}
+	}
+
+	return func(c *gin.Context) {
+		start := time.Now()
+		path := c.Request.URL.Path
+		raw := c.Request.URL.RawQuery
+
+		ctx, span := obs.Observer.NewSpan(c.Request.Context(), obs.SpanKindServer, "http_server")
+		defer span.End()
+
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+
+		if _, ok := skip[path]; ok {
+			return
+		}
+		if raw != "" {
+			path = path + "?" + raw
+		}
+		logrus.WithContext(ctx).WithFields(logrus.Fields{
+			"component":        "api",
+			"net_peer_ip":      c.ClientIP(),
+			"duration":         time.Since(start),
+			"http_uri":         path,
+			"http_route":       c.Request.URL.Path,
+			"http_host_name":   c.Request.Host,
+			"http_method":      c.Request.Method,
+			"http_status_code": c.Writer.Status(),
+		}).Info("http request handled")
 	}
 }

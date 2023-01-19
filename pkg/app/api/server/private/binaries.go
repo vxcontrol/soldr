@@ -166,7 +166,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		validate     = validator.New()
 	)
 	uaf := useraction.NewFields(c, "agent", "distribution", "downloading", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	resultName = fmt.Sprintf("%s_%s_%s", agentName, agentOS, agentArch)
 	if agentOS == "windows" {
@@ -200,7 +200,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", agentVersion)
+		utils.FromContext(c).Errorf("error getting binary info by version '%s', record not found", agentVersion)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, err)
 		return
 	} else if err != nil {
@@ -212,7 +212,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentName)
 	if chksums, ok = binary.Info.Chksums[path]; !ok {
-		utils.FromContext(c).WithError(nil).Errorf("error getting agent binary file check sums: '%s' not found", path)
+		utils.FromContext(c).Errorf("error getting agent binary file check sums: '%s' not found", path)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, nil)
 		return
 	}

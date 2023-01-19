@@ -372,7 +372,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
@@ -402,7 +402,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -420,7 +420,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
@@ -451,7 +451,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -468,7 +468,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
@@ -498,7 +498,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "external" {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch socket type to incoming token type")
+		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}

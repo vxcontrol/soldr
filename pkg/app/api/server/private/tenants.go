@@ -75,7 +75,7 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 			},
 		})
 	default:
-		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -206,7 +206,7 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 		response.Error(c, response.ErrTenantsInvalidRequest, err)
 		return
 	} else if hash != tenant.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch tenant hash to requested one")
+		utils.FromContext(c).Errorf("mismatch tenant hash to requested one")
 		response.Error(c, response.ErrTenantsInvalidRequest, nil)
 		return
 	} else if err = tenant.Valid(); err != nil {
@@ -234,7 +234,7 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 	public_info := []interface{}{"description", "status"}
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&tenant).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating tenant by hash '%s', tenant not found", hash)
+		utils.FromContext(c).Errorf("error updating tenant by hash '%s', tenant not found", hash)
 		response.Error(c, response.ErrTenantsNotFound, err)
 		return
 	} else if err != nil {

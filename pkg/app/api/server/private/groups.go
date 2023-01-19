@@ -519,7 +519,7 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "group", "group", "editing", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -550,13 +550,13 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	uaf.ObjectDisplayName = group.Info.Name.En
 
 	if hash != group.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch group hash to requested one")
+		utils.FromContext(c).Errorf("mismatch group hash to requested one")
 		response.Error(c, response.ErrGroupsValidationFail, nil)
 		return
 	}
 
 	if err = iDB.Model(&group).Count(&count).Error; err != nil || count == 0 {
-		utils.FromContext(c).WithError(nil).Errorf("error updating group by hash '%s', group not found", hash)
+		utils.FromContext(c).Errorf("error updating group by hash '%s', group not found", hash)
 		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	}
@@ -565,7 +565,7 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&group).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating group by hash '%s', group not found", hash)
+		utils.FromContext(c).Errorf("error updating group by hash '%s', group not found", hash)
 		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	} else if err != nil {
@@ -599,7 +599,7 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "undefined action", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&form); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
@@ -683,7 +683,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "group", "group", "creation", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&info); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
@@ -793,7 +793,7 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "group", "group", "deletion", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -812,9 +812,9 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGroupsNotFound, err)
-		} else {
-			response.Error(c, response.ErrInternal, err)
+			return
 		}
+		response.Error(c, response.ErrInternal, err)
 		return
 	} else if err = group.Valid(); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)

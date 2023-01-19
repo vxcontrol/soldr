@@ -175,9 +175,9 @@ func getService(c *gin.Context) *models.Service {
 	var sv *models.Service
 
 	if val, ok := c.Get("SV"); !ok {
-		utils.FromContext(c).WithError(nil).Errorf("error getting vxservice instance from context")
+		utils.FromContext(c).Errorf("error getting vxservice instance from context")
 	} else if sv = val.(*models.Service); sv == nil {
-		utils.FromContext(c).WithError(nil).Errorf("got nil value vxservice instance from context")
+		utils.FromContext(c).Errorf("got nil value vxservice instance from context")
 	}
 
 	return sv
@@ -187,9 +187,9 @@ func getDBEncryptor(c *gin.Context) crypto.IDBConfigEncryptor {
 	var encryptor crypto.IDBConfigEncryptor
 
 	if cr, ok := c.Get("crp"); !ok {
-		utils.FromContext(c).WithError(nil).Errorf("error getting secure config encryptor from context")
+		utils.FromContext(c).Errorf("error getting secure config encryptor from context")
 	} else if encryptor = cr.(crypto.IDBConfigEncryptor); encryptor == nil {
-		utils.FromContext(c).WithError(nil).Errorf("got nil value secure config encryptor from context")
+		utils.FromContext(c).Errorf("got nil value secure config encryptor from context")
 	}
 
 	return encryptor
@@ -933,14 +933,14 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	iDB := utils.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 		strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 	if iDB == nil {
-		utils.FromContext(c).WithError(nil).Errorf("error openning connection to instance DB")
+		utils.FromContext(c).Errorf("error openning connection to instance DB")
 		return errors.New("failed to connect to instance DB")
 	}
 	defer iDB.Close()
 
 	encryptor := getDBEncryptor(c)
 	if encryptor == nil {
-		utils.FromContext(c).WithError(nil).Errorf("encryptor not found")
+		utils.FromContext(c).Errorf("encryptor not found")
 		return errors.New("encryptor not found")
 	}
 
@@ -2269,7 +2269,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -2356,7 +2356,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if moduleA.ID == 0 && form.Action != "activate" {
-		utils.FromContext(c).WithError(nil).Errorf("error on %s module, policy module not found", form.Action)
+		utils.FromContext(c).Errorf("error on %s module, policy module not found", form.Action)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2429,7 +2429,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 
 		for _, ch := range changes {
 			if ch {
-				utils.FromContext(c).WithError(nil).Errorf("error accepting module changes")
+				utils.FromContext(c).Errorf("error accepting module changes")
 				response.Error(c, response.ErrPatchPolicyModuleAcceptFail, nil)
 				return
 			}
@@ -2450,7 +2450,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	case "update":
 		moduleVersion := moduleA.Info.Version.String()
 		if moduleVersion == moduleS.Info.Version.String() {
-			utils.FromContext(c).WithError(nil).Errorf("error updating module to the same version: %s", moduleVersion)
+			utils.FromContext(c).Errorf("error updating module to the same version: %s", moduleVersion)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -2494,7 +2494,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		}
 
 	default:
-		utils.FromContext(c).WithError(nil).Errorf("error making unknown action on module")
+		utils.FromContext(c).Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchPolicyModuleActionNotFound, nil)
 		return
 	}
@@ -2561,7 +2561,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -2654,7 +2654,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "setting value to module secure config", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	err := c.ShouldBindJSON(&payload)
 	switch {
@@ -2805,7 +2805,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	actionCode := fmt.Sprintf("retrieving value in module secure config, key: %s", paramName)
 	uaf := useraction.NewFields(c, "policy", "policy", actionCode, hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -3008,7 +3008,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3041,7 +3041,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		response.Error(c, response.ErrCreateModuleGetCountFail, err)
 		return
 	} else if count >= 1 {
-		utils.FromContext(c).WithError(nil).Errorf("error creating second system module")
+		utils.FromContext(c).Errorf("error creating second system module")
 		response.Error(c, response.ErrCreateModuleSecondSystemModule, err)
 		return
 	}
@@ -3105,7 +3105,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "deletion", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3138,7 +3138,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		iDB := utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
 			strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
 		if iDB == nil {
-			utils.FromContext(c).WithError(nil).Errorf("error openning connection to instance DB")
+			utils.FromContext(c).Errorf("error openning connection to instance DB")
 			return errors.New("failed to connect to instance DB")
 		}
 		defer iDB.Close()
@@ -3350,7 +3350,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "undefined action", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&form); err != nil || form.Module.Valid() != nil {
 		if err == nil {
@@ -3402,7 +3402,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 
 	if module.State == "release" {
-		utils.FromContext(c).WithError(nil).Errorf("error changing released system module")
+		utils.FromContext(c).Errorf("error changing released system module")
 		response.Error(c, response.ErrPatchModuleVersionAcceptReleaseChangesFail, nil)
 		return
 	}
@@ -3418,7 +3418,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 	for _, ch := range changes {
 		if ch {
-			utils.FromContext(c).WithError(nil).Errorf("error accepting system module changes")
+			utils.FromContext(c).Errorf("error accepting system module changes")
 			response.Error(c, response.ErrPatchModuleVersionAcceptSystemChangesFail, nil)
 			return
 		}
@@ -3501,7 +3501,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation of the draft", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3558,7 +3558,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		response.Error(c, response.ErrCreateModuleVersionGetDraftNumberFail, err)
 		return
 	} else if count >= 1 {
-		utils.FromContext(c).WithError(nil).Errorf("error creating system module second draft")
+		utils.FromContext(c).Errorf("error creating system module second draft")
 		response.Error(c, response.ErrCreateModuleVersionSecondSystemModuleDraft, err)
 		return
 	}
@@ -3573,7 +3573,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	switch utils.CompareVersions(module.Info.Version.String(), version) {
 	case utils.TargetVersionGreat:
 	default:
-		utils.FromContext(c).WithError(nil).Errorf("error validating new version '%s' -> '%s'",
+		utils.FromContext(c).Errorf("error validating new version '%s' -> '%s'",
 			module.Info.Version.String(), version)
 		response.Error(c, response.ErrCreateModuleVersionInvalidModuleVersion, nil)
 		return
@@ -3647,7 +3647,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "deletion of the version", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3664,7 +3664,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		response.Error(c, response.ErrDeleteModuleVersionGetVersionNumberFail, err)
 		return
 	} else if count == 1 {
-		utils.FromContext(c).WithError(nil).Errorf("error deleting last system module version")
+		utils.FromContext(c).Errorf("error deleting last system module version")
 		response.Error(c, response.ErrDeleteModuleVersionDeleteLastVersionFail, nil)
 		return
 	}
@@ -3820,7 +3820,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "version update in policies", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3972,7 +3972,7 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(filePath, prefix) || strings.Contains(filePath, "..") {
-		utils.FromContext(c).WithError(nil).Errorf("error parsing path to file: mismatch base prefix")
+		utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrGetModuleVersionFileParsePathFail, nil)
 		return
 	}
@@ -4013,7 +4013,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "module editing", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -4041,7 +4041,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if module.State == "release" {
-		utils.FromContext(c).WithError(nil).Errorf("error patching released module")
+		utils.FromContext(c).Errorf("error patching released module")
 		response.Error(c, response.ErrPatchModuleVersionFileUpdateFail, nil)
 		return
 	}
@@ -4061,7 +4061,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(form.Path, prefix) || strings.Contains(form.Path, "..") {
-		utils.FromContext(c).WithError(nil).Errorf("error parsing path to file: mismatch base prefix")
+		utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrPatchModuleVersionFileParsePathFail, nil)
 		return
 	}
@@ -4089,7 +4089,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 
 	case "move":
 		if !strings.HasPrefix(form.NewPath, prefix) || strings.Contains(form.NewPath, "..") {
-			utils.FromContext(c).WithError(nil).Errorf("error parsing path to file: mismatch base prefix")
+			utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 			response.Error(c, response.ErrPatchModuleVersionFileParseNewpathFail, nil)
 			return
 		}
@@ -4104,7 +4104,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				utils.FromContext(c).WithError(nil).Errorf("error moving file in S3: newpath is identical to path")
+				utils.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
@@ -4123,7 +4123,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				utils.FromContext(c).WithError(nil).Errorf("error moving file in S3: newpath is identical to path")
+				utils.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
@@ -4148,7 +4148,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		}
 
 	default:
-		utils.FromContext(c).WithError(nil).Errorf("error making unknown action on module")
+		utils.FromContext(c).Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchModuleVersionFileActionNotFound, nil)
 		return
 	}

@@ -11,9 +11,10 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/qor/validations"
 	migrate "github.com/rubenv/sql-migrate"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/utils/meter"
-	"soldr/pkg/log"
+	"soldr/pkg/logger"
 	"soldr/pkg/secret"
 )
 
@@ -82,7 +83,7 @@ func (d *DB) RetryConnect(ctx context.Context, maxAttempts int, backoff time.Dur
 				break
 			}
 			nextAttemptWait := time.Duration(attempt) * backoff
-			log.FromContext(ctx).Warnf(
+			logrus.Warnf(
 				"attempt %v: could not establish a connection with the database, wait for %v.",
 				attempt,
 				nextAttemptWait,
@@ -110,15 +111,13 @@ func (d *DB) Migrate(path string) error {
 	return err
 }
 
-func (d *DB) WithORM(ctx context.Context) (*gorm.DB, error) {
+func (d *DB) WithORM() (*gorm.DB, error) {
 	conn, err := gorm.Open("mysql", d.DSN().Unmask())
 	if err != nil {
 		return nil, err
 	}
-	conn.LogMode(true)
+	conn.SetLogger(&logger.GormLogger{})
 	validations.RegisterCallbacks(conn)
 	meter.ApplyGorm(conn)
-
-	conn.SetLogger(log.FromContext(ctx))
 	return conn, nil
 }

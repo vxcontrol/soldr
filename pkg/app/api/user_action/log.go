@@ -1,20 +1,19 @@
 package useraction
 
 import (
-	"github.com/sirupsen/logrus"
+	"soldr/pkg/app/api/utils"
 
-	"soldr/pkg/log"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-type LogWriter struct {
-	logger log.Logger
+type LogWriter struct{}
+
+func NewLogWriter() *LogWriter {
+	return &LogWriter{}
 }
 
-func NewLogWriter(logger log.Logger) *LogWriter {
-	return &LogWriter{logger: logger}
-}
-
-func (w *LogWriter) WriteUserAction(uaf Fields) error {
+func (w *LogWriter) WriteUserAction(c *gin.Context, uaf Fields) error {
 	fields := logrus.Fields{
 		"start_time":          uaf.StartTime,
 		"user_name":           uaf.UserName,
@@ -26,7 +25,8 @@ func (w *LogWriter) WriteUserAction(uaf Fields) error {
 		"action_code":         uaf.ActionCode,
 		"success":             uaf.Success,
 		"fail_reason":         uaf.FailReason,
+		"component":           "user_action",
 	}
-	w.logger.WithFields(fields).Info()
+	utils.FromContext(c).WithFields(fields).Info()
 	return nil
 }

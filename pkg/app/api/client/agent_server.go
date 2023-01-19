@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -57,9 +58,12 @@ func (c *AgentServerClient) GetDB(ctx context.Context, hash string) (*gorm.DB, e
 		return nil, fmt.Errorf("could not connect to database: %w", err)
 	}
 
-	dbWithORM, err := dbConn.WithORM(ctx)
+	dbWithORM, err := dbConn.WithORM()
 	if err != nil {
 		return nil, fmt.Errorf("could not create ORM: %w", err)
+	}
+	if _, exists := os.LookupEnv("DEBUG"); exists {
+		dbWithORM.LogMode(true)
 	}
 	c.dbConns.Set(hash, dbWithORM)
 

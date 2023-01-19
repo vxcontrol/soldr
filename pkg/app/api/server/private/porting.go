@@ -131,7 +131,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		ObjectID:          moduleName,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -149,7 +149,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		return
 	} else {
 		if len(modules) == 0 {
-			utils.FromContext(c).WithError(nil).Errorf("system module by name and version not found: %s : %s", moduleName, version)
+			utils.FromContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
 			response.Error(c, response.ErrPortingModuleNotFound, nil)
 			return
 		}
@@ -247,7 +247,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		ObjectID:          moduleName,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -287,7 +287,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		return
 	}
 	if len(templates) == 0 {
-		utils.FromContext(c).WithError(nil).Errorf("system module by name and version not found: %s : %s", moduleName, version)
+		utils.FromContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
 		response.Error(c, response.ErrPortingModuleNotFound, nil)
 		return
 	}
@@ -315,7 +315,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 
 		svModule := getModule(module.Info.Version)
 		if svModule != nil && !rewrite {
-			utils.FromContext(c).WithError(nil).Errorf("error overriding system module version: %s", module.Info.Version.String())
+			utils.FromContext(c).Errorf("error overriding system module version: %s", module.Info.Version.String())
 			response.Error(c, response.ErrImportOverrideNotPermitted, err)
 			return
 		}

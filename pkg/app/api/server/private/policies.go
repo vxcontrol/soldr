@@ -536,7 +536,7 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 		ObjectID:          hash,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -566,13 +566,13 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if hash != policy.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch policy hash to requested one")
+		utils.FromContext(c).Errorf("mismatch policy hash to requested one")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
 
 	if err = iDB.Model(&policy).Count(&count).Error; err != nil || count == 0 {
-		utils.FromContext(c).WithError(nil).Errorf("error updating policy by hash '%s', group not found", hash)
+		utils.FromContext(c).Errorf("error updating policy by hash '%s', group not found", hash)
 		response.Error(c, response.ErrPoliciesNotFound, err)
 		return
 	}
@@ -581,7 +581,7 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&policy).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating policy by hash '%s', policy not found", hash)
+		utils.FromContext(c).Errorf("error updating policy by hash '%s', policy not found", hash)
 		response.Error(c, response.ErrPoliciesNotFound, err)
 		return
 	} else if err != nil {
@@ -620,7 +620,7 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 		ActionCode:        "undefined action",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -710,7 +710,7 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 		ActionCode:        "creation",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&info); err != nil {
 		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
@@ -827,7 +827,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		ObjectID:          hash,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -863,7 +863,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if policy.Info.System {
-		utils.FromContext(c).WithError(nil).Errorf("error removing system policy")
+		utils.FromContext(c).Errorf("error removing system policy")
 		response.Error(c, response.ErrDeletePolicySystemPolicy, err)
 		return
 	}
@@ -877,7 +877,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		return
 	}
 	if len(pgs.Groups) != 0 {
-		utils.FromContext(c).WithError(nil).Errorf("error removing policy which linked to groups")
+		utils.FromContext(c).Errorf("error removing policy which linked to groups")
 		response.Error(c, response.ErrDeletePolicyPolicyLinkedToGroups, err)
 		return
 	}
@@ -921,7 +921,7 @@ func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 		ActionCode:        "counting",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {

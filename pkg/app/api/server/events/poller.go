@@ -12,6 +12,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/utils"
+	obs "soldr/pkg/observability"
 )
 
 type EventName string
@@ -53,8 +54,6 @@ type EventPoller struct {
 
 	db *gorm.DB
 
-	logger *logrus.Entry
-
 	// list of service_id -> GroupToPolicy_id, useful for detect new GroupToPolicy records
 	groupToPolicyLastID map[uint64]uint64
 	// list of service_id -> module_id, useful for detect new module records
@@ -71,15 +70,14 @@ func NewEventPoller(exchanger *Exchanger, tickInterval time.Duration, db *gorm.D
 		services:            make(map[uint64]*service),
 		groupToPolicyLastID: make(map[uint64]uint64),
 		moduleLastID:        make(map[uint64]uint64),
-		logger: logrus.WithFields(logrus.Fields{
-			"component": "event_poller",
-		}),
 	}
 }
 
 // Run start polling loop.
 func (ep *EventPoller) Run(ctx context.Context) error {
-	ep.logger.Debugf("Start DB polling, interval: %s", ep.tickInterval.String())
+	logrus.WithContext(ctx).WithFields(logrus.Fields{
+		"component": "event_poller",
+	}).Debugf("Start DB polling, interval: %s", ep.tickInterval.String())
 
 	if ep.tickInterval <= 0 {
 		return errors.New("expected event poller tick interval greater than 0")
@@ -95,14 +93,16 @@ func (ep *EventPoller) Run(ctx context.Context) error {
 			from, to := ep.lastPollAt, now
 			ep.lastPollAt = now
 
-			ep.poll(from, to)
+			ctx, span := obs.Observer.NewSpan(context.Background(), obs.SpanKindInternal, "event_poller")
+			ep.poll(ctx, from, to)
+			span.End()
 		case <-ctx.Done():
 			return nil
 		}
 	}
 }
 
-func (ep *EventPoller) poll(from, to time.Time) {
+func (ep *EventPoller) poll(ctx context.Context, from, to time.Time) {
 	ep.services = loadServices(ep.db, ep.services)
 
 	wg := &sync.WaitGroup{}
@@ -111,7 +111,7 @@ func (ep *EventPoller) poll(from, to time.Time) {
 		go func(s *service) {
 			defer wg.Done()
 
-			newAgents, updatedAgents, deletedAgents := ep.pollAgents(s, from, to)
+			newAgents, updatedAgents, deletedAgents := ep.pollAgents(ctx, s, from, to)
 			agentCreateEvents := makeAgentEvents(CreateAgentEvent, newAgents)
 			agentUpdateEvents := makeAgentEvents(UpdateAgentEvent, updatedAgents)
 			agentDeleteEvents := makeAgentEvents(DeleteAgentEvent, deletedAgents)
@@ -120,7 +120,7 @@ func (ep *EventPoller) poll(from, to time.Time) {
 			ep.exchanger.fireEvents(s.sv.ID, UpdateAgentsChannel, agentUpdateEvents...)
 			ep.exchanger.fireEvents(s.sv.ID, DeleteAgentsChannel, agentDeleteEvents...)
 
-			newGroups, updatedGroups, deletedGroups := ep.pollGroups(s, from, to)
+			newGroups, updatedGroups, deletedGroups := ep.pollGroups(ctx, s, from, to)
 			groupCreateEvents := makeGroupEvents(CreateGroupEvent, newGroups)
 			groupUpdateEvents := makeGroupEvents(UpdateGroupEvent, updatedGroups)
 			groupDeleteEvents := makeGroupEvents(DeleteGroupEvent, deletedGroups)
@@ -129,7 +129,7 @@ func (ep *EventPoller) poll(from, to time.Time) {
 			ep.exchanger.fireEvents(s.sv.ID, UpdateGroupsChannel, groupUpdateEvents...)
 			ep.exchanger.fireEvents(s.sv.ID, DeleteGroupsChannel, groupDeleteEvents...)
 
-			newPolicies, updatedPolicies, deletedPolicies := ep.pollPolicies(s, from, to)
+			newPolicies, updatedPolicies, deletedPolicies := ep.pollPolicies(ctx, s, from, to)
 			policyCreateEvents := makePolicyEvents(CreatePolicyEvent, newPolicies)
 			policyUpdateEvents := makePolicyEvents(UpdatePolicyEvent, updatedPolicies)
 			policyDeleteEvents := makePolicyEvents(DeletePolicyEvent, deletedPolicies)
@@ -138,12 +138,12 @@ func (ep *EventPoller) poll(from, to time.Time) {
 			ep.exchanger.fireEvents(s.sv.ID, UpdatePoliciesChannel, policyUpdateEvents...)
 			ep.exchanger.fireEvents(s.sv.ID, DeletePoliciesChannel, policyDeleteEvents...)
 
-			newGroupToPolicy := ep.pollGroupToPolicy(s)
+			newGroupToPolicy := ep.pollGroupToPolicy(ctx, s)
 			groupToPolicyCreateEvents := makeGroupToPoliciesEvents(CreateGroupToPolicyEvent, newGroupToPolicy)
 
 			ep.exchanger.fireEvents(s.sv.ID, CreateGroupToPolicyChannel, groupToPolicyCreateEvents...)
 
-			newModules, updatedModules, deletedModules := ep.pollModules(s, from, to)
+			newModules, updatedModules, deletedModules := ep.pollModules(ctx, s, from, to)
 			moduleCreateEvents := makeModuleEvents(CreateModuleEvent, newModules)
 			moduleUpdateEvents := makeModuleEvents(UpdateModuleEvent, updatedModules)
 			moduleDeleteEvents := makeModuleEvents(DeleteModuleEvent, deletedModules)
@@ -166,17 +166,17 @@ func (ep *EventPoller) poll(from, to time.Time) {
 	wg.Wait()
 }
 
-func (ep *EventPoller) pollAgents(s *service, from, to time.Time) (created, updated, deleted []models.Agent) {
+func (ep *EventPoller) pollAgents(ctx context.Context, s *service, from, to time.Time) (created, updated, deleted []models.Agent) {
 	if err := s.db.Find(&created, "created_date >= ? && created_date < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll new agents fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll new agents fail")
 	}
 
 	if err := s.db.Find(&updated, "updated_at >= ? && updated_at < ? && created_date < ?", from, to, from.Add(-time.Second)).Error; err != nil {
-		ep.logger.WithError(err).Error("poll updated agents fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll updated agents fail")
 	}
 
 	if err := s.db.Unscoped().Find(&deleted, "deleted_at >= ? && deleted_at < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll deleted agents fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll deleted agents fail")
 	}
 
 	return created, updated, deleted
@@ -191,17 +191,17 @@ func makeAgentEvents(event EventName, agents []models.Agent) []Event {
 	return result
 }
 
-func (ep *EventPoller) pollGroups(s *service, from, to time.Time) (created, updated, deleted []models.Group) {
+func (ep *EventPoller) pollGroups(ctx context.Context, s *service, from, to time.Time) (created, updated, deleted []models.Group) {
 	if err := s.db.Find(&created, "created_date >= ? && created_date < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll new groups fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll new groups fail")
 	}
 
 	if err := s.db.Find(&updated, "updated_at >= ? && updated_at < ? && created_date < ?", from, to, from.Add(-time.Second)).Error; err != nil {
-		ep.logger.WithError(err).Error("poll updated groups fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll updated groups fail")
 	}
 
 	if err := s.db.Unscoped().Find(&deleted, "deleted_at >= ? && deleted_at < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll deleted groups fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll deleted groups fail")
 	}
 
 	return created, updated, deleted
@@ -216,17 +216,17 @@ func makeGroupEvents(event EventName, groups []models.Group) []Event {
 	return result
 }
 
-func (ep *EventPoller) pollPolicies(s *service, from, to time.Time) (created, updated, deleted []models.Policy) {
+func (ep *EventPoller) pollPolicies(ctx context.Context, s *service, from, to time.Time) (created, updated, deleted []models.Policy) {
 	if err := s.db.Find(&created, "created_date >= ? && created_date < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll new policies fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll new policies fail")
 	}
 
 	if err := s.db.Find(&updated, "updated_at >= ? && updated_at < ? && created_date < ?", from, to, from.Add(-time.Second)).Error; err != nil {
-		ep.logger.WithError(err).Error("poll updated policies fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll updated policies fail")
 	}
 
 	if err := s.db.Unscoped().Find(&deleted, "deleted_at >= ? && deleted_at < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll deleted policies fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll deleted policies fail")
 	}
 
 	return created, updated, deleted
@@ -240,14 +240,14 @@ func makePolicyEvents(event EventName, policies []models.Policy) []Event {
 	return result
 }
 
-func (ep *EventPoller) pollModules(s *service, from, to time.Time) (created, updated, deleted []models.ModuleA) {
+func (ep *EventPoller) pollModules(ctx context.Context, s *service, from, to time.Time) (created, updated, deleted []models.ModuleA) {
 	if _, exists := ep.moduleLastID[s.sv.ID]; !exists {
 		var module models.ModuleA
 		s.db.Order("id DESC").First(&module)
 		ep.moduleLastID[s.sv.ID] = module.ID
 	} else {
 		if err := s.db.Order("id ASC").Find(&created, "id > ?", ep.moduleLastID[s.sv.ID]).Error; err != nil {
-			ep.logger.WithError(err).Error("poll new modules fail")
+			logrus.WithContext(ctx).WithError(err).Error("poll new modules fail")
 		}
 		if len(created) > 0 {
 			ep.moduleLastID[s.sv.ID] = created[len(created)-1].ID
@@ -260,11 +260,11 @@ func (ep *EventPoller) pollModules(s *service, from, to time.Time) (created, upd
 	}
 
 	if err := s.db.Not(createdIDs).Where("last_update >= ? && last_update < ?", from, to).Find(&updated).Error; err != nil {
-		ep.logger.WithError(err).Error("poll updated modules fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll updated modules fail")
 	}
 
 	if err := s.db.Unscoped().Find(&deleted, "deleted_at >= ? && deleted_at < ?", from, to).Error; err != nil {
-		ep.logger.WithError(err).Error("poll deleted modules fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll deleted modules fail")
 	}
 
 	return created, updated, deleted
@@ -278,7 +278,7 @@ func makeModuleEvents(event EventName, modules []models.ModuleA) []Event {
 	return result
 }
 
-func (ep *EventPoller) pollGroupToPolicy(s *service) (created []models.GroupToPolicy) {
+func (ep *EventPoller) pollGroupToPolicy(ctx context.Context, s *service) (created []models.GroupToPolicy) {
 	if _, exists := ep.groupToPolicyLastID[s.sv.ID]; !exists {
 		var gtp models.GroupToPolicy
 		s.db.Order("id DESC").First(&gtp)
@@ -287,7 +287,7 @@ func (ep *EventPoller) pollGroupToPolicy(s *service) (created []models.GroupToPo
 	}
 
 	if err := s.db.Order("id ASC").Find(&created, "id > ?", ep.groupToPolicyLastID[s.sv.ID]).Error; err != nil {
-		ep.logger.WithError(err).Error("poll new group-to-policy fail")
+		logrus.WithContext(ctx).WithError(err).Error("poll new group-to-policy fail")
 	}
 
 	if len(created) > 0 {

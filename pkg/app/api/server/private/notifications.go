@@ -14,6 +14,7 @@ import (
 	"soldr/pkg/app/api/models"
 	srvevents "soldr/pkg/app/api/server/events"
 	"soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/utils"
 )
 
 type PermissionsFilter func(*gin.Context, srvevents.EventChannelName) bool
@@ -30,7 +31,7 @@ func SubscribeHandler(exchanger *srvevents.Exchanger, permsFilter PermissionsFil
 	return func(c *gin.Context) {
 		subscribeString := c.Query("list")
 		w, r := c.Writer, c.Request
-		logger := logrus.WithField("component", "notifier").WithContext(r.Context())
+		logger := utils.FromContext(c).WithField("component", "notifier").WithContext(r.Context())
 
 		var subscribes []srvevents.EventChannelName
 		for _, name := range strings.Split(subscribeString, ",") {

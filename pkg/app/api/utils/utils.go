@@ -23,6 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
+	"soldr/pkg/logger"
 	"soldr/pkg/storage"
 	"soldr/pkg/system"
 	"soldr/pkg/version"
@@ -144,7 +145,12 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 			Errorf("error opening gorm connection: %v", err)
 		return nil
 	}
-	conn.LogMode(true) // avoid annoying logs
+
+	conn.SetLogger(&logger.GormLogger{})
+	if _, exists := os.LookupEnv("DEBUG"); exists {
+		conn.LogMode(true)
+	}
+
 	validations.RegisterCallbacks(conn)
 
 	conn.DB().SetMaxIdleConns(10)
@@ -153,7 +159,6 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 
 	meter.ApplyGorm(conn)
 
-	// conn.SetLogger(logrus.StandardLogger())
 	return conn
 }
 
@@ -409,10 +414,10 @@ func GetGormDB(c *gin.Context, name string) *gorm.DB {
 	var db *gorm.DB
 
 	if val, ok := c.Get(name); !ok {
-		logrus.WithField("component", "gorm_conn_getter").
+		FromContext(c).WithField("component", "gorm_conn_getter").
 			Errorf("error getting '" + name + "' from context")
 	} else if db = val.(*gorm.DB); db == nil {
-		logrus.WithField("component", "gorm_conn_getter").
+		FromContext(c).WithField("component", "gorm_conn_getter").
 			Errorf("got nil value '" + name + "' from context")
 	}
 

@@ -3,7 +3,6 @@ package server
 import (
 	"crypto/tls"
 	"encoding/gob"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -16,7 +15,6 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -54,7 +52,6 @@ func NewRouter(
 	userActionWriter useraction.Writer,
 	dbConns *mem.DBConnectionStorage,
 	s3Conns *mem.S3ConnectionStorage,
-
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	if _, exists := os.LookupEnv("DEBUG"); exists {
@@ -67,19 +64,6 @@ func NewRouter(
 
 	cookieStore := cookie.NewStore(utils.MakeCookieStoreKey())
 
-	logDir := "logs"
-	if dir, ok := os.LookupEnv("LOG_DIR"); ok {
-		logDir = dir
-	}
-	apiLogFile := &lumberjack.Logger{
-		Filename:   path.Join(logDir, "api.log"),
-		MaxSize:    100,
-		MaxBackups: 7,
-		MaxAge:     14,
-		Compress:   true,
-	}
-	defer apiLogFile.Close()
-
 	staticPath := "./static"
 	if uiStaticPath, ok := os.LookupEnv("API_STATIC_PATH"); ok {
 		staticPath = uiStaticPath
@@ -91,12 +75,12 @@ func NewRouter(
 			utils.FromContext(c).WithError(err).Errorf("error loading index.html")
 			return
 		}
-		c.Data(200, "text/html", []byte(data))
+		c.Data(200, "text/html", data)
 	}
 
 	router := gin.New()
 	router.Use(otelgin.Middleware("vxapi"))
-	router.Use(gin.LoggerWithWriter(io.MultiWriter(apiLogFile, os.Stdout)))
+	router.Use(WithLogger([]string{}))
 	router.Use(gin.Recovery())
 	router.Use(sessions.Sessions("auth", cookieStore))
 

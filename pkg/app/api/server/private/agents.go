@@ -528,7 +528,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	uafArr := []useraction.Fields{uaf}
 	defer func() {
 		for i := range uafArr {
-			s.userActionWriter.WriteUserAction(uafArr[i])
+			s.userActionWriter.WriteUserAction(c, uafArr[i])
 		}
 	}()
 
@@ -798,7 +798,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 // @Router /agents/{hash} [put]
 func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	hash := c.Param("hash")
 
@@ -833,14 +833,14 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf.ObjectDisplayName = action.Agent.Description
 
 	if hash != action.Agent.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch agent hash to requested one")
+		utils.FromContext(c).Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchAgentValidationError, nil)
 		return
 	}
 
 	var count int64
 	if err = iDB.Model(&action.Agent).Count(&count).Error; err != nil || count == 0 {
-		utils.FromContext(c).WithError(nil).Errorf("error updating agent by hash '%s', agent not found", hash)
+		utils.FromContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	}
@@ -865,7 +865,7 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&action.Agent).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating agent by hash '%s', agent not found", hash)
+		utils.FromContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	} else if err != nil {
@@ -890,13 +890,11 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 // @Router /agents/ [post]
 func (s *AgentService) CreateAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "creation", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
-
-	logger := utils.FromContext(c)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	var info agentInfo
 	if err := c.ShouldBindJSON(&info); err != nil {
-		logger.WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrCreateAgentValidationError, err)
 		return
 	}
@@ -947,7 +945,7 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 	uaf.ObjectID = newAgent.Hash
 
 	if err = iDB.Create(&newAgent).Error; err != nil {
-		logger.WithError(err).Errorf("error creating agent")
+		utils.FromContext(c).WithError(err).Errorf("error creating agent")
 		response.Error(c, response.ErrCreateAgentCreateError, err)
 		return
 	}
@@ -972,7 +970,7 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "agent", "agent", "deletion", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -1025,7 +1023,7 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 		ActionCode:        "counting",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {

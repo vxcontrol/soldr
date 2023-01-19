@@ -152,7 +152,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	uafArr := []useraction.Fields{uaf}
 	defer func() {
 		for i := range uafArr {
-			s.userActionWriter.WriteUserAction(uafArr[i])
+			s.userActionWriter.WriteUserAction(c, uafArr[i])
 		}
 	}()
 
@@ -200,7 +200,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	}
 	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
+		utils.FromContext(c).Errorf("error getting binary info by version '%s', record not found", upgradeReq.Version)
 		response.Error(c, response.ErrCreateAgentsUpgradesAgentNotFound, err)
 		return
 	} else if err != nil {
@@ -359,7 +359,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
@@ -401,7 +401,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentData, err)
 		return
 	} else if hash != agent.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch agent hash to requested one")
+		utils.FromContext(c).Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchLastAgentUpgradeInvalidAgentUpgradeInfo, err)
 		return
 	}
@@ -425,7 +425,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 		}
 		err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-			utils.FromContext(c).WithError(nil).Errorf("error getting binary info by version '%s', record not found", task.Version)
+			utils.FromContext(c).Errorf("error getting binary info by version '%s', record not found", task.Version)
 			response.Error(c, response.ErrPatchLastAgentUpgradeAgentBinaryNotFound, err)
 			return
 		} else if err != nil {
@@ -458,7 +458,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	}
 	err = iDB.Model(&task).UpdateColumns(update_info).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
+		utils.FromContext(c).Errorf("error updating last agent upgrade information by id '%d', task not found", task.ID)
 		response.Error(c, response.ErrPatchLastAgentUpgradeLastUpgradeInfoNotFound, err)
 		return
 	} else if err != nil {

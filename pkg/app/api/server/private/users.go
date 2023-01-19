@@ -199,7 +199,7 @@ func (s *UserService) GetUsers(c *gin.Context) {
 			},
 		})
 	default:
-		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -355,7 +355,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		}
 		user.TenantID = tid
 	default:
-		utils.FromContext(c).WithError(nil).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -423,7 +423,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if hash != user.Hash {
-		utils.FromContext(c).WithError(nil).Errorf("mismatch user hash to requested one")
+		utils.FromContext(c).Errorf("mismatch user hash to requested one")
 		response.Error(c, response.ErrUsersInvalidRequest, nil)
 		return
 	} else if err = user.User.Valid(); err != nil {
@@ -469,7 +469,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	}
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).WithError(nil).Errorf("error updating user by hash '%s', user not found", hash)
+		utils.FromContext(c).Errorf("error updating user by hash '%s', user not found", hash)
 		response.Error(c, response.ErrUsersNotFound, err)
 		return
 	} else if err != nil {

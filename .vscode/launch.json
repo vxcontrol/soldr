@@ -37,7 +37,7 @@
                 "VALID_PATH": "${workspaceFolder}/security/vconf",
                 "LOG_DIR": "${workspaceFolder}/build/logs"
             },
-            "args": ["-debug", "-profiling"], 
+            "args": ["-debug", "-profiling"],
             "cwd": "${workspaceFolder}/build",
             "dlvFlags": ["--check-go-version=false"],
             "preLaunchTask": "build vxserver"
@@ -52,7 +52,7 @@
             "env": {
                 "LOG_DIR": "${workspaceFolder}/build/logs"
             },
-            "args": ["-debug"], 
+            "args": ["-debug"],
             "cwd": "${workspaceFolder}/build",
             "dlvFlags": ["--check-go-version=false"],
             "preLaunchTask": "build vxagent"
@@ -78,7 +78,7 @@
                 "--file=${workspaceFolder}/security/vconf/lic/sbh.json",
                 "--version=example",
                 "--force=true"
-            ], 
+            ],
             "cwd": "${workspaceFolder}/scripts/sbh_generator",
             "dlvFlags": ["--check-go-version=false"]
         },
