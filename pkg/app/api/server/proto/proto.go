@@ -215,7 +215,7 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 		validate   = models.GetValidator()
 	)
 
-	logger := logrus.WithFields(logrus.Fields{
+	logger := utils.FromContext(c).WithFields(logrus.Fields{
 		"sock_id":   sockID,
 		"sock_type": sockType,
 		"conn_id":   getRandomID(),
@@ -372,17 +372,17 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		logrus.WithError(err).Errorf("could not get service hash")
+		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -391,7 +391,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		logrus.WithError(err).Errorf("error finding group by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -402,7 +402,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
-		logrus.Errorf("mismatch socket type to incoming token type")
+		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -420,17 +420,17 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		logrus.WithError(err).Errorf("could not get service hash")
+		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -439,7 +439,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		logrus.WithError(err).Errorf("error finding agent by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -451,7 +451,7 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
-		logrus.Errorf("mismatch socket type to incoming token type")
+		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
@@ -468,17 +468,17 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		logrus.WithError(err).Errorf("could not get service hash")
+		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -487,7 +487,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		logrus.WithError(err).Errorf("error finding agent by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -498,7 +498,7 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 
 	sockType, ok := srvcontext.GetString(c, "cpt")
 	if !ok || sockType != "external" {
-		logrus.Errorf("mismatch socket type to incoming token type")
+		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}

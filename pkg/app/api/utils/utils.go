@@ -92,6 +92,11 @@ func IsUseSSL() bool {
 	return os.Getenv("API_USE_SSL") == "true"
 }
 
+// FromContext is function to get logrus Entry with context
+func FromContext(c *gin.Context) *logrus.Entry {
+	return logrus.WithContext(c.Request.Context())
+}
+
 // UniqueUint64InSlice is function to remove duplicates in slice of uint64
 func UniqueUint64InSlice(slice []uint64) []uint64 {
 	keys := make(map[uint64]bool)
@@ -409,10 +414,10 @@ func GetGormDB(c *gin.Context, name string) *gorm.DB {
 	var db *gorm.DB
 
 	if val, ok := c.Get(name); !ok {
-		logrus.WithField("component", "gorm_conn_getter").
+		FromContext(c).WithField("component", "gorm_conn_getter").
 			Errorf("error getting '" + name + "' from context")
 	} else if db = val.(*gorm.DB); db == nil {
-		logrus.WithField("component", "gorm_conn_getter").
+		FromContext(c).WithField("component", "gorm_conn_getter").
 			Errorf("got nil value '" + name + "' from context")
 	}
 

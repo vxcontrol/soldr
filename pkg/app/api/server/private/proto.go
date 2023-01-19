@@ -7,7 +7,6 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
@@ -100,23 +99,23 @@ func ValidateToken(tokenString string) (*models.ProtoAuthTokenClaims, error) {
 func CreateAuthToken(c *gin.Context) {
 	var req models.ProtoAuthTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrProtoInvalidRequest, err)
 		return
 	} else if err := req.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating JSON")
+		utils.FromContext(c).WithError(err).Errorf("error validating JSON")
 		response.Error(c, response.ErrProtoInvalidRequest, err)
 		return
 	}
 
 	token, err := MakeToken(c, &req)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error on making token")
+		utils.FromContext(c).WithError(err).Errorf("error on making token")
 		response.Error(c, response.ErrProtoCreateTokenFail, err)
 		return
 	}
 	if _, err := ValidateToken(token); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error on validating token")
+		utils.FromContext(c).WithError(err).Errorf("error on validating token")
 		response.Error(c, response.ErrProtoInvalidToken, err)
 		return
 	}

@@ -14,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
@@ -132,7 +131,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		ObjectID:          moduleName,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -145,18 +144,18 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
 		if len(modules) == 0 {
-			logrus.WithContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
+			utils.FromContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
 			response.Error(c, response.ErrPortingModuleNotFound, nil)
 			return
 		}
 		for _, module := range modules {
 			if err = module.Valid(); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+				utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 				response.Error(c, response.ErrExportInvalidModuleData, err)
 				return
 			}
@@ -172,13 +171,13 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		prefix := moduleName + "/" + module.Info.Version.String()
 		template, err := LoadModuleSFromGlobalS3(&module.Info)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error loading system module files from S3")
+			utils.FromContext(c).WithError(err).Errorf("error loading system module files from S3")
 			response.Error(c, response.ErrExportLoadFilesFail, err)
 			return
 		}
 		config, err := BuildModuleSConfig(&module)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error building system module config")
+			utils.FromContext(c).WithError(err).Errorf("error building system module config")
 			response.Error(c, response.ErrExportBuildConfigFail, err)
 			return
 		}
@@ -188,13 +187,13 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 			for fileName, fileContent := range folderContent {
 				zipFile, err := zipWriter.Create(prefix + "/" + folderName + "/" + fileName)
 				if err != nil {
-					logrus.WithContext(c).WithError(err).Errorf("error adding new system module file to zip")
+					utils.FromContext(c).WithError(err).Errorf("error adding new system module file to zip")
 					response.Error(c, response.ErrExportAddFileFail, err)
 					return
 				}
 
 				if _, err = zipFile.Write(fileContent); err != nil {
-					logrus.WithContext(c).WithError(err).Errorf("error writing system module file to zip")
+					utils.FromContext(c).WithError(err).Errorf("error writing system module file to zip")
 					response.Error(c, response.ErrExportWriteFileFail, err)
 					return
 				}
@@ -202,7 +201,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		}
 	}
 	if err = zipWriter.Close(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error closing system module archive")
+		utils.FromContext(c).WithError(err).Errorf("error closing system module archive")
 		response.Error(c, response.ErrExportCloseArchiveFail, err)
 		return
 	}
@@ -248,7 +247,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		ObjectID:          moduleName,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -261,7 +260,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(FilterModulesByVersion("all"), scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -276,26 +275,26 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 
 	zipArchive, err := c.FormFile("archive")
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error reading system module zip file")
+		utils.FromContext(c).WithError(err).Errorf("error reading system module zip file")
 		response.Error(c, response.ErrImportReadArchiveFail, err)
 		return
 	}
 
 	templates, err := getModuleTemplates(zipArchive, moduleName, version)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error parsing system module zip file")
+		utils.FromContext(c).WithError(err).Errorf("error parsing system module zip file")
 		response.Error(c, response.ErrImportParseArchiveFail, err)
 		return
 	}
 	if len(templates) == 0 {
-		logrus.WithContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
+		utils.FromContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
 		response.Error(c, response.ErrPortingModuleNotFound, nil)
 		return
 	}
 	for _, template := range templates {
 		module, err := LoadModuleSConfig(template["config"])
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error parsing system module config from zip file")
+			utils.FromContext(c).WithError(err).Errorf("error parsing system module config from zip file")
 			response.Error(c, response.ErrImportParseConfigFail, err)
 			return
 		}
@@ -304,19 +303,19 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		module.TenantID = tid
 		module.ServiceType = sv.Type
 		if err = json.Unmarshal(template["config"]["info.json"], &module.Info); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error parsing system module file info")
+			utils.FromContext(c).WithError(err).Errorf("error parsing system module file info")
 			response.Error(c, response.ErrImportParseFileFail, err)
 			return
 		}
 		if err = module.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating system module data")
+			utils.FromContext(c).WithError(err).Errorf("error validating system module data")
 			response.Error(c, response.ErrImportValidateConfigFail, err)
 			return
 		}
 
 		svModule := getModule(module.Info.Version)
 		if svModule != nil && !rewrite {
-			logrus.WithContext(c).Errorf("error overriding system module version: %s", module.Info.Version.String())
+			utils.FromContext(c).Errorf("error overriding system module version: %s", module.Info.Version.String())
 			response.Error(c, response.ErrImportOverrideNotPermitted, err)
 			return
 		}
@@ -328,7 +327,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		module := nmodules[idx]
 		svModule := getModule(module.Info.Version)
 		if err = StoreCleanModuleSToGlobalS3(&module.Info, template); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error storing system module to S3")
+			utils.FromContext(c).WithError(err).Errorf("error storing system module to S3")
 			response.Error(c, response.ErrImportStoreS3Fail, err)
 			return
 		}
@@ -339,7 +338,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 			err = s.db.Create(module).Error
 		}
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error storing system module to DB")
+			utils.FromContext(c).WithError(err).Errorf("error storing system module to DB")
 			response.Error(c, response.ErrImportStoreDBFail, err)
 			return
 		}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
@@ -207,20 +206,20 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -236,13 +235,13 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading system modules latest version")
+		utils.FromContext(c).WithError(err).Errorf("error loading system modules latest version")
 		response.Error(c, response.ErrGetPoliciesSystemModulesNotFound, err)
 		return
 	}
 
 	if err = query.Init("policies", policiesSQLMappers); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
@@ -293,13 +292,13 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 
 	if query.Group == "" {
 		if resp.Total, err = query.Query(iDB, &resp.Policies, funcs...); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding policies")
+			utils.FromContext(c).WithError(err).Errorf("error finding policies")
 			response.Error(c, response.ErrPoliciesInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding grouped policies")
+			utils.FromContext(c).WithError(err).Errorf("error finding grouped policies")
 			response.Error(c, response.ErrPoliciesInvalidQuery, err)
 			return
 		}
@@ -310,7 +309,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 	for i := 0; i < len(resp.Policies); i++ {
 		pids = append(pids, resp.Policies[i].ID)
 		if err = resp.Policies[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", resp.Policies[i].Hash)
+			utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", resp.Policies[i].Hash)
 			response.Error(c, response.ErrPoliciesInvalidData, err)
 			return
 		}
@@ -318,13 +317,13 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 
 	sqlQuery := sqlPolicyDetails + ` WHERE p.id IN (?) AND p.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, pids).Scan(&resp.Details).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading policies details")
+		utils.FromContext(c).WithError(err).Errorf("error loading policies details")
 		response.Error(c, response.ErrGetPoliciesDetailsNotFound, err)
 		return
 	}
 
 	if err = iDB.Find(&modulesa, "policy_id IN (?) AND status = 'joined'", pids).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy modules")
 		response.Error(c, response.ErrGetPoliciesModulesNotFound, err)
 		return
 	} else {
@@ -332,7 +331,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 			id := modulesa[i].ID
 			name := modulesa[i].Info.Name
 			if err = modulesa[i].Valid(); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
+				utils.FromContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetPoliciesInvalidModuleData, err)
 				return
 			}
@@ -340,7 +339,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 	}
 
 	if err = iDB.Find(&pgss, "policy_id IN (?)", pids).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group to policies links")
+		utils.FromContext(c).WithError(err).Errorf("error finding group to policies links")
 		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	}
@@ -350,7 +349,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.group_id = groups.id`).
 		Find(&groups, "gtp.policy_id IN (?)", pids).Error
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy groups")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy groups")
 		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
 		return
 	} else {
@@ -358,7 +357,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 			id := groups[i].ID
 			name := groups[i].Info.Name
 			if err = groups[i].Valid(); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error validating agent group data '%d' '%s'", id, name)
+				utils.FromContext(c).WithError(err).Errorf("error validating agent group data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetPoliciesInvalidGroupData, err)
 				return
 			}
@@ -427,13 +426,13 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -449,13 +448,13 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading system modules latest version")
+		utils.FromContext(c).WithError(err).Errorf("error loading system modules latest version")
 		response.Error(c, response.ErrGetPolicySystemModulesNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPoliciesNotFound, err)
 		} else {
@@ -463,20 +462,20 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", resp.Policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", resp.Policy.Hash)
 		response.Error(c, response.ErrPoliciesInvalidData, err)
 		return
 	}
 
 	sqlQuery := sqlPolicyDetails + ` WHERE p.hash = ? AND p.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, hash).Scan(&resp.Details).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading details by policy hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error loading details by policy hash '%s'", hash)
 		response.Error(c, response.ErrGetPolicyDetailsNotFound, err)
 		return
 	}
 
 	if err = iDB.Find(&resp.Details.Modules, "policy_id = ? AND status = 'joined'", resp.Policy.ID).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", resp.Policy.ID)
+		utils.FromContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", resp.Policy.ID)
 		response.Error(c, response.ErrGetPolicyModulesNotFound, err)
 		return
 	} else {
@@ -484,7 +483,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 			id := resp.Details.Modules[i].ID
 			name := resp.Details.Modules[i].Info.Name
 			if err = resp.Details.Modules[i].Valid(); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
+				utils.FromContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetPolicyInvalidModuleData, err)
 				return
 			}
@@ -502,7 +501,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 		Policy: resp.Policy,
 	}
 	if err = iDB.Model(pgs).Association("groups").Find(&pgs.Groups).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy groups by policy model")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy groups by policy model")
 		response.Error(c, response.ErrGetPolicyGroupsNotFound, err)
 		return
 	}
@@ -537,17 +536,17 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 		ObjectID:          hash,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -560,20 +559,20 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if hash != policy.Hash {
-		logrus.WithContext(c).Errorf("mismatch policy hash to requested one")
+		utils.FromContext(c).Errorf("mismatch policy hash to requested one")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
 
 	if err = iDB.Model(&policy).Count(&count).Error; err != nil || count == 0 {
-		logrus.WithContext(c).Errorf("error updating policy by hash '%s', group not found", hash)
+		utils.FromContext(c).Errorf("error updating policy by hash '%s', group not found", hash)
 		response.Error(c, response.ErrPoliciesNotFound, err)
 		return
 	}
@@ -582,11 +581,11 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&policy).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithContext(c).Errorf("error updating policy by hash '%s', policy not found", hash)
+		utils.FromContext(c).Errorf("error updating policy by hash '%s', policy not found", hash)
 		response.Error(c, response.ErrPoliciesNotFound, err)
 		return
 	} else if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error updating policy by hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error updating policy by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -621,17 +620,17 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 		ActionCode:        "undefined action",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -641,7 +640,7 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
@@ -652,7 +651,7 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPoliciesNotFound, err)
 		} else {
@@ -662,13 +661,13 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = policy.Info.Name.En
 	if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPoliciesInvalidData, err)
 		return
 	}
 
 	if err = iDB.Take(&group, "hash = ?", form.Group.Hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPoliciesNotFound, err)
 		} else {
@@ -676,14 +675,14 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 		}
 		return
 	} else if err = group.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
 		response.Error(c, response.ErrPatchPolicyGroupInvalidGroupData, err)
 		return
 	}
 
 	httpErr, err := makeGroupPolicyAction(form.Action, iDB, group, policy)
 	if httpErr != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error patching group policy by action: %s", httpErr.Error())
+		utils.FromContext(c).WithError(err).Errorf("error patching group policy by action: %s", httpErr.Error())
 		response.Error(c, httpErr, err)
 	}
 	response.Success(c, http.StatusOK, struct{}{})
@@ -711,10 +710,10 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 		ActionCode:        "creation",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&info); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPoliciesInvalidRequest, err)
 		return
 	}
@@ -722,13 +721,13 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -748,11 +747,11 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 
 	if info.From != 0 {
 		if err = iDB.Take(&policyFrom, "id = ?", info.From).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding source policy by ID")
+			utils.FromContext(c).WithError(err).Errorf("error finding source policy by ID")
 			response.Error(c, response.ErrCreatePolicySourceNotFound, err)
 			return
 		} else if err = policyFrom.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policyFrom.Hash)
+			utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policyFrom.Hash)
 			response.Error(c, response.ErrPoliciesInvalidData, err)
 			return
 		}
@@ -777,7 +776,7 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 	}
 
 	if err = iDB.Create(&policy).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error creating policy")
+		utils.FromContext(c).WithError(err).Errorf("error creating policy")
 		response.Error(c, response.ErrCreatePolicyCreateFail, err)
 		return
 	}
@@ -786,7 +785,7 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 		var modules []models.ModuleA
 		err = iDB.Where("policy_id = ? AND status = 'joined'", policyFrom.ID).Find(&modules).Error
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", policyFrom.ID)
+			utils.FromContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", policyFrom.ID)
 			response.Error(c, response.ErrCreatePolicyModulesNotFound, err)
 			return
 		}
@@ -794,7 +793,7 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 			module.ID = 0
 			module.PolicyID = policy.ID
 			if err = iDB.Create(&module).Error; err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error creating policy module")
+				utils.FromContext(c).WithError(err).Errorf("error creating policy module")
 				response.Error(c, response.ErrCreatePolicyCreateModulesFail, err)
 				return
 			}
@@ -828,17 +827,17 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		ObjectID:          hash,
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -849,7 +848,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPoliciesNotFound, err)
 		} else {
@@ -857,14 +856,14 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPoliciesInvalidData, err)
 		return
 	}
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if policy.Info.System {
-		logrus.WithContext(c).Errorf("error removing system policy")
+		utils.FromContext(c).Errorf("error removing system policy")
 		response.Error(c, response.ErrDeletePolicySystemPolicy, err)
 		return
 	}
@@ -873,24 +872,24 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		Policy: policy,
 	}
 	if err = iDB.Model(pgs).Association("groups").Find(&pgs.Groups).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy groups by policy model")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy groups by policy model")
 		response.Error(c, response.ErrDeletePolicyGroupsNotFound, err)
 		return
 	}
 	if len(pgs.Groups) != 0 {
-		logrus.WithContext(c).Errorf("error removing policy which linked to groups")
+		utils.FromContext(c).Errorf("error removing policy which linked to groups")
 		response.Error(c, response.ErrDeletePolicyPolicyLinkedToGroups, err)
 		return
 	}
 
 	if err = iDB.Find(&modules, "policy_id = ?", policy.ID).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", policy.ID)
+		utils.FromContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", policy.ID)
 		response.Error(c, response.ErrDeletePolicyModulesNotFound, err)
 		return
 	}
 
 	if err = iDB.Delete(&policy).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error deleting policy by hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error deleting policy by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -899,7 +898,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		moduleName := module.Info.Name
 		moduleVersion := module.Info.Version.String()
 		if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error removing unused module data")
+			utils.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -922,17 +921,17 @@ func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 		ActionCode:        "counting",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
 	}
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -950,7 +949,7 @@ func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 		Scan(&resp).
 		Error
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("could not count policies")
+		utils.FromContext(c).WithError(err).Errorf("could not count policies")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

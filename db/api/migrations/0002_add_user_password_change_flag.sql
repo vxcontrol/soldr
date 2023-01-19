@@ -1,7 +1,7 @@
 -- +migrate Up
 
 ALTER TABLE `users` ADD COLUMN
-    `password_change_required` BOOL NOT NULL DEFAULT false;
+    `password_change_required` BOOL NOT NULL DEFAULT false AFTER `tenant_id`;
 
 -- +migrate Down
 

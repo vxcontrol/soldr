@@ -10,7 +10,7 @@ import (
 const UnknownObjectDisplayName = "Undefined object"
 
 type Writer interface {
-	WriteUserAction(uaf Fields) error
+	WriteUserAction(c *gin.Context, uaf Fields) error
 }
 
 type Fields struct {

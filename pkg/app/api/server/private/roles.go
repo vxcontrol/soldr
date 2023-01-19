@@ -5,7 +5,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/response"
@@ -51,7 +50,7 @@ func (s *RoleService) GetRoles(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrRolesInvalidRequest, err)
 		return
 	}
@@ -59,14 +58,14 @@ func (s *RoleService) GetRoles(c *gin.Context) {
 	query.Init("roles", rolesSQLMappers)
 
 	if resp.Total, err = query.Query(s.db, &resp.Roles); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding roles")
+		utils.FromContext(c).WithError(err).Errorf("error finding roles")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Roles); i++ {
 		if err = resp.Roles[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating role data '%d'", resp.Roles[i].ID)
+			utils.FromContext(c).WithError(err).Errorf("error validating role data '%d'", resp.Roles[i].ID)
 			response.Error(c, response.ErrRolesInvalidData, err)
 			return
 		}

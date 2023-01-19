@@ -52,6 +52,7 @@ build-web:
 .PHONY: run-api
 run-api: build-api
 	cd $(CURDIR)/build && \
+		LOG_DIR=$(CURDIR)/build/logs \
 		CERTS_PATH=$(CURDIR)/security/certs/api \
 		MIGRATION_DIR=$(CURDIR)/db/api/migrations \
 		TEMPLATES_DIR=$(CURDIR)/build/package/api/templates \
@@ -60,6 +61,7 @@ run-api: build-api
 .PHONY: run-server
 run-server: build-server
 	cd $(CURDIR)/build && \
+		LOG_DIR=$(CURDIR)/build/logs \
 		MIGRATION_DIR=$(CURDIR)/db/server/migrations \
 		CERTS_PATH=$(CURDIR)/security/certs/server \
 		VALID_PATH=$(CURDIR)/security/vconf \
@@ -68,6 +70,7 @@ run-server: build-server
 .PHONY: run-agent
 run-agent: build-agent
 	cd $(CURDIR)/build && \
+		LOG_DIR=$(CURDIR)/build/logs \
 		$(CURDIR)/build/bin/vxagent -connect $(CONNECT) $(RUN_ARGS)
 
 .PHONY: run-web
@@ -128,6 +131,7 @@ db-create:
 .PHONY: db-seed
 db-seed:
 	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/api/migrations/0001_initial.sql | mysql --host=$(DB_HOST) --user=$(DB_USER) --password=$(DB_PASS) --port=$(DB_PORT) --batch $(DB_NAME)
+	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/api/migrations/0002_add_user_password_change_flag.sql | mysql --host=$(DB_HOST) --user=$(DB_USER) --password=$(DB_PASS) --port=$(DB_PORT) --batch $(DB_NAME)
 	mysql --host=$(DB_HOST) --user=$(DB_USER) --password=$(DB_PASS) --port=$(DB_PORT) $(DB_NAME) < $(CURDIR)/db/api/seed.sql
 	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/server/migrations/0001_initial.sql | mysql --host=$(DB_HOST) --user=$(AGENT_SERVER_DB_USER) --password=$(AGENT_SERVER_DB_PASS) --port=$(DB_PORT) $(AGENT_SERVER_DB_NAME)
 	awk '1;/-- \+migrate Down/{exit}' $(CURDIR)/db/server/migrations/0002_aggregate_conn_type.sql | mysql --host=$(DB_HOST) --user=$(AGENT_SERVER_DB_USER) --password=$(AGENT_SERVER_DB_PASS) --port=$(DB_PORT) $(AGENT_SERVER_DB_NAME)

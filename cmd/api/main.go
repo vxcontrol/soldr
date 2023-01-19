@@ -134,13 +134,19 @@ func main() {
 		cfg.Log.Level = "debug"
 		cfg.Log.Format = "text"
 	}
+
+	logDir := cfg.Log.Dir
+	if dir, ok := os.LookupEnv("LOG_DIR"); ok {
+		logDir = dir
+	}
 	logFile := &lumberjack.Logger{
-		Filename:   path.Join(cfg.Log.Dir, "app.log"),
-		MaxSize:    100,
+		Filename:   path.Join(logDir, "api.log"),
+		MaxSize:    10,
 		MaxBackups: 7,
 		MaxAge:     14,
 		Compress:   true,
 	}
+
 	logrus.SetLevel(logger.ParseLevel(cfg.Log.Level))
 	logrus.SetFormatter(logger.ParseFormat(cfg.Log.Format))
 	logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))

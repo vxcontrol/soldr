@@ -48,7 +48,7 @@ func refreshCookie(c *gin.Context, resp *info, privs []string) error {
 	})
 	session.Save()
 
-	logrus.
+	utils.FromContext(c).
 		WithFields(logrus.Fields{
 			"age": expires,
 			"uid": resp.User.ID,
@@ -120,19 +120,19 @@ func Info(c *gin.Context) {
 			response.Error(c, response.ErrInfoUserNotFound, err)
 			return
 		} else if err = resp.User.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
+			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
 		if err = gDB.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
+			utils.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
 		if err = gDB.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
+			utils.FromContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidServiceData, err)
 			return
 		}
@@ -151,7 +151,7 @@ func Info(c *gin.Context) {
 		var fiveMins int64 = 5 * 60
 		if nowt >= gtmt+fiveMins && c.Query("refresh_cookie") != "false" {
 			if err = refreshCookie(c, &resp, privs); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("failed to refresh token")
+				utils.FromContext(c).WithError(err).Errorf("failed to refresh token")
 				// raise error when there is elapsing last five minutes
 				if nowt >= gtmt+int64(utils.DefaultSessionTimeout)-fiveMins {
 					response.Error(c, response.ErrInternal, err)
@@ -164,7 +164,7 @@ func Info(c *gin.Context) {
 	// raise error when there is elapsing last five minutes
 	// and user hasn't permissions in the session auth cookie
 	if resp.Type != "guest" && resp.Privs == nil {
-		logrus.
+		utils.FromContext(c).
 			WithFields(logrus.Fields{
 				"uid": resp.User.ID,
 				"rid": resp.User.RoleID,

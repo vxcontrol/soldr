@@ -16,6 +16,7 @@
                 "MIGRATION_DIR": "${workspaceFolder}/db/api/migrations",
                 "TEMPLATES_DIR": "${workspaceFolder}/build/package/api/templates",
                 "CERTS_PATH": "${workspaceFolder}/security/certs/api",
+                "LOG_DIR": "${workspaceFolder}/build/logs"
             },
             "args": [],
             "cwd": "${workspaceFolder}/build",
@@ -34,6 +35,7 @@
                 "MIGRATION_DIR": "${workspaceFolder}/db/server/migrations",
                 "CERTS_PATH": "${workspaceFolder}/security/certs/server",
                 "VALID_PATH": "${workspaceFolder}/security/vconf",
+                "LOG_DIR": "${workspaceFolder}/build/logs"
             },
             "args": ["-debug", "-profiling"],
             "cwd": "${workspaceFolder}/build",
@@ -48,6 +50,7 @@
             "program": "${workspaceFolder}/build/bin/vxagent",
             "envFile": "${workspaceFolder}/.env",
             "env": {
+                "LOG_DIR": "${workspaceFolder}/build/logs"
             },
             "args": ["-debug"],
             "cwd": "${workspaceFolder}/build",

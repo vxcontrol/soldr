@@ -352,10 +352,10 @@ func SyncRetentionEvents(ctx context.Context, gDB *gorm.DB) {
 		keepAmountDays int
 	)
 	if retEvents, ok := os.LookupEnv("RETENTION_EVENTS"); !ok {
-		logrus.Info("events retention policy is not set")
+		logrus.WithContext(ctx).Info("events retention policy is not set")
 		return
 	} else if keepAmountDays, err = strconv.Atoi(retEvents); err != nil {
-		logrus.WithError(err).Error("events retention policy must contains amount days")
+		logrus.WithContext(ctx).WithError(err).Error("events retention policy must contains amount days")
 		return
 	}
 

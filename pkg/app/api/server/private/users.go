@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
 	"soldr/pkg/app/api/models"
@@ -65,7 +64,7 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 		Related(&resp.Role).
 		Related(&resp.Tenant).Error
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding current user")
+		utils.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -73,7 +72,7 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
@@ -105,7 +104,7 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 		if err == nil {
 			err = form.Valid()
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrChangePasswordCurrentUserInvalidPassword, err)
 		return
 	}
@@ -116,7 +115,7 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&user).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding current user")
+		utils.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -124,19 +123,19 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 		}
 		return
 	} else if err = user.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.CurrentPassword)); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error checking password for current user")
+		utils.FromContext(c).WithError(err).Errorf("error checking password for current user")
 		response.Error(c, response.ErrChangePasswordCurrentUserInvalidCurrentPassword, err)
 		return
 	}
 
 	if encPass, err = utils.EncryptPassword(form.Password); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error making new password for current user")
+		utils.FromContext(c).WithError(err).Errorf("error making new password for current user")
 		response.Error(c, response.ErrChangePasswordCurrentUserInvalidNewPassword, err)
 		return
 	}
@@ -144,7 +143,7 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	user.PasswordChangeRequired = false
 
 	if err = s.db.Scopes(scope).Select("password", "password_change_required").Save(&user).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error updating password for current user")
+		utils.FromContext(c).WithError(err).Errorf("error updating password for current user")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -174,7 +173,7 @@ func (s *UserService) GetUsers(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
@@ -200,13 +199,13 @@ func (s *UserService) GetUsers(c *gin.Context) {
 			},
 		})
 	default:
-		logrus.WithContext(c).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Users); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding users")
+		utils.FromContext(c).WithError(err).Errorf("error finding users")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -217,13 +216,13 @@ func (s *UserService) GetUsers(c *gin.Context) {
 	}
 
 	if err = s.db.Find(&roles, "id IN (?)", rids).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding linked roles")
+		utils.FromContext(c).WithError(err).Errorf("error finding linked roles")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.db.Find(&tenans, "id IN (?)", tids).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding linked tenants")
+		utils.FromContext(c).WithError(err).Errorf("error finding linked tenants")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -248,7 +247,7 @@ func (s *UserService) GetUsers(c *gin.Context) {
 
 	for i := 0; i < len(resp.Users); i++ {
 		if err = resp.Users[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Users[i].Hash)
+			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Users[i].Hash)
 			response.Error(c, response.ErrUsersInvalidData, err)
 			return
 		}
@@ -292,7 +291,7 @@ func (s *UserService) GetUser(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding user by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -301,7 +300,7 @@ func (s *UserService) GetUser(c *gin.Context) {
 		return
 	}
 	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding related models by user hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetUserModelsNotFound, err)
 		} else {
@@ -310,7 +309,7 @@ func (s *UserService) GetUser(c *gin.Context) {
 		return
 	}
 	if err = resp.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
@@ -338,7 +337,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&user); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
@@ -356,7 +355,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		}
 		user.TenantID = tid
 	default:
-		logrus.WithContext(c).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -364,13 +363,13 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	user.ID = 0
 	user.Hash = utils.MakeUserHash(user.Name)
 	if err = user.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user")
+		utils.FromContext(c).WithError(err).Errorf("error validating user")
 		response.Error(c, response.ErrCreateUserInvalidUser, err)
 		return
 	}
 
 	if encPassword, err = utils.EncryptPassword(user.Password); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error encoding password")
+		utils.FromContext(c).WithError(err).Errorf("error encoding password")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
@@ -378,7 +377,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	}
 
 	if err = s.db.Create(&user).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error creating user")
+		utils.FromContext(c).WithError(err).Errorf("error creating user")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -387,11 +386,11 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		Related(&resp.Role).
 		Related(&resp.Tenant).Error
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding user by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else if err = resp.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
@@ -420,19 +419,19 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&user); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if hash != user.Hash {
-		logrus.WithContext(c).Errorf("mismatch user hash to requested one")
+		utils.FromContext(c).Errorf("mismatch user hash to requested one")
 		response.Error(c, response.ErrUsersInvalidRequest, nil)
 		return
 	} else if err = user.User.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user JSON")
+		utils.FromContext(c).WithError(err).Errorf("error validating user JSON")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if err = user.Valid(); user.Password != "" && err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user password")
+		utils.FromContext(c).WithError(err).Errorf("error validating user password")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
@@ -457,7 +456,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	public_info := []interface{}{"mail", "name", "status"}
 	if user.Password != "" {
 		if encPassword, err := utils.EncryptPassword(user.Password); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error encoding password")
+			utils.FromContext(c).WithError(err).Errorf("error encoding password")
 			response.Error(c, response.ErrInternal, err)
 			return
 		} else {
@@ -470,17 +469,17 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	}
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithContext(c).Errorf("error updating user by hash '%s', user not found", hash)
+		utils.FromContext(c).Errorf("error updating user by hash '%s', user not found", hash)
 		response.Error(c, response.ErrUsersNotFound, err)
 		return
 	} else if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error updating user by hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error updating user by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding user by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -489,7 +488,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 		return
 	}
 	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding related models by user hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchUserModelsNotFound, err)
 		} else {
@@ -498,7 +497,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 		return
 	}
 	if err = resp.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -541,7 +540,7 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&user.User).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding user by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -550,7 +549,7 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		return
 	}
 	if err = s.db.Model(&user.User).Related(&user.Role).Related(&user.Tenant).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding related models by user hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrDeleteUserModelsNotFound, err)
 		} else {
@@ -559,13 +558,13 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		return
 	}
 	if err = user.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&user.User).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error deleting user by hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error deleting user by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

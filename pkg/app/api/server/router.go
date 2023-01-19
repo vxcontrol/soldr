@@ -72,7 +72,7 @@ func NewRouter(
 	index := func(c *gin.Context) {
 		data, err := ioutil.ReadFile(path.Join(staticPath, "/index.html"))
 		if err != nil {
-			logrus.WithError(err).Errorf("error loading index.html")
+			utils.FromContext(c).WithError(err).Errorf("error loading index.html")
 			return
 		}
 		c.Data(200, "text/html", data)

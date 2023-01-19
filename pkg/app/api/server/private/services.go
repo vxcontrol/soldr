@@ -6,7 +6,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
 	srvcontext "soldr/pkg/app/api/server/context"
@@ -69,7 +68,7 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
@@ -88,20 +87,20 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 			},
 		})
 	default:
-		logrus.WithContext(c).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Services); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding services")
+		utils.FromContext(c).WithError(err).Errorf("error finding services")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Services); i++ {
 		if err = resp.Services[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Services[i].Hash)
+			utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Services[i].Hash)
 			response.Error(c, response.ErrServicesInvalidData, err)
 			return
 		}
@@ -142,7 +141,7 @@ func (s *ServicesService) GetService(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding service by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrServicesNotFound, err)
 		} else {
@@ -150,7 +149,7 @@ func (s *ServicesService) GetService(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Hash)
 		response.Error(c, response.ErrServicesInvalidData, err)
 		return
 	}
@@ -176,7 +175,7 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&service); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
@@ -189,7 +188,7 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 	case models.RoleUser, models.RoleAdmin, models.RoleExternal:
 		service.TenantID = tid
 	default:
-		logrus.WithContext(c).Errorf("error filtering user role services: unexpected role")
+		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
@@ -197,7 +196,7 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 	service.Hash = utils.MakeServiceHash(service.Name)
 
 	if err = s.db.Create(&service).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error creating service")
+		utils.FromContext(c).WithError(err).Errorf("error creating service")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -225,15 +224,15 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&service); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	} else if hash != service.Hash {
-		logrus.WithContext(c).Errorf("mismatch service hash to requested one")
+		utils.FromContext(c).Errorf("mismatch service hash to requested one")
 		response.Error(c, response.ErrServicesInvalidRequest, nil)
 		return
 	} else if err = service.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating service JSON")
+		utils.FromContext(c).WithError(err).Errorf("error validating service JSON")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
@@ -241,7 +240,7 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	rid, _ := srvcontext.GetUint64(c, "rid")
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
-		logrus.WithContext(c).Errorf("error: no rights to patch service")
+		utils.FromContext(c).Errorf("error: no rights to patch service")
 		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
@@ -260,11 +259,11 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	public_info := []interface{}{"info", "name", "status"}
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&service).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		logrus.WithContext(c).Errorf("error updating service by hash '%s', service not found", hash)
+		utils.FromContext(c).Errorf("error updating service by hash '%s', service not found", hash)
 		response.Error(c, response.ErrServicesNotFound, err)
 		return
 	} else if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error updating service by hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error updating service by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -292,7 +291,7 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 	rid, _ := srvcontext.GetUint64(c, "rid")
 	tid, _ := srvcontext.GetUint64(c, "tid")
 	if rid == models.RoleExternal {
-		logrus.WithContext(c).Errorf("error: no rights to delete service")
+		utils.FromContext(c).Errorf("error: no rights to delete service")
 		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
@@ -309,7 +308,7 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&service).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding service by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrServicesNotFound, err)
 		} else {
@@ -317,13 +316,13 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 		}
 		return
 	} else if err = service.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
 		response.Error(c, response.ErrServicesInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&service).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error deleting service by hash '%s'", hash)
+		utils.FromContext(c).WithError(err).Errorf("error deleting service by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

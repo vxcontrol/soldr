@@ -20,7 +20,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/models"
@@ -176,9 +175,9 @@ func getService(c *gin.Context) *models.Service {
 	var sv *models.Service
 
 	if val, ok := c.Get("SV"); !ok {
-		logrus.WithContext(c).Errorf("error getting vxservice instance from context")
+		utils.FromContext(c).Errorf("error getting vxservice instance from context")
 	} else if sv = val.(*models.Service); sv == nil {
-		logrus.WithContext(c).Errorf("got nil value vxservice instance from context")
+		utils.FromContext(c).Errorf("got nil value vxservice instance from context")
 	}
 
 	return sv
@@ -188,9 +187,9 @@ func getDBEncryptor(c *gin.Context) crypto.IDBConfigEncryptor {
 	var encryptor crypto.IDBConfigEncryptor
 
 	if cr, ok := c.Get("crp"); !ok {
-		logrus.WithContext(c).Errorf("error getting secure config encryptor from context")
+		utils.FromContext(c).Errorf("error getting secure config encryptor from context")
 	} else if encryptor = cr.(crypto.IDBConfigEncryptor); encryptor == nil {
-		logrus.WithContext(c).Errorf("got nil value secure config encryptor from context")
+		utils.FromContext(c).Errorf("got nil value secure config encryptor from context")
 	}
 
 	return encryptor
@@ -874,12 +873,12 @@ func removeUnusedModuleVersion(c *gin.Context, iDB *gorm.DB, name, version strin
 	if count == 0 {
 		s3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 			return err
 		}
 
 		if err = s3.RemoveDir(name + "/" + version + "/"); err != nil && err.Error() != "not found" {
-			logrus.WithContext(c).WithError(err).Errorf("error removing module data from s3")
+			utils.FromContext(c).WithError(err).Errorf("error removing module data from s3")
 			return err
 		}
 	}
@@ -895,7 +894,7 @@ func updateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name strin
 	)
 
 	if err = iDB.Find(&modules, "dependencies LIKE ?", `%"`+name+`"%`).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding modules by dependencies")
+		utils.FromContext(c).WithError(err).Errorf("error finding modules by dependencies")
 		return err
 	}
 
@@ -922,7 +921,7 @@ func updateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name strin
 		m.DynamicDependencies = ddeps
 
 		if err = iDB.Select("", incl...).Save(&m).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error updating config module")
+			utils.FromContext(c).WithError(err).Errorf("error updating config module")
 			return err
 		}
 	}
@@ -934,14 +933,14 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	iDB := utils.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 		strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 	if iDB == nil {
-		logrus.WithContext(c).Errorf("error openning connection to instance DB")
+		utils.FromContext(c).Errorf("error openning connection to instance DB")
 		return errors.New("failed to connect to instance DB")
 	}
 	defer iDB.Close()
 
 	encryptor := getDBEncryptor(c)
 	if encryptor == nil {
-		logrus.WithContext(c).Errorf("encryptor not found")
+		utils.FromContext(c).Errorf("encryptor not found")
 		return errors.New("encryptor not found")
 	}
 
@@ -951,7 +950,7 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
 	}
 	if err := iDB.Scopes(scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).
+		utils.FromContext(c).WithError(err).
 			Errorf("error finding policy modules by name and version '%s' '%s'",
 				moduleS.Info.Name, moduleS.Info.Version.String())
 		return err
@@ -960,7 +959,7 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	}
 
 	if err := CopyModuleAFilesToInstanceS3(&moduleS.Info, sv); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error copying module files to S3")
+		utils.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 		return err
 	}
 
@@ -969,22 +968,22 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 		var err error
 		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, moduleS, encryptor)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("invalid module state")
+			utils.FromContext(c).WithError(err).Errorf("invalid module state")
 			return err
 		}
 
 		if err := moduleA.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("invalid module state")
+			utils.FromContext(c).WithError(err).Errorf("invalid module state")
 			return err
 		}
 
 		err = moduleA.EncryptSecureParameters(encryptor)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+			utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			return fmt.Errorf("failed to encrypt module secure config: %w", err)
 		}
 		if err := iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error updating module")
+			utils.FromContext(c).WithError(err).Errorf("error updating module")
 			return err
 		}
 	}
@@ -1334,20 +1333,20 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1359,7 +1358,7 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 
 	var agentPolicies models.AgentPolicies
 	if err = iDB.Take(&agentPolicies, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetAgentModulesAgentNotFound, err)
 		} else {
@@ -1368,12 +1367,12 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(agentPolicies).Association("policies").Find(&agentPolicies.Policies).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent policies by agent model")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
 		response.Error(c, response.ErrGetAgentModulesAgentPoliciesNotFound, err)
 		return
 	}
 	if err = agentPolicies.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
 		response.Error(c, response.ErrGetAgentModulesInvalidAgentPoliciesData, err)
 		return
 	}
@@ -1397,14 +1396,14 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		},
 	})
 	if resp.Total, err = query.Query(iDB, &resp.Modules); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent modules")
 		response.Error(c, response.ErrGetAgentModulesInvalidQuery, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).
+			utils.FromContext(c).WithError(err).
 				Errorf("error validating agent module data '%s'", resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrGetAgentModulesInvalidAgentData, err)
 			return
@@ -1422,14 +1421,14 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system modules list by names")
+		utils.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
 		response.Error(c, response.ErrGetAgentsGetSystemModulesFail, err)
 		return
 	}
 
 	var details []agentModuleDetails
 	if err = iDB.Raw(sqlAgentModuleDetails, agentPolicies.ID).Scan(&details).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading agents modules details")
+		utils.FromContext(c).WithError(err).Errorf("error loading agents modules details")
 		response.Error(c, response.ErrGetAgentModulesDetailsNotFound, err)
 
 		return
@@ -1480,20 +1479,20 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	var agentPolicies models.AgentPolicies
 	if err = iDB.Take(&agentPolicies, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetAgentModuleAgentNotFound, err)
 		} else {
@@ -1502,12 +1501,12 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(agentPolicies).Association("policies").Find(&agentPolicies.Policies).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent policies by agent model")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
 		response.Error(c, response.ErrGetAgentModuleAgentPoliceNotFound, err)
 		return
 	}
 	if err = agentPolicies.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
 		response.Error(c, response.ErrGetAgentModuleInvalidAgentPoliceData, err)
 		return
 	}
@@ -1520,11 +1519,11 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by module name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		response.Error(c, response.ErrModulesNotFound, err)
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
@@ -1565,13 +1564,13 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1582,15 +1581,15 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 
 	var agentPolicies models.AgentPolicies
 	if err = iDB.Take(&agentPolicies, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		return
 	}
 	if err = iDB.Model(agentPolicies).Association("policies").Find(&agentPolicies.Policies).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding agent policies by agent model")
+		utils.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
 		return
 	}
 	if err = agentPolicies.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
 		response.Error(c, response.ErrGetAgentBModuleInvalidAgentPoliceData, err)
 		return
 	}
@@ -1603,23 +1602,23 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by module name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		return
 	}
 
 	path := path.Join(moduleName, module.Info.Version.String(), "bmodule", filepath)
 	if data, err = s3.ReadFile(path); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error reading module file '%s'", path)
+		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
 		return
 	}
 }
@@ -1647,20 +1646,20 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1671,7 +1670,7 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&gps, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetGroupModulesGroupNotFound, err)
 		} else {
@@ -1680,12 +1679,12 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group policies by group model")
+		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		response.Error(c, response.ErrGetGroupModulesGroupPoliciesNotFound, err)
 		return
 	}
 	if err = gps.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
 		response.Error(c, response.ErrGetGroupModulesInvalidGroupPoliciesData, err)
 		return
 	}
@@ -1709,14 +1708,14 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		},
 	})
 	if resp.Total, err = query.Query(iDB, &resp.Modules); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding group modules")
 		response.Error(c, response.ErrGetGroupModulesInvalidGroupQuery, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).
+			utils.FromContext(c).WithError(err).
 				Errorf("error validating group module data '%s'",
 					resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrGetGroupModulesInvalidGroupData, err)
@@ -1735,14 +1734,14 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system modules list by names")
+		utils.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
 		response.Error(c, response.ErrGetGroupsGetSystemModulesFail, err)
 		return
 	}
 
 	var details []groupModuleDetails
 	if err = iDB.Raw(sqlGroupModuleDetails, gps.ID).Scan(&details).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading group modules details")
+		utils.FromContext(c).WithError(err).Errorf("error loading group modules details")
 		response.Error(c, response.ErrGetGroupModulesDetailsNotFound, err)
 		return
 	}
@@ -1793,19 +1792,19 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&gps, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetGroupModuleGroupNotFound, err)
 		} else {
@@ -1814,12 +1813,12 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group policies by group model")
+		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		response.Error(c, response.ErrGetGroupModuleGroupPoliciesNotFound, err)
 		return
 	}
 	if err = gps.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
 		response.Error(c, response.ErrGetGroupModuleInvalidGroupPoliciesData, err)
 		return
 	}
@@ -1832,12 +1831,12 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by module name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		response.Error(c, response.ErrModulesNotFound, err)
 
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
@@ -1879,13 +1878,13 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1895,15 +1894,15 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&gps, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		return
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding group policies by group model")
+		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		return
 	}
 	if err = gps.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
 		response.Error(c, response.ErrGetGroupBModuleInvalidGroupPoliciesData, err)
 		return
 	}
@@ -1916,23 +1915,23 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by module name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		return
 	}
 
 	path := path.Join(moduleName, module.Info.Version.String(), "bmodule", filepath)
 	if data, err = s3.ReadFile(path); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error reading module file '%s'", path)
+		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
 		return
 	}
 }
@@ -1967,13 +1966,13 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1984,7 +1983,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetPolicyModulesPolicyNotFound, err)
 		} else {
@@ -1992,7 +1991,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrGetPolicyModulesInvalidPolicyData, err)
 		return
 	}
@@ -2013,7 +2012,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		},
 	})
 	if _, err = queryA.Query(iDB, &modulesA); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy modules")
 		response.Error(c, response.ErrGetPolicyModulesInvalidPolicyQuery, err)
 		return
 	}
@@ -2041,14 +2040,14 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		},
 	}
 	if resp.Total, err = queryS.Query(s.db, &modulesS, funcs...); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
 		response.Error(c, response.ErrGetPolicyModulesInvalidModulesQuery, err)
 		return
 	}
 
 	var details []policyModuleDetails
 	if err = iDB.Raw(sqlPolicyModuleDetails, policy.ID).Scan(&details).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading policies modules details")
+		utils.FromContext(c).WithError(err).Errorf("error loading policies modules details")
 		response.Error(c, response.ErrGetPolicyModulesDetailsNotFound, err)
 		return
 	}
@@ -2087,7 +2086,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).
+			utils.FromContext(c).WithError(err).
 				Errorf("error validating policy module data '%s'", resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrGetPolicyModulesInvalidPolicyData, err)
 			return
@@ -2102,7 +2101,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	}
 	duplicateMap, err := CheckMultipleModulesDuplicate(iDB, moduleNames, policy.ID)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error checking duplicate modules")
+		utils.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2135,19 +2134,19 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetPolicyModulePolicyNotFound, err)
 		} else {
@@ -2155,17 +2154,17 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrGetPolicyModuleInvalidPolicyData, err)
 		return
 	}
 
 	if err = iDB.Take(&module, "policy_id = ? AND name = ?", policy.ID, moduleName).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by name")
 		response.Error(c, response.ErrModulesNotFound, err)
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
@@ -2206,13 +2205,13 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2222,24 +2221,24 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		return
 	}
 
 	if err = iDB.Take(&module, "policy_id = ? AND name = ?", policy.ID, moduleName).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by name")
 		return
 	}
 
 	s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		return
 	}
 
 	path := path.Join(moduleName, module.Info.Version.String(), "bmodule", filepath)
 	if data, err = s3.ReadFile(path); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error reading module file '%s'", path)
+		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
 		return
 	}
 }
@@ -2270,17 +2269,17 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2290,7 +2289,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2301,7 +2300,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchPolicyModulePolicyNotFound, err)
 		} else {
@@ -2312,7 +2311,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPatchPolicyModuleInvalidPolicyData, err)
 		return
 	}
@@ -2334,7 +2333,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&moduleS).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -2342,7 +2341,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = moduleS.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2351,13 +2350,13 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		moduleA.FromModuleS(&moduleS)
 		moduleA.PolicyID = policy.ID
 	} else if err = moduleA.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if moduleA.ID == 0 && form.Action != "activate" {
-		logrus.WithContext(c).Errorf("error on %s module, policy module not found", form.Action)
+		utils.FromContext(c).Errorf("error on %s module, policy module not found", form.Action)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2367,26 +2366,26 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	switch form.Action {
 	case "activate":
 		if err = CheckModulesDuplicate(iDB, &moduleA); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error checking duplicate modules")
+			utils.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
 			response.Error(c, response.ErrPatchPolicyModuleDuplicatedModule, err)
 			return
 		}
 
 		if moduleA.ID == 0 {
 			if err = CopyModuleAFilesToInstanceS3(&moduleA.Info, sv); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error copying module files to S3")
+				utils.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
 
 			if err = moduleA.ValidateEncryption(encryptor); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("module config not encrypted")
+				utils.FromContext(c).WithError(err).Errorf("module config not encrypted")
 				response.Error(c, response.ErrModulesDataNotEncryptedOnDBInsert, nil)
 				return
 			}
 
 			if err = iDB.Create(&moduleA).Error; err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error creating module")
+				utils.FromContext(c).WithError(err).Errorf("error creating module")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
@@ -2400,7 +2399,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		} else {
 			moduleA.Status = "joined"
 			if err = iDB.Select("", incl...).Save(&moduleA).Error; err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error updating module")
+				utils.FromContext(c).WithError(err).Errorf("error updating module")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
@@ -2409,28 +2408,28 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	case "deactivate":
 		moduleA.Status = "inactive"
 		if err = iDB.Select("", incl...).Save(&moduleA).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error updating module")
+			utils.FromContext(c).WithError(err).Errorf("error updating module")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 	case "store":
 		if err = form.Module.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error validating module")
+			utils.FromContext(c).WithError(err).Errorf("error validating module")
 			response.Error(c, response.ErrPatchPolicyModuleNewModuleInvalid, err)
 			return
 		}
 
 		changes, err := compareModulesChanges(form.Module, moduleA, encryptor)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("failed to compare modules changes")
+			utils.FromContext(c).WithError(err).Errorf("failed to compare modules changes")
 			response.Error(c, response.ErrModulesFailedToCompareChanges, err)
 			return
 		}
 
 		for _, ch := range changes {
 			if ch {
-				logrus.WithContext(c).Errorf("error accepting module changes")
+				utils.FromContext(c).Errorf("error accepting module changes")
 				response.Error(c, response.ErrPatchPolicyModuleAcceptFail, nil)
 				return
 			}
@@ -2438,12 +2437,12 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 
 		err = form.Module.EncryptSecureParameters(encryptor)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+			utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 			return
 		}
 		if err = iDB.Omit(excl...).Save(&form.Module).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error saving module")
+			utils.FromContext(c).WithError(err).Errorf("error saving module")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -2451,51 +2450,51 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	case "update":
 		moduleVersion := moduleA.Info.Version.String()
 		if moduleVersion == moduleS.Info.Version.String() {
-			logrus.WithContext(c).Errorf("error updating module to the same version: %s", moduleVersion)
+			utils.FromContext(c).Errorf("error updating module to the same version: %s", moduleVersion)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, &moduleS, encryptor)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("invalid module state")
+			utils.FromContext(c).WithError(err).Errorf("invalid module state")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = moduleA.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("invalid module state")
+			utils.FromContext(c).WithError(err).Errorf("invalid module state")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		err = moduleA.EncryptSecureParameters(encryptor)
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+			utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 			return
 		}
 
 		if err = CopyModuleAFilesToInstanceS3(&moduleA.Info, sv); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error copying module files to S3")
+			utils.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error updating module")
+			utils.FromContext(c).WithError(err).Errorf("error updating module")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error removing unused module data")
+			utils.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 	default:
-		logrus.WithContext(c).Errorf("error making unknown action on module")
+		utils.FromContext(c).Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchPolicyModuleActionNotFound, nil)
 		return
 	}
@@ -2562,23 +2561,23 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrDeletePolicyModulePolicyNotFound, err)
 		} else {
@@ -2586,7 +2585,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrDeletePolicyModuleInvalidPolicyData, err)
 		return
 	}
@@ -2598,7 +2597,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&module, "policy_id = ? AND name = ?", policy.ID, moduleName).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesNotFound, err)
 		} else {
@@ -2606,20 +2605,20 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if err = iDB.Delete(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error deleting policy module by name '%s'", moduleName)
+		utils.FromContext(c).WithError(err).Errorf("error deleting policy module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	moduleVersion := module.Info.Version.String()
 	if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error removing unused module data")
+		utils.FromContext(c).WithError(err).Errorf("error removing unused module data")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2655,16 +2654,16 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "setting value to module secure config", hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	err := c.ShouldBindJSON(&payload)
 	switch {
 	case err != nil:
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	case len(payload) != 1:
-		logrus.WithContext(c).WithError(err).Errorf("only one key-value pair in body allowed")
+		utils.FromContext(c).WithError(err).Errorf("only one key-value pair in body allowed")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2676,13 +2675,13 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2698,7 +2697,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchPolicyModulePolicyNotFound, err)
 		} else {
@@ -2706,7 +2705,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPatchPolicyModuleInvalidPolicyData, err)
 		return
 	}
@@ -2718,7 +2717,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&moduleS).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -2726,7 +2725,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = moduleS.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2736,13 +2735,13 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		moduleA.FromModuleS(&moduleS)
 		moduleA.PolicyID = policy.ID
 	} else if err = moduleA.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if err = moduleA.DecryptSecureParameters(encryptor); err != nil {
-		logrus.WithContext(c).WithError(err).
+		utils.FromContext(c).WithError(err).
 			Errorf("error decrypting module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 		return
@@ -2750,7 +2749,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	param, ok := moduleA.SecureCurrentConfig[paramName]
 	if !ok {
-		logrus.WithContext(c).WithError(err).Errorf("module secure parameter not exists")
+		utils.FromContext(c).WithError(err).Errorf("module secure parameter not exists")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2760,19 +2759,19 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		Value:      payload[paramName],
 	}
 	if err = moduleA.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error saving module")
+		utils.FromContext(c).WithError(err).Errorf("error saving module")
 		response.Error(c, response.ErrModulesInvalidParameterValue, err)
 		return
 	}
 
 	err = moduleA.EncryptSecureParameters(encryptor)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 		return
 	}
 	if err = iDB.Save(&moduleA).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error saving module")
+		utils.FromContext(c).WithError(err).Errorf("error saving module")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2806,17 +2805,17 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	actionCode := fmt.Sprintf("retrieving value in module secure config, key: %s", paramName)
 	uaf := useraction.NewFields(c, "policy", "policy", actionCode, hash, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2832,7 +2831,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policy by hash")
+		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchPolicyModulePolicyNotFound, err)
 		} else {
@@ -2840,7 +2839,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPatchPolicyModuleInvalidPolicyData, err)
 		return
 	}
@@ -2852,7 +2851,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&moduleS).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -2860,7 +2859,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = moduleS.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2870,13 +2869,13 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		moduleA.FromModuleS(&moduleS)
 		moduleA.PolicyID = policy.ID
 	} else if err = moduleA.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if err = moduleA.DecryptSecureParameters(encryptor); err != nil {
-		logrus.WithContext(c).WithError(err).
+		utils.FromContext(c).WithError(err).
 			Errorf("error decrypting module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 		return
@@ -2884,7 +2883,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	val, ok := moduleA.SecureCurrentConfig[paramName]
 	if !ok {
-		logrus.WithContext(c).WithError(err).Errorf("module secure parameter not exists")
+		utils.FromContext(c).WithError(err).Errorf("module secure parameter not exists")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2914,7 +2913,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2962,7 +2961,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 	}
 	total, err := query.Query(s.db, &resp.Modules, funcs...)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
 		response.Error(c, response.ErrGetModulesInvalidModulesQuery, err)
 		return
 	}
@@ -2970,14 +2969,14 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 
 	for _, module := range resp.Modules {
 		if err = module.Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).
+			utils.FromContext(c).WithError(err).
 				Errorf("error validating system module data '%s'", module.Info.Name)
 			response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 			return
 		}
 
 		if err = module.DecryptSecureParameters(encryptor); err != nil {
-			logrus.WithContext(c).WithError(err).
+			utils.FromContext(c).WithError(err).
 				Errorf("error decrypting module data '%s'", module.Info.Name)
 			response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 			return
@@ -3009,7 +3008,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation", "", useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3027,7 +3026,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		if err == nil {
 			err = info.Valid()
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrCreateModuleInvalidInfo, err)
 		return
 	}
@@ -3038,11 +3037,11 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding number of system module")
+		utils.FromContext(c).WithError(err).Errorf("error finding number of system module")
 		response.Error(c, response.ErrCreateModuleGetCountFail, err)
 		return
 	} else if count >= 1 {
-		logrus.WithContext(c).Errorf("error creating second system module")
+		utils.FromContext(c).Errorf("error creating second system module")
 		response.Error(c, response.ErrCreateModuleSecondSystemModule, err)
 		return
 	}
@@ -3051,7 +3050,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 
 	var err error
 	if template, module, err = LoadModuleSTemplate(&info); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error loading module")
+		utils.FromContext(c).WithError(err).Errorf("error loading module")
 		response.Error(c, response.ErrCreateModuleLoadFail, err)
 		return
 	}
@@ -3061,13 +3060,13 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	module.TenantID = tid
 	module.ServiceType = sv.Type
 	if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module")
+		utils.FromContext(c).WithError(err).Errorf("error validating module")
 		response.Error(c, response.ErrCreateModuleValidationFail, err)
 		return
 	}
 
 	if err = StoreModuleSToGlobalS3(&info, template); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error storing module to S3")
+		utils.FromContext(c).WithError(err).Errorf("error storing module to S3")
 		response.Error(c, response.ErrCreateModuleStoreS3Fail, err)
 		return
 	}
@@ -3077,7 +3076,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return
 	}
 	if err = s.db.Create(module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error creating module")
+		utils.FromContext(c).WithError(err).Errorf("error creating module")
 		response.Error(c, response.ErrCreateModuleStoreDBFail, err)
 		return
 	}
@@ -3106,7 +3105,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "deletion", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3119,7 +3118,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil || len(modules) == 0 {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if err == nil && len(modules) == 0 {
 			response.Error(c, response.ErrModulesNotFound, err)
 		} else {
@@ -3139,29 +3138,29 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		iDB := utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
 			strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
 		if iDB == nil {
-			logrus.WithContext(c).Errorf("error openning connection to instance DB")
+			utils.FromContext(c).Errorf("error openning connection to instance DB")
 			return errors.New("failed to connect to instance DB")
 		}
 		defer iDB.Close()
 
 		if err = iDB.Find(&modules, "name = ?", moduleName).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding modules by name")
+			utils.FromContext(c).WithError(err).Errorf("error finding modules by name")
 			return err
 		} else if len(modules) == 0 {
 			return updateDependenciesWhenModuleRemove(c, iDB, moduleName)
 		} else if err = iDB.Where("name = ?", moduleName).Delete(&modules).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error deleting module by name '%s'", moduleName)
+			utils.FromContext(c).WithError(err).Errorf("error deleting module by name '%s'", moduleName)
 			return err
 		}
 
 		s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 			return err
 		}
 
 		if err = s3.RemoveDir(moduleName + "/"); err != nil && err.Error() != "not found" {
-			logrus.WithContext(c).WithError(err).Errorf("error removing modules files")
+			utils.FromContext(c).WithError(err).Errorf("error removing modules files")
 			return err
 		}
 
@@ -3169,7 +3168,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	}
 
 	if err = s.db.Find(&services, "tenant_id = ? AND type = ?", tid, sv.Type).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding services")
+		utils.FromContext(c).WithError(err).Errorf("error finding services")
 		response.Error(c, response.ErrDeleteModuleServiceNotFound, err)
 		return
 	}
@@ -3182,19 +3181,19 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	}
 
 	if err = s.db.Where("name = ?", moduleName).Delete(&modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
+		utils.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if s3, err = storage.NewS3(nil); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s3.RemoveDir(moduleName + "/"); err != nil && err.Error() != "not found" {
-		logrus.WithContext(c).WithError(err).Errorf("error removing system modules files")
+		utils.FromContext(c).WithError(err).Errorf("error removing system modules files")
 		response.Error(c, response.ErrDeleteModuleDeleteFilesFail, err)
 		return
 	}
@@ -3222,7 +3221,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding query")
+		utils.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -3247,7 +3246,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 	})
 	total, err := query.Query(s.db, &resp.Modules)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system modules")
+		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
 		response.Error(c, response.ErrGetModuleVersionsInvalidModulesQuery, err)
 		return
 	}
@@ -3255,7 +3254,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			logrus.WithContext(c).WithError(err).
+			utils.FromContext(c).WithError(err).
 				Errorf("error validating system module data '%s'", resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 			return
@@ -3301,7 +3300,7 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesNotFound, err)
 
@@ -3310,13 +3309,13 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
 	if err := module.DecryptSecureParameters(encryptor); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error decrypting module data")
+		utils.FromContext(c).WithError(err).Errorf("error decrypting module data")
 		response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 		return
 	}
@@ -3351,7 +3350,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "undefined action", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&form); err != nil || form.Module.Valid() != nil {
 		if err == nil {
@@ -3361,7 +3360,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -3389,7 +3388,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3397,13 +3396,13 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
 	if module.State == "release" {
-		logrus.WithContext(c).Errorf("error changing released system module")
+		utils.FromContext(c).Errorf("error changing released system module")
 		response.Error(c, response.ErrPatchModuleVersionAcceptReleaseChangesFail, nil)
 		return
 	}
@@ -3419,7 +3418,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 	for _, ch := range changes {
 		if ch {
-			logrus.WithContext(c).Errorf("error accepting system module changes")
+			utils.FromContext(c).Errorf("error accepting system module changes")
 			response.Error(c, response.ErrPatchModuleVersionAcceptSystemChangesFail, nil)
 			return
 		}
@@ -3427,24 +3426,24 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 
 	err := form.Module.EncryptSecureParameters(encryptor)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 		return
 	}
 	if sqlResult := s.db.Omit("last_update").Save(&form.Module); sqlResult.Error != nil {
-		logrus.WithContext(c).WithError(sqlResult.Error).Errorf("error saving system module")
+		utils.FromContext(c).WithError(sqlResult.Error).Errorf("error saving system module")
 		response.Error(c, response.ErrPatchModuleVersionUpdateFail, err)
 		return
 	} else if sqlResult.RowsAffected != 0 {
 		if cfiles, err = BuildModuleSConfig(&form.Module); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error building system module files")
+			utils.FromContext(c).WithError(err).Errorf("error building system module files")
 			response.Error(c, response.ErrPatchModuleVersionBuildFilesFail, err)
 			return
 		}
 
 		template["config"] = cfiles
 		if err = StoreModuleSToGlobalS3(&form.Module.Info, template); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error storing system module files to S3")
+			utils.FromContext(c).WithError(err).Errorf("error storing system module files to S3")
 			response.Error(c, response.ErrPatchModuleVersionUpdateS3Fail, err)
 			return
 		}
@@ -3452,13 +3451,13 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 
 	if module.State == "draft" && form.Module.State == "release" {
 		if err = s.db.Find(&services, "tenant_id = ? AND type = ?", tid, sv.Type).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding services")
+			utils.FromContext(c).WithError(err).Errorf("error finding services")
 			response.Error(c, response.ErrPatchModuleVersionServiceNotFound, err)
 			return
 		}
 
 		if err = s.db.Model(&form.Module).Take(&module).Error; err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error finding system module by id '%d'", form.Module.ID)
+			utils.FromContext(c).WithError(err).Errorf("error finding system module by id '%d'", form.Module.ID)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -3502,7 +3501,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation of the draft", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3522,7 +3521,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -3533,7 +3532,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion("latest"), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3545,7 +3544,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if err := module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -3555,18 +3554,18 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(scope, draft).Model(&module).Count(&count).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding number of system module drafts")
+		utils.FromContext(c).WithError(err).Errorf("error finding number of system module drafts")
 		response.Error(c, response.ErrCreateModuleVersionGetDraftNumberFail, err)
 		return
 	} else if count >= 1 {
-		logrus.WithContext(c).Errorf("error creating system module second draft")
+		utils.FromContext(c).Errorf("error creating system module second draft")
 		response.Error(c, response.ErrCreateModuleVersionSecondSystemModuleDraft, err)
 		return
 	}
 
 	newModuleVersion, err := semver.NewVersion(version)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error parsing new version '%s'", version)
+		utils.FromContext(c).WithError(err).Errorf("error parsing new version '%s'", version)
 		response.Error(c, response.ErrCreateModuleVersionInvalidModuleVersionFormat, err)
 		return
 	}
@@ -3574,14 +3573,14 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	switch utils.CompareVersions(module.Info.Version.String(), version) {
 	case utils.TargetVersionGreat:
 	default:
-		logrus.WithContext(c).Errorf("error validating new version '%s' -> '%s'",
+		utils.FromContext(c).Errorf("error validating new version '%s' -> '%s'",
 			module.Info.Version.String(), version)
 		response.Error(c, response.ErrCreateModuleVersionInvalidModuleVersion, nil)
 		return
 	}
 
 	if template, err = LoadModuleSFromGlobalS3(&module.Info); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error building system module files")
+		utils.FromContext(c).WithError(err).Errorf("error building system module files")
 		response.Error(c, response.ErrCreateModuleVersionBuildFilesFail, err)
 		return
 	}
@@ -3594,32 +3593,32 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	module.Info.Version.Patch = newModuleVersion.Patch()
 	module.Changelog[module.Info.Version.String()] = clver
 	if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating module")
+		utils.FromContext(c).WithError(err).Errorf("error validating module")
 		response.Error(c, response.ErrCreateModuleVersionValidationFail, err)
 		return
 	}
 
 	if cfiles, err = BuildModuleSConfig(&module); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error building system module files")
+		utils.FromContext(c).WithError(err).Errorf("error building system module files")
 		response.Error(c, response.ErrCreateModuleVersionBuildFilesFail, err)
 		return
 	}
 
 	template["config"] = cfiles
 	if err = StoreModuleSToGlobalS3(&module.Info, template); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error storing module to S3")
+		utils.FromContext(c).WithError(err).Errorf("error storing module to S3")
 		response.Error(c, response.ErrCreateModuleVersionStoreS3Fail, err)
 		return
 	}
 
 	err = module.EncryptSecureParameters(encryptor)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 		return
 	}
 	if err = s.db.Create(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error creating module")
+		utils.FromContext(c).WithError(err).Errorf("error creating module")
 		response.Error(c, response.ErrCreateModuleVersionStoreDBFail, err)
 		return
 	}
@@ -3648,7 +3647,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "deletion of the version", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3661,17 +3660,17 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil || count == 0 {
-		logrus.WithContext(c).WithError(err).Errorf("error finding number of system module versions")
+		utils.FromContext(c).WithError(err).Errorf("error finding number of system module versions")
 		response.Error(c, response.ErrDeleteModuleVersionGetVersionNumberFail, err)
 		return
 	} else if count == 1 {
-		logrus.WithContext(c).Errorf("error deleting last system module version")
+		utils.FromContext(c).Errorf("error deleting last system module version")
 		response.Error(c, response.ErrDeleteModuleVersionDeleteLastVersionFail, nil)
 		return
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3679,28 +3678,28 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if err := s.db.Delete(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
+		utils.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	s3, err := storage.NewS3(nil)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	path := moduleName + "/" + module.Info.Version.String() + "/"
 	if err = s3.RemoveDir(path); err != nil && err.Error() != "not found" {
-		logrus.WithContext(c).WithError(err).Errorf("error removing system modules files")
+		utils.FromContext(c).WithError(err).Errorf("error removing system modules files")
 		response.Error(c, response.ErrDeleteModuleVersionDeleteFilesFail, err)
 		return
 	}
@@ -3732,13 +3731,13 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 
 	serviceHash, ok := srvcontext.GetString(c, "svc")
 	if !ok {
-		logrus.WithContext(c).Errorf("could not get service hash")
+		utils.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Error()
+		utils.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -3754,7 +3753,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3762,7 +3761,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -3772,7 +3771,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 			module.Info.Name, module.Info.Version.String(), module.LastUpdate)
 	}
 	if err = iDB.Scopes(scope).Find(&resp.Modules).Error; err != nil {
-		logrus.WithContext(c).WithError(err).
+		utils.FromContext(c).WithError(err).
 			Errorf("error finding policy modules by name and version '%s' '%s'",
 				module.Info.Name, module.Info.Version.String())
 		response.Error(c, response.ErrInternal, err)
@@ -3784,13 +3783,13 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	}
 
 	if err = iDB.Find(&resp.Policies, "id IN (?)", pids).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding policies by IDs")
+		utils.FromContext(c).WithError(err).Errorf("error finding policies by IDs")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
 		for _, policy := range resp.Policies {
 			if err = policy.Valid(); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+				utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 				response.Error(c, response.ErrGetModuleVersionUpdatesInvalidPolicyData, err)
 				return
 			}
@@ -3821,7 +3820,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "version update in policies", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -3834,7 +3833,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3842,7 +3841,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -3887,7 +3886,7 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3895,21 +3894,21 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
 	s3, err := storage.NewS3(nil)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	path := moduleName + "/" + module.Info.Version.String()
 	if files, err = readDir(s3, path); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error listening module files from S3")
+		utils.FromContext(c).WithError(err).Errorf("error listening module files from S3")
 		response.Error(c, response.ErrGetModuleVersionFilesListenFail, err)
 		return
 	}
@@ -3951,7 +3950,7 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3959,27 +3958,27 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
 	s3, err := storage.NewS3(nil)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(filePath, prefix) || strings.Contains(filePath, "..") {
-		logrus.WithContext(c).Errorf("error parsing path to file: mismatch base prefix")
+		utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrGetModuleVersionFileParsePathFail, nil)
 		return
 	}
 
 	if fileData, err = s3.ReadFile(filePath); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error reading module file '%s'", filePath)
+		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", filePath)
 		response.Error(c, response.ErrGetModuleVersionFileReadFail, err)
 		return
 	}
@@ -4014,7 +4013,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "module editing", moduleName, useraction.UnknownObjectDisplayName)
-	defer s.userActionWriter.WriteUserAction(uaf)
+	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
@@ -4027,7 +4026,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -4035,34 +4034,34 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if module.State == "release" {
-		logrus.WithContext(c).Errorf("error patching released module")
+		utils.FromContext(c).Errorf("error patching released module")
 		response.Error(c, response.ErrPatchModuleVersionFileUpdateFail, nil)
 		return
 	}
 
 	s3, err := storage.NewS3(nil)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error openning connection to S3")
+		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = c.ShouldBindJSON(&form); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error binding JSON")
+		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(form.Path, prefix) || strings.Contains(form.Path, "..") {
-		logrus.WithContext(c).Errorf("error parsing path to file: mismatch base prefix")
+		utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrPatchModuleVersionFileParsePathFail, nil)
 		return
 	}
@@ -4070,33 +4069,33 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	switch form.Action {
 	case "save":
 		if data, err = base64.StdEncoding.DecodeString(form.Data); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error decoding file data")
+			utils.FromContext(c).WithError(err).Errorf("error decoding file data")
 			response.Error(c, response.ErrPatchModuleVersionFileParseModuleFileFail, err)
 			return
 		}
 
 		if err = s3.WriteFile(form.Path, data); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error writing file data to S3")
+			utils.FromContext(c).WithError(err).Errorf("error writing file data to S3")
 			response.Error(c, response.ErrPatchModuleVersionFileWriteModuleFileFail, err)
 			return
 		}
 
 	case "remove":
 		if err = s3.Remove(form.Path); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error removing file from S3")
+			utils.FromContext(c).WithError(err).Errorf("error removing file from S3")
 			response.Error(c, response.ErrPatchModuleVersionFileWriteModuleObjectFail, err)
 			return
 		}
 
 	case "move":
 		if !strings.HasPrefix(form.NewPath, prefix) || strings.Contains(form.NewPath, "..") {
-			logrus.WithContext(c).Errorf("error parsing path to file: mismatch base prefix")
+			utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 			response.Error(c, response.ErrPatchModuleVersionFileParseNewpathFail, nil)
 			return
 		}
 
 		if info, err = s3.GetInfo(form.Path); err != nil {
-			logrus.WithContext(c).WithError(err).Errorf("error getting file info from S3")
+			utils.FromContext(c).WithError(err).Errorf("error getting file info from S3")
 			response.Error(c, response.ErrPatchModuleVersionFileObjectNotFound, err)
 			return
 		} else if !info.IsDir() {
@@ -4105,13 +4104,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				logrus.WithContext(c).Errorf("error moving file in S3: newpath is identical to path")
+				utils.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
 
 			if err = s3.Rename(form.Path, form.NewPath); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error renaming file in S3")
+				utils.FromContext(c).WithError(err).Errorf("error renaming file in S3")
 				response.Error(c, response.ErrPatchModuleVersionFileObjectMoveFail, err)
 				return
 			}
@@ -4124,13 +4123,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				logrus.WithContext(c).Errorf("error moving file in S3: newpath is identical to path")
+				utils.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
 
 			if files, err = s3.ListDirRec(form.Path); err != nil {
-				logrus.WithContext(c).WithError(err).Errorf("error getting files by path from S3")
+				utils.FromContext(c).WithError(err).Errorf("error getting files by path from S3")
 				response.Error(c, response.ErrPatchModuleVersionFileGetFilesFail, err)
 				return
 			}
@@ -4140,7 +4139,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 					curfile := filepath.Join(form.Path, obj)
 					newfile := filepath.Join(form.NewPath, obj)
 					if err = s3.Rename(curfile, newfile); err != nil {
-						logrus.WithContext(c).WithError(err).Errorf("error moving file in S3")
+						utils.FromContext(c).WithError(err).Errorf("error moving file in S3")
 						response.Error(c, response.ErrPatchModuleVersionFileObjectMoveFail, err)
 						return
 					}
@@ -4149,13 +4148,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		}
 
 	default:
-		logrus.WithContext(c).Errorf("error making unknown action on module")
+		utils.FromContext(c).Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchModuleVersionFileActionNotFound, nil)
 		return
 	}
 
 	if err = s.db.Model(&module).UpdateColumn("last_update", gorm.Expr("NOW()")).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error updating system module")
+		utils.FromContext(c).WithError(err).Errorf("error updating system module")
 		response.Error(c, response.ErrPatchModuleVersionFileSystemModuleUpdateFail, err)
 		return
 	}
@@ -4195,7 +4194,7 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -4203,7 +4202,7 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -4221,15 +4220,15 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	options := make(map[string]json.RawMessage)
 	data, err := json.Marshal(module)
 	if err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error building system module JSON")
+		utils.FromContext(c).WithError(err).Errorf("error building system module JSON")
 		response.Error(c, response.ErrGetModuleVersionOptionMakeJsonFail, err)
 		return
 	} else if err = json.Unmarshal(data, &options); err != nil {
-		logrus.WithContext(c).WithError(err).Errorf("error parsing system module JSON")
+		utils.FromContext(c).WithError(err).Errorf("error parsing system module JSON")
 		response.Error(c, response.ErrGetModuleVersionOptionParseJsonFail, err)
 		return
 	} else if _, ok := options[optionName]; !ok {
-		logrus.WithContext(c).WithError(err).Errorf("error finding system module option by name")
+		utils.FromContext(c).WithError(err).Errorf("error finding system module option by name")
 		response.Error(c, response.ErrGetModuleVersionOptionNotFound, err)
 		return
 	}

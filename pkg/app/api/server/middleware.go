@@ -19,6 +19,7 @@ import (
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/app/api/utils/dbencryptor"
+	obs "soldr/pkg/observability"
 )
 
 func authTokenProtoRequired() gin.HandlerFunc {
@@ -259,20 +260,27 @@ func WithLogger(skipPaths []string) gin.HandlerFunc {
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
 
+		ctx, span := obs.Observer.NewSpan(c.Request.Context(), obs.SpanKindServer, "http_server")
+		defer span.End()
+
+		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 
-		if _, ok := skip[path]; !ok {
-			if raw != "" {
-				path = path + "?" + raw
-			}
-			logrus.WithFields(logrus.Fields{
-				"component":   "api",
-				"client_ip":   c.ClientIP(),
-				"latency":     time.Now().Sub(start),
-				"path":        path,
-				"method":      c.Request.Method,
-				"status_code": c.Writer.Status(),
-			}).Info()
+		if _, ok := skip[path]; ok {
+			return
 		}
+		if raw != "" {
+			path = path + "?" + raw
+		}
+		logrus.WithContext(ctx).WithFields(logrus.Fields{
+			"component":        "api",
+			"net_peer_ip":      c.ClientIP(),
+			"duration":         time.Since(start),
+			"http_uri":         path,
+			"http_route":       c.Request.URL.Path,
+			"http_host_name":   c.Request.Host,
+			"http_method":      c.Request.Method,
+			"http_status_code": c.Writer.Status(),
+		}).Info("http request handled")
 	}
 }
