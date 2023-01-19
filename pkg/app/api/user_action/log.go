@@ -22,6 +22,7 @@ func (w *LogWriter) WriteUserAction(uaf Fields) error {
 		"action_code":         uaf.ActionCode,
 		"success":             uaf.Success,
 		"fail_reason":         uaf.FailReason,
+		"component":           "user_action",
 	}
 	logrus.WithFields(fields).Info()
 	return nil
