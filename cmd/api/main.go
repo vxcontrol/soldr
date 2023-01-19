@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -19,14 +21,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"soldr/pkg/app/api/server"
-	srvevents "soldr/pkg/app/api/server/events"
 	"soldr/pkg/app/api/storage/mem"
 	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils/meter"
 	"soldr/pkg/app/api/worker"
-	"soldr/pkg/logger"
+	"soldr/pkg/app/api/worker/events"
+	"soldr/pkg/log"
 	"soldr/pkg/observability"
 	"soldr/pkg/secret"
+	"soldr/pkg/storage"
 	"soldr/pkg/storage/mysql"
 	"soldr/pkg/system"
 	"soldr/pkg/version"
@@ -35,13 +37,14 @@ import (
 const serviceName = "vxapi"
 
 type Config struct {
-	Debug       bool `config:"debug"`
-	Develop     bool `config:"is_develop"`
-	Log         LogConfig
-	DB          DBConfig
-	Tracing     TracingConfig
-	PublicAPI   PublicAPIConfig
-	EventWorker EventWorkerConfig
+	Debug             bool `config:"debug"`
+	Develop           bool `config:"is_develop"`
+	Log               LogConfig
+	DB                DBConfig
+	Tracing           TracingConfig
+	PublicAPI         PublicAPIConfig
+	EventWorker       EventWorkerConfig
+	ServerEventWorker ServerEventWorkerConfig
 }
 
 type LogConfig struct {
@@ -51,11 +54,12 @@ type LogConfig struct {
 }
 
 type DBConfig struct {
-	User string `config:"db_user,required"`
-	Pass string `config:"db_pass,required"`
-	Name string `config:"db_name,required"`
-	Host string `config:"db_host,required"`
-	Port int    `config:"db_port,required"`
+	User         string `config:"db_user,required"`
+	Pass         string `config:"db_pass,required"`
+	Name         string `config:"db_name,required"`
+	Host         string `config:"db_host,required"`
+	Port         int    `config:"db_port,required"`
+	MigrationDir string `config:"migration_dir"`
 }
 
 type PublicAPIConfig struct {
@@ -65,6 +69,10 @@ type PublicAPIConfig struct {
 	CertFile        string        `config:"api_ssl_crt"`
 	KeyFile         string        `config:"api_ssl_key"`
 	GracefulTimeout time.Duration `config:"public_api_graceful_timeout"`
+	StaticPath      string        `config:"api_static_path"`
+	StaticURL       string        `config:"api_static_url"`
+	TemplatesDir    string        `config:"templates_dir"`
+	CertsPath       string        `config:"certs_path"`
 }
 
 type TracingConfig struct {
@@ -73,6 +81,10 @@ type TracingConfig struct {
 
 type EventWorkerConfig struct {
 	PollInterval time.Duration `config:"event_worker_poll_interval"`
+}
+
+type ServerEventWorkerConfig struct {
+	KeepDays int `config:"retention_events"`
 }
 
 func defaultConfig() Config {
@@ -85,13 +97,22 @@ func defaultConfig() Config {
 		Tracing: TracingConfig{
 			Addr: "otel.local:8148",
 		},
+		DB: DBConfig{
+			MigrationDir: "db/api/migrations",
+		},
 		PublicAPI: PublicAPIConfig{
 			Addr:            ":8080",
 			AddrHTTPS:       ":8443",
 			GracefulTimeout: time.Minute,
+			TemplatesDir:    "templates",
+			StaticPath:      "static",
+			CertsPath:       filepath.Join("security", "certs", "api"),
 		},
 		EventWorker: EventWorkerConfig{
 			PollInterval: 30 * time.Second,
+		},
+		ServerEventWorker: ServerEventWorkerConfig{
+			KeepDays: 7,
 		},
 	}
 }
@@ -134,21 +155,15 @@ func main() {
 		cfg.Log.Level = "debug"
 		cfg.Log.Format = "text"
 	}
-
-	logDir := cfg.Log.Dir
-	if dir, ok := os.LookupEnv("LOG_DIR"); ok {
-		logDir = dir
-	}
 	logFile := &lumberjack.Logger{
-		Filename:   path.Join(logDir, "api.log"),
+		Filename:   path.Join(cfg.Log.Dir, "api.log"),
 		MaxSize:    10,
 		MaxBackups: 7,
 		MaxAge:     14,
 		Compress:   true,
 	}
-
-	logrus.SetLevel(logger.ParseLevel(cfg.Log.Level))
-	logrus.SetFormatter(logger.ParseFormat(cfg.Log.Format))
+	logrus.SetLevel(log.ParseLevel(cfg.Log.Level))
+	logrus.SetFormatter(log.ParseFormat(cfg.Log.Format))
 	logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
 	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true",
@@ -166,12 +181,7 @@ func main() {
 		logrus.WithError(err).Error("could not connect to database")
 		return
 	}
-
-	migrationDir := "db/api/migrations"
-	if dir, ok := os.LookupEnv("MIGRATION_DIR"); ok {
-		migrationDir = dir
-	}
-	if err = db.Migrate(migrationDir); err != nil {
+	if err = db.Migrate(cfg.DB.MigrationDir); err != nil {
 		logrus.WithError(err).Error("could not apply migrations")
 		return
 	}
@@ -244,7 +254,7 @@ func main() {
 	)
 
 	gormMeter := meterProvider.Meter("vxapi-meter")
-	if err = meter.InitGormMetrics(gormMeter); err != nil {
+	if err = storage.InitGormMetrics(gormMeter); err != nil {
 		logrus.WithError(err).Error("could not initialize vxapi-meter")
 		return
 	}
@@ -254,8 +264,8 @@ func main() {
 	observability.Observer.StartGoRuntimeMetricCollect(serviceName, version.GetBinaryVersion(), attr)
 	defer observability.Observer.Close()
 
-	exchanger := srvevents.NewExchanger()
-	eventWorker := srvevents.NewEventPoller(exchanger, cfg.EventWorker.PollInterval, dbWithORM)
+	exchanger := events.NewExchanger()
+	eventWorker := events.NewEventPoller(exchanger, cfg.EventWorker.PollInterval, dbWithORM)
 	go func() {
 		if err = eventWorker.Run(ctx); err != nil {
 			logrus.WithError(err).Error("could not start event worker")
@@ -269,27 +279,41 @@ func main() {
 	go worker.SyncModulesToPolicies(ctx, dbWithORM)
 
 	// run worker to synchronize events retention policy to all instance DB
-	go worker.SyncRetentionEvents(ctx, dbWithORM)
+	go worker.SyncRetentionEvents(ctx, dbWithORM, cfg.ServerEventWorker.KeepDays)
 
-	userActionWriter := useraction.NewLogWriter()
+	uiStaticURL, err := url.Parse(cfg.PublicAPI.StaticURL)
+	if err != nil {
+		logrus.WithError(err).Error("error on parsing URL to redirect requests to the UI static")
+		return
+	}
+	userActionLogger := useraction.NewLogger()
 
 	router := server.NewRouter(
+		server.RouterConfig{
+			BaseURL:      "/api/v1",
+			Debug:        cfg.Debug,
+			UseSSL:       cfg.PublicAPI.UseSSL,
+			StaticPath:   cfg.PublicAPI.StaticPath,
+			StaticURL:    uiStaticURL,
+			TemplatesDir: cfg.PublicAPI.TemplatesDir,
+			CertsPath:    cfg.PublicAPI.CertsPath,
+		},
 		dbWithORM,
 		exchanger,
-		userActionWriter,
+		userActionLogger,
 		dbConnectionStorage,
 		s3ConnectionStorage,
 	)
 
-	srvg, ctx := errgroup.WithContext(ctx)
-	srvg.Go(func() error {
+	group, ctx := errgroup.WithContext(ctx)
+	group.Go(func() error {
 		return server.Server{
 			Addr:            cfg.PublicAPI.Addr,
 			GracefulTimeout: cfg.PublicAPI.GracefulTimeout,
 		}.ListenAndServe(ctx, router)
 	})
 	if cfg.PublicAPI.UseSSL {
-		srvg.Go(func() error {
+		group.Go(func() error {
 			return server.Server{
 				Addr:            cfg.PublicAPI.AddrHTTPS,
 				CertFile:        cfg.PublicAPI.CertFile,
@@ -298,7 +322,7 @@ func main() {
 			}.ListenAndServeTLS(ctx, router)
 		})
 	}
-	if err = srvg.Wait(); err != nil {
-		logrus.WithError(err).Error("failed to start server")
+	if err = group.Wait(); err != nil {
+		logrus.WithError(err).Error("could not start services")
 	}
 }

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 
@@ -15,21 +14,31 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"soldr/pkg/app/api/client"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/server/context"
-	srvevents "soldr/pkg/app/api/server/events"
-	"soldr/pkg/app/api/server/private"
+	protected2 "soldr/pkg/app/api/server/protected"
 	"soldr/pkg/app/api/server/proto"
 	"soldr/pkg/app/api/server/public"
+	"soldr/pkg/app/api/storage"
 	"soldr/pkg/app/api/storage/mem"
 	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils"
+	srvevents "soldr/pkg/app/api/worker/events"
 )
+
+type RouterConfig struct {
+	Debug        bool
+	UseSSL       bool
+	BaseURL      string
+	StaticPath   string
+	StaticURL    *url.URL
+	TemplatesDir string
+	CertsPath    string
+}
 
 // @title SOLDR Swagger API
 // @version 1.0
@@ -47,6 +56,7 @@ import (
 
 // @BasePath /api/v1
 func NewRouter(
+	cfg RouterConfig,
 	db *gorm.DB,
 	exchanger *srvevents.Exchanger,
 	userActionWriter useraction.Writer,
@@ -54,7 +64,7 @@ func NewRouter(
 	s3Conns *mem.S3ConnectionStorage,
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
-	if _, exists := os.LookupEnv("DEBUG"); exists {
+	if cfg.Debug {
 		gin.SetMode(gin.DebugMode)
 	}
 
@@ -62,17 +72,12 @@ func NewRouter(
 	gob.Register([]string{})
 	gob.Register(map[string]interface{}{})
 
-	cookieStore := cookie.NewStore(utils.MakeCookieStoreKey())
-
-	staticPath := "./static"
-	if uiStaticPath, ok := os.LookupEnv("API_STATIC_PATH"); ok {
-		staticPath = uiStaticPath
-	}
+	cookieStore := cookie.NewStore(storage.MakeCookieStoreKey())
 
 	index := func(c *gin.Context) {
-		data, err := ioutil.ReadFile(path.Join(staticPath, "/index.html"))
+		data, err := ioutil.ReadFile(path.Join(cfg.StaticPath, "/index.html"))
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error loading index.html")
+			logger.FromContext(c).WithError(err).Errorf("error loading index.html")
 			return
 		}
 		c.Data(200, "text/html", data)
@@ -84,20 +89,16 @@ func NewRouter(
 	router.Use(gin.Recovery())
 	router.Use(sessions.Sessions("auth", cookieStore))
 
-	router.Static("/js", path.Join(staticPath, "js"))
-	router.Static("/css", path.Join(staticPath, "css"))
-	router.Static("/fonts", path.Join(staticPath, "fonts"))
-	router.Static("/images", path.Join(staticPath, "images"))
+	router.Static("/js", path.Join(cfg.StaticPath, "js"))
+	router.Static("/css", path.Join(cfg.StaticPath, "css"))
+	router.Static("/fonts", path.Join(cfg.StaticPath, "fonts"))
+	router.Static("/images", path.Join(cfg.StaticPath, "images"))
 
 	// TODO: should be moved to the web service
-	router.StaticFile("/favicon.ico", path.Join(staticPath, "favicon.ico"))
-	router.StaticFile("/apple-touch-icon.png", path.Join(staticPath, "apple-touch-icon.png"))
+	router.StaticFile("/favicon.ico", path.Join(cfg.StaticPath, "favicon.ico"))
+	router.StaticFile("/apple-touch-icon.png", path.Join(cfg.StaticPath, "apple-touch-icon.png"))
 
-	if uiStaticAddr, ok := os.LookupEnv("API_STATIC_URL"); ok {
-		uiStaticUrl, err := url.Parse(uiStaticAddr)
-		if err != nil {
-			logrus.WithError(err).Error("error on parsing URL to redirect requests to the UI static")
-		}
+	if cfg.StaticURL.Scheme != "" && cfg.StaticURL.Host != "" {
 		router.NoRoute(func() gin.HandlerFunc {
 			return func(c *gin.Context) {
 				if strings.HasPrefix(c.Request.URL.String(), "/app/") {
@@ -106,8 +107,8 @@ func NewRouter(
 				}
 				director := func(req *http.Request) {
 					*req = *c.Request
-					req.URL.Scheme = uiStaticUrl.Scheme
-					req.URL.Host = uiStaticUrl.Host
+					req.URL.Scheme = cfg.StaticURL.Scheme
+					req.URL.Host = cfg.StaticURL.Host
 				}
 				proxy := &httputil.ReverseProxy{
 					Director: director,
@@ -135,32 +136,37 @@ func NewRouter(
 	serverConnector := client.NewAgentServerClient(db, dbConns, s3Conns)
 
 	// services
-	protoService := proto.NewProtoService(db, serverConnector, userActionWriter)
-	agentService := private.NewAgentService(db, serverConnector, userActionWriter)
-	binariesService := private.NewBinariesService(db, userActionWriter)
-	eventService := private.NewEventService(serverConnector)
-	groupService := private.NewGroupService(serverConnector, userActionWriter)
-	moduleService := private.NewModuleService(db, serverConnector, userActionWriter)
-	optionService := private.NewOptionService(db)
-	policyService := private.NewPolicyService(db, serverConnector, userActionWriter)
-	portingService := private.NewPortingService(db, userActionWriter)
-	roleService := private.NewRoleService(db)
-	upgradeService := private.NewUpgradeService(db, serverConnector, userActionWriter)
-	tagService := private.NewTagService(db, serverConnector)
-	versionService := private.NewVersionService(db, serverConnector)
-	servicesService := private.NewServicesService(db)
-	tenantService := private.NewTenantService(db)
-	userService := private.NewUserService(db)
+	authService := public.NewAuthService(public.AuthServiceConfig{
+		SessionTimeout: 3 * 3600, // 3 hours
+		APIBaseURL:     cfg.BaseURL,
+		SecureCookie:   cfg.UseSSL,
+	}, db)
+	protoService := proto.NewProtoService(db, serverConnector, userActionWriter, cfg.CertsPath)
+	agentService := protected2.NewAgentService(db, serverConnector, userActionWriter)
+	binariesService := protected2.NewBinariesService(db, userActionWriter)
+	eventService := protected2.NewEventService(serverConnector)
+	groupService := protected2.NewGroupService(serverConnector, userActionWriter)
+	moduleService := protected2.NewModuleService(db, serverConnector, userActionWriter, cfg.TemplatesDir)
+	optionService := protected2.NewOptionService(db)
+	policyService := protected2.NewPolicyService(db, serverConnector, userActionWriter)
+	portingService := protected2.NewPortingService(db, userActionWriter)
+	roleService := protected2.NewRoleService(db)
+	upgradeService := protected2.NewUpgradeService(db, serverConnector, userActionWriter)
+	tagService := protected2.NewTagService(db, serverConnector)
+	versionService := protected2.NewVersionService(db, serverConnector)
+	servicesService := protected2.NewServicesService(db)
+	tenantService := protected2.NewTenantService(db)
+	userService := protected2.NewUserService(db)
 
 	// set api handlers
-	api := router.Group(utils.PrefixPathAPI)
+	api := router.Group(cfg.BaseURL)
 	api.Use(setGlobalDB(db))
 	{
-		setPublicGroup(api)
+		setPublicGroup(api, authService)
 
 		setSwaggerGroup(api)
 
-		setVXProtoGroup(api, db, protoService)
+		setVXProtoGroup(api, db, protoService, cfg.BaseURL)
 	}
 
 	privateGroup := api.Group("/")
@@ -201,20 +207,20 @@ func NewRouter(
 	return router
 }
 
-func setPublicGroup(parent *gin.RouterGroup) {
+func setPublicGroup(parent *gin.RouterGroup, svc *public.AuthService) {
 	publicGroup := parent.Group("/")
 	{
-		publicGroup.GET("/info", public.Info)
+		publicGroup.GET("/info", svc.Info)
 		authGroup := publicGroup.Group("/auth")
 		{
-			authGroup.POST("/login", public.AuthLogin)
-			authGroup.GET("/logout", public.AuthLogout)
+			authGroup.POST("/login", svc.AuthLogin)
+			authGroup.GET("/logout", svc.AuthLogout)
 		}
 
 		authPrivateGroup := publicGroup.Group("/auth")
 		authPrivateGroup.Use(authRequired())
 		{
-			authPrivateGroup.POST("/switch-service", public.AuthSwitchService)
+			authPrivateGroup.POST("/switch-service", svc.AuthSwitchService)
 		}
 	}
 }
@@ -227,9 +233,9 @@ func setSwaggerGroup(parent *gin.RouterGroup) {
 	}
 }
 
-func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService) {
+func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService, apiBaseURL string) {
 	vxProtoGroup := parent.Group("/")
-	vxProtoGroup.Use(authTokenProtoRequired())
+	vxProtoGroup.Use(authTokenProtoRequired(apiBaseURL))
 	vxProtoGroup.Use(setServiceInfo(db))
 	{
 		protoAggregateGroup := vxProtoGroup.Group("/vxpws")
@@ -251,11 +257,11 @@ func setTokenGroup(parent *gin.RouterGroup) {
 	tokenGroup := parent.Group("/token")
 	tokenGroup.Use(privilegesRequired("vxapi.modules.interactive"))
 	{
-		tokenGroup.POST("/vxproto", private.CreateAuthToken)
+		tokenGroup.POST("/vxproto", protected2.CreateAuthToken)
 	}
 }
 
-func setBinariesGroup(parent *gin.RouterGroup, svc *private.BinariesService) {
+func setBinariesGroup(parent *gin.RouterGroup, svc *protected2.BinariesService) {
 	binariesGroup := parent.Group("/binaries")
 	binariesGroup.Use(privilegesRequired("vxapi.agents.downloads"))
 	{
@@ -264,7 +270,7 @@ func setBinariesGroup(parent *gin.RouterGroup, svc *private.BinariesService) {
 	}
 }
 
-func setUpgradesGroup(parent *gin.RouterGroup, svc *private.UpgradeService) {
+func setUpgradesGroup(parent *gin.RouterGroup, svc *protected2.UpgradeService) {
 	upgradesGroup := parent.Group("/upgrades")
 	upgradesGroup.Use(privilegesRequired("vxapi.agents.api.edit"))
 	{
@@ -277,8 +283,8 @@ func setUpgradesGroup(parent *gin.RouterGroup, svc *private.UpgradeService) {
 
 func setAgentsGroup(
 	parent *gin.RouterGroup,
-	agentService *private.AgentService,
-	moduleService *private.ModuleService,
+	agentService *protected2.AgentService,
+	moduleService *protected2.ModuleService,
 ) {
 	agentsCreateGroup := parent.Group("/agents")
 	agentsCreateGroup.Use(privilegesRequired("vxapi.agents.api.create"))
@@ -323,8 +329,8 @@ func setAgentsGroup(
 
 func setGroupsGroup(
 	parent *gin.RouterGroup,
-	groupService *private.GroupService,
-	moduleService *private.ModuleService,
+	groupService *protected2.GroupService,
+	moduleService *protected2.ModuleService,
 ) {
 	groupsCreateGroup := parent.Group("/groups")
 	groupsCreateGroup.Use(privilegesRequired("vxapi.groups.api.create"))
@@ -368,8 +374,8 @@ func setGroupsGroup(
 
 func setPoliciesGroup(
 	parent *gin.RouterGroup,
-	policyService *private.PolicyService,
-	moduleService *private.ModuleService,
+	policyService *protected2.PolicyService,
+	moduleService *protected2.ModuleService,
 ) {
 	parent = parent.Group("/")
 	parent.Use(setSecureConfigEncryptor())
@@ -434,7 +440,7 @@ func setPoliciesGroup(
 	}
 }
 
-func setEventsGroup(parent *gin.RouterGroup, svc *private.EventService) {
+func setEventsGroup(parent *gin.RouterGroup, svc *protected2.EventService) {
 	eventsGroup := parent.Group("/events")
 	eventsGroup.Use(privilegesRequired("vxapi.modules.events"))
 	{
@@ -442,7 +448,7 @@ func setEventsGroup(parent *gin.RouterGroup, svc *private.EventService) {
 	}
 }
 
-func setSystemModulesGroup(parent *gin.RouterGroup, svc *private.ModuleService) {
+func setSystemModulesGroup(parent *gin.RouterGroup, svc *protected2.ModuleService) {
 	parent = parent.Group("/")
 	parent.Use(setSecureConfigEncryptor())
 
@@ -483,7 +489,7 @@ func setSystemModulesGroup(parent *gin.RouterGroup, svc *private.ModuleService) 
 	}
 }
 
-func setExportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
+func setExportGroup(parent *gin.RouterGroup, svc *protected2.PortingService) {
 	exportGroup := parent.Group("/export")
 	exportGroup.Use(privilegesRequired("vxapi.modules.control.export"))
 	{
@@ -491,7 +497,7 @@ func setExportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
 	}
 }
 
-func setImportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
+func setImportGroup(parent *gin.RouterGroup, svc *protected2.PortingService) {
 	importGroup := parent.Group("/import")
 	importGroup.Use(privilegesRequired("vxapi.modules.control.import"))
 	{
@@ -499,7 +505,7 @@ func setImportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
 	}
 }
 
-func setOptionsGroup(parent *gin.RouterGroup, svc *private.OptionService) {
+func setOptionsGroup(parent *gin.RouterGroup, svc *protected2.OptionService) {
 	optionsGroup := parent.Group("/options")
 	optionsGroup.Use(privilegesRequired("vxapi.modules.api.view"))
 	{
@@ -546,11 +552,11 @@ func setNotificationsGroup(parent *gin.RouterGroup, exchanger *srvevents.Exchang
 		return true
 	}
 	{
-		notificationsGroup.GET("/subscribe/", private.SubscribeHandler(exchanger, premsFilter))
+		notificationsGroup.GET("/subscribe/", protected2.SubscribeHandler(exchanger, premsFilter))
 	}
 }
 
-func setTagsGroup(parent *gin.RouterGroup, svc *private.TagService) {
+func setTagsGroup(parent *gin.RouterGroup, svc *protected2.TagService) {
 	tagsGroup := parent.Group("/tags")
 	tagsGroup.Use(privilegesRequiredByQueryTypeField(
 		map[string][]string{
@@ -565,7 +571,7 @@ func setTagsGroup(parent *gin.RouterGroup, svc *private.TagService) {
 	}
 }
 
-func setVersionsGroup(parent *gin.RouterGroup, svc *private.VersionService) {
+func setVersionsGroup(parent *gin.RouterGroup, svc *protected2.VersionService) {
 	versionsGroup := parent.Group("/versions")
 	versionsGroup.Use(privilegesRequiredByQueryTypeField(
 		map[string][]string{
@@ -578,7 +584,7 @@ func setVersionsGroup(parent *gin.RouterGroup, svc *private.VersionService) {
 	}
 }
 
-func setRolesGroup(parent *gin.RouterGroup, svc *private.RoleService) {
+func setRolesGroup(parent *gin.RouterGroup, svc *protected2.RoleService) {
 	rolesGroup := parent.Group("/roles")
 	rolesGroup.Use(privilegesRequired("vxapi.roles.api.view"))
 	{
@@ -586,7 +592,7 @@ func setRolesGroup(parent *gin.RouterGroup, svc *private.RoleService) {
 	}
 }
 
-func setServicesGroup(parent *gin.RouterGroup, svc *private.ServicesService) {
+func setServicesGroup(parent *gin.RouterGroup, svc *protected2.ServicesService) {
 	servicesCreateGroup := parent.Group("/services")
 	servicesCreateGroup.Use(privilegesRequired("vxapi.services.api.create"))
 	{
@@ -613,7 +619,7 @@ func setServicesGroup(parent *gin.RouterGroup, svc *private.ServicesService) {
 	}
 }
 
-func setTenanesGroup(parent *gin.RouterGroup, svc *private.TenantService) {
+func setTenanesGroup(parent *gin.RouterGroup, svc *protected2.TenantService) {
 	tenantsCreateGroup := parent.Group("/tenants")
 	tenantsCreateGroup.Use(privilegesRequired("vxapi.tenants.api.create"))
 	{
@@ -640,7 +646,7 @@ func setTenanesGroup(parent *gin.RouterGroup, svc *private.TenantService) {
 	}
 }
 
-func setUsersGroup(parent *gin.RouterGroup, svc *private.UserService) {
+func setUsersGroup(parent *gin.RouterGroup, svc *protected2.UserService) {
 	usersCreateGroup := parent.Group("/users")
 	usersCreateGroup.Use(privilegesRequired("vxapi.users.api.create"))
 	{

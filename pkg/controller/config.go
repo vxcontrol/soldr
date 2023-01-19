@@ -3,7 +3,6 @@ package controller
 import (
 	"fmt"
 
-	"soldr/pkg/db"
 	"soldr/pkg/storage"
 )
 
@@ -217,8 +216,8 @@ func (ci *sConfigItem) SetSecureCurrentConfig(config string) bool {
 }
 
 // NewConfigFromDB is function which constructed Configuration loader object
-func NewConfigFromDB(dsn *db.DSN) (IConfigLoader, error) {
-	dbc, err := db.New(dsn)
+func NewConfigFromDB(dsn *storage.DSN) (IConfigLoader, error) {
+	dbc, err := storage.New(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize the DB driver: %w", err)
 	}

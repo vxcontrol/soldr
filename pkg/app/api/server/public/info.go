@@ -6,12 +6,11 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
 	"soldr/pkg/version"
 )
 
@@ -26,44 +25,6 @@ type info struct {
 	Services []*models.Service `json:"services"`
 }
 
-func refreshCookie(c *gin.Context, resp *info, privs []string) error {
-	session := sessions.Default(c)
-
-	expires := utils.DefaultSessionTimeout
-	session.Set("prm", privs)
-	session.Set("gtm", time.Now().Unix())
-	session.Set("exp", time.Now().Add(time.Duration(expires)*time.Second).Unix())
-	resp.Privs = privs
-
-	session.Set("uid", resp.User.ID)
-	session.Set("rid", resp.User.RoleID)
-	session.Set("tid", resp.User.TenantID)
-	session.Set("sid", session.Get("sid"))
-	session.Set("svc", session.Get("svc"))
-	session.Options(sessions.Options{
-		HttpOnly: true,
-		Secure:   utils.IsUseSSL(),
-		Path:     utils.PrefixPathAPI,
-		MaxAge:   expires,
-	})
-	session.Save()
-
-	utils.FromContext(c).
-		WithFields(logrus.Fields{
-			"age": expires,
-			"uid": resp.User.ID,
-			"rid": resp.User.RoleID,
-			"tid": resp.User.TenantID,
-			"sid": session.Get("sid"),
-			"gtm": session.Get("gtm"),
-			"exp": session.Get("exp"),
-			"prm": session.Get("prm"),
-		}).
-		Infof("session was refreshed for '%s' '%s'", resp.User.Mail, resp.User.Name)
-
-	return nil
-}
-
 // Info is function to return settings and current information about system and config
 // @Summary Retrieve current user and system settings
 // @Tags Public
@@ -74,21 +35,15 @@ func refreshCookie(c *gin.Context, resp *info, privs []string) error {
 // @Failure 404 {object} utils.errorResp "user not found"
 // @Failure 500 {object} utils.errorResp "internal error on getting information about system and config"
 // @Router /info [get]
-func Info(c *gin.Context) {
+func (s *AuthService) Info(c *gin.Context) {
 	var (
 		err   error
 		expt  int64
 		gtmt  int64
-		gDB   *gorm.DB
 		ok    bool
 		privs []string
 		resp  info
 	)
-
-	if gDB = utils.GetGormDB(c, "gDB"); gDB == nil {
-		response.Error(c, response.ErrInternalDBNotFound, nil)
-		return
-	}
 
 	nowt := time.Now().Unix()
 	session := sessions.Default(c)
@@ -114,25 +69,26 @@ func Info(c *gin.Context) {
 		resp.Privs = make([]string, 0)
 	} else {
 		resp.Type = "user"
-		err = gDB.Take(&resp.User, "id = ?", uid).
-			Related(&resp.Role).Related(&resp.Tenant).Error
+		err = s.db.Take(&resp.User, "id = ?", uid).
+			Related(&resp.Role).
+			Related(&resp.Tenant).Error
 		if err != nil {
 			response.Error(c, response.ErrInfoUserNotFound, err)
 			return
 		} else if err = resp.User.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
-		if err = gDB.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
+		if err = s.db.Table("privileges").Where("role_id = ?", resp.User.RoleID).Pluck("name", &privs).Error; err != nil {
+			logger.FromContext(c).WithError(err).Errorf("error getting user privileges list '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidUserData, err)
 			return
 		}
 
-		if err = gDB.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
+		if err = s.db.Find(&resp.Services, "tenant_id = ?", resp.User.TenantID).Error; err != nil {
+			logger.FromContext(c).WithError(err).Errorf("error getting user services list '%s'", resp.User.Hash)
 			response.Error(c, response.ErrInfoInvalidServiceData, err)
 			return
 		}
@@ -150,10 +106,10 @@ func Info(c *gin.Context) {
 		// check 5 minutes timeout to refresh current token
 		var fiveMins int64 = 5 * 60
 		if nowt >= gtmt+fiveMins && c.Query("refresh_cookie") != "false" {
-			if err = refreshCookie(c, &resp, privs); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("failed to refresh token")
+			if err = s.refreshCookie(c, &resp, privs); err != nil {
+				logger.FromContext(c).WithError(err).Errorf("failed to refresh token")
 				// raise error when there is elapsing last five minutes
-				if nowt >= gtmt+int64(utils.DefaultSessionTimeout)-fiveMins {
+				if nowt >= gtmt+int64(s.cfg.SessionTimeout)-fiveMins {
 					response.Error(c, response.ErrInternal, err)
 					return
 				}
@@ -164,7 +120,7 @@ func Info(c *gin.Context) {
 	// raise error when there is elapsing last five minutes
 	// and user hasn't permissions in the session auth cookie
 	if resp.Type != "guest" && resp.Privs == nil {
-		utils.FromContext(c).
+		logger.FromContext(c).
 			WithFields(logrus.Fields{
 				"uid": resp.User.ID,
 				"rid": resp.User.RoleID,

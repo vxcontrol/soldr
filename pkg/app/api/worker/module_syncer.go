@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/modules"
+	"soldr/pkg/app/api/storage"
 	"soldr/pkg/crypto"
 	obs "soldr/pkg/observability"
 	"soldr/pkg/version"
@@ -24,7 +25,6 @@ import (
 	"soldr/pkg/app/api/utils/dbencryptor"
 
 	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/utils"
 )
 
 const (
@@ -54,7 +54,7 @@ func loadServices(gDB *gorm.DB, mSV map[uint64]*service) map[uint64]*service {
 		if _, ok := mSV[sv.ID]; ok {
 			continue
 		}
-		iDB := utils.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
+		iDB := storage.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 			strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 		if iDB != nil {
 			mSV[sv.ID] = &service{
@@ -242,7 +242,7 @@ func getExtConnmodels() []models.ExtConn {
 	extConns := make([]models.ExtConn, 0, 2)
 	for _, ctype := range []string{"aggregate", "browser", "external"} {
 		extConns = append(extConns, models.ExtConn{
-			Hash: utils.MakeMD5Hash(extConnVersionString+ctype, "ext_conns"),
+			Hash: storage.MakeMD5Hash(extConnVersionString+ctype, "ext_conns"),
 			Desc: "vxapi connection",
 			Type: ctype,
 			Info: extConnInfo,
@@ -346,19 +346,7 @@ func SyncModulesToPolicies(ctx context.Context, gDB *gorm.DB) {
 	}
 }
 
-func SyncRetentionEvents(ctx context.Context, gDB *gorm.DB) {
-	var (
-		err            error
-		keepAmountDays int
-	)
-	if retEvents, ok := os.LookupEnv("RETENTION_EVENTS"); !ok {
-		logrus.WithContext(ctx).Info("events retention policy is not set")
-		return
-	} else if keepAmountDays, err = strconv.Atoi(retEvents); err != nil {
-		logrus.WithContext(ctx).WithError(err).Error("events retention policy must contains amount days")
-		return
-	}
-
+func SyncRetentionEvents(ctx context.Context, gDB *gorm.DB, keepAmountDays int) {
 	mSV := make(map[uint64]*service)
 	rotateEventsInstance := func(ctx context.Context, srv *service) {
 		var event models.Event

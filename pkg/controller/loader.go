@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"soldr/pkg/db"
 	"soldr/pkg/loader"
 	"soldr/pkg/storage"
 )
@@ -50,7 +49,7 @@ type IFilesLoader interface {
 
 // configLoaderDB is container for config which loaded from DB
 type configLoaderDB struct {
-	dbc *db.DB
+	dbc *storage.DB
 }
 
 func (cl *configLoaderDB) getCb(id, col string) getCallback {

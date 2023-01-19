@@ -33,7 +33,6 @@ import (
 	"soldr/pkg/app/server/config"
 	"soldr/pkg/app/server/mmodule"
 	"soldr/pkg/controller"
-	"soldr/pkg/db"
 	"soldr/pkg/observability"
 	"soldr/pkg/storage"
 	"soldr/pkg/system"
@@ -79,7 +78,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to compose a DSN from config: %w", err)
 		}
-		gdb, err := db.New(dsn)
+		gdb, err := storage.New(dsn)
 		if err != nil {
 			return fmt.Errorf("failed to initialize a connection to DB: %w", err)
 		}
@@ -112,7 +111,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 		}
 		cl, err = controller.NewConfigFromS3(s3ConnParams)
 	case loaderTypeDB:
-		var dsn *db.DSN
+		var dsn *storage.DSN
 		dsn, err = dsnFromConfig(&s.config.DB)
 		if err != nil {
 			err = fmt.Errorf("failed to compose a DSN from config: %w", err)
@@ -186,7 +185,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 	return
 }
 
-func dsnFromConfig(c *config.DB) (*db.DSN, error) {
+func dsnFromConfig(c *config.DB) (*storage.DSN, error) {
 	if c == nil {
 		return nil, fmt.Errorf("passed config is nil")
 	}
@@ -205,7 +204,7 @@ func dsnFromConfig(c *config.DB) (*db.DSN, error) {
 	if len(c.Name) == 0 {
 		return nil, fmt.Errorf("db name is empty")
 	}
-	return &db.DSN{
+	return &storage.DSN{
 		Host:     c.Host,
 		Port:     c.Port,
 		User:     c.User,
@@ -269,7 +268,7 @@ func initCertProvider(c *config.CertsConfig, s3 storage.IFileReader) (certs.Prov
 	}
 }
 
-func initGorm(dsn *db.DSN, logDir string) (*gorm.DB, error) {
+func initGorm(dsn *storage.DSN, logDir string) (*gorm.DB, error) {
 	addr := fmt.Sprintf(
 		"%s:%s@%s/%s?parseTime=true",
 		dsn.User,

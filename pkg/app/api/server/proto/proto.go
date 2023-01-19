@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
@@ -19,12 +18,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"soldr/pkg/app/api/client"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
+	context2 "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/proto/vm"
 	"soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/storage"
 	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils"
 	"soldr/pkg/hardening/luavm/certs"
 	vxcommonVM "soldr/pkg/hardening/luavm/vm"
 	connValidator "soldr/pkg/hardening/validator"
@@ -126,12 +126,9 @@ func doVXServerConnection(
 	ctxConn *ctxVXConnection,
 	agentInfo *protoagent.Information,
 	ltacGetter vxcommonVM.LTACGetter,
+	certsPath string,
 ) (*socket, error) {
-	certsDir := filepath.Join("security", "certs", "api")
-	if dir, ok := os.LookupEnv("CERTS_PATH"); ok {
-		certsDir = dir
-	}
-	hardeningVM, packEncryptor, err := prepareVM(ctxConn, NewCertProvider(certsDir), ltacGetter)
+	hardeningVM, packEncryptor, err := prepareVM(ctxConn, NewCertProvider(certsPath), ltacGetter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare VM: %w", err)
 	}
@@ -208,14 +205,21 @@ func sendAuthResp(ctx context.Context, conn vxproto.IConnection, authRespMessage
 	return nil
 }
 
-func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, sockType string, uaf useraction.Fields) {
+func wsConnectToVXServer(
+	c *gin.Context,
+	connType vxproto.AgentType,
+	sockID string,
+	sockType string,
+	certsPath string,
+	uaf useraction.Fields,
+) {
 	var (
 		serverConn *socket
 		sv         *models.Service
 		validate   = models.GetValidator()
 	)
 
-	logger := utils.FromContext(c).WithFields(logrus.Fields{
+	logger := logger.FromContext(c).WithFields(logrus.Fields{
 		"sock_id":   sockID,
 		"sock_type": sockType,
 		"conn_id":   getRandomID(),
@@ -275,16 +279,15 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 		sv:       sv,
 		logger:   logger,
 	}
-	certsDir := filepath.Join("security", "certs", "api")
-	if dir, ok := os.LookupEnv("CERTS_PATH"); ok {
-		certsDir = dir
-	}
+
 	logger.WithField("auth_req", authReq).Debug("try doVXServerConnection")
-	if serverConn, err = doVXServerConnection(
+	serverConn, err = doVXServerConnection(
 		ctxConn,
 		agentInfo,
-		NewStore(filepath.Join(certsDir, sockType)),
-	); err != nil {
+		NewStore(filepath.Join(certsPath, sockType)),
+		certsPath,
+	)
+	if err != nil {
 		clientConn.Close(c.Request.Context())
 		logger.WithError(err).Error("failed to initialize connection to server")
 		uaf.FailReason = "failed to initialize connection to server"
@@ -319,15 +322,15 @@ func wsConnectToVXServer(c *gin.Context, connType vxproto.AgentType, sockID, soc
 }
 
 func getServiceHash(c *gin.Context) (string, error) {
-	tid, ok := srvcontext.GetUint64(c, "tid")
+	tid, ok := context2.GetUint64(c, "tid")
 	if !ok {
 		return "", fmt.Errorf("could not get tenant ID from context")
 	}
-	sid, ok := srvcontext.GetUint64(c, "sid")
+	sid, ok := context2.GetUint64(c, "sid")
 	if !ok {
 		return "", fmt.Errorf("could not get service ID from context")
 	}
-	gDB := utils.GetGormDB(c, "gDB")
+	gDB := storage.GetGormDB(c, "gDB")
 	if gDB == nil {
 		return "", fmt.Errorf("could not get global DB connection from context")
 	}
@@ -348,17 +351,20 @@ type ProtoService struct {
 	db               *gorm.DB
 	serverConnector  *client.AgentServerClient
 	userActionWriter useraction.Writer
+	certsPath        string
 }
 
 func NewProtoService(
 	db *gorm.DB,
 	serverConnector *client.AgentServerClient,
 	userActionWriter useraction.Writer,
+	certsPath string,
 ) *ProtoService {
 	return &ProtoService{
 		db:               db,
 		serverConnector:  serverConnector,
 		userActionWriter: userActionWriter,
+		certsPath:        certsPath,
 	}
 }
 
@@ -376,22 +382,22 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		logger.FromContext(c).WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
-	name, err := utils.GetGroupName(iDB, sockID)
+	name, err := storage.GetGroupName(iDB, sockID)
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -400,14 +406,14 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 		return
 	}
 
-	sockType, ok := srvcontext.GetString(c, "cpt")
+	sockType, ok := context2.GetString(c, "cpt")
 	if !ok || sockType != "aggregate" {
-		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
+		logger.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
 
-	wsConnectToVXServer(c, vxproto.Aggregate, sockID, sockType, uaf)
+	wsConnectToVXServer(c, vxproto.Aggregate, sockID, sockType, s.certsPath, uaf)
 }
 
 func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
@@ -424,22 +430,22 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		logger.FromContext(c).WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
-	name, err := utils.GetAgentName(iDB, sockID)
+	name, err := storage.GetAgentName(iDB, sockID)
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -449,14 +455,14 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 		return
 	}
 
-	sockType, ok := srvcontext.GetString(c, "cpt")
+	sockType, ok := context2.GetString(c, "cpt")
 	if !ok || sockType != "browser" {
-		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
+		logger.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
 
-	wsConnectToVXServer(c, vxproto.Browser, sockID, sockType, uaf)
+	wsConnectToVXServer(c, vxproto.Browser, sockID, sockType, s.certsPath, uaf)
 }
 
 func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
@@ -472,22 +478,22 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 
 	serviceHash, err := getServiceHash(c)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not get service hash")
+		logger.FromContext(c).WithError(err).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
-	name, err := utils.GetAgentName(iDB, sockID)
+	name, err := storage.GetAgentName(iDB, sockID)
 	if err == nil {
 		uaf.ObjectDisplayName = name
 	} else {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, nil)
 			return
@@ -496,12 +502,12 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 		return
 	}
 
-	sockType, ok := srvcontext.GetString(c, "cpt")
+	sockType, ok := context2.GetString(c, "cpt")
 	if !ok || sockType != "external" {
-		utils.FromContext(c).Errorf("mismatch socket type to incoming token type")
+		logger.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
 	}
 
-	wsConnectToVXServer(c, vxproto.External, sockID, sockType, uaf)
+	wsConnectToVXServer(c, vxproto.External, sockID, sockType, s.certsPath, uaf)
 }

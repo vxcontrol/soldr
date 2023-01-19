@@ -15,17 +15,16 @@ import (
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/context"
-	"soldr/pkg/app/api/server/private"
+	"soldr/pkg/app/api/server/protected"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
 	"soldr/pkg/app/api/utils/dbencryptor"
 	obs "soldr/pkg/observability"
 )
 
-func authTokenProtoRequired() gin.HandlerFunc {
+func authTokenProtoRequired(apiBaseURL string) gin.HandlerFunc {
 	privInteractive := "vxapi.modules.interactive"
 	connTypeRegexp := regexp.MustCompile(
-		fmt.Sprintf("%s/vxpws/(aggregate|browser|external)/.*", utils.PrefixPathAPI),
+		fmt.Sprintf("%s/vxpws/(aggregate|browser|external)/.*", apiBaseURL),
 	)
 	return func(c *gin.Context) {
 		if c.IsAborted() {
@@ -90,7 +89,7 @@ func authTokenProtoRequired() gin.HandlerFunc {
 			authFallback("must be used bearer schema")
 			return
 		}
-		claims, err := private.ValidateToken(token)
+		claims, err := protected.ValidateToken(token)
 		if err != nil {
 			authFallback("token invalid")
 			return
