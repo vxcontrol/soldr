@@ -12,6 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/server/context"
@@ -232,6 +238,17 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 		return service, nil
 	}
 
+	loadServices := func() {
+		var svs []models.Service
+		if err := db.Find(&svs).Error; err != nil {
+			for idx := range svs {
+				s := svs[idx]
+				serviceCache[s.ID] = &s
+			}
+		}
+	}
+	loadServices()
+
 	return func(c *gin.Context) {
 		if c.IsAborted() {
 			return
@@ -248,38 +265,70 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-func WithLogger(skipPaths []string) gin.HandlerFunc {
-	skip := make(map[string]struct{}, len(skipPaths))
-	for _, path := range skipPaths {
-		skip[path] = struct{}{}
-	}
-
+func WithLogger(service string) gin.HandlerFunc {
+	propagators := otel.GetTextMapPropagator()
 	return func(c *gin.Context) {
 		start := time.Now()
-		path := c.Request.URL.Path
+		uri := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
+		if raw != "" {
+			uri = uri + "?" + raw
+		}
 
-		ctx, span := obs.Observer.NewSpan(c.Request.Context(), obs.SpanKindServer, "http_server")
+		savedCtx := c.Request.Context()
+		defer func() {
+			c.Request = c.Request.WithContext(savedCtx)
+		}()
+
+		ctx := propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
+		opts := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
+			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
+			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
+		}
+
+		entry := logrus.WithContext(ctx).WithFields(logrus.Fields{
+			"component":      "api",
+			"net_peer_ip":    c.ClientIP(),
+			"http_uri":       uri,
+			"http_path":      c.Request.URL.Path,
+			"http_host_name": c.Request.Host,
+			"http_method":    c.Request.Method,
+		})
+		spanName := c.FullPath()
+		if spanName == "" {
+			spanName = fmt.Sprintf("proxy request with method %s", c.Request.Method)
+			entry = entry.WithField("request", "proxy handled")
+		} else {
+			entry = entry.WithField("request", "api handled")
+		}
+
+		ctx, span := obs.Observer.NewSpan(ctx, obs.SpanKindServer, spanName, opts...)
 		defer span.End()
 
+		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)
+
+		// serve the request to the next middleware
 		c.Next()
 
-		if _, ok := skip[path]; ok {
-			return
+		status := c.Writer.Status()
+		attrs := semconv.HTTPAttributesFromHTTPStatusCode(status)
+		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(status)
+		span.SetAttributes(attrs...)
+		span.SetStatus(spanStatus, spanMessage)
+		if len(c.Errors) > 0 {
+			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
 		}
-		if raw != "" {
-			path = path + "?" + raw
-		}
-		logrus.WithContext(ctx).WithFields(logrus.Fields{
-			"component":        "api",
-			"net_peer_ip":      c.ClientIP(),
+
+		entry = entry.WithFields(logrus.Fields{
 			"duration":         time.Since(start),
-			"http_uri":         path,
-			"http_route":       c.Request.URL.Path,
-			"http_host_name":   c.Request.Host,
-			"http_method":      c.Request.Method,
 			"http_status_code": c.Writer.Status(),
-		}).Info("http request handled")
+		})
+		if spanStatus == codes.Error {
+			entry.Error("http request handled error")
+		} else {
+			entry.Info("http request handled success")
+		}
 	}
 }

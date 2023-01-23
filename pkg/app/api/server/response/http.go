@@ -50,7 +50,7 @@ func Error(c *gin.Context, err *HttpError, original error) {
 		body["trace_id"] = traceID.String()
 	}
 
-	c.JSON(err.HttpCode(), body)
+	c.AbortWithStatusJSON(err.HttpCode(), body)
 }
 
 func Success(c *gin.Context, code int, data interface{}) {

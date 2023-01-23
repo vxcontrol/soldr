@@ -16,7 +16,6 @@ import (
 	"github.com/jinzhu/gorm"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
@@ -84,8 +83,7 @@ func NewRouter(
 	}
 
 	router := gin.New()
-	router.Use(otelgin.Middleware("vxapi"))
-	router.Use(WithLogger([]string{}))
+	router.Use(WithLogger("vxapi"))
 	router.Use(gin.Recovery())
 	router.Use(sessions.Sessions("auth", cookieStore))
 
@@ -234,22 +232,13 @@ func setSwaggerGroup(parent *gin.RouterGroup) {
 }
 
 func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService, apiBaseURL string) {
-	vxProtoGroup := parent.Group("/")
+	vxProtoGroup := parent.Group("/vxpws")
 	vxProtoGroup.Use(authTokenProtoRequired(apiBaseURL))
 	vxProtoGroup.Use(setServiceInfo(db))
 	{
-		protoAggregateGroup := vxProtoGroup.Group("/vxpws")
-		{
-			protoAggregateGroup.GET("/aggregate/:group_id/", svc.AggregateWSConnect)
-		}
-		protoBrowserGroup := vxProtoGroup.Group("/vxpws")
-		{
-			protoBrowserGroup.GET("/browser/:agent_id/", svc.BrowserWSConnect)
-		}
-		protoExternalGroup := vxProtoGroup.Group("/vxpws")
-		{
-			protoExternalGroup.GET("/external/:agent_id/", svc.ExternalWSConnect)
-		}
+		vxProtoGroup.GET("/aggregate/:group_id/", svc.AggregateWSConnect)
+		vxProtoGroup.GET("/browser/:agent_id/", svc.BrowserWSConnect)
+		vxProtoGroup.GET("/external/:agent_id/", svc.ExternalWSConnect)
 	}
 }
 
