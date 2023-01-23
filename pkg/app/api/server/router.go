@@ -19,14 +19,12 @@ import (
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
-	"soldr/pkg/app/api/server/context"
-	protected2 "soldr/pkg/app/api/server/protected"
+	"soldr/pkg/app/api/server/private"
 	"soldr/pkg/app/api/server/proto"
 	"soldr/pkg/app/api/server/public"
 	"soldr/pkg/app/api/storage"
-	"soldr/pkg/app/api/storage/mem"
-	useraction "soldr/pkg/app/api/user_action"
-	srvevents "soldr/pkg/app/api/worker/events"
+	"soldr/pkg/app/api/useraction"
+	"soldr/pkg/app/api/worker/events"
 )
 
 type RouterConfig struct {
@@ -57,10 +55,10 @@ type RouterConfig struct {
 func NewRouter(
 	cfg RouterConfig,
 	db *gorm.DB,
-	exchanger *srvevents.Exchanger,
+	exchanger *events.Exchanger,
 	userActionWriter useraction.Writer,
-	dbConns *mem.DBConnectionStorage,
-	s3Conns *mem.S3ConnectionStorage,
+	dbConns *storage.DBConnectionStorage,
+	s3Conns *storage.S3ConnectionStorage,
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	if cfg.Debug {
@@ -140,21 +138,21 @@ func NewRouter(
 		SecureCookie:   cfg.UseSSL,
 	}, db)
 	protoService := proto.NewProtoService(db, serverConnector, userActionWriter, cfg.CertsPath)
-	agentService := protected2.NewAgentService(db, serverConnector, userActionWriter)
-	binariesService := protected2.NewBinariesService(db, userActionWriter)
-	eventService := protected2.NewEventService(serverConnector)
-	groupService := protected2.NewGroupService(serverConnector, userActionWriter)
-	moduleService := protected2.NewModuleService(db, serverConnector, userActionWriter, cfg.TemplatesDir)
-	optionService := protected2.NewOptionService(db)
-	policyService := protected2.NewPolicyService(db, serverConnector, userActionWriter)
-	portingService := protected2.NewPortingService(db, userActionWriter)
-	roleService := protected2.NewRoleService(db)
-	upgradeService := protected2.NewUpgradeService(db, serverConnector, userActionWriter)
-	tagService := protected2.NewTagService(db, serverConnector)
-	versionService := protected2.NewVersionService(db, serverConnector)
-	servicesService := protected2.NewServicesService(db)
-	tenantService := protected2.NewTenantService(db)
-	userService := protected2.NewUserService(db)
+	agentService := private.NewAgentService(db, serverConnector, userActionWriter)
+	binariesService := private.NewBinariesService(db, userActionWriter)
+	eventService := private.NewEventService(serverConnector)
+	groupService := private.NewGroupService(serverConnector, userActionWriter)
+	moduleService := private.NewModuleService(db, serverConnector, userActionWriter, cfg.TemplatesDir)
+	optionService := private.NewOptionService(db)
+	policyService := private.NewPolicyService(db, serverConnector, userActionWriter)
+	portingService := private.NewPortingService(db, userActionWriter)
+	roleService := private.NewRoleService(db)
+	upgradeService := private.NewUpgradeService(db, serverConnector, userActionWriter)
+	tagService := private.NewTagService(db, serverConnector)
+	versionService := private.NewVersionService(db, serverConnector)
+	servicesService := private.NewServicesService(db)
+	tenantService := private.NewTenantService(db)
+	userService := private.NewUserService(db)
 
 	// set api handlers
 	api := router.Group(cfg.BaseURL)
@@ -246,11 +244,11 @@ func setTokenGroup(parent *gin.RouterGroup) {
 	tokenGroup := parent.Group("/token")
 	tokenGroup.Use(privilegesRequired("vxapi.modules.interactive"))
 	{
-		tokenGroup.POST("/vxproto", protected2.CreateAuthToken)
+		tokenGroup.POST("/vxproto", private.CreateAuthToken)
 	}
 }
 
-func setBinariesGroup(parent *gin.RouterGroup, svc *protected2.BinariesService) {
+func setBinariesGroup(parent *gin.RouterGroup, svc *private.BinariesService) {
 	binariesGroup := parent.Group("/binaries")
 	binariesGroup.Use(privilegesRequired("vxapi.agents.downloads"))
 	{
@@ -259,7 +257,7 @@ func setBinariesGroup(parent *gin.RouterGroup, svc *protected2.BinariesService) 
 	}
 }
 
-func setUpgradesGroup(parent *gin.RouterGroup, svc *protected2.UpgradeService) {
+func setUpgradesGroup(parent *gin.RouterGroup, svc *private.UpgradeService) {
 	upgradesGroup := parent.Group("/upgrades")
 	upgradesGroup.Use(privilegesRequired("vxapi.agents.api.edit"))
 	{
@@ -272,8 +270,8 @@ func setUpgradesGroup(parent *gin.RouterGroup, svc *protected2.UpgradeService) {
 
 func setAgentsGroup(
 	parent *gin.RouterGroup,
-	agentService *protected2.AgentService,
-	moduleService *protected2.ModuleService,
+	agentService *private.AgentService,
+	moduleService *private.ModuleService,
 ) {
 	agentsCreateGroup := parent.Group("/agents")
 	agentsCreateGroup.Use(privilegesRequired("vxapi.agents.api.create"))
@@ -318,8 +316,8 @@ func setAgentsGroup(
 
 func setGroupsGroup(
 	parent *gin.RouterGroup,
-	groupService *protected2.GroupService,
-	moduleService *protected2.ModuleService,
+	groupService *private.GroupService,
+	moduleService *private.ModuleService,
 ) {
 	groupsCreateGroup := parent.Group("/groups")
 	groupsCreateGroup.Use(privilegesRequired("vxapi.groups.api.create"))
@@ -363,8 +361,8 @@ func setGroupsGroup(
 
 func setPoliciesGroup(
 	parent *gin.RouterGroup,
-	policyService *protected2.PolicyService,
-	moduleService *protected2.ModuleService,
+	policyService *private.PolicyService,
+	moduleService *private.ModuleService,
 ) {
 	parent = parent.Group("/")
 	parent.Use(setSecureConfigEncryptor())
@@ -429,7 +427,7 @@ func setPoliciesGroup(
 	}
 }
 
-func setEventsGroup(parent *gin.RouterGroup, svc *protected2.EventService) {
+func setEventsGroup(parent *gin.RouterGroup, svc *private.EventService) {
 	eventsGroup := parent.Group("/events")
 	eventsGroup.Use(privilegesRequired("vxapi.modules.events"))
 	{
@@ -437,7 +435,7 @@ func setEventsGroup(parent *gin.RouterGroup, svc *protected2.EventService) {
 	}
 }
 
-func setSystemModulesGroup(parent *gin.RouterGroup, svc *protected2.ModuleService) {
+func setSystemModulesGroup(parent *gin.RouterGroup, svc *private.ModuleService) {
 	parent = parent.Group("/")
 	parent.Use(setSecureConfigEncryptor())
 
@@ -478,7 +476,7 @@ func setSystemModulesGroup(parent *gin.RouterGroup, svc *protected2.ModuleServic
 	}
 }
 
-func setExportGroup(parent *gin.RouterGroup, svc *protected2.PortingService) {
+func setExportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
 	exportGroup := parent.Group("/export")
 	exportGroup.Use(privilegesRequired("vxapi.modules.control.export"))
 	{
@@ -486,7 +484,7 @@ func setExportGroup(parent *gin.RouterGroup, svc *protected2.PortingService) {
 	}
 }
 
-func setImportGroup(parent *gin.RouterGroup, svc *protected2.PortingService) {
+func setImportGroup(parent *gin.RouterGroup, svc *private.PortingService) {
 	importGroup := parent.Group("/import")
 	importGroup.Use(privilegesRequired("vxapi.modules.control.import"))
 	{
@@ -494,7 +492,7 @@ func setImportGroup(parent *gin.RouterGroup, svc *protected2.PortingService) {
 	}
 }
 
-func setOptionsGroup(parent *gin.RouterGroup, svc *protected2.OptionService) {
+func setOptionsGroup(parent *gin.RouterGroup, svc *private.OptionService) {
 	optionsGroup := parent.Group("/options")
 	optionsGroup.Use(privilegesRequired("vxapi.modules.api.view"))
 	{
@@ -506,27 +504,27 @@ func setOptionsGroup(parent *gin.RouterGroup, svc *protected2.OptionService) {
 	}
 }
 
-func setNotificationsGroup(parent *gin.RouterGroup, exchanger *srvevents.Exchanger) {
+func setNotificationsGroup(parent *gin.RouterGroup, exchanger *events.Exchanger) {
 	notificationsGroup := parent.Group("/notifications")
-	premsFilter := func(c *gin.Context, name srvevents.EventChannelName) bool {
-		prms, ok := context.GetStringArray(c, "prm")
-		if !ok {
+	premsFilter := func(c *gin.Context, name events.EventChannelName) bool {
+		prms := c.GetStringSlice("prm")
+		if len(prms) == 0 {
 			return false
 		}
 		var privs []string
 		switch name {
-		case srvevents.CreateAgentsChannel, srvevents.UpdateAgentsChannel, srvevents.DeleteAgentsChannel:
+		case events.CreateAgentsChannel, events.UpdateAgentsChannel, events.DeleteAgentsChannel:
 			privs = append(privs, "vxapi.agents.api.view")
-		case srvevents.CreateGroupsChannel, srvevents.UpdateGroupsChannel, srvevents.DeleteGroupsChannel:
+		case events.CreateGroupsChannel, events.UpdateGroupsChannel, events.DeleteGroupsChannel:
 			privs = append(privs, "vxapi.groups.api.view")
-		case srvevents.CreatePoliciesChannel, srvevents.UpdatePoliciesChannel, srvevents.DeletePoliciesChannel:
+		case events.CreatePoliciesChannel, events.UpdatePoliciesChannel, events.DeletePoliciesChannel:
 			privs = append(privs, "vxapi.policies.api.view")
-		case srvevents.CreateModulesChannel, srvevents.UpdateModulesChannel, srvevents.DeleteModulesChannel:
+		case events.CreateModulesChannel, events.UpdateModulesChannel, events.DeleteModulesChannel:
 			privs = append(privs, "vxapi.policies.api.view")
-		case srvevents.CreateGroupToPolicyChannel, srvevents.DeleteGroupToPolicyChannel:
+		case events.CreateGroupToPolicyChannel, events.DeleteGroupToPolicyChannel:
 			privs = append(privs, "vxapi.groups.api.view")
 			privs = append(privs, "vxapi.policies.api.view")
-		case srvevents.AllEventsChannel:
+		case events.AllEventsChannel:
 			privs = append(privs, "vxapi.agents.api.view")
 			privs = append(privs, "vxapi.groups.api.view")
 			privs = append(privs, "vxapi.policies.api.view")
@@ -541,11 +539,11 @@ func setNotificationsGroup(parent *gin.RouterGroup, exchanger *srvevents.Exchang
 		return true
 	}
 	{
-		notificationsGroup.GET("/subscribe/", protected2.SubscribeHandler(exchanger, premsFilter))
+		notificationsGroup.GET("/subscribe/", private.SubscribeHandler(exchanger, premsFilter))
 	}
 }
 
-func setTagsGroup(parent *gin.RouterGroup, svc *protected2.TagService) {
+func setTagsGroup(parent *gin.RouterGroup, svc *private.TagService) {
 	tagsGroup := parent.Group("/tags")
 	tagsGroup.Use(privilegesRequiredByQueryTypeField(
 		map[string][]string{
@@ -560,7 +558,7 @@ func setTagsGroup(parent *gin.RouterGroup, svc *protected2.TagService) {
 	}
 }
 
-func setVersionsGroup(parent *gin.RouterGroup, svc *protected2.VersionService) {
+func setVersionsGroup(parent *gin.RouterGroup, svc *private.VersionService) {
 	versionsGroup := parent.Group("/versions")
 	versionsGroup.Use(privilegesRequiredByQueryTypeField(
 		map[string][]string{
@@ -573,7 +571,7 @@ func setVersionsGroup(parent *gin.RouterGroup, svc *protected2.VersionService) {
 	}
 }
 
-func setRolesGroup(parent *gin.RouterGroup, svc *protected2.RoleService) {
+func setRolesGroup(parent *gin.RouterGroup, svc *private.RoleService) {
 	rolesGroup := parent.Group("/roles")
 	rolesGroup.Use(privilegesRequired("vxapi.roles.api.view"))
 	{
@@ -581,7 +579,7 @@ func setRolesGroup(parent *gin.RouterGroup, svc *protected2.RoleService) {
 	}
 }
 
-func setServicesGroup(parent *gin.RouterGroup, svc *protected2.ServicesService) {
+func setServicesGroup(parent *gin.RouterGroup, svc *private.ServicesService) {
 	servicesCreateGroup := parent.Group("/services")
 	servicesCreateGroup.Use(privilegesRequired("vxapi.services.api.create"))
 	{
@@ -608,7 +606,7 @@ func setServicesGroup(parent *gin.RouterGroup, svc *protected2.ServicesService) 
 	}
 }
 
-func setTenanesGroup(parent *gin.RouterGroup, svc *protected2.TenantService) {
+func setTenanesGroup(parent *gin.RouterGroup, svc *private.TenantService) {
 	tenantsCreateGroup := parent.Group("/tenants")
 	tenantsCreateGroup.Use(privilegesRequired("vxapi.tenants.api.create"))
 	{
@@ -635,7 +633,7 @@ func setTenanesGroup(parent *gin.RouterGroup, svc *protected2.TenantService) {
 	}
 }
 
-func setUsersGroup(parent *gin.RouterGroup, svc *protected2.UserService) {
+func setUsersGroup(parent *gin.RouterGroup, svc *private.UserService) {
 	usersCreateGroup := parent.Group("/users")
 	usersCreateGroup.Use(privilegesRequired("vxapi.users.api.create"))
 	{

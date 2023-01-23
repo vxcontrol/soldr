@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 
-	"soldr/pkg/app/api/server/protected"
+	"soldr/pkg/app/api/server/private"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
 )
@@ -73,7 +73,7 @@ func privilegesRequiredPatchAgents() gin.HandlerFunc {
 			return
 		}
 
-		var action protected.AgentsAction
+		var action private.AgentsAction
 		if err := c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
 			response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("error binding query: %w", err))
 			return

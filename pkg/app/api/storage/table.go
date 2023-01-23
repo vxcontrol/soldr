@@ -2,30 +2,22 @@ package storage
 
 import (
 	"crypto/md5"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/qor/validations"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
-	"soldr/pkg/app/api/logger"
-	"soldr/pkg/storage"
-	"soldr/pkg/system"
-	"soldr/pkg/version"
+	"soldr/pkg/mysql"
 )
 
 // TableFilter is auxiliary struct to contain method of filtering
@@ -304,7 +296,7 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 		return nil
 	}
 
-	conn.SetLogger(&storage.GormLogger{})
+	conn.SetLogger(&mysql.GormLogger{})
 	if _, exists := os.LookupEnv("DEBUG"); exists {
 		conn.LogMode(true)
 	}
@@ -315,7 +307,7 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 	conn.DB().SetMaxOpenConns(100)
 	conn.DB().SetConnMaxLifetime(time.Hour)
 
-	storage.ApplyGormMetrics(conn)
+	mysql.ApplyGormMetrics(conn)
 
 	return conn
 }
@@ -481,15 +473,6 @@ func BinaryChksumsMapper(q *TableQuery, db *gorm.DB, value interface{}) *gorm.DB
 	return BinaryFieldMapper(cond, db, value)
 }
 
-// RandBase64String is function to generate random base64 with set length (bytes)
-func RandBase64String(nByte int) (string, error) {
-	b := make([]byte, nByte)
-	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
-}
-
 // MakeMD5Hash is function to generate common hash by value
 func MakeMD5Hash(value, salt string) string {
 	currentTime := time.Now().Format("2006-01-02 15:04:05.000000000")
@@ -527,30 +510,6 @@ func MakeUserHash(name string) string {
 	return MakeMD5Hash(name, "335e5be8ff97eedb86414062a94898619599b1da")
 }
 
-// MakeTaskHash is function to generate task hash
-func MakeTaskHash(name string) string {
-	return MakeMD5Hash(name, "e849827ddba8916293e1e52769144f78f5545986")
-}
-
-// MakeCookieStoreKey is function to generate secure key for cookie store
-func MakeCookieStoreKey() []byte {
-	md5Hash := func(value, salt string) string {
-		hash := md5.Sum([]byte(value + "|" + salt))
-		return hex.EncodeToString(hash[:])
-	}
-	key := strings.Join([]string{
-		md5Hash(version.GetBinaryVersion(), "972bf553c89cd103feb198f62a24e305b06a8840"),
-		system.MakeAgentID(),
-	}, "|")
-	hash := sha256.Sum256([]byte(key))
-	return hash[:]
-}
-
-// MakeResultHash is function to generate result hash
-func MakeResultHash(name string) string {
-	return MakeMD5Hash(name, "fd872289fff6348f00085c3ca330868014359929")
-}
-
 // MakeUuidStrFromHash is function to convert format view from hash to UUID
 func MakeUuidStrFromHash(hash string) (string, error) {
 	hashBytes, err := hex.DecodeString(hash)
@@ -562,22 +521,4 @@ func MakeUuidStrFromHash(hash string) (string, error) {
 		return "", err
 	}
 	return userIdUuid.String(), nil
-}
-
-// GetGormDB is function to get gorm object from request context
-// Do not use, pass db as a dependency for service.
-// For agent server DB use mem.ServiceDBConnectionStorage.
-// Deprecated
-func GetGormDB(c *gin.Context, name string) *gorm.DB {
-	var db *gorm.DB
-
-	if val, ok := c.Get(name); !ok {
-		logger.FromContext(c).WithField("component", "gorm_conn_getter").
-			Errorf("error getting '" + name + "' from context")
-	} else if db = val.(*gorm.DB); db == nil {
-		logger.FromContext(c).WithField("component", "gorm_conn_getter").
-			Errorf("got nil value '" + name + "' from context")
-	}
-
-	return db
 }

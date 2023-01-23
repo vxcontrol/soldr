@@ -20,8 +20,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/server/context"
-	"soldr/pkg/app/api/server/protected"
+	"soldr/pkg/app/api/server/private"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils/dbencryptor"
 	obs "soldr/pkg/observability"
@@ -95,7 +94,7 @@ func authTokenProtoRequired(apiBaseURL string) gin.HandlerFunc {
 			authFallback("must be used bearer schema")
 			return
 		}
-		claims, err := protected.ValidateToken(token)
+		claims, err := private.ValidateToken(token)
 		if err != nil {
 			authFallback("token invalid")
 			return
@@ -222,9 +221,9 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 		mu.Lock()
 		defer mu.Unlock()
 
-		sid, ok := context.GetUint64(c, "sid")
-		if !ok || sid == 0 {
-			return nil, errors.New("sid cannot be 0 or absent")
+		sid := c.GetUint64("sid")
+		if sid == 0 {
+			return nil, errors.New("sid cannot be 0")
 		}
 
 		service, ok := serviceCache[sid]

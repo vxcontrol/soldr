@@ -21,7 +21,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage/fs"
 	"soldr/pkg/system"
 	"soldr/pkg/vxproto/tunnel"
 )
@@ -222,7 +222,7 @@ func New(mmodule IMainModule) (IVXProto, error) {
 	tokenKey = append(tokenKey, tokenKey[:8]...)
 
 	// VXStore files rotation
-	vxstore, err := storage.NewFS()
+	vxstore, err := fs.New()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a vxstore handler: %w", err)
 	}

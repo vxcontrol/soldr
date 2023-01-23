@@ -13,7 +13,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/server/mmodule/hardening/cache"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage"
 	"soldr/pkg/vxproto"
 )
 
@@ -112,7 +112,7 @@ func (l *ABHList) UnmarshalJSON(data []byte) error {
 }
 
 func getABHListFromFile(basePath string, dst *ABHList) cache.FetchDataFromFile {
-	return func(ctx context.Context, connector storage.IFileReader) (interface{}, error) {
+	return func(ctx context.Context, connector filestorage.Reader) (interface{}, error) {
 		filePath := path.Join(basePath, "hardening", "abh.json")
 		file, err := connector.ReadFile(filePath)
 		if err != nil {

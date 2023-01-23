@@ -16,7 +16,6 @@ import (
 
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
 )
@@ -214,8 +213,8 @@ func (s *AuthService) AuthSwitchService(c *gin.Context) {
 		return
 	}
 
-	tid, _ := context.GetUint64(c, "tid")
-	exp, _ := context.GetInt64(c, "exp")
+	tid := c.GetUint64("tid")
+	exp := c.GetInt64("exp")
 	expires := int(time.Until(time.Unix(exp, 0)) / time.Second)
 
 	var tenant models.Tenant

@@ -118,7 +118,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.agents"
+                                            "$ref": "#/definitions/private.agents"
                                         }
                                     }
                                 }
@@ -163,7 +163,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.AgentsAction"
+                            "$ref": "#/definitions/private.AgentsAction"
                         }
                     }
                 ],
@@ -179,7 +179,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.agentsActionResult"
+                                            "$ref": "#/definitions/private.agentsActionResult"
                                         }
                                     }
                                 }
@@ -224,7 +224,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.agentInfo"
+                            "$ref": "#/definitions/private.agentInfo"
                         }
                     }
                 ],
@@ -289,7 +289,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.agentCount"
+                                            "$ref": "#/definitions/private.agentCount"
                                         }
                                     }
                                 }
@@ -337,7 +337,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.agent"
+                                            "$ref": "#/definitions/private.agent"
                                         }
                                     }
                                 }
@@ -391,7 +391,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.patchAgentAction"
+                            "$ref": "#/definitions/private.patchAgentAction"
                         }
                     }
                 ],
@@ -590,7 +590,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.agentModules"
+                                            "$ref": "#/definitions/private.agentModules"
                                         }
                                     }
                                 }
@@ -981,7 +981,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.binaries"
+                                            "$ref": "#/definitions/private.binaries"
                                         }
                                     }
                                 }
@@ -1181,7 +1181,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.events"
+                                            "$ref": "#/definitions/private.eventResponse"
                                         }
                                     }
                                 }
@@ -1358,7 +1358,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.groups"
+                                            "$ref": "#/definitions/private.groups"
                                         }
                                     }
                                 }
@@ -1409,7 +1409,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.groupInfo"
+                            "$ref": "#/definitions/private.groupInfo"
                         }
                     }
                 ],
@@ -1485,7 +1485,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.group"
+                                            "$ref": "#/definitions/private.group"
                                         }
                                     }
                                 }
@@ -1738,7 +1738,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.groupModules"
+                                            "$ref": "#/definitions/private.groupModules"
                                         }
                                     }
                                 }
@@ -1922,7 +1922,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.groupPolicyPatch"
+                            "$ref": "#/definitions/private.groupPolicyPatch"
                         }
                     }
                 ],
@@ -2189,7 +2189,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.systemModules"
+                                            "$ref": "#/definitions/private.systemModules"
                                         }
                                     }
                                 }
@@ -2424,7 +2424,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.systemShortModules"
+                                            "$ref": "#/definitions/private.systemShortModules"
                                         }
                                     }
                                 }
@@ -2550,7 +2550,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.moduleVersionPatch"
+                            "$ref": "#/definitions/private.moduleVersionPatch"
                         }
                     }
                 ],
@@ -2829,7 +2829,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.systemModuleFile"
+                                            "$ref": "#/definitions/private.systemModuleFile"
                                         }
                                     }
                                 }
@@ -2889,7 +2889,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.systemModuleFilePatch"
+                            "$ref": "#/definitions/private.systemModuleFilePatch"
                         }
                     }
                 ],
@@ -3052,7 +3052,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.policyModulesUpdates"
+                                            "$ref": "#/definitions/private.policyModulesUpdates"
                                         }
                                     }
                                 }
@@ -3281,7 +3281,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.optionsActions"
+                                            "$ref": "#/definitions/private.optionsActions"
                                         }
                                     }
                                 }
@@ -3403,7 +3403,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.optionsEvents"
+                                            "$ref": "#/definitions/private.optionsEvents"
                                         }
                                     }
                                 }
@@ -3525,7 +3525,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.optionsFields"
+                                            "$ref": "#/definitions/private.optionsFields"
                                         }
                                     }
                                 }
@@ -3647,7 +3647,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.optionsTags"
+                                            "$ref": "#/definitions/private.optionsTags"
                                         }
                                     }
                                 }
@@ -3769,7 +3769,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.optionsVersions"
+                                            "$ref": "#/definitions/private.optionsVersions"
                                         }
                                     }
                                 }
@@ -3890,7 +3890,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.policies"
+                                            "$ref": "#/definitions/private.policies"
                                         }
                                     }
                                 }
@@ -3941,7 +3941,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.policyInfo"
+                            "$ref": "#/definitions/private.policyInfo"
                         }
                     }
                 ],
@@ -4006,7 +4006,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.policyCount"
+                                            "$ref": "#/definitions/private.policyCount"
                                         }
                                     }
                                 }
@@ -4054,7 +4054,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.policy"
+                                            "$ref": "#/definitions/private.policy"
                                         }
                                     }
                                 }
@@ -4233,7 +4233,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.policyGroupPatch"
+                            "$ref": "#/definitions/private.policyGroupPatch"
                         }
                     }
                 ],
@@ -4374,7 +4374,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.policyModules"
+                                            "$ref": "#/definitions/private.policyModules"
                                         }
                                     }
                                 }
@@ -4510,7 +4510,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.policyModulePatch"
+                            "$ref": "#/definitions/private.policyModulePatch"
                         }
                     }
                 ],
@@ -4882,7 +4882,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.roles"
+                                            "$ref": "#/definitions/private.roles"
                                         }
                                     }
                                 }
@@ -5003,7 +5003,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.services"
+                                            "$ref": "#/definitions/private.services"
                                         }
                                     }
                                 }
@@ -5364,7 +5364,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.tags"
+                                            "$ref": "#/definitions/private.tags"
                                         }
                                     }
                                 }
@@ -5560,7 +5560,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.tenants"
+                                            "$ref": "#/definitions/private.tenants"
                                         }
                                     }
                                 }
@@ -5912,7 +5912,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.upgradesAgents"
+                                            "$ref": "#/definitions/private.upgradesAgents"
                                         }
                                     }
                                 }
@@ -5958,7 +5958,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/protected.upgradesAgentsAction"
+                            "$ref": "#/definitions/private.upgradesAgentsAction"
                         }
                     }
                 ],
@@ -5974,7 +5974,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.upgradesAgentsActionResult"
+                                            "$ref": "#/definitions/private.upgradesAgentsActionResult"
                                         }
                                     }
                                 }
@@ -6041,7 +6041,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.upgradeAgent"
+                                            "$ref": "#/definitions/private.upgradeAgent"
                                         }
                                     }
                                 }
@@ -6351,7 +6351,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.users"
+                                            "$ref": "#/definitions/private.users"
                                         }
                                     }
                                 }
@@ -6712,7 +6712,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/protected.versions"
+                                            "$ref": "#/definitions/private.versions"
                                         }
                                     }
                                 }
@@ -8651,7 +8651,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.AgentsAction": {
+        "private.AgentsAction": {
             "type": "object",
             "required": [
                 "action"
@@ -8679,18 +8679,18 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agent": {
+        "private.agent": {
             "type": "object",
             "properties": {
                 "agent": {
                     "$ref": "#/definitions/models.Agent"
                 },
                 "details": {
-                    "$ref": "#/definitions/protected.agentDetails"
+                    "$ref": "#/definitions/private.agentDetails"
                 }
             }
         },
-        "protected.agentCount": {
+        "private.agentCount": {
             "type": "object",
             "properties": {
                 "all": {
@@ -8710,7 +8710,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agentDetails": {
+        "private.agentDetails": {
             "type": "object",
             "properties": {
                 "active_modules": {
@@ -8751,7 +8751,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agentInfo": {
+        "private.agentInfo": {
             "type": "object",
             "required": [
                 "arch",
@@ -8782,7 +8782,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agentModuleDetails": {
+        "private.agentModuleDetails": {
             "type": "object",
             "properties": {
                 "name": {
@@ -8796,13 +8796,13 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agentModules": {
+        "private.agentModules": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/protected.agentModuleDetails"
+                        "$ref": "#/definitions/private.agentModuleDetails"
                     }
                 },
                 "modules": {
@@ -8816,7 +8816,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agents": {
+        "private.agents": {
             "type": "object",
             "properties": {
                 "agents": {
@@ -8828,7 +8828,7 @@ const docTemplate = `{
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/protected.agentDetails"
+                        "$ref": "#/definitions/private.agentDetails"
                     }
                 },
                 "total": {
@@ -8836,7 +8836,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.agentsActionResult": {
+        "private.agentsActionResult": {
             "type": "object",
             "properties": {
                 "total": {
@@ -8844,7 +8844,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.binaries": {
+        "private.binaries": {
             "type": "object",
             "properties": {
                 "binaries": {
@@ -8858,7 +8858,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.events": {
+        "private.eventResponse": {
             "type": "object",
             "properties": {
                 "agents": {
@@ -8896,18 +8896,18 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.group": {
+        "private.group": {
             "type": "object",
             "properties": {
                 "details": {
-                    "$ref": "#/definitions/protected.groupDetails"
+                    "$ref": "#/definitions/private.groupDetails"
                 },
                 "group": {
                     "$ref": "#/definitions/models.Group"
                 }
             }
         },
-        "protected.groupDetails": {
+        "private.groupDetails": {
             "type": "object",
             "properties": {
                 "active_modules": {
@@ -8945,7 +8945,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.groupInfo": {
+        "private.groupInfo": {
             "type": "object",
             "properties": {
                 "from": {
@@ -8964,7 +8964,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.groupModuleDetails": {
+        "private.groupModuleDetails": {
             "type": "object",
             "properties": {
                 "name": {
@@ -8978,13 +8978,13 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.groupModules": {
+        "private.groupModules": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/protected.groupModuleDetails"
+                        "$ref": "#/definitions/private.groupModuleDetails"
                     }
                 },
                 "modules": {
@@ -8998,7 +8998,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.groupPolicyPatch": {
+        "private.groupPolicyPatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9019,13 +9019,13 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.groups": {
+        "private.groups": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/protected.groupDetails"
+                        "$ref": "#/definitions/private.groupDetails"
                     }
                 },
                 "groups": {
@@ -9039,7 +9039,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.moduleVersionPatch": {
+        "private.moduleVersionPatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9060,7 +9060,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.optionsActions": {
+        "private.optionsActions": {
             "type": "object",
             "properties": {
                 "actions": {
@@ -9074,7 +9074,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.optionsEvents": {
+        "private.optionsEvents": {
             "type": "object",
             "properties": {
                 "events": {
@@ -9088,7 +9088,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.optionsFields": {
+        "private.optionsFields": {
             "type": "object",
             "properties": {
                 "fields": {
@@ -9102,7 +9102,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.optionsTags": {
+        "private.optionsTags": {
             "type": "object",
             "properties": {
                 "tags": {
@@ -9116,7 +9116,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.optionsVersions": {
+        "private.optionsVersions": {
             "type": "object",
             "properties": {
                 "total": {
@@ -9130,7 +9130,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.patchAgentAction": {
+        "private.patchAgentAction": {
             "type": "object",
             "required": [
                 "action",
@@ -9153,13 +9153,13 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policies": {
+        "private.policies": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/protected.policyDetails"
+                        "$ref": "#/definitions/private.policyDetails"
                     }
                 },
                 "policies": {
@@ -9173,18 +9173,18 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policy": {
+        "private.policy": {
             "type": "object",
             "properties": {
                 "details": {
-                    "$ref": "#/definitions/protected.policyDetails"
+                    "$ref": "#/definitions/private.policyDetails"
                 },
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
                 }
             }
         },
-        "protected.policyCount": {
+        "private.policyCount": {
             "type": "object",
             "properties": {
                 "all": {
@@ -9195,7 +9195,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyDetails": {
+        "private.policyDetails": {
             "type": "object",
             "properties": {
                 "active_modules": {
@@ -9236,7 +9236,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyGroupPatch": {
+        "private.policyGroupPatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9257,7 +9257,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyInfo": {
+        "private.policyInfo": {
             "type": "object",
             "properties": {
                 "from": {
@@ -9276,7 +9276,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyModuleDetails": {
+        "private.policyModuleDetails": {
             "type": "object",
             "properties": {
                 "active": {
@@ -9296,7 +9296,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyModulePatch": {
+        "private.policyModulePatch": {
             "type": "object",
             "required": [
                 "action"
@@ -9321,13 +9321,13 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyModules": {
+        "private.policyModules": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/protected.policyModuleDetails"
+                        "$ref": "#/definitions/private.policyModuleDetails"
                     }
                 },
                 "modules": {
@@ -9341,7 +9341,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.policyModulesUpdates": {
+        "private.policyModulesUpdates": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -9358,7 +9358,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.roles": {
+        "private.roles": {
             "type": "object",
             "properties": {
                 "roles": {
@@ -9372,7 +9372,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.services": {
+        "private.services": {
             "type": "object",
             "properties": {
                 "services": {
@@ -9386,7 +9386,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.systemModuleFile": {
+        "private.systemModuleFile": {
             "type": "object",
             "required": [
                 "data",
@@ -9402,7 +9402,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.systemModuleFilePatch": {
+        "private.systemModuleFilePatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9430,7 +9430,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.systemModules": {
+        "private.systemModules": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -9444,7 +9444,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.systemShortModules": {
+        "private.systemShortModules": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -9458,7 +9458,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.tags": {
+        "private.tags": {
             "type": "object",
             "properties": {
                 "tags": {
@@ -9472,7 +9472,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.tenants": {
+        "private.tenants": {
             "type": "object",
             "properties": {
                 "tenants": {
@@ -9486,18 +9486,18 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.upgradeAgent": {
+        "private.upgradeAgent": {
             "type": "object",
             "properties": {
                 "details": {
-                    "$ref": "#/definitions/protected.upgradeAgentDetails"
+                    "$ref": "#/definitions/private.upgradeAgentDetails"
                 },
                 "task": {
                     "$ref": "#/definitions/models.AgentUpgradeTask"
                 }
             }
         },
-        "protected.upgradeAgentDetails": {
+        "private.upgradeAgentDetails": {
             "type": "object",
             "properties": {
                 "agent": {
@@ -9508,7 +9508,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.upgradesAgents": {
+        "private.upgradesAgents": {
             "type": "object",
             "properties": {
                 "tasks": {
@@ -9522,7 +9522,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.upgradesAgentsAction": {
+        "private.upgradesAgentsAction": {
             "type": "object",
             "required": [
                 "version"
@@ -9539,7 +9539,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.upgradesAgentsActionResult": {
+        "private.upgradesAgentsActionResult": {
             "type": "object",
             "properties": {
                 "batch": {
@@ -9550,7 +9550,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.users": {
+        "private.users": {
             "type": "object",
             "properties": {
                 "total": {
@@ -9564,7 +9564,7 @@ const docTemplate = `{
                 }
             }
         },
-        "protected.versions": {
+        "private.versions": {
             "type": "object",
             "properties": {
                 "total": {

@@ -21,15 +21,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"soldr/pkg/app/api/server"
-	"soldr/pkg/app/api/storage/mem"
-	useraction "soldr/pkg/app/api/user_action"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/app/api/useraction"
 	"soldr/pkg/app/api/worker"
 	"soldr/pkg/app/api/worker/events"
-	"soldr/pkg/log"
+	"soldr/pkg/logtooling"
+	"soldr/pkg/mysql"
 	"soldr/pkg/observability"
 	"soldr/pkg/secret"
-	"soldr/pkg/storage"
-	"soldr/pkg/storage/mysql"
 	"soldr/pkg/system"
 	"soldr/pkg/version"
 )
@@ -162,8 +161,8 @@ func main() {
 		MaxAge:     14,
 		Compress:   true,
 	}
-	logrus.SetLevel(log.ParseLevel(cfg.Log.Level))
-	logrus.SetFormatter(log.ParseFormat(cfg.Log.Format))
+	logrus.SetLevel(logtooling.ParseLevel(cfg.Log.Level))
+	logrus.SetFormatter(logtooling.ParseFormat(cfg.Log.Format))
 	logrus.SetOutput(io.MultiWriter(os.Stdout, logFile))
 
 	dsn := fmt.Sprintf("%s:%s@%s/%s?parseTime=true",
@@ -195,8 +194,8 @@ func main() {
 	}
 
 	// storages
-	dbConnectionStorage := mem.NewDBConnectionStorage()
-	s3ConnectionStorage := mem.NewS3ConnectionStorage()
+	dbConnectionStorage := storage.NewDBConnectionStorage()
+	s3ConnectionStorage := storage.NewS3ConnectionStorage()
 
 	tracerClient := observability.NewProxyTracerClient(
 		observability.NewOtlpTracerAndLoggerClient(cfg.Tracing.Addr),
@@ -254,7 +253,7 @@ func main() {
 	)
 
 	gormMeter := meterProvider.Meter("vxapi-meter")
-	if err = storage.InitGormMetrics(gormMeter); err != nil {
+	if err = mysql.InitGormMetrics(gormMeter); err != nil {
 		logrus.WithError(err).Error("could not initialize vxapi-meter")
 		return
 	}

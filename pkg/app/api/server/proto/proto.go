@@ -20,11 +20,10 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	context2 "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/proto/vm"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
-	useraction "soldr/pkg/app/api/user_action"
+	"soldr/pkg/app/api/useraction"
 	"soldr/pkg/hardening/luavm/certs"
 	vxcommonVM "soldr/pkg/hardening/luavm/vm"
 	connValidator "soldr/pkg/hardening/validator"
@@ -322,15 +321,16 @@ func wsConnectToVXServer(
 }
 
 func getServiceHash(c *gin.Context) (string, error) {
-	tid, ok := context2.GetUint64(c, "tid")
-	if !ok {
+	tid := c.GetUint64("tid")
+	if tid == 0 {
 		return "", fmt.Errorf("could not get tenant ID from context")
 	}
-	sid, ok := context2.GetUint64(c, "sid")
-	if !ok {
+	sid := c.GetUint64("tid")
+	if sid == 0 {
 		return "", fmt.Errorf("could not get service ID from context")
 	}
-	gDB := storage.GetGormDB(c, "gDB")
+
+	gDB := getGormDB(c, "gDB")
 	if gDB == nil {
 		return "", fmt.Errorf("could not get global DB connection from context")
 	}
@@ -345,6 +345,20 @@ func getServiceHash(c *gin.Context) (string, error) {
 		return "", fmt.Errorf("could not validate service record: %w", err)
 	}
 	return svc.Hash, nil
+}
+
+func getGormDB(c *gin.Context, name string) *gorm.DB {
+	var db *gorm.DB
+
+	if val, ok := c.Get(name); !ok {
+		logger.FromContext(c).WithField("component", "gorm_conn_getter").
+			Errorf("error getting '" + name + "' from context")
+	} else if db = val.(*gorm.DB); db == nil {
+		logger.FromContext(c).WithField("component", "gorm_conn_getter").
+			Errorf("got nil value '" + name + "' from context")
+	}
+
+	return db
 }
 
 type ProtoService struct {
@@ -406,8 +420,8 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 		return
 	}
 
-	sockType, ok := context2.GetString(c, "cpt")
-	if !ok || sockType != "aggregate" {
+	sockType := c.GetString("cpt")
+	if sockType != "aggregate" {
 		logger.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
@@ -455,8 +469,8 @@ func (s *ProtoService) BrowserWSConnect(c *gin.Context) {
 		return
 	}
 
-	sockType, ok := context2.GetString(c, "cpt")
-	if !ok || sockType != "browser" {
+	sockType := c.GetString("cpt")
+	if sockType != "browser" {
 		logger.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return
@@ -502,8 +516,8 @@ func (s *ProtoService) ExternalWSConnect(c *gin.Context) {
 		return
 	}
 
-	sockType, ok := context2.GetString(c, "cpt")
-	if !ok || sockType != "external" {
+	sockType := c.GetString("cpt")
+	if sockType != "external" {
 		logger.FromContext(c).Errorf("mismatch socket type to incoming token type")
 		response.Error(c, response.ErrProtoSockMismatch, nil)
 		return

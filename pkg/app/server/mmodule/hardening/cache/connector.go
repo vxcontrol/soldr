@@ -6,13 +6,13 @@ import (
 
 	"github.com/jinzhu/gorm"
 
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage"
 )
 
 type (
 	fetchData         func(ctx context.Context, connector interface{}) (interface{}, error)
 	FetchDataFromDB   func(ctx context.Context, connector *gorm.DB) (interface{}, error)
-	FetchDataFromFile func(ctx context.Context, connector storage.IFileReader) (interface{}, error)
+	FetchDataFromFile func(ctx context.Context, connector filestorage.Reader) (interface{}, error)
 )
 
 type ConnectorParams struct {
@@ -48,7 +48,7 @@ func chooseFetcher(connector interface{}, initParams *ConnectorParams) (fetchDat
 	switch connector.(type) {
 	case *gorm.DB:
 		fetch, err = getDBFetcher(initParams.DBFetcher)
-	case storage.IFileReader:
+	case filestorage.Reader:
 		fetch, err = getFileFetcher(initParams.FileFetcher)
 	default:
 		return nil, fmt.Errorf("a store of an unknown type passed")
@@ -84,9 +84,9 @@ func getFileFetcher(fetcher FetchDataFromFile) (fetchData, error) {
 		return nil, fmt.Errorf("fileStore fetcher function has not been implemented")
 	}
 	return func(ctx context.Context, connector interface{}) (interface{}, error) {
-		fileStore, ok := connector.(storage.IStorage)
+		fileStore, ok := connector.(filestorage.Storage)
 		if !ok {
-			return nil, fmt.Errorf("passed connector in not of the type IStorage")
+			return nil, fmt.Errorf("passed connector in not of the type Storage")
 		}
 		if fileStore == nil {
 			return nil, fmt.Errorf("passed connector object is nil")

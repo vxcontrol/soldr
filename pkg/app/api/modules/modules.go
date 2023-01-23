@@ -12,7 +12,7 @@ import (
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/crypto"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage/s3"
 )
 
 type agentModuleDetails struct {
@@ -50,7 +50,7 @@ func joinPath(args ...string) string {
 }
 
 func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) error {
-	gS3, err := storage.NewS3(nil)
+	gS3, err := s3.New(nil)
 	if err != nil {
 		return errors.New("failed to initialize global S3 driver: " + err.Error())
 	}
@@ -67,7 +67,7 @@ func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) err
 		return errors.New("failed to read utils files: " + err.Error())
 	}
 
-	iS3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
+	iS3, err := s3.New(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
 		return errors.New("failed to initialize instance S3 driver: " + err.Error())
 	}

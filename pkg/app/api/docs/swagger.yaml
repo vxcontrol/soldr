@@ -1359,7 +1359,7 @@ definitions:
     - status
     - type
     type: object
-  protected.AgentsAction:
+  private.AgentsAction:
     properties:
       action:
         enum:
@@ -1379,14 +1379,14 @@ definitions:
     required:
     - action
     type: object
-  protected.agent:
+  private.agent:
     properties:
       agent:
         $ref: '#/definitions/models.Agent'
       details:
-        $ref: '#/definitions/protected.agentDetails'
+        $ref: '#/definitions/private.agentDetails'
     type: object
-  protected.agentCount:
+  private.agentCount:
     properties:
       all:
         type: integer
@@ -1399,7 +1399,7 @@ definitions:
       without_groups:
         type: integer
     type: object
-  protected.agentDetails:
+  private.agentDetails:
     properties:
       active_modules:
         type: integer
@@ -1426,7 +1426,7 @@ definitions:
       upgrade_task:
         $ref: '#/definitions/models.AgentUpgradeTask'
     type: object
-  protected.agentInfo:
+  private.agentInfo:
     properties:
       arch:
         default: amd64
@@ -1449,7 +1449,7 @@ definitions:
     - name
     - os
     type: object
-  protected.agentModuleDetails:
+  private.agentModuleDetails:
     properties:
       name:
         type: string
@@ -1458,11 +1458,11 @@ definitions:
       update:
         type: boolean
     type: object
-  protected.agentModules:
+  private.agentModules:
     properties:
       details:
         items:
-          $ref: '#/definitions/protected.agentModuleDetails'
+          $ref: '#/definitions/private.agentModuleDetails'
         type: array
       modules:
         items:
@@ -1471,7 +1471,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.agents:
+  private.agents:
     properties:
       agents:
         items:
@@ -1479,17 +1479,17 @@ definitions:
         type: array
       details:
         items:
-          $ref: '#/definitions/protected.agentDetails'
+          $ref: '#/definitions/private.agentDetails'
         type: array
       total:
         type: integer
     type: object
-  protected.agentsActionResult:
+  private.agentsActionResult:
     properties:
       total:
         type: integer
     type: object
-  protected.binaries:
+  private.binaries:
     properties:
       binaries:
         items:
@@ -1498,7 +1498,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.events:
+  private.eventResponse:
     properties:
       agents:
         items:
@@ -1523,14 +1523,14 @@ definitions:
       total:
         type: integer
     type: object
-  protected.group:
+  private.group:
     properties:
       details:
-        $ref: '#/definitions/protected.groupDetails'
+        $ref: '#/definitions/private.groupDetails'
       group:
         $ref: '#/definitions/models.Group'
     type: object
-  protected.groupDetails:
+  private.groupDetails:
     properties:
       active_modules:
         type: integer
@@ -1555,7 +1555,7 @@ definitions:
           $ref: '#/definitions/models.Policy'
         type: array
     type: object
-  protected.groupInfo:
+  private.groupInfo:
     properties:
       from:
         minimum: 0
@@ -1568,7 +1568,7 @@ definitions:
           type: string
         type: array
     type: object
-  protected.groupModuleDetails:
+  private.groupModuleDetails:
     properties:
       name:
         type: string
@@ -1577,11 +1577,11 @@ definitions:
       update:
         type: boolean
     type: object
-  protected.groupModules:
+  private.groupModules:
     properties:
       details:
         items:
-          $ref: '#/definitions/protected.groupModuleDetails'
+          $ref: '#/definitions/private.groupModuleDetails'
         type: array
       modules:
         items:
@@ -1590,7 +1590,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.groupPolicyPatch:
+  private.groupPolicyPatch:
     properties:
       action:
         default: activate
@@ -1605,11 +1605,11 @@ definitions:
     - action
     - policy
     type: object
-  protected.groups:
+  private.groups:
     properties:
       details:
         items:
-          $ref: '#/definitions/protected.groupDetails'
+          $ref: '#/definitions/private.groupDetails'
         type: array
       groups:
         items:
@@ -1618,7 +1618,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.moduleVersionPatch:
+  private.moduleVersionPatch:
     properties:
       action:
         default: store
@@ -1633,7 +1633,7 @@ definitions:
     - action
     - module
     type: object
-  protected.optionsActions:
+  private.optionsActions:
     properties:
       actions:
         items:
@@ -1642,7 +1642,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.optionsEvents:
+  private.optionsEvents:
     properties:
       events:
         items:
@@ -1651,7 +1651,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.optionsFields:
+  private.optionsFields:
     properties:
       fields:
         items:
@@ -1660,7 +1660,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.optionsTags:
+  private.optionsTags:
     properties:
       tags:
         items:
@@ -1669,7 +1669,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.optionsVersions:
+  private.optionsVersions:
     properties:
       total:
         type: integer
@@ -1678,7 +1678,7 @@ definitions:
           $ref: '#/definitions/models.OptionsVersions'
         type: array
     type: object
-  protected.patchAgentAction:
+  private.patchAgentAction:
     properties:
       action:
         enum:
@@ -1695,11 +1695,11 @@ definitions:
     - action
     - agent
     type: object
-  protected.policies:
+  private.policies:
     properties:
       details:
         items:
-          $ref: '#/definitions/protected.policyDetails'
+          $ref: '#/definitions/private.policyDetails'
         type: array
       policies:
         items:
@@ -1708,21 +1708,21 @@ definitions:
       total:
         type: integer
     type: object
-  protected.policy:
+  private.policy:
     properties:
       details:
-        $ref: '#/definitions/protected.policyDetails'
+        $ref: '#/definitions/private.policyDetails'
       policy:
         $ref: '#/definitions/models.Policy'
     type: object
-  protected.policyCount:
+  private.policyCount:
     properties:
       all:
         type: integer
       without_groups:
         type: integer
     type: object
-  protected.policyDetails:
+  private.policyDetails:
     properties:
       active_modules:
         type: integer
@@ -1749,7 +1749,7 @@ definitions:
       update_modules:
         type: boolean
     type: object
-  protected.policyGroupPatch:
+  private.policyGroupPatch:
     properties:
       action:
         default: activate
@@ -1764,7 +1764,7 @@ definitions:
     - action
     - group
     type: object
-  protected.policyInfo:
+  private.policyInfo:
     properties:
       from:
         minimum: 0
@@ -1777,7 +1777,7 @@ definitions:
           type: string
         type: array
     type: object
-  protected.policyModuleDetails:
+  private.policyModuleDetails:
     properties:
       active:
         type: boolean
@@ -1790,7 +1790,7 @@ definitions:
       update:
         type: boolean
     type: object
-  protected.policyModulePatch:
+  private.policyModulePatch:
     properties:
       action:
         default: update
@@ -1809,11 +1809,11 @@ definitions:
     required:
     - action
     type: object
-  protected.policyModules:
+  private.policyModules:
     properties:
       details:
         items:
-          $ref: '#/definitions/protected.policyModuleDetails'
+          $ref: '#/definitions/private.policyModuleDetails'
         type: array
       modules:
         items:
@@ -1822,7 +1822,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.policyModulesUpdates:
+  private.policyModulesUpdates:
     properties:
       modules:
         items:
@@ -1833,7 +1833,7 @@ definitions:
           $ref: '#/definitions/models.Policy'
         type: array
     type: object
-  protected.roles:
+  private.roles:
     properties:
       roles:
         items:
@@ -1842,7 +1842,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.services:
+  private.services:
     properties:
       services:
         items:
@@ -1851,7 +1851,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.systemModuleFile:
+  private.systemModuleFile:
     properties:
       data:
         default: base64
@@ -1862,7 +1862,7 @@ definitions:
     - data
     - path
     type: object
-  protected.systemModuleFilePatch:
+  private.systemModuleFilePatch:
     properties:
       action:
         default: save
@@ -1882,7 +1882,7 @@ definitions:
     - action
     - path
     type: object
-  protected.systemModules:
+  private.systemModules:
     properties:
       modules:
         items:
@@ -1891,7 +1891,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.systemShortModules:
+  private.systemShortModules:
     properties:
       modules:
         items:
@@ -1900,7 +1900,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.tags:
+  private.tags:
     properties:
       tags:
         items:
@@ -1909,7 +1909,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.tenants:
+  private.tenants:
     properties:
       tenants:
         items:
@@ -1918,21 +1918,21 @@ definitions:
       total:
         type: integer
     type: object
-  protected.upgradeAgent:
+  private.upgradeAgent:
     properties:
       details:
-        $ref: '#/definitions/protected.upgradeAgentDetails'
+        $ref: '#/definitions/private.upgradeAgentDetails'
       task:
         $ref: '#/definitions/models.AgentUpgradeTask'
     type: object
-  protected.upgradeAgentDetails:
+  private.upgradeAgentDetails:
     properties:
       agent:
         $ref: '#/definitions/models.Agent'
       group:
         $ref: '#/definitions/models.Group'
     type: object
-  protected.upgradesAgents:
+  private.upgradesAgents:
     properties:
       tasks:
         items:
@@ -1941,7 +1941,7 @@ definitions:
       total:
         type: integer
     type: object
-  protected.upgradesAgentsAction:
+  private.upgradesAgentsAction:
     properties:
       filters:
         items:
@@ -1952,14 +1952,14 @@ definitions:
     required:
     - version
     type: object
-  protected.upgradesAgentsActionResult:
+  private.upgradesAgentsActionResult:
     properties:
       batch:
         type: string
       total:
         type: integer
     type: object
-  protected.users:
+  private.users:
     properties:
       total:
         type: integer
@@ -1968,7 +1968,7 @@ definitions:
           $ref: '#/definitions/models.UserRoleTenant'
         type: array
     type: object
-  protected.versions:
+  private.versions:
     properties:
       total:
         type: integer
@@ -2093,7 +2093,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.agents'
+                  $ref: '#/definitions/private.agents'
               type: object
         "400":
           description: invalid query request data
@@ -2119,7 +2119,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.agentInfo'
+          $ref: '#/definitions/private.agentInfo'
       produces:
       - application/json
       responses:
@@ -2156,7 +2156,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.AgentsAction'
+          $ref: '#/definitions/private.AgentsAction'
       produces:
       - application/json
       responses:
@@ -2167,7 +2167,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.agentsActionResult'
+                  $ref: '#/definitions/private.agentsActionResult'
               type: object
         "400":
           description: invalid agents action
@@ -2235,7 +2235,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.agent'
+                  $ref: '#/definitions/private.agent'
               type: object
         "403":
           description: getting agent info not permitted
@@ -2268,7 +2268,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.patchAgentAction'
+          $ref: '#/definitions/private.patchAgentAction'
       produces:
       - application/json
       responses:
@@ -2377,7 +2377,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.agentModules'
+                  $ref: '#/definitions/private.agentModules'
               type: object
         "400":
           description: invalid query request data
@@ -2491,7 +2491,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.agentCount'
+                  $ref: '#/definitions/private.agentCount'
               type: object
         "500":
           description: internal error
@@ -2660,7 +2660,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.binaries'
+                  $ref: '#/definitions/private.binaries'
               type: object
         "400":
           description: invalid query request data
@@ -2802,7 +2802,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.events'
+                  $ref: '#/definitions/private.eventResponse'
               type: object
         "400":
           description: invalid query request data
@@ -2928,7 +2928,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.groups'
+                  $ref: '#/definitions/private.groups'
               type: object
         "400":
           description: invalid query request data
@@ -2958,7 +2958,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.groupInfo'
+          $ref: '#/definitions/private.groupInfo'
       produces:
       - application/json
       responses:
@@ -3037,7 +3037,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.group'
+                  $ref: '#/definitions/private.group'
               type: object
         "403":
           description: getting group info not permitted
@@ -3179,7 +3179,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.groupModules'
+                  $ref: '#/definitions/private.groupModules'
               type: object
         "400":
           description: invalid query request data
@@ -3298,7 +3298,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.groupPolicyPatch'
+          $ref: '#/definitions/private.groupPolicyPatch'
       produces:
       - application/json
       responses:
@@ -3484,7 +3484,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.systemModules'
+                  $ref: '#/definitions/private.systemModules'
               type: object
         "400":
           description: invalid query request data
@@ -3643,7 +3643,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.systemShortModules'
+                  $ref: '#/definitions/private.systemShortModules'
               type: object
         "400":
           description: invalid query request data
@@ -3807,7 +3807,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.moduleVersionPatch'
+          $ref: '#/definitions/private.moduleVersionPatch'
       produces:
       - application/json
       responses:
@@ -3902,7 +3902,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.systemModuleFile'
+                  $ref: '#/definitions/private.systemModuleFile'
               type: object
         "403":
           description: getting system module file content not permitted
@@ -3940,7 +3940,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.systemModuleFilePatch'
+          $ref: '#/definitions/private.systemModuleFilePatch'
       produces:
       - application/json
       responses:
@@ -4054,7 +4054,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.policyModulesUpdates'
+                  $ref: '#/definitions/private.policyModulesUpdates'
               type: object
         "403":
           description: getting policy modules list not permitted
@@ -4220,7 +4220,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.optionsActions'
+                  $ref: '#/definitions/private.optionsActions'
               type: object
         "400":
           description: invalid query request data
@@ -4308,7 +4308,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.optionsEvents'
+                  $ref: '#/definitions/private.optionsEvents'
               type: object
         "400":
           description: invalid query request data
@@ -4396,7 +4396,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.optionsFields'
+                  $ref: '#/definitions/private.optionsFields'
               type: object
         "400":
           description: invalid query request data
@@ -4484,7 +4484,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.optionsTags'
+                  $ref: '#/definitions/private.optionsTags'
               type: object
         "400":
           description: invalid query request data
@@ -4572,7 +4572,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.optionsVersions'
+                  $ref: '#/definitions/private.optionsVersions'
               type: object
         "400":
           description: invalid query request data
@@ -4660,7 +4660,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.policies'
+                  $ref: '#/definitions/private.policies'
               type: object
         "400":
           description: invalid query request data
@@ -4690,7 +4690,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.policyInfo'
+          $ref: '#/definitions/private.policyInfo'
       produces:
       - application/json
       responses:
@@ -4769,7 +4769,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.policy'
+                  $ref: '#/definitions/private.policy'
               type: object
         "403":
           description: getting policy info not permitted
@@ -4851,7 +4851,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.policyGroupPatch'
+          $ref: '#/definitions/private.policyGroupPatch'
       produces:
       - application/json
       responses:
@@ -4956,7 +4956,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.policyModules'
+                  $ref: '#/definitions/private.policyModules'
               type: object
         "400":
           description: invalid query request data
@@ -5082,7 +5082,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.policyModulePatch'
+          $ref: '#/definitions/private.policyModulePatch'
       produces:
       - application/json
       responses:
@@ -5248,7 +5248,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.policyCount'
+                  $ref: '#/definitions/private.policyCount'
               type: object
         "500":
           description: internal error
@@ -5327,7 +5327,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.roles'
+                  $ref: '#/definitions/private.roles'
               type: object
         "400":
           description: invalid query request data
@@ -5414,7 +5414,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.services'
+                  $ref: '#/definitions/private.services'
               type: object
         "400":
           description: invalid query request data
@@ -5652,7 +5652,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.tags'
+                  $ref: '#/definitions/private.tags'
               type: object
         "400":
           description: invalid query request data
@@ -5786,7 +5786,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.tenants'
+                  $ref: '#/definitions/private.tenants'
               type: object
         "400":
           description: invalid query request data
@@ -6016,7 +6016,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.upgradesAgents'
+                  $ref: '#/definitions/private.upgradesAgents'
               type: object
         "400":
           description: invalid query request data
@@ -6043,7 +6043,7 @@ paths:
         name: json
         required: true
         schema:
-          $ref: '#/definitions/protected.upgradesAgentsAction'
+          $ref: '#/definitions/private.upgradesAgentsAction'
       produces:
       - application/json
       responses:
@@ -6054,7 +6054,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.upgradesAgentsActionResult'
+                  $ref: '#/definitions/private.upgradesAgentsActionResult'
               type: object
         "400":
           description: invalid agents upgrade request
@@ -6096,7 +6096,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.upgradeAgent'
+                  $ref: '#/definitions/private.upgradeAgent'
               type: object
         "400":
           description: invalid query request data
@@ -6303,7 +6303,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.users'
+                  $ref: '#/definitions/private.users'
               type: object
         "400":
           description: invalid query request data
@@ -6541,7 +6541,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/protected.versions'
+                  $ref: '#/definitions/private.versions'
               type: object
         "400":
           description: invalid query request data
