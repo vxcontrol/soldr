@@ -240,7 +240,7 @@ func setServiceInfo(db *gorm.DB) gin.HandlerFunc {
 
 	loadServices := func() {
 		var svs []models.Service
-		if err := db.Find(&svs).Error; err != nil {
+		if err := db.Find(&svs).Error; err == nil {
 			for idx := range svs {
 				s := svs[idx]
 				serviceCache[s.ID] = &s
