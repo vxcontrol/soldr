@@ -455,14 +455,16 @@ func (s *UserService) PatchUser(c *gin.Context) {
 
 	public_info := []interface{}{"mail", "name", "status"}
 	if user.Password != "" {
-		if encPassword, err := utils.EncryptPassword(user.Password); err != nil {
+		var encPassword []byte
+		encPassword, err = utils.EncryptPassword(user.Password)
+		if err != nil {
 			utils.FromContext(c).WithError(err).Errorf("error encoding password")
 			response.Error(c, response.ErrInternal, err)
 			return
-		} else {
-			user.Password = string(encPassword)
-			public_info = append(public_info, "password")
 		}
+		user.Password = string(encPassword)
+		user.PasswordChangeRequired = false
+		public_info = append(public_info, "password", "password_change_required")
 		err = s.db.Scopes(scope).Select("", public_info...).Save(&user).Error
 	} else {
 		err = s.db.Scopes(scope).Select("", public_info...).Save(&user.User).Error
