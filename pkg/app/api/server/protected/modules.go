@@ -1320,12 +1320,12 @@ func NewModuleService(
 // @Tags Agents,Modules
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=agentModules} "agent modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agent modules not permitted"
-// @Failure 404 {object} utils.errorResp "agent or modules not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=agentModules} "agent modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agent modules not permitted"
+// @Failure 404 {object} response.errorResp "agent or modules not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent modules"
 // @Router /agents/{hash}/modules [get]
 func (s *ModuleService) GetAgentModules(c *gin.Context) {
 	var (
@@ -1468,10 +1468,10 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp{data=models.ModuleA} "agent module data received successful"
-// @Failure 403 {object} utils.errorResp "getting agent module data not permitted"
-// @Failure 404 {object} utils.errorResp "agent or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent module"
+// @Success 200 {object} response.successResp{data=models.ModuleA} "agent module data received successful"
+// @Failure 403 {object} response.errorResp "getting agent module data not permitted"
+// @Failure 404 {object} response.errorResp "agent or module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent module"
 // @Router /agents/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetAgentModule(c *gin.Context) {
 	var (
@@ -1543,7 +1543,7 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param file query string false "path to the browser module file" default(main.vue)
 // @Success 200 {file} file "browser module vue code as a file"
-// @Failure 403 {object} utils.errorResp "getting agent module data not permitted"
+// @Failure 403 {object} response.errorResp "getting agent module data not permitted"
 // @Router /agents/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 	var (
@@ -1632,12 +1632,12 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 // @Tags Groups,Modules
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=groupModules} "group modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting group modules not permitted"
-// @Failure 404 {object} utils.errorResp "group or modules not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting group modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=groupModules} "group modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting group modules not permitted"
+// @Failure 404 {object} response.errorResp "group or modules not found"
+// @Failure 500 {object} response.errorResp "internal error on getting group modules"
 // @Router /groups/{hash}/modules [get]
 func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	var (
@@ -1780,10 +1780,10 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp{data=models.ModuleA} "group module data received successful"
-// @Failure 403 {object} utils.errorResp "getting group module data not permitted"
-// @Failure 404 {object} utils.errorResp "group or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting group"
+// @Success 200 {object} response.successResp{data=models.ModuleA} "group module data received successful"
+// @Failure 403 {object} response.errorResp "getting group module data not permitted"
+// @Failure 404 {object} response.errorResp "group or module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting group"
 // @Router /groups/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetGroupModule(c *gin.Context) {
 	var (
@@ -1856,7 +1856,7 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param file query string false "path to the browser module file" default(main.vue)
 // @Success 200 {file} file "browser module vue code as a file"
-// @Failure 403 {object} utils.errorResp "getting group module data not permitted"
+// @Failure 403 {object} response.errorResp "getting group module data not permitted"
 // @Router /groups/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 	var (
@@ -1945,12 +1945,12 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 // @Tags Policies,Modules
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=policyModules} "policy modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data
-// @Failure 403 {object} utils.errorResp "getting policy modules not permitted"
-// @Failure 404 {object} utils.errorResp "policy or modules not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=policyModules} "policy modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data
+// @Failure 403 {object} response.errorResp "getting policy modules not permitted"
+// @Failure 404 {object} response.errorResp "policy or modules not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy modules"
 // @Router /policies/{hash}/modules [get]
 func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	var (
@@ -2123,10 +2123,10 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp{data=models.ModuleA} "policy module data received successful"
-// @Failure 403 {object} utils.errorResp "getting policy module data not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy module"
+// @Success 200 {object} response.successResp{data=models.ModuleA} "policy module data received successful"
+// @Failure 403 {object} response.errorResp "getting policy module data not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy module"
 // @Router /policies/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 	var (
@@ -2184,7 +2184,7 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param file query string false "path to the browser module file" default(main.vue)
 // @Success 200 {file} file "browser module vue code as a file"
-// @Failure 403 {object} utils.errorResp "getting policy module data not permitted"
+// @Failure 403 {object} response.errorResp "getting policy module data not permitted"
 // @Router /policies/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 	var (
@@ -2255,10 +2255,10 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
 // @Param json body policyModulePatch true "action on policy module as JSON data (activate, deactivate, store, update)"
-// @Success 200 {object} utils.successResp "policy module patched successful"
-// @Failure 403 {object} utils.errorResp "updating policy module not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating policy module"
+// @Success 200 {object} response.successResp "policy module patched successful"
+// @Failure 403 {object} response.errorResp "updating policy module not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on updating policy module"
 // @Router /policies/{hash}/modules/{module_name} [put]
 func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	var (
@@ -2550,10 +2550,10 @@ func compareModulesChanges(moduleIn, moduleDB models.ModuleA, encryptor crypto.I
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp "policy module deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting policy module not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting policy module"
+// @Success 200 {object} response.successResp "policy module deleted successful"
+// @Failure 403 {object} response.errorResp "deleting policy module not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting policy module"
 // @Router /policies/{hash}/modules/{module_name} [delete]
 func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	var (
@@ -2638,11 +2638,11 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
 // @Param json body models.ModuleConfig true "param name and value to be set"
-// @Success 200 {object} utils.successResp "parameter updated successfully"
-// @Success 400 {object} utils.errorResp "bad request"
-// @Failure 403 {object} utils.errorResp "updating parameter not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating secured parameter"
+// @Success 200 {object} response.successResp "parameter updated successfully"
+// @Success 400 {object} response.errorResp "bad request"
+// @Failure 403 {object} response.errorResp "updating parameter not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on updating secured parameter"
 // @Router /policies/{hash}/modules/{module_name}/secure_config [post]
 func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	var (
@@ -2791,9 +2791,9 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param param_name path string true "parameter name without spaces"
 // @Success 200 {object} models.ModuleConfig "secured param value received successfully"
-// @Failure 403 {object} utils.errorResp "get secured parameter not permitted"
-// @Failure 404 {object} utils.errorResp "policy, module or parameter not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting module secured parameter"
+// @Failure 403 {object} response.errorResp "get secured parameter not permitted"
+// @Failure 404 {object} response.errorResp "policy, module or parameter not found"
+// @Failure 500 {object} response.errorResp "internal error on getting module secured parameter"
 // @Router /policies/{hash}/modules/{module_name}/secure_config/{param_name} [get]
 func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	var (
@@ -2901,11 +2901,11 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Summary Retrieve system modules by filters
 // @Tags Modules
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=systemModules} "system modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting system modules not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting system modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=systemModules} "system modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting system modules not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting system modules"
 // @Router /modules/ [get]
 func (s *ModuleService) GetModules(c *gin.Context) {
 	var (
@@ -2996,10 +2996,10 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.ModuleInfo true "module info to create one"
-// @Success 201 {object} utils.successResp{data=models.ModuleS} "system module created successful"
-// @Failure 400 {object} utils.errorResp "invalid system module info"
-// @Failure 403 {object} utils.errorResp "creating system module not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating system module"
+// @Success 201 {object} response.successResp{data=models.ModuleS} "system module created successful"
+// @Failure 400 {object} response.errorResp "invalid system module info"
+// @Failure 403 {object} response.errorResp "creating system module not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating system module"
 // @Router /modules/ [post]
 func (s *ModuleService) CreateModule(c *gin.Context) {
 	var (
@@ -3093,10 +3093,10 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 // @Tags Modules
 // @Produce json
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp "system module deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module or services not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting system module"
+// @Success 200 {object} response.successResp "system module deleted successful"
+// @Failure 403 {object} response.errorResp "deleting system module not permitted"
+// @Failure 404 {object} response.errorResp "system module or services not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting system module"
 // @Router /modules/{module_name} [delete]
 func (s *ModuleService) DeleteModule(c *gin.Context) {
 	var (
@@ -3210,11 +3210,11 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 // @Tags Modules
 // @Produce json
 // @Param module_name path string true "module name without spaces"
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=systemShortModules} "system modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting system modules not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting system modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=systemShortModules} "system modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting system modules not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting system modules"
 // @Router /modules/{module_name}/versions/ [get]
 func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 	var (
@@ -3274,10 +3274,10 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp{data=models.ModuleS} "system module data received successful"
-// @Failure 403 {object} utils.errorResp "getting system module data not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting system module"
+// @Success 200 {object} response.successResp{data=models.ModuleS} "system module data received successful"
+// @Failure 403 {object} response.errorResp "getting system module data not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting system module"
 // @Router /modules/{module_name}/versions/{version} [get]
 func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 	var (
@@ -3335,10 +3335,10 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param json body moduleVersionPatch true "module info to create one"
-// @Success 200 {object} utils.successResp "system module updated successful"
-// @Failure 403 {object} utils.errorResp "updating system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module or services not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating system module"
+// @Success 200 {object} response.successResp "system module updated successful"
+// @Failure 403 {object} response.errorResp "updating system module not permitted"
+// @Failure 404 {object} response.errorResp "system module or services not found"
+// @Failure 500 {object} response.errorResp "internal error on updating system module"
 // @Router /modules/{module_name}/versions/{version} [put]
 func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	var (
@@ -3485,11 +3485,11 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format"
 // @Param json body models.ChangelogVersion true "module changelog to add to created module"
-// @Success 201 {object} utils.successResp{data=models.ModuleS} "system module created successful"
-// @Failure 400 {object} utils.errorResp "invalid system module info"
-// @Failure 403 {object} utils.errorResp "creating system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on creating system module"
+// @Success 201 {object} response.successResp{data=models.ModuleS} "system module created successful"
+// @Failure 400 {object} response.errorResp "invalid system module info"
+// @Failure 403 {object} response.errorResp "creating system module not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on creating system module"
 // @Router /modules/{module_name}/versions/{version} [post]
 func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	var (
@@ -3636,10 +3636,10 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp "system module deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting system module"
+// @Success 200 {object} response.successResp "system module deleted successful"
+// @Failure 403 {object} response.errorResp "deleting system module not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting system module"
 // @Router /modules/{module_name}/versions/{version} [delete]
 func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	var (
@@ -3717,10 +3717,10 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp{data=policyModulesUpdates} "policy modules list received successful"
-// @Failure 403 {object} utils.errorResp "getting policy modules list not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy modules list to update"
+// @Success 200 {object} response.successResp{data=policyModulesUpdates} "policy modules list received successful"
+// @Failure 403 {object} response.errorResp "getting policy modules list not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy modules list to update"
 // @Router /modules/{module_name}/versions/{version}/updates [get]
 func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	var (
@@ -3810,10 +3810,10 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 201 {object} utils.successResp "policy modules update run successful"
-// @Failure 403 {object} utils.errorResp "running policy modules updates not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on running policy modules updates"
+// @Success 201 {object} response.successResp "policy modules update run successful"
+// @Failure 403 {object} response.errorResp "running policy modules updates not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on running policy modules updates"
 // @Router /modules/{module_name}/versions/{version}/updates [post]
 func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	var (
@@ -3865,10 +3865,10 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp{data=[]string} "system module files received successful"
-// @Failure 403 {object} utils.errorResp "getting system module files not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting system module files"
+// @Success 200 {object} response.successResp{data=[]string} "system module files received successful"
+// @Failure 403 {object} response.errorResp "getting system module files not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting system module files"
 // @Router /modules/{module_name}/versions/{version}/files [get]
 func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 	var (
@@ -3927,10 +3927,10 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param path query string true "relative path to module file"
-// @Success 200 {object} utils.successResp{data=systemModuleFile} "system module file content received successful"
-// @Failure 403 {object} utils.errorResp "getting system module file content not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting system module file"
+// @Success 200 {object} response.successResp{data=systemModuleFile} "system module file content received successful"
+// @Failure 403 {object} response.errorResp "getting system module file content not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting system module file"
 // @Router /modules/{module_name}/versions/{version}/files/file [get]
 func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 	var (
@@ -3999,10 +3999,10 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param json body systemModuleFilePatch true "action, relative path and file content for module file"
-// @Success 200 {object} utils.successResp "action on system module file did successful"
-// @Failure 403 {object} utils.errorResp "making action on system module file not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on making action system module file"
+// @Success 200 {object} response.successResp "action on system module file did successful"
+// @Failure 403 {object} response.errorResp "making action on system module file not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on making action system module file"
 // @Router /modules/{module_name}/versions/{version}/files/file [put]
 func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	var (
@@ -4173,10 +4173,10 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param option_name path string true "module option without spaces" Enums(id, tenant_id, service_type, state, config_schema, default_config, static_dependencies, fields_schema, action_config_schema, default_action_config, event_config_schema, default_event_config, changelog, locale, info, last_update, event_config_schema_definitions, action_config_schema_definitions)
-// @Success 200 {object} utils.successResp{data=interface{}} "module option received successful"
-// @Failure 403 {object} utils.errorResp "getting module option not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting module option"
+// @Success 200 {object} response.successResp{data=interface{}} "module option received successful"
+// @Failure 403 {object} response.errorResp "getting module option not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting module option"
 // @Router /modules/{module_name}/versions/{version}/options/{option_name} [get]
 func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	var (

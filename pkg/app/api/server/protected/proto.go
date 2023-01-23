@@ -92,10 +92,10 @@ func ValidateToken(tokenString string) (*models.ProtoAuthTokenClaims, error) {
 // @Accept json
 // @Produce json
 // @Param json body models.ProtoAuthTokenRequest true "Proto auth token request JSON data"
-// @Success 201 {object} utils.successResp{data=models.ProtoAuthToken} "token created successful"
-// @Failure 400 {object} utils.errorResp "invalid requested token info"
-// @Failure 403 {object} utils.errorResp "creating token not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating token"
+// @Success 201 {object} response.successResp{data=models.ProtoAuthToken} "token created successful"
+// @Failure 400 {object} response.errorResp "invalid requested token info"
+// @Failure 403 {object} response.errorResp "creating token not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating token"
 // @Router /token/vxproto [post]
 func CreateAuthToken(c *gin.Context) {
 	var req models.ProtoAuthTokenRequest

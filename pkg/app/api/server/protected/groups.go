@@ -203,12 +203,12 @@ func NewGroupService(
 // @Summary Retrieve groups list by filters
 // @Tags Groups
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=groups} "groups list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting groups not permitted"
-// @Failure 404 {object} utils.errorResp "groups not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting groups"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=groups} "groups list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting groups not permitted"
+// @Failure 404 {object} response.errorResp "groups not found"
+// @Failure 500 {object} response.errorResp "internal error on getting groups"
 // @Router /groups/ [get]
 func (s *GroupService) GetGroups(c *gin.Context) {
 	var (
@@ -420,10 +420,10 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 // @Tags Groups
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=group} "group info received successful"
-// @Failure 403 {object} utils.errorResp "getting group info not permitted"
-// @Failure 404 {object} utils.errorResp "group not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting group"
+// @Success 200 {object} response.successResp{data=group} "group info received successful"
+// @Failure 403 {object} response.errorResp "getting group info not permitted"
+// @Failure 404 {object} response.errorResp "group not found"
+// @Failure 500 {object} response.errorResp "internal error on getting group"
 // @Router /groups/{hash} [get]
 func (s *GroupService) GetGroup(c *gin.Context) {
 	var (
@@ -506,11 +506,11 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body models.Group true "group info as JSON data"
-// @Success 200 {object} utils.successResp{data=models.Group} "group info updated successful"
-// @Failure 400 {object} utils.errorResp "invalid group info"
-// @Failure 403 {object} utils.errorResp "updating group info not permitted"
-// @Failure 404 {object} utils.errorResp "group not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating group"
+// @Success 200 {object} response.successResp{data=models.Group} "group info updated successful"
+// @Failure 400 {object} response.errorResp "invalid group info"
+// @Failure 403 {object} response.errorResp "updating group info not permitted"
+// @Failure 404 {object} response.errorResp "group not found"
+// @Failure 500 {object} response.errorResp "internal error on updating group"
 // @Router /groups/{hash} [put]
 func (s *GroupService) PatchGroup(c *gin.Context) {
 	var (
@@ -585,11 +585,11 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body groupPolicyPatch true "action on group policy as JSON data (activate, deactivate)"
-// @Success 200 {object} utils.successResp "group policy patched successful"
-// @Failure 400 {object} utils.errorResp "invalid patch request data"
-// @Failure 403 {object} utils.errorResp "updating group policy not permitted"
-// @Failure 404 {object} utils.errorResp "group or policy not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting updating group policy"
+// @Success 200 {object} response.successResp "group policy patched successful"
+// @Failure 400 {object} response.errorResp "invalid patch request data"
+// @Failure 403 {object} response.errorResp "updating group policy not permitted"
+// @Failure 404 {object} response.errorResp "group or policy not found"
+// @Failure 500 {object} response.errorResp "internal error on getting updating group policy"
 // @Router /groups/{hash}/policies [put]
 func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	var (
@@ -672,10 +672,10 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body groupInfo true "group info to create one"
-// @Success 201 {object} utils.successResp{data=models.Group} "group created successful"
-// @Failure 400 {object} utils.errorResp "invalid group info"
-// @Failure 403 {object} utils.errorResp "creating group not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating group"
+// @Success 201 {object} response.successResp{data=models.Group} "group created successful"
+// @Failure 400 {object} response.errorResp "invalid group info"
+// @Failure 403 {object} response.errorResp "creating group not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating group"
 // @Router /groups/ [post]
 func (s *GroupService) CreateGroup(c *gin.Context) {
 	var (
@@ -782,10 +782,10 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 // @Tags Groups
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "group deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting group not permitted"
-// @Failure 404 {object} utils.errorResp "group not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting group"
+// @Success 200 {object} response.successResp "group deleted successful"
+// @Failure 403 {object} response.errorResp "deleting group not permitted"
+// @Failure 404 {object} response.errorResp "group not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting group"
 // @Router /groups/{hash} [delete]
 func (s *GroupService) DeleteGroup(c *gin.Context) {
 	var (

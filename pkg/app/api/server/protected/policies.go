@@ -185,12 +185,12 @@ func NewPolicyService(
 // @Summary Retrieve policies list by filters
 // @Tags Policies
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=policies} "policies list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting policies not permitted"
-// @Failure 404 {object} utils.errorResp "policies not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policies"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=policies} "policies list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting policies not permitted"
+// @Failure 404 {object} response.errorResp "policies not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policies"
 // @Router /policies/ [get]
 func (s *PolicyService) GetPolicies(c *gin.Context) {
 	var (
@@ -414,10 +414,10 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 // @Tags Policies
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=policy} "policy info received successful"
-// @Failure 403 {object} utils.errorResp "getting policy info not permitted"
-// @Failure 404 {object} utils.errorResp "policy not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy"
+// @Success 200 {object} response.successResp{data=policy} "policy info received successful"
+// @Failure 403 {object} response.errorResp "getting policy info not permitted"
+// @Failure 404 {object} response.errorResp "policy not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy"
 // @Router /policies/{hash} [get]
 func (s *PolicyService) GetPolicy(c *gin.Context) {
 	var (
@@ -520,11 +520,11 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body models.Policy true "policy info as JSON data"
-// @Success 200 {object} utils.successResp{data=models.Policy} "policy info updated successful"
-// @Failure 400 {object} utils.errorResp "invalid policy info"
-// @Failure 403 {object} utils.errorResp "updating policy info not permitted"
-// @Failure 404 {object} utils.errorResp "policy not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating policy"
+// @Success 200 {object} response.successResp{data=models.Policy} "policy info updated successful"
+// @Failure 400 {object} response.errorResp "invalid policy info"
+// @Failure 403 {object} response.errorResp "updating policy info not permitted"
+// @Failure 404 {object} response.errorResp "policy not found"
+// @Failure 500 {object} response.errorResp "internal error on updating policy"
 // @Router /policies/{hash} [put]
 func (s *PolicyService) PatchPolicy(c *gin.Context) {
 	var (
@@ -603,11 +603,11 @@ func (s *PolicyService) PatchPolicy(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body policyGroupPatch true "action on policy group as JSON data (activate, deactivate)"
-// @Success 200 {object} utils.successResp "policy group patched successful"
-// @Failure 400 {object} utils.errorResp "invalid patch request data"
-// @Failure 403 {object} utils.errorResp "updating policy group not permitted"
-// @Failure 404 {object} utils.errorResp "policy or group not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating policy group"
+// @Success 200 {object} response.successResp "policy group patched successful"
+// @Failure 400 {object} response.errorResp "invalid patch request data"
+// @Failure 403 {object} response.errorResp "updating policy group not permitted"
+// @Failure 404 {object} response.errorResp "policy or group not found"
+// @Failure 500 {object} response.errorResp "internal error on updating policy group"
 // @Router /policies/{hash}/groups [put]
 func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 	var (
@@ -697,10 +697,10 @@ func (s *PolicyService) PatchPolicyGroup(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body policyInfo true "policy info to create one"
-// @Success 201 {object} utils.successResp{data=models.Policy} "policy created successful"
-// @Failure 400 {object} utils.errorResp "invalid policy info"
-// @Failure 403 {object} utils.errorResp "creating policy not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating policy"
+// @Success 201 {object} response.successResp{data=models.Policy} "policy created successful"
+// @Failure 400 {object} response.errorResp "invalid policy info"
+// @Failure 403 {object} response.errorResp "creating policy not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating policy"
 // @Router /policies/ [post]
 func (s *PolicyService) CreatePolicy(c *gin.Context) {
 	var (
@@ -811,10 +811,10 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 // @Tags Policies
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "policy deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting policy not permitted"
-// @Failure 404 {object} utils.errorResp "policy not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting policy"
+// @Success 200 {object} response.successResp "policy deleted successful"
+// @Failure 403 {object} response.errorResp "deleting policy not permitted"
+// @Failure 404 {object} response.errorResp "policy not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting policy"
 // @Router /policies/{hash} [delete]
 func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	var (
@@ -914,8 +914,8 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 // @Summary Retrieve groups of counted policies
 // @Tags Policies
 // @Produce json
-// @Success 200 {object} utils.successResp{data=policyCount} "groups of counted agents policies successfully"
-// @Failure 500 {object} utils.errorResp "internal error"
+// @Success 200 {object} response.successResp{data=policyCount} "groups of counted agents policies successfully"
+// @Failure 500 {object} response.errorResp "internal error"
 // @Router /policies/count [get]
 func (s *PolicyService) GetPoliciesCount(c *gin.Context) {
 	uaf := useraction.Fields{

@@ -55,11 +55,11 @@ func NewServicesService(db *gorm.DB) *ServicesService {
 // @Summary Retrieve services list by filters
 // @Tags Services
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=services} "services list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting services not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting services"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=services} "services list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting services not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting services"
 // @Router /services/ [get]
 func (s *ServicesService) GetServices(c *gin.Context) {
 	var (
@@ -115,10 +115,10 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 // @Tags Services
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.Service} "service received successful"
-// @Failure 403 {object} utils.errorResp "getting service not permitted
-// @Failure 404 {object} utils.errorResp "service not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting service"
+// @Success 200 {object} response.successResp{data=models.Service} "service received successful"
+// @Failure 403 {object} response.errorResp "getting service not permitted
+// @Failure 404 {object} response.errorResp "service not found"
+// @Failure 500 {object} response.errorResp "internal error on getting service"
 // @Router /services/{hash} [get]
 func (s *ServicesService) GetService(c *gin.Context) {
 	var (
@@ -164,10 +164,10 @@ func (s *ServicesService) GetService(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.Service true "service model to create from"
-// @Success 201 {object} utils.successResp{data=models.Service} "service created successful"
-// @Failure 400 {object} utils.errorResp "invalid service request data"
-// @Failure 403 {object} utils.errorResp "creating service not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating service"
+// @Success 201 {object} response.successResp{data=models.Service} "service created successful"
+// @Failure 400 {object} response.errorResp "invalid service request data"
+// @Failure 403 {object} response.errorResp "creating service not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating service"
 // @Router /services/ [post]
 func (s *ServicesService) CreateService(c *gin.Context) {
 	var (
@@ -211,11 +211,11 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 // @Produce json
 // @Param json body models.Service true "service model to update"
 // @Param hash path string true "service hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.Service} "service updated successful"
-// @Failure 400 {object} utils.errorResp "invalid service request data"
-// @Failure 403 {object} utils.errorResp "updating service not permitted"
-// @Failure 404 {object} utils.errorResp "service not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating service"
+// @Success 200 {object} response.successResp{data=models.Service} "service updated successful"
+// @Failure 400 {object} response.errorResp "invalid service request data"
+// @Failure 403 {object} response.errorResp "updating service not permitted"
+// @Failure 404 {object} response.errorResp "service not found"
+// @Failure 500 {object} response.errorResp "internal error on updating service"
 // @Router /services/{hash} [put]
 func (s *ServicesService) PatchService(c *gin.Context) {
 	var (
@@ -277,10 +277,10 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 // @Tags Services
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "service deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting service not permitted"
-// @Failure 404 {object} utils.errorResp "service not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting service"
+// @Success 200 {object} response.successResp "service deleted successful"
+// @Failure 403 {object} response.errorResp "deleting service not permitted"
+// @Failure 404 {object} response.errorResp "service not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting service"
 // @Router /services/{hash} [delete]
 func (s *ServicesService) DeleteService(c *gin.Context) {
 	var (

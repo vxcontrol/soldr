@@ -113,9 +113,9 @@ func NewPortingService(
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format or 'latest' or 'all'" default(latest)
 // @Success 200 {file} file "system module archive file"
-// @Failure 403 {object} utils.errorResp "exporting system module content not permitted"
-// @Failure 404 {object} utils.errorResp "system module or version not found"
-// @Failure 500 {object} utils.errorResp "internal error on exporting system module"
+// @Failure 403 {object} response.errorResp "exporting system module content not permitted"
+// @Failure 404 {object} response.errorResp "system module or version not found"
+// @Failure 500 {object} response.errorResp "internal error on exporting system module"
 // @Router /export/modules/{module_name}/versions/{version} [post]
 func (s *PortingService) ExportModule(c *gin.Context) {
 	var (
@@ -224,11 +224,11 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 // @Param version path string true "module version string according semantic version format or 'all'" default(all)
 // @Param rewrite query boolean true "override system module files and records in global DB" default(true)
 // @Param archive formData file true "system module archive file"
-// @Success 200 {object} utils.successResp "system module archive uploaded successful"
-// @Failure 400 {object} utils.errorResp "bad format input system module archive"
-// @Failure 403 {object} utils.errorResp "importing system module content not permitted"
-// @Failure 404 {object} utils.errorResp "system module or version in archive not found"
-// @Failure 500 {object} utils.errorResp "internal error on importing system module"
+// @Success 200 {object} response.successResp "system module archive uploaded successful"
+// @Failure 400 {object} response.errorResp "bad format input system module archive"
+// @Failure 403 {object} response.errorResp "importing system module content not permitted"
+// @Failure 404 {object} response.errorResp "system module or version in archive not found"
+// @Failure 500 {object} response.errorResp "internal error on importing system module"
 // @Router /import/modules/{module_name}/versions/{version} [post]
 func (s *PortingService) ImportModule(c *gin.Context) {
 	var (

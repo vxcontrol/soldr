@@ -158,11 +158,11 @@ func NewTagService(db *gorm.DB, serverConnector *client.AgentServerClient) *TagS
 // @Summary Retrieve tags list by filters
 // @Tags Tags
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=tags} "tags list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting tags not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting tags"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=tags} "tags list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting tags not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting tags"
 // @Router /tags/ [get]
 func (s *TagService) GetTags(c *gin.Context) {
 	var (

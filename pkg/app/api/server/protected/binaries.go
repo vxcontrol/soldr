@@ -89,11 +89,11 @@ func patchOrderingByVersion(query *storage2.TableQuery) {
 // @Summary Retrieve agent binaries list by filters
 // @Tags Binaries
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=binaries} "agent binaries list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agent binaries not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent binaries"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=binaries} "agent binaries list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agent binaries not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting agent binaries"
 // @Router /binaries/vxagent [get]
 func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	var (
@@ -146,10 +146,10 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 // @Param arch path string true "agent info arch" default(amd64) Enums(386, amd64)
 // @Param version path string true "agent version string according semantic version format" default(latest)
 // @Success 200 {file} file "agent binary as a file"
-// @Failure 400 {object} utils.errorResp "invalid agent info"
-// @Failure 403 {object} utils.errorResp "getting agent binary file not permitted"
-// @Failure 404 {object} utils.errorResp "agent binary file not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent binary file"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "getting agent binary file not permitted"
+// @Failure 404 {object} response.errorResp "agent binary file not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent binary file"
 // @Router /binaries/vxagent/{os}/{arch}/{version} [get]
 func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 	var (

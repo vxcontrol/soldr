@@ -232,11 +232,11 @@ func NewOptionService(db *gorm.DB) *OptionService {
 // @Summary Retrieve global action list by filters
 // @Tags Modules,Options
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=optionsActions} "global action list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting global action list not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting global action list"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=optionsActions} "global action list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting global action list not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting global action list"
 // @Router /options/actions [get]
 func (s *OptionService) GetOptionsActions(c *gin.Context) {
 	var resp optionsActions
@@ -253,11 +253,11 @@ func (s *OptionService) GetOptionsActions(c *gin.Context) {
 // @Summary Retrieve global event list by filters
 // @Tags Modules,Options
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=optionsEvents} "global event list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting global event list not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting global event list"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=optionsEvents} "global event list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting global event list not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting global event list"
 // @Router /options/events [get]
 func (s *OptionService) GetOptionsEvents(c *gin.Context) {
 	var resp optionsEvents
@@ -274,11 +274,11 @@ func (s *OptionService) GetOptionsEvents(c *gin.Context) {
 // @Summary Retrieve global field list by filters
 // @Tags Modules,Options
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=optionsFields} "global field list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting global field list not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting global field list"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=optionsFields} "global field list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting global field list not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting global field list"
 // @Router /options/fields [get]
 func (s *OptionService) GetOptionsFields(c *gin.Context) {
 	var resp optionsFields
@@ -295,11 +295,11 @@ func (s *OptionService) GetOptionsFields(c *gin.Context) {
 // @Summary Retrieve global tag list by filters
 // @Tags Modules,Options
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=optionsTags} "global tag list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting global tag list not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting global tag list"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=optionsTags} "global tag list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting global tag list not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting global tag list"
 // @Router /options/tags [get]
 func (s *OptionService) GetOptionsTags(c *gin.Context) {
 	var resp optionsTags
@@ -316,11 +316,11 @@ func (s *OptionService) GetOptionsTags(c *gin.Context) {
 // @Summary Retrieve global version list by filters
 // @Tags Modules,Options
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=optionsVersions} "global version list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting global version list not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting global version list"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=optionsVersions} "global version list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting global version list not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting global version list"
 // @Router /options/versions [get]
 func (s *OptionService) GetOptionsVersions(c *gin.Context) {
 	var resp optionsVersions

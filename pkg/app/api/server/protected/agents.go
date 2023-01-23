@@ -252,11 +252,11 @@ func NewAgentService(
 // @Summary Retrieve agents list by filters
 // @Tags Agents
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=agents} "agents list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agents not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting agents"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=agents} "agents list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agents not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting agents"
 // @Router /agents/ [get]
 func (s *AgentService) GetAgents(c *gin.Context) {
 	var (
@@ -512,10 +512,10 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body AgentsAction true "action on agents as JSON data"
-// @Success 200 {object} utils.successResp{data=agentsActionResult} "agents updated successful"
-// @Failure 400 {object} utils.errorResp "invalid agents action"
-// @Failure 403 {object} utils.errorResp "updating agents not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on updating agents"
+// @Success 200 {object} response.successResp{data=agentsActionResult} "agents updated successful"
+// @Failure 400 {object} response.errorResp "invalid agents action"
+// @Failure 403 {object} response.errorResp "updating agents not permitted"
+// @Failure 500 {object} response.errorResp "internal error on updating agents"
 // @Router /agents/ [put]
 func (s *AgentService) PatchAgents(c *gin.Context) {
 	var (
@@ -675,10 +675,10 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 // @Tags Agents
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=agent} "agent info received successful"
-// @Failure 403 {object} utils.errorResp "getting agent info not permitted"
-// @Failure 404 {object} utils.errorResp "agent not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent"
+// @Success 200 {object} response.successResp{data=agent} "agent info received successful"
+// @Failure 403 {object} response.errorResp "getting agent info not permitted"
+// @Failure 404 {object} response.errorResp "agent not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent"
 // @Router /agents/{hash} [get]
 func (s *AgentService) GetAgent(c *gin.Context) {
 	var (
@@ -792,11 +792,11 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body patchAgentAction true "agent info as JSON data"
-// @Success 200 {object} utils.successResp{data=models.Agent} "agent info updated successful"
-// @Failure 400 {object} utils.errorResp "invalid agent info"
-// @Failure 403 {object} utils.errorResp "updating agent info not permitted"
-// @Failure 404 {object} utils.errorResp "agent not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating agent"
+// @Success 200 {object} response.successResp{data=models.Agent} "agent info updated successful"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "updating agent info not permitted"
+// @Failure 404 {object} response.errorResp "agent not found"
+// @Failure 500 {object} response.errorResp "internal error on updating agent"
 // @Router /agents/{hash} [put]
 func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", "", useraction.UnknownObjectDisplayName)
@@ -885,10 +885,10 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body agentInfo true "agent info to create one"
-// @Success 201 {object} utils.successResp{data=models.Agent} "agent created successful"
-// @Failure 400 {object} utils.errorResp "invalid agent info"
-// @Failure 403 {object} utils.errorResp "creating agent not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating agent"
+// @Success 201 {object} response.successResp{data=models.Agent} "agent created successful"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "creating agent not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating agent"
 // @Router /agents/ [post]
 func (s *AgentService) CreateAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "creation", "", useraction.UnknownObjectDisplayName)
@@ -960,10 +960,10 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 // @Tags Agents
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "agent deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting agent not permitted"
-// @Failure 404 {object} utils.errorResp "agent not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting agent"
+// @Success 200 {object} response.successResp "agent deleted successful"
+// @Failure 403 {object} response.errorResp "deleting agent not permitted"
+// @Failure 404 {object} response.errorResp "agent not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting agent"
 // @Router /agents/{hash} [delete]
 func (s *AgentService) DeleteAgent(c *gin.Context) {
 	var (
@@ -1015,8 +1015,8 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 // @Summary Retrieve groups of counted agents
 // @Tags Agents
 // @Produce json
-// @Success 200 {object} utils.successResp{data=agentCount} "groups of counted agents retrieved successfully"
-// @Failure 500 {object} utils.errorResp "internal error"
+// @Success 200 {object} response.successResp{data=agentCount} "groups of counted agents retrieved successfully"
+// @Failure 500 {object} response.errorResp "internal error"
 // @Router /agents/count [get]
 func (s *AgentService) GetAgentsCount(c *gin.Context) {
 	uaf := useraction.Fields{

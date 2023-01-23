@@ -30,10 +30,10 @@ type info struct {
 // @Tags Public
 // @Produce json
 // @Param refresh_cookie query boolean false "boolean arg to refresh current cookie, use explicit false"
-// @Success 200 {object} utils.successResp{data=info} "info received successful"
-// @Failure 403 {object} utils.errorResp "getting info not permitted"
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting information about system and config"
+// @Success 200 {object} response.successResp{data=info} "info received successful"
+// @Failure 403 {object} response.errorResp "getting info not permitted"
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on getting information about system and config"
 // @Router /info [get]
 func (s *AuthService) Info(c *gin.Context) {
 	var (

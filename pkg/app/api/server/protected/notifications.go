@@ -24,8 +24,8 @@ type PermissionsFilter func(*gin.Context, srvevents.EventChannelName) bool
 // @Tags Notifications
 // @Produce json
 // @Param list query string true "list of events type to get from notification service (support of multiple choices)" default(all) Enums(all, create-agent, update-agent, delete-agent, create-group, update-group, delete-group, create-policy, update-policy, delete-policy, create-module, update-module, delete-module, create-group-to-policy, delete-group-to-policy)
-// @Success 200 {object} utils.successResp{} "fake response because here will be upgrade to websocket"
-// @Failure 500 {object} utils.errorResp "internal error on upgraging to websocket"
+// @Success 200 {object} response.successResp{} "fake response because here will be upgrade to websocket"
+// @Failure 500 {object} response.errorResp "internal error on upgraging to websocket"
 // @Router /notifications/subscribe/ [get]
 func SubscribeHandler(exchanger *srvevents.Exchanger, permsFilter PermissionsFilter) func(c *gin.Context) {
 	return func(c *gin.Context) {

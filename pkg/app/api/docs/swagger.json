@@ -110,7 +110,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.agents"
+                                            "$ref": "#/definitions/protected.agents"
                                         }
                                     }
                                 }
@@ -155,7 +155,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.AgentsAction"
+                            "$ref": "#/definitions/protected.AgentsAction"
                         }
                     }
                 ],
@@ -171,7 +171,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.agentsActionResult"
+                                            "$ref": "#/definitions/protected.agentsActionResult"
                                         }
                                     }
                                 }
@@ -216,7 +216,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.agentInfo"
+                            "$ref": "#/definitions/protected.agentInfo"
                         }
                     }
                 ],
@@ -281,7 +281,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.agentCount"
+                                            "$ref": "#/definitions/protected.agentCount"
                                         }
                                     }
                                 }
@@ -329,7 +329,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.agent"
+                                            "$ref": "#/definitions/protected.agent"
                                         }
                                     }
                                 }
@@ -383,7 +383,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.patchAgentAction"
+                            "$ref": "#/definitions/protected.patchAgentAction"
                         }
                     }
                 ],
@@ -582,7 +582,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.agentModules"
+                                            "$ref": "#/definitions/protected.agentModules"
                                         }
                                     }
                                 }
@@ -973,7 +973,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.binaries"
+                                            "$ref": "#/definitions/protected.binaries"
                                         }
                                     }
                                 }
@@ -1173,7 +1173,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.events"
+                                            "$ref": "#/definitions/protected.events"
                                         }
                                     }
                                 }
@@ -1350,7 +1350,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.groups"
+                                            "$ref": "#/definitions/protected.groups"
                                         }
                                     }
                                 }
@@ -1401,7 +1401,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.groupInfo"
+                            "$ref": "#/definitions/protected.groupInfo"
                         }
                     }
                 ],
@@ -1477,7 +1477,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.group"
+                                            "$ref": "#/definitions/protected.group"
                                         }
                                     }
                                 }
@@ -1730,7 +1730,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.groupModules"
+                                            "$ref": "#/definitions/protected.groupModules"
                                         }
                                     }
                                 }
@@ -1914,7 +1914,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.groupPolicyPatch"
+                            "$ref": "#/definitions/protected.groupPolicyPatch"
                         }
                     }
                 ],
@@ -2181,7 +2181,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.systemModules"
+                                            "$ref": "#/definitions/protected.systemModules"
                                         }
                                     }
                                 }
@@ -2416,7 +2416,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.systemShortModules"
+                                            "$ref": "#/definitions/protected.systemShortModules"
                                         }
                                     }
                                 }
@@ -2542,7 +2542,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.moduleVersionPatch"
+                            "$ref": "#/definitions/protected.moduleVersionPatch"
                         }
                     }
                 ],
@@ -2821,7 +2821,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.systemModuleFile"
+                                            "$ref": "#/definitions/protected.systemModuleFile"
                                         }
                                     }
                                 }
@@ -2881,7 +2881,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.systemModuleFilePatch"
+                            "$ref": "#/definitions/protected.systemModuleFilePatch"
                         }
                     }
                 ],
@@ -3044,7 +3044,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.policyModulesUpdates"
+                                            "$ref": "#/definitions/protected.policyModulesUpdates"
                                         }
                                     }
                                 }
@@ -3273,7 +3273,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.optionsActions"
+                                            "$ref": "#/definitions/protected.optionsActions"
                                         }
                                     }
                                 }
@@ -3395,7 +3395,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.optionsEvents"
+                                            "$ref": "#/definitions/protected.optionsEvents"
                                         }
                                     }
                                 }
@@ -3517,7 +3517,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.optionsFields"
+                                            "$ref": "#/definitions/protected.optionsFields"
                                         }
                                     }
                                 }
@@ -3639,7 +3639,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.optionsTags"
+                                            "$ref": "#/definitions/protected.optionsTags"
                                         }
                                     }
                                 }
@@ -3761,7 +3761,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.optionsVersions"
+                                            "$ref": "#/definitions/protected.optionsVersions"
                                         }
                                     }
                                 }
@@ -3882,7 +3882,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.policies"
+                                            "$ref": "#/definitions/protected.policies"
                                         }
                                     }
                                 }
@@ -3933,7 +3933,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.policyInfo"
+                            "$ref": "#/definitions/protected.policyInfo"
                         }
                     }
                 ],
@@ -3998,7 +3998,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.policyCount"
+                                            "$ref": "#/definitions/protected.policyCount"
                                         }
                                     }
                                 }
@@ -4046,7 +4046,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.policy"
+                                            "$ref": "#/definitions/protected.policy"
                                         }
                                     }
                                 }
@@ -4225,7 +4225,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.policyGroupPatch"
+                            "$ref": "#/definitions/protected.policyGroupPatch"
                         }
                     }
                 ],
@@ -4366,7 +4366,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.policyModules"
+                                            "$ref": "#/definitions/protected.policyModules"
                                         }
                                     }
                                 }
@@ -4502,7 +4502,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.policyModulePatch"
+                            "$ref": "#/definitions/protected.policyModulePatch"
                         }
                     }
                 ],
@@ -4874,7 +4874,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.roles"
+                                            "$ref": "#/definitions/protected.roles"
                                         }
                                     }
                                 }
@@ -4995,7 +4995,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.services"
+                                            "$ref": "#/definitions/protected.services"
                                         }
                                     }
                                 }
@@ -5356,7 +5356,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.tags"
+                                            "$ref": "#/definitions/protected.tags"
                                         }
                                     }
                                 }
@@ -5552,7 +5552,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.tenants"
+                                            "$ref": "#/definitions/protected.tenants"
                                         }
                                     }
                                 }
@@ -5904,7 +5904,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.upgradesAgents"
+                                            "$ref": "#/definitions/protected.upgradesAgents"
                                         }
                                     }
                                 }
@@ -5950,7 +5950,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/private.upgradesAgentsAction"
+                            "$ref": "#/definitions/protected.upgradesAgentsAction"
                         }
                     }
                 ],
@@ -5966,7 +5966,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.upgradesAgentsActionResult"
+                                            "$ref": "#/definitions/protected.upgradesAgentsActionResult"
                                         }
                                     }
                                 }
@@ -6033,7 +6033,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.upgradeAgent"
+                                            "$ref": "#/definitions/protected.upgradeAgent"
                                         }
                                     }
                                 }
@@ -6343,7 +6343,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.users"
+                                            "$ref": "#/definitions/protected.users"
                                         }
                                     }
                                 }
@@ -6704,7 +6704,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.versions"
+                                            "$ref": "#/definitions/protected.versions"
                                         }
                                     }
                                 }
@@ -8643,7 +8643,7 @@
                 }
             }
         },
-        "private.AgentsAction": {
+        "protected.AgentsAction": {
             "type": "object",
             "required": [
                 "action"
@@ -8662,7 +8662,7 @@
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/utils.TableFilter"
+                        "$ref": "#/definitions/storage.TableFilter"
                     }
                 },
                 "to": {
@@ -8671,18 +8671,18 @@
                 }
             }
         },
-        "private.agent": {
+        "protected.agent": {
             "type": "object",
             "properties": {
                 "agent": {
                     "$ref": "#/definitions/models.Agent"
                 },
                 "details": {
-                    "$ref": "#/definitions/private.agentDetails"
+                    "$ref": "#/definitions/protected.agentDetails"
                 }
             }
         },
-        "private.agentCount": {
+        "protected.agentCount": {
             "type": "object",
             "properties": {
                 "all": {
@@ -8702,7 +8702,7 @@
                 }
             }
         },
-        "private.agentDetails": {
+        "protected.agentDetails": {
             "type": "object",
             "properties": {
                 "active_modules": {
@@ -8743,7 +8743,7 @@
                 }
             }
         },
-        "private.agentInfo": {
+        "protected.agentInfo": {
             "type": "object",
             "required": [
                 "arch",
@@ -8774,7 +8774,7 @@
                 }
             }
         },
-        "private.agentModuleDetails": {
+        "protected.agentModuleDetails": {
             "type": "object",
             "properties": {
                 "name": {
@@ -8788,13 +8788,13 @@
                 }
             }
         },
-        "private.agentModules": {
+        "protected.agentModules": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/private.agentModuleDetails"
+                        "$ref": "#/definitions/protected.agentModuleDetails"
                     }
                 },
                 "modules": {
@@ -8808,7 +8808,7 @@
                 }
             }
         },
-        "private.agents": {
+        "protected.agents": {
             "type": "object",
             "properties": {
                 "agents": {
@@ -8820,7 +8820,7 @@
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/private.agentDetails"
+                        "$ref": "#/definitions/protected.agentDetails"
                     }
                 },
                 "total": {
@@ -8828,7 +8828,7 @@
                 }
             }
         },
-        "private.agentsActionResult": {
+        "protected.agentsActionResult": {
             "type": "object",
             "properties": {
                 "total": {
@@ -8836,7 +8836,7 @@
                 }
             }
         },
-        "private.binaries": {
+        "protected.binaries": {
             "type": "object",
             "properties": {
                 "binaries": {
@@ -8850,7 +8850,7 @@
                 }
             }
         },
-        "private.events": {
+        "protected.events": {
             "type": "object",
             "properties": {
                 "agents": {
@@ -8888,18 +8888,18 @@
                 }
             }
         },
-        "private.group": {
+        "protected.group": {
             "type": "object",
             "properties": {
                 "details": {
-                    "$ref": "#/definitions/private.groupDetails"
+                    "$ref": "#/definitions/protected.groupDetails"
                 },
                 "group": {
                     "$ref": "#/definitions/models.Group"
                 }
             }
         },
-        "private.groupDetails": {
+        "protected.groupDetails": {
             "type": "object",
             "properties": {
                 "active_modules": {
@@ -8937,7 +8937,7 @@
                 }
             }
         },
-        "private.groupInfo": {
+        "protected.groupInfo": {
             "type": "object",
             "properties": {
                 "from": {
@@ -8956,7 +8956,7 @@
                 }
             }
         },
-        "private.groupModuleDetails": {
+        "protected.groupModuleDetails": {
             "type": "object",
             "properties": {
                 "name": {
@@ -8970,13 +8970,13 @@
                 }
             }
         },
-        "private.groupModules": {
+        "protected.groupModules": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/private.groupModuleDetails"
+                        "$ref": "#/definitions/protected.groupModuleDetails"
                     }
                 },
                 "modules": {
@@ -8990,7 +8990,7 @@
                 }
             }
         },
-        "private.groupPolicyPatch": {
+        "protected.groupPolicyPatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9011,13 +9011,13 @@
                 }
             }
         },
-        "private.groups": {
+        "protected.groups": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/private.groupDetails"
+                        "$ref": "#/definitions/protected.groupDetails"
                     }
                 },
                 "groups": {
@@ -9031,7 +9031,7 @@
                 }
             }
         },
-        "private.moduleVersionPatch": {
+        "protected.moduleVersionPatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9052,7 +9052,7 @@
                 }
             }
         },
-        "private.optionsActions": {
+        "protected.optionsActions": {
             "type": "object",
             "properties": {
                 "actions": {
@@ -9066,7 +9066,7 @@
                 }
             }
         },
-        "private.optionsEvents": {
+        "protected.optionsEvents": {
             "type": "object",
             "properties": {
                 "events": {
@@ -9080,7 +9080,7 @@
                 }
             }
         },
-        "private.optionsFields": {
+        "protected.optionsFields": {
             "type": "object",
             "properties": {
                 "fields": {
@@ -9094,7 +9094,7 @@
                 }
             }
         },
-        "private.optionsTags": {
+        "protected.optionsTags": {
             "type": "object",
             "properties": {
                 "tags": {
@@ -9108,7 +9108,7 @@
                 }
             }
         },
-        "private.optionsVersions": {
+        "protected.optionsVersions": {
             "type": "object",
             "properties": {
                 "total": {
@@ -9122,7 +9122,7 @@
                 }
             }
         },
-        "private.patchAgentAction": {
+        "protected.patchAgentAction": {
             "type": "object",
             "required": [
                 "action",
@@ -9145,13 +9145,13 @@
                 }
             }
         },
-        "private.policies": {
+        "protected.policies": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/private.policyDetails"
+                        "$ref": "#/definitions/protected.policyDetails"
                     }
                 },
                 "policies": {
@@ -9165,18 +9165,18 @@
                 }
             }
         },
-        "private.policy": {
+        "protected.policy": {
             "type": "object",
             "properties": {
                 "details": {
-                    "$ref": "#/definitions/private.policyDetails"
+                    "$ref": "#/definitions/protected.policyDetails"
                 },
                 "policy": {
                     "$ref": "#/definitions/models.Policy"
                 }
             }
         },
-        "private.policyCount": {
+        "protected.policyCount": {
             "type": "object",
             "properties": {
                 "all": {
@@ -9187,7 +9187,7 @@
                 }
             }
         },
-        "private.policyDetails": {
+        "protected.policyDetails": {
             "type": "object",
             "properties": {
                 "active_modules": {
@@ -9228,7 +9228,7 @@
                 }
             }
         },
-        "private.policyGroupPatch": {
+        "protected.policyGroupPatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9249,7 +9249,7 @@
                 }
             }
         },
-        "private.policyInfo": {
+        "protected.policyInfo": {
             "type": "object",
             "properties": {
                 "from": {
@@ -9268,7 +9268,7 @@
                 }
             }
         },
-        "private.policyModuleDetails": {
+        "protected.policyModuleDetails": {
             "type": "object",
             "properties": {
                 "active": {
@@ -9288,7 +9288,7 @@
                 }
             }
         },
-        "private.policyModulePatch": {
+        "protected.policyModulePatch": {
             "type": "object",
             "required": [
                 "action"
@@ -9313,13 +9313,13 @@
                 }
             }
         },
-        "private.policyModules": {
+        "protected.policyModules": {
             "type": "object",
             "properties": {
                 "details": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/private.policyModuleDetails"
+                        "$ref": "#/definitions/protected.policyModuleDetails"
                     }
                 },
                 "modules": {
@@ -9333,7 +9333,7 @@
                 }
             }
         },
-        "private.policyModulesUpdates": {
+        "protected.policyModulesUpdates": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -9350,7 +9350,7 @@
                 }
             }
         },
-        "private.roles": {
+        "protected.roles": {
             "type": "object",
             "properties": {
                 "roles": {
@@ -9364,7 +9364,7 @@
                 }
             }
         },
-        "private.services": {
+        "protected.services": {
             "type": "object",
             "properties": {
                 "services": {
@@ -9378,7 +9378,7 @@
                 }
             }
         },
-        "private.systemModuleFile": {
+        "protected.systemModuleFile": {
             "type": "object",
             "required": [
                 "data",
@@ -9394,7 +9394,7 @@
                 }
             }
         },
-        "private.systemModuleFilePatch": {
+        "protected.systemModuleFilePatch": {
             "type": "object",
             "required": [
                 "action",
@@ -9422,7 +9422,7 @@
                 }
             }
         },
-        "private.systemModules": {
+        "protected.systemModules": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -9436,7 +9436,7 @@
                 }
             }
         },
-        "private.systemShortModules": {
+        "protected.systemShortModules": {
             "type": "object",
             "properties": {
                 "modules": {
@@ -9450,7 +9450,7 @@
                 }
             }
         },
-        "private.tags": {
+        "protected.tags": {
             "type": "object",
             "properties": {
                 "tags": {
@@ -9464,7 +9464,7 @@
                 }
             }
         },
-        "private.tenants": {
+        "protected.tenants": {
             "type": "object",
             "properties": {
                 "tenants": {
@@ -9478,18 +9478,18 @@
                 }
             }
         },
-        "private.upgradeAgent": {
+        "protected.upgradeAgent": {
             "type": "object",
             "properties": {
                 "details": {
-                    "$ref": "#/definitions/private.upgradeAgentDetails"
+                    "$ref": "#/definitions/protected.upgradeAgentDetails"
                 },
                 "task": {
                     "$ref": "#/definitions/models.AgentUpgradeTask"
                 }
             }
         },
-        "private.upgradeAgentDetails": {
+        "protected.upgradeAgentDetails": {
             "type": "object",
             "properties": {
                 "agent": {
@@ -9500,7 +9500,7 @@
                 }
             }
         },
-        "private.upgradesAgents": {
+        "protected.upgradesAgents": {
             "type": "object",
             "properties": {
                 "tasks": {
@@ -9514,7 +9514,7 @@
                 }
             }
         },
-        "private.upgradesAgentsAction": {
+        "protected.upgradesAgentsAction": {
             "type": "object",
             "required": [
                 "version"
@@ -9523,7 +9523,7 @@
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/utils.TableFilter"
+                        "$ref": "#/definitions/storage.TableFilter"
                     }
                 },
                 "version": {
@@ -9531,7 +9531,7 @@
                 }
             }
         },
-        "private.upgradesAgentsActionResult": {
+        "protected.upgradesAgentsActionResult": {
             "type": "object",
             "properties": {
                 "batch": {
@@ -9542,7 +9542,7 @@
                 }
             }
         },
-        "private.users": {
+        "protected.users": {
             "type": "object",
             "properties": {
                 "total": {
@@ -9556,7 +9556,7 @@
                 }
             }
         },
-        "private.versions": {
+        "protected.versions": {
             "type": "object",
             "properties": {
                 "total": {
@@ -9605,7 +9605,7 @@
                 }
             }
         },
-        "utils.TableFilter": {
+        "storage.TableFilter": {
             "type": "object",
             "required": [
                 "field",

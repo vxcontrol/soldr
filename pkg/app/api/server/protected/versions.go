@@ -68,11 +68,11 @@ func NewVersionService(db *gorm.DB, serverConnector *client.AgentServerClient) *
 // @Summary Retrieve versions list by filters
 // @Tags Versions
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=versions} "versions list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting versions not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting versions"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=versions} "versions list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting versions not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting versions"
 // @Router /versions/ [get]
 func (s *VersionService) GetVersions(c *gin.Context) {
 	var (

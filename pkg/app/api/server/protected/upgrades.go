@@ -81,11 +81,11 @@ func NewUpgradeService(
 // @Summary Retrieve agents upgrades list
 // @Tags Upgrades,Agents
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=upgradesAgents} "agents upgrades list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agents upgrades not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting agents upgrades"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=upgradesAgents} "agents upgrades list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agents upgrades not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting agents upgrades"
 // @Router /upgrades/agents [get]
 func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 	var (
@@ -137,11 +137,11 @@ func (s *UpgradeService) GetAgentsUpgrades(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body upgradesAgentsAction true "action on agents as JSON data"
-// @Success 201 {object} utils.successResp{data=upgradesAgentsActionResult} "agents upgrade requested succesful"
-// @Failure 400 {object} utils.errorResp "invalid agents upgrade request"
-// @Failure 403 {object} utils.errorResp "upgrading agents not permitted"
-// @Failure 404 {object} utils.errorResp "agent binary file not found"
-// @Failure 500 {object} utils.errorResp "internal error on requesting agents to upgrade"
+// @Success 201 {object} response.successResp{data=upgradesAgentsActionResult} "agents upgrade requested succesful"
+// @Failure 400 {object} response.errorResp "invalid agents upgrade request"
+// @Failure 403 {object} response.errorResp "upgrading agents not permitted"
+// @Failure 404 {object} response.errorResp "agent binary file not found"
+// @Failure 500 {object} response.errorResp "internal error on requesting agents to upgrade"
 // @Router /upgrades/agents [post]
 func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 	var (
@@ -273,11 +273,11 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 // @Tags Upgrades,Agents
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=upgradeAgent} "last agent upgrade information received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting last agent upgrade information not permitted"
-// @Failure 404 {object} utils.errorResp "agent or group or task not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting last agent upgrade information"
+// @Success 200 {object} response.successResp{data=upgradeAgent} "last agent upgrade information received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting last agent upgrade information not permitted"
+// @Failure 404 {object} response.errorResp "agent or group or task not found"
+// @Failure 500 {object} response.errorResp "internal error on getting last agent upgrade information"
 // @Router /upgrades/agents/{hash}/last [get]
 func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 	var (
@@ -349,11 +349,11 @@ func (s *UpgradeService) GetLastAgentUpgrade(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body models.AgentUpgradeTask true "agent info as JSON data"
-// @Success 200 {object} utils.successResp{data=models.AgentUpgradeTask} "last agent upgrade information updated successful"
-// @Failure 400 {object} utils.errorResp "invalid last agent upgrade information"
-// @Failure 403 {object} utils.errorResp "updating last agent upgrade information not permitted"
-// @Failure 404 {object} utils.errorResp "agent or group or task not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating last agent upgrade information"
+// @Success 200 {object} response.successResp{data=models.AgentUpgradeTask} "last agent upgrade information updated successful"
+// @Failure 400 {object} response.errorResp "invalid last agent upgrade information"
+// @Failure 403 {object} response.errorResp "updating last agent upgrade information not permitted"
+// @Failure 404 {object} response.errorResp "agent or group or task not found"
+// @Failure 500 {object} response.errorResp "internal error on updating last agent upgrade information"
 // @Router /upgrades/agents/{hash}/last [put]
 func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	var (

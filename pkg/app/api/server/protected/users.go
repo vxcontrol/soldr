@@ -48,10 +48,10 @@ func NewUserService(db *gorm.DB) *UserService {
 // @Summary Retrieve current user information
 // @Tags Users
 // @Produce json
-// @Success 200 {object} utils.successResp{data=models.UserRoleTenant} "user info received successful"
-// @Failure 403 {object} utils.errorResp "getting current user not permitted"
-// @Failure 404 {object} utils.errorResp "current user not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting current user"
+// @Success 200 {object} response.successResp{data=models.UserRoleTenant} "user info received successful"
+// @Failure 403 {object} response.errorResp "getting current user not permitted"
+// @Failure 404 {object} response.errorResp "current user not found"
+// @Failure 500 {object} response.errorResp "internal error on getting current user"
 // @Router /user/ [get]
 func (s *UserService) GetCurrentUser(c *gin.Context) {
 	var (
@@ -87,11 +87,11 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.Password true "container to validate and update account password"
-// @Success 200 {object} utils.successResp "account password updated successful"
-// @Failure 400 {object} utils.errorResp "invalid account password form data"
-// @Failure 403 {object} utils.errorResp "updating account password not permitted"
-// @Failure 404 {object} utils.errorResp "current user not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating account password"
+// @Success 200 {object} response.successResp "account password updated successful"
+// @Failure 400 {object} response.errorResp "invalid account password form data"
+// @Failure 403 {object} response.errorResp "updating account password not permitted"
+// @Failure 404 {object} response.errorResp "current user not found"
+// @Failure 500 {object} response.errorResp "internal error on updating account password"
 // @Router /user/password [put]
 func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	var (
@@ -156,11 +156,11 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 // @Summary Retrieve users list by filters
 // @Tags Users
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=users} "users list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting users not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting users"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=users} "users list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting users not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting users"
 // @Router /users/ [get]
 func (s *UserService) GetUsers(c *gin.Context) {
 	var (
@@ -262,10 +262,10 @@ func (s *UserService) GetUsers(c *gin.Context) {
 // @Tags Users
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.UserRoleTenant} "user received successful"
-// @Failure 403 {object} utils.errorResp "getting user not permitted
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting user"
+// @Success 200 {object} response.successResp{data=models.UserRoleTenant} "user received successful"
+// @Failure 403 {object} response.errorResp "getting user not permitted
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on getting user"
 // @Router /users/{hash} [get]
 func (s *UserService) GetUser(c *gin.Context) {
 	var (
@@ -324,10 +324,10 @@ func (s *UserService) GetUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.UserPassword true "user model to create from"
-// @Success 201 {object} utils.successResp{data=models.UserRoleTenant} "user created successful"
-// @Failure 400 {object} utils.errorResp "invalid user request data"
-// @Failure 403 {object} utils.errorResp "creating user not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating user"
+// @Success 201 {object} response.successResp{data=models.UserRoleTenant} "user created successful"
+// @Failure 400 {object} response.errorResp "invalid user request data"
+// @Failure 403 {object} response.errorResp "creating user not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating user"
 // @Router /users/ [post]
 func (s *UserService) CreateUser(c *gin.Context) {
 	var (
@@ -405,11 +405,11 @@ func (s *UserService) CreateUser(c *gin.Context) {
 // @Produce json
 // @Param json body models.UserPassword true "user model to update"
 // @Param hash path string true "user hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.UserRoleTenant} "user updated successful"
-// @Failure 400 {object} utils.errorResp "invalid user request data"
-// @Failure 403 {object} utils.errorResp "updating user not permitted"
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating user"
+// @Success 200 {object} response.successResp{data=models.UserRoleTenant} "user updated successful"
+// @Failure 400 {object} response.errorResp "invalid user request data"
+// @Failure 403 {object} response.errorResp "updating user not permitted"
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on updating user"
 // @Router /users/{hash} [put]
 func (s *UserService) PatchUser(c *gin.Context) {
 	var (
@@ -513,10 +513,10 @@ func (s *UserService) PatchUser(c *gin.Context) {
 // @Tags Users
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "user deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting user not permitted"
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting user"
+// @Success 200 {object} response.successResp "user deleted successful"
+// @Failure 403 {object} response.errorResp "deleting user not permitted"
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting user"
 // @Router /users/{hash} [delete]
 func (s *UserService) DeleteUser(c *gin.Context) {
 	var (

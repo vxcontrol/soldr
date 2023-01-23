@@ -45,11 +45,11 @@ func NewAuthService(cfg AuthServiceConfig, db *gorm.DB) *AuthService {
 // @Accept json
 // @Produce json
 // @Param json body models.Login true "Login form JSON data"
-// @Success 200 {object} utils.successResp "login successful"
-// @Failure 400 {object} utils.errorResp "invalid login data"
-// @Failure 401 {object} utils.errorResp "invalid login or password"
-// @Failure 403 {object} utils.errorResp "login not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on login"
+// @Success 200 {object} response.successResp "login successful"
+// @Failure 400 {object} response.errorResp "invalid login data"
+// @Failure 401 {object} response.errorResp "invalid login or password"
+// @Failure 403 {object} response.errorResp "login not permitted"
+// @Failure 500 {object} response.errorResp "internal error on login"
 // @Router /auth/login [post]
 func (s *AuthService) AuthLogin(c *gin.Context) {
 	var data models.Login
@@ -201,10 +201,10 @@ func (s *AuthService) AuthLogout(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param service formData string true "New service hash to change current one and return new cookie"
-// @Success 200 {object} utils.successResp{data=models.Service} "switch successful"
-// @Failure 400 {object} utils.errorResp "invalid service data"
-// @Failure 403 {object} utils.errorResp "switch service not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on switch service"
+// @Success 200 {object} response.successResp{data=models.Service} "switch successful"
+// @Failure 400 {object} response.errorResp "invalid service data"
+// @Failure 403 {object} response.errorResp "switch service not permitted"
+// @Failure 500 {object} response.errorResp "internal error on switch service"
 // @Router /auth/switch-service [post]
 func (s *AuthService) AuthSwitchService(c *gin.Context) {
 	serviceHash := c.PostForm("service")

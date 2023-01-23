@@ -41,11 +41,11 @@ func NewTenantService(db *gorm.DB) *TenantService {
 // @Summary Retrieve tenants list
 // @Tags Tenants
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=tenants} "tenants list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting tenants not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting tenants"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=tenants} "tenants list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting tenants not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting tenants"
 // @Router /tenants/ [get]
 func (s *TenantService) GetTenants(c *gin.Context) {
 	var (
@@ -103,10 +103,10 @@ func (s *TenantService) GetTenants(c *gin.Context) {
 // @Tags Tenants
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.Tenant} "tenant received successful"
-// @Failure 403 {object} utils.errorResp "getting tenant not permitted
-// @Failure 404 {object} utils.errorResp "tenant not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting tenant"
+// @Success 200 {object} response.successResp{data=models.Tenant} "tenant received successful"
+// @Failure 403 {object} response.errorResp "getting tenant not permitted
+// @Failure 404 {object} response.errorResp "tenant not found"
+// @Failure 500 {object} response.errorResp "internal error on getting tenant"
 // @Router /tenants/{hash} [get]
 func (s *TenantService) GetTenant(c *gin.Context) {
 	var (
@@ -154,10 +154,10 @@ func (s *TenantService) GetTenant(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.Tenant true "tenant model to create from"
-// @Success 201 {object} utils.successResp{data=models.Tenant} "tenant created successful"
-// @Failure 400 {object} utils.errorResp "invalid tenant request data"
-// @Failure 403 {object} utils.errorResp "creating tenant not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating tenant"
+// @Success 201 {object} response.successResp{data=models.Tenant} "tenant created successful"
+// @Failure 400 {object} response.errorResp "invalid tenant request data"
+// @Failure 403 {object} response.errorResp "creating tenant not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating tenant"
 // @Router /tenants/ [post]
 func (s *TenantService) CreateTenant(c *gin.Context) {
 	var (
@@ -189,11 +189,11 @@ func (s *TenantService) CreateTenant(c *gin.Context) {
 // @Produce json
 // @Param json body models.Tenant true "tenant model to update"
 // @Param hash path string true "tenant hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.Tenant} "tenant updated successful"
-// @Failure 400 {object} utils.errorResp "invalid tenant request data"
-// @Failure 403 {object} utils.errorResp "updating tenant not permitted"
-// @Failure 404 {object} utils.errorResp "tenant not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating tenant"
+// @Success 200 {object} response.successResp{data=models.Tenant} "tenant updated successful"
+// @Failure 400 {object} response.errorResp "invalid tenant request data"
+// @Failure 403 {object} response.errorResp "updating tenant not permitted"
+// @Failure 404 {object} response.errorResp "tenant not found"
+// @Failure 500 {object} response.errorResp "internal error on updating tenant"
 // @Router /tenant/{hash} [put]
 func (s *TenantService) PatchTenant(c *gin.Context) {
 	var (
@@ -252,10 +252,10 @@ func (s *TenantService) PatchTenant(c *gin.Context) {
 // @Tags Tenants
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "tenant deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting tenant not permitted"
-// @Failure 404 {object} utils.errorResp "tenant not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting tenant"
+// @Success 200 {object} response.successResp "tenant deleted successful"
+// @Failure 403 {object} response.errorResp "deleting tenant not permitted"
+// @Failure 404 {object} response.errorResp "tenant not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting tenant"
 // @Router /tenants/{hash} [delete]
 func (s *TenantService) DeleteTenant(c *gin.Context) {
 	var (
