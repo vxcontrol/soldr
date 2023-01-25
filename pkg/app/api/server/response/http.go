@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"soldr/pkg/app/api/logger"
 	obs "soldr/pkg/observability"
 	"soldr/pkg/version"
 )
@@ -50,10 +51,14 @@ func Error(c *gin.Context, err *HttpError, original error) {
 		body["trace_id"] = traceID.String()
 	}
 
+	logger.FromContext(c).
+		Errorf("api error with status code: '%d'; message: '%s'; error: '%s'",
+			err.HttpCode(), err.Msg(), original)
 	c.AbortWithStatusJSON(err.HttpCode(), body)
 }
 
 func Success(c *gin.Context, code int, data interface{}) {
+	logger.FromContext(c).Infof("api success with status code: '%d'", code)
 	c.JSON(code, gin.H{"status": "success", "data": data})
 }
 

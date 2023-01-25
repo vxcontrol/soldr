@@ -993,6 +993,18 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	return nil
 }
 
+func validateFileOnSave(path string, data []byte) error {
+	fileName := filepath.Base(path)
+	fileDir := filepath.Base(filepath.Dir(path))
+	if utils.StringInSlice(fileDir, []string{"cmodule", "smodule"}) && fileName == "args.json" {
+		args := make(map[string][]string)
+		if err := json.Unmarshal(data, &args); err != nil {
+			return fmt.Errorf("failed to parse the module '%s' args: %w", path, err)
+		}
+	}
+	return nil
+}
+
 // helper method to return fully copy of object json schema and following modification
 func copySchema(sht *models.Type, defs models.Definitions) models.Schema {
 	rsh := models.Schema{}
@@ -1237,16 +1249,6 @@ func MergeModuleAConfigFromModuleS(moduleA *models.ModuleA, moduleS *models.Modu
 	)
 
 	return moduleR, nil
-}
-
-// cleanupSecureConfig removes serverOnly parameters from the agent module config
-func cleanupSecureConfig(module *models.ModuleA) {
-	for k, v := range module.SecureDefaultConfig {
-		if serverOnly := v.ServerOnly; serverOnly != nil && *serverOnly {
-			module.SecureDefaultConfig[k] = models.ModuleSecureParameter{}
-			module.SecureCurrentConfig[k] = models.ModuleSecureParameter{}
-		}
-	}
 }
 
 func LatestModulesQuery(db *gorm.DB) *gorm.DB {
@@ -4071,6 +4073,12 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	case "save":
 		if data, err = base64.StdEncoding.DecodeString(form.Data); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error decoding file data")
+			response.Error(c, response.ErrPatchModuleVersionFileParseModuleFileFail, err)
+			return
+		}
+
+		if err = validateFileOnSave(form.Path, data); err != nil {
+			logger.FromContext(c).WithError(err).Errorf("error validating file data before write to S3")
 			response.Error(c, response.ErrPatchModuleVersionFileParseModuleFileFail, err)
 			return
 		}

@@ -286,7 +286,7 @@ func WithLogger(service string) gin.HandlerFunc {
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
 		}
 
-		entry := logrus.WithContext(ctx).WithFields(logrus.Fields{
+		entry := logrus.WithFields(logrus.Fields{
 			"component":      "api",
 			"net_peer_ip":    c.ClientIP(),
 			"http_uri":       uri,
@@ -323,7 +323,8 @@ func WithLogger(service string) gin.HandlerFunc {
 		entry = entry.WithFields(logrus.Fields{
 			"duration":         time.Since(start),
 			"http_status_code": c.Writer.Status(),
-		})
+			"http_resp_size":   c.Writer.Size(),
+		}).WithContext(ctx)
 		if spanStatus == codes.Error {
 			entry.Error("http request handled error")
 		} else {

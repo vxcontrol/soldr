@@ -111,7 +111,7 @@ func defaultConfig() Config {
 			PollInterval: 30 * time.Second,
 		},
 		ServerEventWorker: ServerEventWorkerConfig{
-			KeepDays: 7,
+			KeepDays: 14,
 		},
 	}
 }

@@ -112,10 +112,11 @@ func (cl *configLoaderDB) load() ([]*loader.ModuleConfig, error) {
 		const moduleInfoField = "info"
 		if info, ok := m[moduleInfoField]; ok {
 			if err = json.Unmarshal([]byte(info), &mc); err != nil {
-				return nil, fmt.Errorf("failed to parse the module config: %w", err)
+				return nil, fmt.Errorf("failed to parse the module '%s' config: %w", mc.Name, err)
 			}
 		} else {
-			return nil, fmt.Errorf("failed to load the module config: returned rows do not contain the field '%s'", moduleInfoField)
+			return nil, fmt.Errorf("failed to load the module '%s' config: returned rows don't contain the field '%s'",
+				mc.Name, moduleInfoField)
 		}
 		if groupID, ok := m["group_id"]; ok {
 			mc.GroupID = groupID
@@ -209,7 +210,7 @@ func parsePathToFile(mpath string) (string, string, error) {
 		}
 	}
 	if len(pparts) < 3 {
-		return "", "", fmt.Errorf("invalid path format: expected 3 parts, actually got %d", len(pparts))
+		return "", "", fmt.Errorf("invalid path format '%s': expected 3 parts, actually got %d", mpath, len(pparts))
 	}
 	mname := pparts[len(pparts)-3]
 	bpath := joinPath(pparts[:len(pparts)-3]...)
@@ -362,7 +363,7 @@ func loadFiles(s filestorage.Storage, path string, mcl []*loader.ModuleConfig) (
 			args := make(map[string][]string)
 			if data, ok := files["args.json"]; ok {
 				if err = json.Unmarshal(data, &args); err != nil {
-					return nil, fmt.Errorf("failed to parse the module args: %w", err)
+					return nil, fmt.Errorf("failed to parse the module '%s' args: %w", mpath, err)
 				}
 			}
 			mi.SetArgs(args)
