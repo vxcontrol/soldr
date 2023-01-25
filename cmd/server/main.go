@@ -81,20 +81,6 @@ func (s *Server) Init(env svc.Environment) (err error) {
 		if err != nil {
 			return fmt.Errorf("failed to compose a DSN from config: %w", err)
 		}
-		gdb, err := db.New(dsn)
-		if err != nil {
-			return fmt.Errorf("failed to initialize a connection to DB: %w", err)
-		}
-		migrationDir := "db/server/migrations"
-		if dir, ok := os.LookupEnv("MIGRATION_DIR"); ok {
-			migrationDir = dir
-		}
-		err = gdb.MigrateUp(migrationDir)
-		if err != nil {
-			return fmt.Errorf("failed to migrate current DB: %w", err)
-		}
-		logger.Info("DB migration was completed")
-
 		gormDB, err = initGorm(dsn, s.config.LogDir)
 		if err != nil {
 			return fmt.Errorf("gorm connection initialization failed: %w", err)
@@ -178,6 +164,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 		&s.config.Validator,
 		s.tracerClient,
 		s.metricsClient,
+		s.config.MaxConcSyncingAgents,
 		logrus.StandardLogger().WithField("module", "main"),
 	); err != nil {
 		logger.WithError(err).Error("failed to initialize main module")
@@ -576,26 +563,46 @@ func main() {
 }
 
 func run(logger *logrus.Entry) error {
+	version := "develop"
+	if PackageVer != "" {
+		version = PackageVer
+	}
+	if PackageRev != "" {
+		version += "-" + PackageRev
+	}
+
 	cfg, err := config.ReadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get the configuration: %w", err)
 	}
-	server := Server{
-		config: cfg,
-	}
-	if PackageVer != "" {
-		server.version = PackageVer
-	} else {
-		server.version = "develop"
-	}
-	if PackageRev != "" {
-		server.version += "-" + PackageRev
-	}
+
 	if cfg.IsPrintVersionOnly {
-		logger.Infof("%s version is %s", serviceName, server.version)
-		return nil
+		fmt.Printf("version is %s\n", version)
+		os.Exit(0)
 	}
 
+	if cfg.Loader.Config == loaderTypeDB {
+		dsn, err := dsnFromConfig(&cfg.DB)
+		if err != nil {
+			return fmt.Errorf("failed to compose a DSN from config: %w", err)
+		}
+		gdb, err := db.New(dsn)
+		if err != nil {
+			return fmt.Errorf("failed to initialize a connection to DB: %w", err)
+		}
+		err = gdb.MigrateUp(cfg.DB.MigrationsPath)
+		if err != nil {
+			return fmt.Errorf("failed to migrate current DB: %w", err)
+		}
+		if cfg.IsMigrateOnly {
+			os.Exit(0)
+		}
+	}
+
+	server := Server{
+		config:  cfg,
+		version: version,
+	}
 	server.config.LogDir, err = getLogDir(server.config.LogDir)
 	if err != nil {
 		return err
