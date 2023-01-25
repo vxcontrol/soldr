@@ -1302,6 +1302,7 @@ type ModuleService struct {
 	serverConnector  *client.AgentServerClient
 	userActionWriter useraction.Writer
 	templatesDir     string
+	modulesStorage   *mem.ModuleStorage
 }
 
 func NewModuleService(
@@ -1309,12 +1310,14 @@ func NewModuleService(
 	serverConnector *client.AgentServerClient,
 	userActionWriter useraction.Writer,
 	templatesDir string,
+	modulesStorage *mem.ModuleStorage,
 ) *ModuleService {
 	return &ModuleService{
 		db:               db,
 		serverConnector:  serverConnector,
 		userActionWriter: userActionWriter,
 		templatesDir:     templatesDir,
+		modulesStorage:   modulesStorage,
 	}
 }
 
@@ -2503,6 +2506,13 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
+	if err = s.modulesStorage.Refresh(iDB); err != nil {
+		utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
+		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
+		return
+	}
+
 	response.Success(c, http.StatusOK, struct{}{})
 }
 
@@ -2624,6 +2634,13 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 		response.Error(c, response.ErrInternal, err)
+		return
+	}
+
+	if err = s.modulesStorage.Refresh(iDB); err != nil {
+		utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
+		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 		return
 	}
 
@@ -3131,19 +3148,16 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = modules[len(modules)-1].Locale.Module["en"].Title
 
-	deletePolicyModule := func(s *models.Service) error {
+	deletePolicyModule := func(svc *models.Service) error {
 		var (
 			err     error
 			modules []models.ModuleA
 		)
 
-		iDB := storage.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
-			strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
-		if iDB == nil {
-			logger.FromContext(c).Errorf("error openning connection to instance DB")
-			return errors.New("failed to connect to instance DB")
+		iDB, err := s.serverConnector.GetDB(c, svc.Hash)
+		if err != nil {
+			return err
 		}
-		defer iDB.Close()
 
 		if err = iDB.Find(&modules, "name = ?", moduleName).Error; err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error finding modules by name")
@@ -3166,7 +3180,17 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 			return err
 		}
 
-		return updateDependenciesWhenModuleRemove(c, iDB, moduleName)
+		if err = updateDependenciesWhenModuleRemove(c, iDB, moduleName); err != nil {
+			utils.FromContext(c).WithError(err).Errorf("error updating module dependencies")
+			return err
+		}
+
+		if err = s.modulesStorage.Refresh(iDB); err != nil {
+			utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+			return err
+		}
+
+		return nil
 	}
 
 	if err = s.db.Find(&services, "tenant_id = ? AND type = ?", tid, sv.Type).Error; err != nil {
@@ -3465,9 +3489,24 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 			return
 		}
 
-		for _, s := range services {
-			if err = updatePolicyModulesByModuleS(c, &module, &s); err != nil {
+		for _, svc := range services {
+			if err = updatePolicyModulesByModuleS(c, &module, &svc); err != nil {
 				response.Error(c, response.ErrInternal, err)
+				return
+			}
+
+			iDB, err := s.serverConnector.GetDB(c, svc.Hash)
+			if err != nil {
+				utils.FromContext(c).WithError(err).Errorf("error openning service DB connection")
+				uaf.FailReason = response.ErrInternal.Msg()
+				response.Error(c, response.ErrInternal, err)
+				return
+			}
+
+			if err = s.modulesStorage.Refresh(iDB); err != nil {
+				utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+				uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
+				response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 				return
 			}
 		}
@@ -3818,21 +3857,21 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	var (
 		moduleName = c.Param("module_name")
 		module     models.ModuleS
-		sv         *models.Service
+		svc        *models.Service
 		version    = c.Param("version")
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "version update in policies", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if svc = getService(c); svc == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
 	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
-		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
+		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, svc.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
@@ -3850,11 +3889,27 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
-	if err := updatePolicyModulesByModuleS(c, &module, sv); err != nil {
+	if err := updatePolicyModulesByModuleS(c, &module, svc); err != nil {
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
+	iDB, err := s.serverConnector.GetDB(c, svc.Hash)
+	if err != nil {
+		utils.FromContext(c).WithError(err).Errorf("error openning service DB connection")
+		uaf.FailReason = response.ErrInternal.Msg()
+		response.Error(c, response.ErrInternal, err)
+		return
+	}
+
+	if err = s.modulesStorage.Refresh(iDB); err != nil {
+		utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
+		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
+		return
+	}
+
+	uaf.Success = true
 	response.Success(c, http.StatusCreated, struct{}{})
 }
 

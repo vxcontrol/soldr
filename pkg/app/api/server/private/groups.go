@@ -186,15 +186,18 @@ func getGroupName(db *gorm.DB, hash string) (string, error) {
 type GroupService struct {
 	serverConnector  *client.AgentServerClient
 	userActionWriter useraction.Writer
+	modulesStorage   *storage.ModuleStorage
 }
 
 func NewGroupService(
 	serverConnector *client.AgentServerClient,
 	userActionWriter useraction.Writer,
+	modulesStorage *storage.ModuleStorage,
 ) *GroupService {
 	return &GroupService{
 		serverConnector:  serverConnector,
 		userActionWriter: userActionWriter,
+		modulesStorage:   modulesStorage,
 	}
 }
 
@@ -213,7 +216,6 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 	var (
 		gids          []uint64
 		gpss          []models.GroupToPolicy
-		modulesa      []models.ModuleAShort
 		policiesa     []models.Policy
 		query         storage.TableQuery
 		resp          groups
@@ -322,33 +324,6 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		return
 	}
 
-	modsToPolicies := make(map[uint64][]models.ModuleAShort)
-	err = iDB.Model(&models.ModuleAShort{}).
-		Group("modules.id").
-		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
-		Find(&modulesa, "gtp.group_id IN (?) AND status = 'joined'", gids).Error
-	if err != nil {
-		logger.FromContext(c).WithError(err).Errorf("error finding policy modules")
-		response.Error(c, response.ErrGetGroupsModulesNotFound, err)
-		return
-	} else {
-		for i := 0; i < len(modulesa); i++ {
-			id := modulesa[i].ID
-			name := modulesa[i].Info.Name
-			policy_id := modulesa[i].PolicyID
-			if err = modulesa[i].Valid(); err != nil {
-				logger.FromContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
-				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
-				return
-			}
-			if mods, ok := modsToPolicies[policy_id]; ok {
-				modsToPolicies[policy_id] = append(mods, modulesa[i])
-			} else {
-				modsToPolicies[policy_id] = []models.ModuleAShort{modulesa[i]}
-			}
-		}
-	}
-
 	if err = iDB.Find(&gpss, "group_id IN (?)", gids).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
 		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
@@ -387,6 +362,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		}
 	}
 
+	modsToPolicies := s.modulesStorage.GetModulesAShort(gids)
 	for _, group := range resp.Groups {
 		var details *groupDetails
 		for idx := range resp.Details {
@@ -463,26 +439,7 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		response.Error(c, response.ErrGetGroupDetailsNotFound, err)
 		return
 	}
-
-	err = iDB.Model(&models.ModuleAShort{}).
-		Group("modules.id").
-		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
-		Find(&resp.Details.Modules, "gtp.group_id = ? AND status = 'joined'", resp.Group.ID).Error
-	if err != nil {
-		logger.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Group.ID)
-		response.Error(c, response.ErrGetGroupModulesNotFound, err)
-		return
-	} else {
-		for i := 0; i < len(resp.Details.Modules); i++ {
-			if err = resp.Details.Modules[i].Valid(); err != nil {
-				id := resp.Details.Modules[i].ID
-				name := resp.Details.Modules[i].Info.Name
-				logger.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
-				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
-				return
-			}
-		}
-	}
+	resp.Details.Modules = s.modulesStorage.GetModulesAShortByGroup(resp.Group.ID)
 	resp.Details.Consistency, resp.Details.Dependencies = getGroupConsistency(resp.Details.Modules)
 
 	gps := models.GroupPolicies{

@@ -710,6 +710,10 @@ errors:
       code: "Modules.FailedToCompareChanges"
       http_code: 500
       description: "failed to compare requested module data"
+    -
+      code: "Modules.FailedRefreshModulesCache"
+      http_code: 500
+      description: "failed to refresh modules cache"
 
   notifications:
     -

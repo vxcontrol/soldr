@@ -44,7 +44,9 @@ type ServicesService struct {
 	db *gorm.DB
 }
 
-func NewServicesService(db *gorm.DB) *ServicesService {
+func NewServicesService(
+	db *gorm.DB,
+) *ServicesService {
 	return &ServicesService{
 		db: db,
 	}

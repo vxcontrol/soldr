@@ -59,6 +59,7 @@ func NewRouter(
 	userActionWriter useraction.Writer,
 	dbConns *storage.DBConnectionStorage,
 	s3Conns *storage.S3ConnectionStorage,
+	modulesStorage *storage.ModuleStorage,
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	if cfg.Debug {
@@ -137,7 +138,7 @@ func NewRouter(
 		APIBaseURL:     cfg.BaseURL,
 		SecureCookie:   cfg.UseSSL,
 	}, db)
-	protoService := proto.NewProtoService(db, serverConnector, userActionWriter, cfg.CertsPath)
+	protoService := proto.NewProtoService(db, serverConnector, userActionWriter)
 	agentService := private.NewAgentService(db, serverConnector, userActionWriter)
 	binariesService := private.NewBinariesService(db, userActionWriter)
 	eventService := private.NewEventService(serverConnector)
