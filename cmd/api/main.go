@@ -196,6 +196,7 @@ func main() {
 	// storages
 	dbConnectionStorage := storage.NewDBConnectionStorage()
 	s3ConnectionStorage := storage.NewS3ConnectionStorage()
+	modulesStorage := storage.NewModulesStorage()
 
 	tracerClient := observability.NewProxyTracerClient(
 		observability.NewOtlpTracerAndLoggerClient(cfg.Tracing.Addr),
@@ -302,6 +303,7 @@ func main() {
 		userActionLogger,
 		dbConnectionStorage,
 		s3ConnectionStorage,
+		modulesStorage,
 	)
 
 	group, ctx := errgroup.WithContext(ctx)
