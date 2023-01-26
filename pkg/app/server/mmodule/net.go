@@ -107,6 +107,11 @@ func (mm *MainModule) requestAgentAboutModules(
 	mIDs []string,
 	msgType protoagent.Message_Type,
 ) (*protoagent.ModuleStatusList, error) {
+	mm.syncModulesSemaphore <- struct{}{}
+	defer func() {
+		<-mm.syncModulesSemaphore
+	}()
+
 	payload, err := mm.getModuleListData(ctx, dst, ainfo, mIDs, msgType)
 	if err != nil {
 		return nil, err

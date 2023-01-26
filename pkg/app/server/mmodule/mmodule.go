@@ -87,6 +87,7 @@ type MainModule struct {
 	authenticator             *Authenticator
 	connValidatorFactory      *hardening.ConnectionValidatorFactory
 	moduleConfigDecryptor     *crypto.ConfigDecryptor
+	syncModulesSemaphore      chan struct{}
 
 	cancelContext context.CancelFunc
 }
@@ -1815,6 +1816,7 @@ func New(
 	connectionValidatorConf *hardeningConfig.Validator,
 	tracerClient otlptrace.Client,
 	metricsClient otlpmetric.Client,
+	maxConcSyncingAgents int,
 	logger *logrus.Entry,
 ) (mm *MainModule, err error) {
 	mm = &MainModule{
@@ -1831,14 +1833,15 @@ func New(
 			list:  make(map[string]*groupInfo),
 			mutex: &sync.Mutex{},
 		},
-		mutexAgent:     &sync.Mutex{},
-		eventsQueue:    make(chan *models.Event, 100),
-		quitSyncAgents: make(chan struct{}),
-		quitSyncGroups: make(chan struct{}),
-		certsProvider:  certsProvider,
-		authenticator:  newAuthenticator(),
-		tracerClient:   tracerClient,
-		meterClient:    metricsClient,
+		mutexAgent:           &sync.Mutex{},
+		eventsQueue:          make(chan *models.Event, 100),
+		quitSyncAgents:       make(chan struct{}),
+		quitSyncGroups:       make(chan struct{}),
+		certsProvider:        certsProvider,
+		authenticator:        newAuthenticator(),
+		tracerClient:         tracerClient,
+		meterClient:          metricsClient,
+		syncModulesSemaphore: make(chan struct{}, maxConcSyncingAgents),
 	}
 	var ctx context.Context
 	ctx, mm.cancelContext = context.WithCancel(context.Background())

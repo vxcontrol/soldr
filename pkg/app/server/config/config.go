@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/imdario/mergo"
@@ -20,19 +21,21 @@ import (
 
 // config implements struct of vxserver configuration file
 type Config struct {
-	Loader            Loader                          `json:"loader"`
-	DB                DB                              `json:"db"`
-	S3                S3                              `json:"s3"`
-	Certs             CertsConfig                     `json:"certs"`
-	Validator         hardeningConfig.Validator       `json:"validator"`
-	APIVersionsConfig vxproto.ServerAPIVersionsConfig `json:"-"`
-	Base              string                          `json:"base"`
-	LogDir            string                          `json:"log_dir"`
-	Listen            string                          `json:"listen"`
-	OtelAddr          string                          `json:"otel_addr"`
+	Loader               Loader                          `json:"loader"`
+	DB                   DB                              `json:"db"`
+	S3                   S3                              `json:"s3"`
+	Certs                CertsConfig                     `json:"certs"`
+	Validator            hardeningConfig.Validator       `json:"validator"`
+	APIVersionsConfig    vxproto.ServerAPIVersionsConfig `json:"-"`
+	Base                 string                          `json:"base"`
+	LogDir               string                          `json:"log_dir"`
+	Listen               string                          `json:"listen"`
+	OtelAddr             string                          `json:"otel_addr"`
+	MaxConcSyncingAgents int                             `json:"max_conc_syncing_agents"`
 
 	// The following fields should not be present in the config file
 	IsPrintVersionOnly bool   `json:"version"`
+	IsMigrateOnly      bool   `json:"migrate"`
 	IsProfiling        bool   `json:"profiling"`
 	ConfigFile         string `json:"config_file"`
 	Command            string `json:"command"`
@@ -46,11 +49,12 @@ type Loader struct {
 }
 
 type DB struct {
-	Host string `json:"host"`
-	Port string `json:"port"`
-	Name string `json:"name"`
-	User string `json:"user"`
-	Pass string `json:"pass"`
+	Host           string `json:"host"`
+	Port           string `json:"port"`
+	Name           string `json:"name"`
+	User           string `json:"user"`
+	Pass           string `json:"pass"`
+	MigrationsPath string `json:"migrations_path"`
 }
 
 type S3 struct {
@@ -78,8 +82,11 @@ func ReadConfig() (*Config, error) {
 			return nil, fmt.Errorf("failed to merge default and file configs: %w", err)
 		}
 	}
-	envVarsConfig := parseEnvVars()
-	var err error
+
+	envVarsConfig, err := parseEnvVars()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse EnvVars config: %w", err)
+	}
 	result, err = mergeConfigs(result, envVarsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge file and EnvVars config: %w", err)
@@ -92,7 +99,17 @@ func ReadConfig() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the API versions config: %w", err)
 	}
+	if err = result.Validate(); err != nil {
+		return nil, fmt.Errorf("failed config validation: %w", err)
+	}
 	return result, nil
+}
+
+func (c *Config) Validate() error {
+	if c.MaxConcSyncingAgents < 1 {
+		return fmt.Errorf("incorrect value of maximum agents to synchronise concurrently")
+	}
+	return nil
 }
 
 func (c *Config) PrettyPrint() (string, error) {
@@ -123,12 +140,10 @@ var defaultConfig = &Config{
 		Type: "fs",
 		Base: "./security/vconf",
 	},
-	ConfigFile:         "",
-	Command:            "",
-	LogDir:             "",
-	Debug:              false,
-	Service:            false,
-	IsPrintVersionOnly: false,
+	DB: DB{
+		MigrationsPath: "migrations",
+	},
+	MaxConcSyncingAgents: 100,
 }
 
 func parseConfigFile(path string) (*Config, error) {
@@ -162,15 +177,17 @@ func parseFlags() *Config {
   status - status of the service`)
 	flag.StringVar(&c.LogDir, "logdir", "", "System option to define log directory to vxserver")
 	flag.StringVar(&c.OtelAddr, "oteladdr", "", "System option to define log opentelemetry address")
+	flag.IntVar(&c.MaxConcSyncingAgents, "mcsa", defaultConfig.MaxConcSyncingAgents, "Maximum agents to synchronise concurrently")
 	flag.BoolVar(&c.Debug, "debug", false, "System option to run vxserver in debug mode")
 	flag.BoolVar(&c.IsProfiling, "profiling", false, "System option to run vxserver in profiling mode")
 	flag.BoolVar(&c.Service, "service", false, "System option to run vxserver as a service")
 	flag.BoolVar(&c.IsPrintVersionOnly, "version", false, "Print current version of vxserver and exit")
+	flag.BoolVar(&c.IsMigrateOnly, "migrate", false, "Migrate and exit")
 	flag.Parse()
 	return c
 }
 
-func parseEnvVars() *Config {
+func parseEnvVars() (*Config, error) {
 	c := &Config{}
 	c.Listen = os.Getenv("LISTEN")
 	c.Base = os.Getenv("BASE_PATH")
@@ -186,16 +203,29 @@ func parseEnvVars() *Config {
 	c.IsProfiling = false
 	// bool parameters can only be passed as flags
 	c.Debug = false
+
 	c.DB.Host = os.Getenv("DB_HOST")
 	c.DB.Port = os.Getenv("DB_PORT")
 	c.DB.User = os.Getenv("DB_USER")
 	c.DB.Pass = os.Getenv("DB_PASS")
 	c.DB.Name = os.Getenv("DB_NAME")
+	c.DB.MigrationsPath = os.Getenv("DB_MIGRATIONS_PATH")
+
 	c.S3.AccessKey = os.Getenv("MINIO_ACCESS_KEY")
 	c.S3.SecretKey = os.Getenv("MINIO_SECRET_KEY")
 	c.S3.BucketName = os.Getenv("MINIO_BUCKET_NAME")
 	c.S3.Endpoint = os.Getenv("MINIO_ENDPOINT")
-	return c
+
+	mcsaRaw := os.Getenv("MAX_CONC_SYNC_AGENTS")
+	if mcsaRaw != "" {
+		mcsa, err := strconv.Atoi(mcsaRaw)
+		if err != nil {
+			return nil, err
+		}
+		c.MaxConcSyncingAgents = mcsa
+	}
+
+	return c, nil
 }
 
 const vxserverAPIVersionEnvVarName = "VXSERVER_API_VERSION_POLICY_"
