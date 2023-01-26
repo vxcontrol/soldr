@@ -421,13 +421,18 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	} else {
-		modsToPolicies := s.modulesStorage.GetModulesAShort(gids)
+		modsToPolicies, err := s.modulesStorage.GetPoliciesModulesAShortByGroups(iDB, gids)
+		if err != nil {
+			logger.FromContext(c).WithError(err).Errorf("error finding group modules")
+			response.Error(c, response.ErrGetGroupModulesInvalidGroupData, err)
+			return
+		}
 		for i := 0; i < len(policiesa); i++ {
 			id := policiesa[i].ID
 			name := policiesa[i].Info.Name
 			if err = policiesa[i].Valid(); err != nil {
 				logger.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
-				response.Error(c, response.ErrGetAgentsInvalidAgentModuleData, err)
+				response.Error(c, response.ErrGetGroupModuleInvalidGroupPoliciesData, err)
 				return
 			}
 			for idx := range gpss {
@@ -723,7 +728,12 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			return
 		}
 		resp.Details.Group = &group
-		resp.Details.Modules = s.modulesStorage.GetModulesAShortByGroup(resp.Agent.GroupID)
+		resp.Details.Modules, err = s.modulesStorage.GetModulesAShortByGroup(iDB, resp.Agent.GroupID)
+		if err != nil {
+			logger.FromContext(c).WithError(err).Errorf("error finding modules by group '%s'", group.Hash)
+			response.Error(c, response.ErrGetAgentModulesInvalidAgentData, err)
+			return
+		}
 		resp.Details.Consistency, resp.Details.Dependencies = getAgentConsistency(resp.Details.Modules, &resp.Agent)
 
 		gps := models.GroupPolicies{

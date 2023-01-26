@@ -362,7 +362,12 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		}
 	}
 
-	modsToPolicies := s.modulesStorage.GetModulesAShort(gids)
+	modsToPolicies, err := s.modulesStorage.GetPoliciesModulesAShortByGroups(iDB, gids)
+	if err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error finding group modules")
+		response.Error(c, response.ErrGetGroupModulesInvalidGroupData, err)
+		return
+	}
 	for _, group := range resp.Groups {
 		var details *groupDetails
 		for idx := range resp.Details {
@@ -439,7 +444,12 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		response.Error(c, response.ErrGetGroupDetailsNotFound, err)
 		return
 	}
-	resp.Details.Modules = s.modulesStorage.GetModulesAShortByGroup(resp.Group.ID)
+	resp.Details.Modules, err = s.modulesStorage.GetModulesAShortByGroup(iDB, resp.Group.ID)
+	if err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error finding group modules")
+		response.Error(c, response.ErrGetGroupModulesInvalidGroupData, err)
+		return
+	}
 	resp.Details.Consistency, resp.Details.Dependencies = getGroupConsistency(resp.Details.Modules)
 
 	gps := models.GroupPolicies{

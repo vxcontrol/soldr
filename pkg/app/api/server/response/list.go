@@ -204,7 +204,6 @@ var ErrModulesFailedToEncryptSecureConfig = NewHttpError(500, "Modules.FailedToE
 var ErrModulesFailedToDecryptSecureConfig = NewHttpError(500, "Modules.FailedToDecryptSecureConfig", "failed to decrypt secure config")
 var ErrModulesDataNotEncryptedOnDBInsert = NewHttpError(500, "Modules.DataNotEncryptedOnDBInsert", "module data not encrypted on inserting to DB")
 var ErrModulesFailedToCompareChanges = NewHttpError(500, "Modules.FailedToCompareChanges", "failed to compare requested module data")
-var ErrModulesFailedRefreshModulesCache = NewHttpError(500, "Modules.FailedRefreshModulesCache", "failed to refresh modules cache")
 
 // notifications
 

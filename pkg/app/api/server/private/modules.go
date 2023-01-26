@@ -2506,13 +2506,6 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	if err = s.modulesStorage.Refresh(iDB); err != nil {
-		logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
-		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
-		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
-		return
-	}
-
 	response.Success(c, http.StatusOK, struct{}{})
 }
 
@@ -2634,13 +2627,6 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 		response.Error(c, response.ErrInternal, err)
-		return
-	}
-
-	if err = s.modulesStorage.Refresh(iDB); err != nil {
-		logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
-		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
-		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 		return
 	}
 
@@ -3185,11 +3171,6 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 			return err
 		}
 
-		if err = s.modulesStorage.Refresh(iDB); err != nil {
-			logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
-			return err
-		}
-
 		return nil
 	}
 
@@ -3492,21 +3473,6 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		for _, svc := range services {
 			if err = updatePolicyModulesByModuleS(c, &module, &svc); err != nil {
 				response.Error(c, response.ErrInternal, err)
-				return
-			}
-
-			iDB, err := s.serverConnector.GetDB(c, svc.Hash)
-			if err != nil {
-				logger.FromContext(c).WithError(err).Errorf("error openning service DB connection")
-				uaf.FailReason = response.ErrInternal.Msg()
-				response.Error(c, response.ErrInternal, err)
-				return
-			}
-
-			if err = s.modulesStorage.Refresh(iDB); err != nil {
-				logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
-				uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
-				response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 				return
 			}
 		}
@@ -3891,21 +3857,6 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 
 	if err := updatePolicyModulesByModuleS(c, &module, svc); err != nil {
 		response.Error(c, response.ErrInternal, err)
-		return
-	}
-
-	iDB, err := s.serverConnector.GetDB(c, svc.Hash)
-	if err != nil {
-		logger.FromContext(c).WithError(err).Errorf("error openning service DB connection")
-		uaf.FailReason = response.ErrInternal.Msg()
-		response.Error(c, response.ErrInternal, err)
-		return
-	}
-
-	if err = s.modulesStorage.Refresh(iDB); err != nil {
-		logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
-		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
-		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 		return
 	}
 

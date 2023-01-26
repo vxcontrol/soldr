@@ -2,7 +2,6 @@ package storage
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/jinzhu/gorm"
 
@@ -10,68 +9,61 @@ import (
 )
 
 type ModuleStorage struct {
-	mu    sync.RWMutex
-	store map[uint64][]models.ModuleAShort
 }
 
 func NewModulesStorage() *ModuleStorage {
-	return &ModuleStorage{
-		store: make(map[uint64][]models.ModuleAShort),
-	}
+	return &ModuleStorage{}
 }
 
-func (s *ModuleStorage) GetModulesAShortByGroup(groupID uint64) []models.ModuleAShort {
-	return s.GetModulesAShort([]uint64{groupID})[groupID]
+func (s *ModuleStorage) GetModulesAShortByGroup(serviceDB *gorm.DB, groupID uint64) ([]models.ModuleAShort, error) {
+	return s.GetModulesAShortByGroups(serviceDB, []uint64{groupID})
 }
 
-func (s *ModuleStorage) GetModulesAShort(groupIDs []uint64) map[uint64][]models.ModuleAShort {
-	if groupIDs == nil || len(groupIDs) == 0 {
-		return map[uint64][]models.ModuleAShort{}
+func (s *ModuleStorage) GetModulesAShortByGroups(serviceDB *gorm.DB,
+	groupIDs []uint64) ([]models.ModuleAShort, error) {
+	modules := []models.ModuleAShort{}
+	if len(groupIDs) == 0 {
+		return modules, nil
 	}
-
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	result := make(map[uint64][]models.ModuleAShort)
-	for _, groupID := range groupIDs {
-		modules, found := s.store[groupID]
-		if found {
-			result[groupID] = modules
-		}
-	}
-
-	return result
-}
-
-func (s *ModuleStorage) Refresh(serviceDB *gorm.DB) error {
-	var modules []models.ModuleAShort
-	resultList := make(map[uint64][]models.ModuleAShort)
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	err := serviceDB.Model(&models.ModuleAShort{}).
 		Group("modules.id").
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
-		Find(&modules, "status = 'joined'").Error
+		Find(&modules, "gtp.group_id IN (?) AND status = 'joined'", groupIDs).Error
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("error finding modules: %w", err)
+	} else {
+		for _, module := range modules {
+			id := module.ID
+			name := module.Info.Name
+			if err = module.Valid(); err != nil {
+				return nil, fmt.Errorf("error validating module data '%d' '%s': %w", id, name, err)
+			}
+		}
 	}
 
-	for _, m := range modules {
-		id := m.ID
-		name := m.Info.Name
-		policyID := m.PolicyID
-		if err = m.Valid(); err != nil {
-			return fmt.Errorf("error validating module data '%d' '%s': %w", id, name, err)
-		}
-		if _, ok := resultList[policyID]; !ok {
-			resultList[policyID] = make([]models.ModuleAShort, 0)
-		}
-		resultList[policyID] = append(resultList[policyID], m)
+	return modules, nil
+}
+
+func (s *ModuleStorage) GetPoliciesModulesAShortByGroups(serviceDB *gorm.DB,
+	groupIDs []uint64) (map[uint64][]models.ModuleAShort, error) {
+	modulesToPolicies := make(map[uint64][]models.ModuleAShort)
+	if len(groupIDs) == 0 {
+		return modulesToPolicies, nil
 	}
 
-	s.store = resultList
+	modules, err := s.GetModulesAShortByGroups(serviceDB, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, module := range modules {
+		policyID := module.PolicyID
+		if mods, ok := modulesToPolicies[policyID]; ok {
+			modulesToPolicies[policyID] = append(mods, module)
+		} else {
+			modulesToPolicies[policyID] = []models.ModuleAShort{module}
+		}
+	}
 
-	return nil
+	return modulesToPolicies, nil
 }
