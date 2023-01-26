@@ -1298,25 +1298,25 @@ func getModuleName(c *gin.Context, db *gorm.DB, name string, version string) (st
 }
 
 type ModuleService struct {
+	templatesDir     string
 	db               *gorm.DB
 	serverConnector  *client.AgentServerClient
 	userActionWriter useraction.Writer
-	templatesDir     string
-	modulesStorage   *mem.ModuleStorage
+	modulesStorage   *storage.ModuleStorage
 }
 
 func NewModuleService(
+	templatesDir string,
 	db *gorm.DB,
 	serverConnector *client.AgentServerClient,
 	userActionWriter useraction.Writer,
-	templatesDir string,
-	modulesStorage *mem.ModuleStorage,
+	modulesStorage *storage.ModuleStorage,
 ) *ModuleService {
 	return &ModuleService{
+		templatesDir:     templatesDir,
 		db:               db,
 		serverConnector:  serverConnector,
 		userActionWriter: userActionWriter,
-		templatesDir:     templatesDir,
 		modulesStorage:   modulesStorage,
 	}
 }
@@ -2507,7 +2507,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if err = s.modulesStorage.Refresh(iDB); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+		logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
 		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
 		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 		return
@@ -2638,7 +2638,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 
 	if err = s.modulesStorage.Refresh(iDB); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+		logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
 		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
 		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 		return
@@ -3181,12 +3181,12 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		}
 
 		if err = updateDependenciesWhenModuleRemove(c, iDB, moduleName); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating module dependencies")
+			logger.FromContext(c).WithError(err).Errorf("error updating module dependencies")
 			return err
 		}
 
 		if err = s.modulesStorage.Refresh(iDB); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+			logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
 			return err
 		}
 
@@ -3497,14 +3497,14 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 
 			iDB, err := s.serverConnector.GetDB(c, svc.Hash)
 			if err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error openning service DB connection")
+				logger.FromContext(c).WithError(err).Errorf("error openning service DB connection")
 				uaf.FailReason = response.ErrInternal.Msg()
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
 
 			if err = s.modulesStorage.Refresh(iDB); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+				logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
 				uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
 				response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 				return
@@ -3896,14 +3896,14 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 
 	iDB, err := s.serverConnector.GetDB(c, svc.Hash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning service DB connection")
+		logger.FromContext(c).WithError(err).Errorf("error openning service DB connection")
 		uaf.FailReason = response.ErrInternal.Msg()
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.modulesStorage.Refresh(iDB); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
+		logger.FromContext(c).WithError(err).Errorf("failed to refresh modules cache")
 		uaf.FailReason = response.ErrModulesFailedRefreshModulesCache.Msg()
 		response.Error(c, response.ErrModulesFailedRefreshModulesCache, nil)
 		return

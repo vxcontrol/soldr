@@ -233,14 +233,14 @@ type AgentService struct {
 	db               *gorm.DB
 	serverConnector  *client.AgentServerClient
 	userActionWriter useraction.Writer
-	modulesStorage   *mem.ModuleStorage
+	modulesStorage   *storage.ModuleStorage
 }
 
 func NewAgentService(
 	db *gorm.DB,
 	serverConnector *client.AgentServerClient,
 	userActionWriter useraction.Writer,
-	modulesStorage *mem.ModuleStorage,
+	modulesStorage *storage.ModuleStorage,
 ) *AgentService {
 	return &AgentService{
 		db:               db,

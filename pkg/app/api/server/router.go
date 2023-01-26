@@ -138,12 +138,12 @@ func NewRouter(
 		APIBaseURL:     cfg.BaseURL,
 		SecureCookie:   cfg.UseSSL,
 	}, db)
-	protoService := proto.NewProtoService(db, serverConnector, userActionWriter)
-	agentService := private.NewAgentService(db, serverConnector, userActionWriter)
+	protoService := proto.NewProtoService(db, serverConnector, userActionWriter, cfg.CertsPath)
+	agentService := private.NewAgentService(db, serverConnector, userActionWriter, modulesStorage)
 	binariesService := private.NewBinariesService(db, userActionWriter)
 	eventService := private.NewEventService(serverConnector)
-	groupService := private.NewGroupService(serverConnector, userActionWriter)
-	moduleService := private.NewModuleService(db, serverConnector, userActionWriter, cfg.TemplatesDir)
+	groupService := private.NewGroupService(serverConnector, userActionWriter, modulesStorage)
+	moduleService := private.NewModuleService(cfg.TemplatesDir, db, serverConnector, userActionWriter, modulesStorage)
 	optionService := private.NewOptionService(db)
 	policyService := private.NewPolicyService(db, serverConnector, userActionWriter)
 	portingService := private.NewPortingService(db, userActionWriter)
