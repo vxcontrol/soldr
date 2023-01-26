@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
 	"path"
 	"strings"
 
@@ -15,21 +14,28 @@ import (
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"soldr/pkg/app/api/client"
-	"soldr/pkg/app/api/server/context"
-	srvevents "soldr/pkg/app/api/server/events"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/server/private"
 	"soldr/pkg/app/api/server/proto"
 	"soldr/pkg/app/api/server/public"
-	"soldr/pkg/app/api/storage/mem"
-	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/app/api/useraction"
+	"soldr/pkg/app/api/worker/events"
 )
+
+type RouterConfig struct {
+	Debug        bool
+	UseSSL       bool
+	BaseURL      string
+	StaticPath   string
+	StaticURL    *url.URL
+	TemplatesDir string
+	CertsPath    string
+}
 
 // @title SOLDR Swagger API
 // @version 1.0
@@ -47,14 +53,15 @@ import (
 
 // @BasePath /api/v1
 func NewRouter(
+	cfg RouterConfig,
 	db *gorm.DB,
-	exchanger *srvevents.Exchanger,
+	exchanger *events.Exchanger,
 	userActionWriter useraction.Writer,
-	dbConns *mem.DBConnectionStorage,
-	s3Conns *mem.S3ConnectionStorage,
+	dbConns *storage.DBConnectionStorage,
+	s3Conns *storage.S3ConnectionStorage,
 ) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
-	if _, exists := os.LookupEnv("DEBUG"); exists {
+	if cfg.Debug {
 		gin.SetMode(gin.DebugMode)
 	}
 
@@ -62,42 +69,32 @@ func NewRouter(
 	gob.Register([]string{})
 	gob.Register(map[string]interface{}{})
 
-	cookieStore := cookie.NewStore(utils.MakeCookieStoreKey())
-
-	staticPath := "./static"
-	if uiStaticPath, ok := os.LookupEnv("API_STATIC_PATH"); ok {
-		staticPath = uiStaticPath
-	}
+	cookieStore := cookie.NewStore(storage.MakeCookieStoreKey())
 
 	index := func(c *gin.Context) {
-		data, err := ioutil.ReadFile(path.Join(staticPath, "/index.html"))
+		data, err := ioutil.ReadFile(path.Join(cfg.StaticPath, "/index.html"))
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error loading index.html")
+			logger.FromContext(c).WithError(err).Errorf("error loading index.html")
 			return
 		}
 		c.Data(200, "text/html", data)
 	}
 
 	router := gin.New()
-	router.Use(otelgin.Middleware("vxapi"))
-	router.Use(WithLogger([]string{}))
+	router.Use(WithLogger("vxapi"))
 	router.Use(gin.Recovery())
 	router.Use(sessions.Sessions("auth", cookieStore))
 
-	router.Static("/js", path.Join(staticPath, "js"))
-	router.Static("/css", path.Join(staticPath, "css"))
-	router.Static("/fonts", path.Join(staticPath, "fonts"))
-	router.Static("/images", path.Join(staticPath, "images"))
+	router.Static("/js", path.Join(cfg.StaticPath, "js"))
+	router.Static("/css", path.Join(cfg.StaticPath, "css"))
+	router.Static("/fonts", path.Join(cfg.StaticPath, "fonts"))
+	router.Static("/images", path.Join(cfg.StaticPath, "images"))
 
 	// TODO: should be moved to the web service
-	router.StaticFile("/favicon.ico", path.Join(staticPath, "favicon.ico"))
-	router.StaticFile("/apple-touch-icon.png", path.Join(staticPath, "apple-touch-icon.png"))
+	router.StaticFile("/favicon.ico", path.Join(cfg.StaticPath, "favicon.ico"))
+	router.StaticFile("/apple-touch-icon.png", path.Join(cfg.StaticPath, "apple-touch-icon.png"))
 
-	if uiStaticAddr, ok := os.LookupEnv("API_STATIC_URL"); ok {
-		uiStaticUrl, err := url.Parse(uiStaticAddr)
-		if err != nil {
-			logrus.WithError(err).Error("error on parsing URL to redirect requests to the UI static")
-		}
+	if cfg.StaticURL.Scheme != "" && cfg.StaticURL.Host != "" {
 		router.NoRoute(func() gin.HandlerFunc {
 			return func(c *gin.Context) {
 				if strings.HasPrefix(c.Request.URL.String(), "/app/") {
@@ -106,8 +103,8 @@ func NewRouter(
 				}
 				director := func(req *http.Request) {
 					*req = *c.Request
-					req.URL.Scheme = uiStaticUrl.Scheme
-					req.URL.Host = uiStaticUrl.Host
+					req.URL.Scheme = cfg.StaticURL.Scheme
+					req.URL.Host = cfg.StaticURL.Host
 				}
 				proxy := &httputil.ReverseProxy{
 					Director: director,
@@ -135,12 +132,17 @@ func NewRouter(
 	serverConnector := client.NewAgentServerClient(db, dbConns, s3Conns)
 
 	// services
-	protoService := proto.NewProtoService(db, serverConnector, userActionWriter)
+	authService := public.NewAuthService(public.AuthServiceConfig{
+		SessionTimeout: 3 * 3600, // 3 hours
+		APIBaseURL:     cfg.BaseURL,
+		SecureCookie:   cfg.UseSSL,
+	}, db)
+	protoService := proto.NewProtoService(db, serverConnector, userActionWriter, cfg.CertsPath)
 	agentService := private.NewAgentService(db, serverConnector, userActionWriter)
 	binariesService := private.NewBinariesService(db, userActionWriter)
 	eventService := private.NewEventService(serverConnector)
 	groupService := private.NewGroupService(serverConnector, userActionWriter)
-	moduleService := private.NewModuleService(db, serverConnector, userActionWriter)
+	moduleService := private.NewModuleService(db, serverConnector, userActionWriter, cfg.TemplatesDir)
 	optionService := private.NewOptionService(db)
 	policyService := private.NewPolicyService(db, serverConnector, userActionWriter)
 	portingService := private.NewPortingService(db, userActionWriter)
@@ -153,14 +155,14 @@ func NewRouter(
 	userService := private.NewUserService(db)
 
 	// set api handlers
-	api := router.Group(utils.PrefixPathAPI)
+	api := router.Group(cfg.BaseURL)
 	api.Use(setGlobalDB(db))
 	{
-		setPublicGroup(api)
+		setPublicGroup(api, authService)
 
 		setSwaggerGroup(api)
 
-		setVXProtoGroup(api, db, protoService)
+		setVXProtoGroup(api, db, protoService, cfg.BaseURL)
 	}
 
 	privateGroup := api.Group("/")
@@ -201,20 +203,20 @@ func NewRouter(
 	return router
 }
 
-func setPublicGroup(parent *gin.RouterGroup) {
+func setPublicGroup(parent *gin.RouterGroup, svc *public.AuthService) {
 	publicGroup := parent.Group("/")
 	{
-		publicGroup.GET("/info", public.Info)
+		publicGroup.GET("/info", svc.Info)
 		authGroup := publicGroup.Group("/auth")
 		{
-			authGroup.POST("/login", public.AuthLogin)
-			authGroup.GET("/logout", public.AuthLogout)
+			authGroup.POST("/login", svc.AuthLogin)
+			authGroup.GET("/logout", svc.AuthLogout)
 		}
 
 		authPrivateGroup := publicGroup.Group("/auth")
 		authPrivateGroup.Use(authRequired())
 		{
-			authPrivateGroup.POST("/switch-service", public.AuthSwitchService)
+			authPrivateGroup.POST("/switch-service", svc.AuthSwitchService)
 		}
 	}
 }
@@ -227,23 +229,14 @@ func setSwaggerGroup(parent *gin.RouterGroup) {
 	}
 }
 
-func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService) {
-	vxProtoGroup := parent.Group("/")
-	vxProtoGroup.Use(authTokenProtoRequired())
+func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService, apiBaseURL string) {
+	vxProtoGroup := parent.Group("/vxpws")
+	vxProtoGroup.Use(authTokenProtoRequired(apiBaseURL))
 	vxProtoGroup.Use(setServiceInfo(db))
 	{
-		protoAggregateGroup := vxProtoGroup.Group("/vxpws")
-		{
-			protoAggregateGroup.GET("/aggregate/:group_id/", svc.AggregateWSConnect)
-		}
-		protoBrowserGroup := vxProtoGroup.Group("/vxpws")
-		{
-			protoBrowserGroup.GET("/browser/:agent_id/", svc.BrowserWSConnect)
-		}
-		protoExternalGroup := vxProtoGroup.Group("/vxpws")
-		{
-			protoExternalGroup.GET("/external/:agent_id/", svc.ExternalWSConnect)
-		}
+		vxProtoGroup.GET("/aggregate/:group_id/", svc.AggregateWSConnect)
+		vxProtoGroup.GET("/browser/:agent_id/", svc.BrowserWSConnect)
+		vxProtoGroup.GET("/external/:agent_id/", svc.ExternalWSConnect)
 	}
 }
 
@@ -511,27 +504,27 @@ func setOptionsGroup(parent *gin.RouterGroup, svc *private.OptionService) {
 	}
 }
 
-func setNotificationsGroup(parent *gin.RouterGroup, exchanger *srvevents.Exchanger) {
+func setNotificationsGroup(parent *gin.RouterGroup, exchanger *events.Exchanger) {
 	notificationsGroup := parent.Group("/notifications")
-	premsFilter := func(c *gin.Context, name srvevents.EventChannelName) bool {
-		prms, ok := context.GetStringArray(c, "prm")
-		if !ok {
+	premsFilter := func(c *gin.Context, name events.EventChannelName) bool {
+		prms := c.GetStringSlice("prm")
+		if len(prms) == 0 {
 			return false
 		}
 		var privs []string
 		switch name {
-		case srvevents.CreateAgentsChannel, srvevents.UpdateAgentsChannel, srvevents.DeleteAgentsChannel:
+		case events.CreateAgentsChannel, events.UpdateAgentsChannel, events.DeleteAgentsChannel:
 			privs = append(privs, "vxapi.agents.api.view")
-		case srvevents.CreateGroupsChannel, srvevents.UpdateGroupsChannel, srvevents.DeleteGroupsChannel:
+		case events.CreateGroupsChannel, events.UpdateGroupsChannel, events.DeleteGroupsChannel:
 			privs = append(privs, "vxapi.groups.api.view")
-		case srvevents.CreatePoliciesChannel, srvevents.UpdatePoliciesChannel, srvevents.DeletePoliciesChannel:
+		case events.CreatePoliciesChannel, events.UpdatePoliciesChannel, events.DeletePoliciesChannel:
 			privs = append(privs, "vxapi.policies.api.view")
-		case srvevents.CreateModulesChannel, srvevents.UpdateModulesChannel, srvevents.DeleteModulesChannel:
+		case events.CreateModulesChannel, events.UpdateModulesChannel, events.DeleteModulesChannel:
 			privs = append(privs, "vxapi.policies.api.view")
-		case srvevents.CreateGroupToPolicyChannel, srvevents.DeleteGroupToPolicyChannel:
+		case events.CreateGroupToPolicyChannel, events.DeleteGroupToPolicyChannel:
 			privs = append(privs, "vxapi.groups.api.view")
 			privs = append(privs, "vxapi.policies.api.view")
-		case srvevents.AllEventsChannel:
+		case events.AllEventsChannel:
 			privs = append(privs, "vxapi.agents.api.view")
 			privs = append(privs, "vxapi.groups.api.view")
 			privs = append(privs, "vxapi.policies.api.view")

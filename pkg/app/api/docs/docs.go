@@ -1181,7 +1181,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.events"
+                                            "$ref": "#/definitions/private.eventResponse"
                                         }
                                     }
                                 }
@@ -8670,7 +8670,7 @@ const docTemplate = `{
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/utils.TableFilter"
+                        "$ref": "#/definitions/storage.TableFilter"
                     }
                 },
                 "to": {
@@ -8858,7 +8858,7 @@ const docTemplate = `{
                 }
             }
         },
-        "private.events": {
+        "private.eventResponse": {
             "type": "object",
             "properties": {
                 "agents": {
@@ -9531,7 +9531,7 @@ const docTemplate = `{
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/utils.TableFilter"
+                        "$ref": "#/definitions/storage.TableFilter"
                     }
                 },
                 "version": {
@@ -9613,7 +9613,7 @@ const docTemplate = `{
                 }
             }
         },
-        "utils.TableFilter": {
+        "storage.TableFilter": {
             "type": "object",
             "required": [
                 "field",

@@ -32,11 +32,12 @@ import (
 	"soldr/pkg/app/server/mmodule/hardening/v1/crypto"
 	"soldr/pkg/app/server/mmodule/upgrader/store"
 	"soldr/pkg/controller"
+	"soldr/pkg/filestorage"
+	"soldr/pkg/filestorage/fs"
 	"soldr/pkg/loader"
 	"soldr/pkg/lua"
 	obs "soldr/pkg/observability"
 	"soldr/pkg/protoagent"
-	"soldr/pkg/storage"
 	"soldr/pkg/system"
 	utilsErrors "soldr/pkg/utils/errors"
 	"soldr/pkg/vxproto"
@@ -63,7 +64,7 @@ type MainModule struct {
 	cnt                       controller.IController
 	gdbc                      *gorm.DB
 	validator                 *validator.Validate
-	store                     storage.IStorage
+	store                     filestorage.Storage
 	agents                    *agentList
 	groups                    *groupList
 	listen                    string
@@ -1808,7 +1809,7 @@ func New(
 	cl controller.IConfigLoader,
 	fl controller.IFilesLoader,
 	gdb *gorm.DB,
-	store storage.IStorage,
+	store filestorage.Storage,
 	certsProvider certs.Provider,
 	version string,
 	connectionValidatorConf *hardeningConfig.Validator,
@@ -1867,9 +1868,9 @@ func New(
 		return mm, fmt.Errorf("failed to initialize the update task consumer submodule: %w", err)
 	}
 	var validatorStore interface{}
-	fsStore, err := storage.NewFS()
+	fsStore, err := fs.New()
 	if err != nil {
-		return mm, fmt.Errorf("failed to initialize an FS store: %w", err)
+		return mm, fmt.Errorf("failed to initialize an LocalStorage store: %w", err)
 	}
 	switch connectionValidatorConf.Type {
 	case "fs":

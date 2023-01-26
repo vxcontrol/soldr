@@ -9,7 +9,7 @@ import (
 
 	"soldr/pkg/app/api/server/private"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 )
 
 func getPrms(c *gin.Context) ([]string, error) {
@@ -37,7 +37,7 @@ func privilegesRequiredByQueryTypeField(mprivs map[string][]string) gin.HandlerF
 			return
 		}
 
-		var query utils.TableQuery
+		var query storage.TableQuery
 		if err := c.ShouldBindQuery(&query); err != nil {
 			response.Error(c, response.ErrPrivilegesRequired, fmt.Errorf("error binding query: %w", err))
 			return

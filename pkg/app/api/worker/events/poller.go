@@ -11,7 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 	obs "soldr/pkg/observability"
 )
 
@@ -334,7 +334,7 @@ func loadServices(gDB *gorm.DB, existingServices map[uint64]*service) map[uint64
 		if _, ok := existingServices[sv.ID]; ok {
 			continue
 		}
-		db := utils.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
+		db := storage.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 			strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 		if db != nil {
 			existingServices[sv.ID] = &service{

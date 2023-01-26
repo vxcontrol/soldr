@@ -1,12 +1,12 @@
-package mem
+package storage
 
 import (
 	"errors"
 	"sync"
 
-	"soldr/pkg/storage"
-
 	"github.com/jinzhu/gorm"
+
+	"soldr/pkg/filestorage"
 )
 
 type DBConnectionStorage struct {
@@ -38,17 +38,17 @@ func (s *DBConnectionStorage) Set(hash string, db *gorm.DB) {
 
 type S3ConnectionStorage struct {
 	mu sync.RWMutex // protects map below
-	// TODO: store S3 struct instead of interface
-	store map[string]storage.IStorage
+	// TODO: store RemoteStorage struct instead of interface
+	store map[string]filestorage.Storage
 }
 
 func NewS3ConnectionStorage() *S3ConnectionStorage {
 	return &S3ConnectionStorage{
-		store: make(map[string]storage.IStorage),
+		store: make(map[string]filestorage.Storage),
 	}
 }
 
-func (s *S3ConnectionStorage) Get(hash string) (storage.IStorage, error) {
+func (s *S3ConnectionStorage) Get(hash string) (filestorage.Storage, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	conn, found := s.store[hash]
@@ -58,7 +58,7 @@ func (s *S3ConnectionStorage) Get(hash string) (storage.IStorage, error) {
 	return conn, nil
 }
 
-func (s *S3ConnectionStorage) Set(hash string, s3 storage.IStorage) {
+func (s *S3ConnectionStorage) Set(hash string, s3 filestorage.Storage) {
 	s.mu.Lock()
 	s.store[hash] = s3
 	s.mu.Unlock()

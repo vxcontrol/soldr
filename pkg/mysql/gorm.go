@@ -1,4 +1,4 @@
-package meter
+package mysql
 
 import (
 	"context"
@@ -6,10 +6,33 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
 )
+
+type GormLogger struct{}
+
+func (*GormLogger) Print(v ...interface{}) {
+	switch v[0] {
+	case "sql":
+		logrus.WithFields(
+			logrus.Fields{
+				"component":     "gorm",
+				"type":          "sql",
+				"rows_returned": v[5],
+				"src":           v[1],
+				"values":        v[4],
+				"duration":      v[2],
+			},
+		).Info(v[3])
+	case "log":
+		logrus.WithFields(logrus.Fields{"component": "gorm"}).Info(v[2])
+	case "info":
+		// do not log validators
+	}
+}
 
 var (
 	createHist metric.Float64Histogram
@@ -83,7 +106,7 @@ func recordHistogram(scope *gorm.Scope, hist metric.Float64Histogram, labels ...
 	}
 }
 
-func ApplyGorm(db *gorm.DB) {
+func ApplyGormMetrics(db *gorm.DB) {
 	labels := []attribute.KeyValue{
 		{Key: "database_name", Value: attribute.StringValue(db.Dialect().CurrentDatabase())},
 		{Key: "dialect", Value: attribute.StringValue(db.Dialect().GetName())},

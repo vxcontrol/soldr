@@ -13,8 +13,6 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/app/api/utils/meter"
-	"soldr/pkg/logger"
 	"soldr/pkg/secret"
 )
 
@@ -116,8 +114,8 @@ func (d *DB) WithORM() (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn.SetLogger(&logger.GormLogger{})
+	conn.SetLogger(&GormLogger{})
 	validations.RegisterCallbacks(conn)
-	meter.ApplyGorm(conn)
+	ApplyGormMetrics(conn)
 	return conn, nil
 }

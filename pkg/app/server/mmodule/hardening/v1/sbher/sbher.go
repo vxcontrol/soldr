@@ -10,7 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	cache2 "soldr/pkg/app/server/mmodule/hardening/cache"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage"
 )
 
 type SBH struct {
@@ -74,7 +74,7 @@ type SBHFileData map[string][]byte
 
 func getFileFetcher(basePath string) cache2.FetchDataFromFile {
 	const sbhFileName = "sbh.json"
-	return func(ctx context.Context, connector storage.IFileReader) (interface{}, error) {
+	return func(ctx context.Context, connector filestorage.Reader) (interface{}, error) {
 		sbhFilePath := path.Join(basePath, "lic", sbhFileName)
 		data, err := connector.ReadFile(sbhFilePath)
 		if err != nil {

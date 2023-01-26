@@ -79,8 +79,8 @@ type IObserver interface {
 }
 
 type ITracer interface {
-	NewSpan(context.Context, oteltrace.SpanKind, string) (context.Context, oteltrace.Span)
-	NewSpanWithParent(context.Context, oteltrace.SpanKind, string, string, string) (context.Context, oteltrace.Span)
+	NewSpan(context.Context, oteltrace.SpanKind, string, ...oteltrace.SpanStartOption) (context.Context, oteltrace.Span)
+	NewSpanWithParent(context.Context, oteltrace.SpanKind, string, string, string, ...oteltrace.SpanStartOption) (context.Context, oteltrace.Span)
 	SpanFromContext(ctx context.Context) oteltrace.Span
 	SpanContextFromContext(ctx context.Context) oteltrace.SpanContext
 }
@@ -450,7 +450,7 @@ func (obs *observer) NewInt64UpDownCounter(name string,
 }
 
 func (obs *observer) NewSpan(ctx context.Context, kind oteltrace.SpanKind,
-	component string) (context.Context, oteltrace.Span) {
+	component string, opts ...oteltrace.SpanStartOption) (context.Context, oteltrace.Span) {
 	if ctx == nil {
 		// TODO: here should use default context
 		ctx = context.TODO()
@@ -464,27 +464,25 @@ func (obs *observer) NewSpan(ctx context.Context, kind oteltrace.SpanKind,
 		)
 	}
 
-	return obs.tracer.Start(
-		ctx,
-		component,
+	opts = append(opts,
 		oteltrace.WithSpanKind(kind),
 		oteltrace.WithAttributes(attribute.Key("span.component").String(component)),
 	)
+	return obs.tracer.Start(ctx, component, opts...)
 }
 
 func (obs *observer) NewSpanWithParent(ctx context.Context, kind oteltrace.SpanKind,
-	component, traceID, pspanID string) (context.Context, oteltrace.Span) {
+	component, traceID, pspanID string, opts ...oteltrace.SpanStartOption) (context.Context, oteltrace.Span) {
 	if ctx == nil {
 		// TODO: here should use default context
 		ctx = context.TODO()
 	}
 	if obs == nil || obs.tracer == nil {
-		return oteltrace.NewNoopTracerProvider().Tracer("noop").Start(
-			ctx,
-			component,
+		opts = append(opts,
 			oteltrace.WithSpanKind(kind),
 			oteltrace.WithAttributes(attribute.Key("span.component").String(component)),
 		)
+		return oteltrace.NewNoopTracerProvider().Tracer("noop").Start(ctx, component, opts...)
 	}
 
 	var (

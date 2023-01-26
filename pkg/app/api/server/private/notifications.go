@@ -11,32 +11,32 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/sirupsen/logrus"
 
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvevents "soldr/pkg/app/api/server/events"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/worker/events"
 )
 
-type PermissionsFilter func(*gin.Context, srvevents.EventChannelName) bool
+type PermissionsFilter func(*gin.Context, events.EventChannelName) bool
 
 // SubscribeHandler is a function to subscribe on notifications via WS connection
 // @Summary Retrieve events via websocket connections on changing or creating or deleting instance entities by filter
 // @Tags Notifications
 // @Produce json
 // @Param list query string true "list of events type to get from notification service (support of multiple choices)" default(all) Enums(all, create-agent, update-agent, delete-agent, create-group, update-group, delete-group, create-policy, update-policy, delete-policy, create-module, update-module, delete-module, create-group-to-policy, delete-group-to-policy)
-// @Success 200 {object} utils.successResp{} "fake response because here will be upgrade to websocket"
-// @Failure 500 {object} utils.errorResp "internal error on upgraging to websocket"
+// @Success 200 {object} response.successResp{} "fake response because here will be upgrade to websocket"
+// @Failure 500 {object} response.errorResp "internal error on upgraging to websocket"
 // @Router /notifications/subscribe/ [get]
-func SubscribeHandler(exchanger *srvevents.Exchanger, permsFilter PermissionsFilter) func(c *gin.Context) {
+func SubscribeHandler(exchanger *events.Exchanger, permsFilter PermissionsFilter) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		subscribeString := c.Query("list")
 		w, r := c.Writer, c.Request
-		logger := utils.FromContext(c).WithField("component", "notifier").WithContext(r.Context())
+		logger := logger.FromContext(c).WithField("component", "notifier").WithContext(r.Context())
 
-		var subscribes []srvevents.EventChannelName
+		var subscribes []events.EventChannelName
 		for _, name := range strings.Split(subscribeString, ",") {
-			name := srvevents.EventChannelName(strings.TrimSpace(name))
-			if srvevents.ValidChannelName(name) && permsFilter(c, name) {
+			name := events.EventChannelName(strings.TrimSpace(name))
+			if events.ValidChannelName(name) && permsFilter(c, name) {
 				subscribes = append(subscribes, name)
 			}
 		}
@@ -73,7 +73,7 @@ func SubscribeHandler(exchanger *srvevents.Exchanger, permsFilter PermissionsFil
 }
 
 func handleWSConn(conn net.Conn, service *models.Service, logger *logrus.Entry,
-	subscribes []srvevents.EventChannelName, exchanger *srvevents.Exchanger) {
+	subscribes []events.EventChannelName, exchanger *events.Exchanger) {
 	defer conn.Close()
 
 	sub := exchanger.Subscribe(service.ID, subscribes...)

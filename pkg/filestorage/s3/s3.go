@@ -1,4 +1,4 @@
-package storage
+package s3
 
 import (
 	"bytes"
@@ -9,13 +9,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+
+	"soldr/pkg/filestorage"
 )
 
-// S3 is main class for S3 API
-type S3 struct {
+type Client struct {
 	endpoint   string
 	accessKey  string
 	secretKey  string
@@ -23,43 +25,42 @@ type S3 struct {
 	host       string
 	isSSL      bool
 	con        *minio.Client
-	sLimits
+	*filestorage.Limits
 }
 
-type S3ConnParams struct {
+type Config struct {
 	Endpoint   string
 	AccessKey  string
 	SecretKey  string
 	BucketName string
 }
 
-// NewS3 is function that construct S3 driver with IStorage
-func NewS3(connParams *S3ConnParams) (IStorage, error) {
-	if connParams == nil {
+func New(cfg *Config) (*Client, error) {
+	if cfg == nil {
 		var err error
-		connParams, err = getConnParamsFromEnvVars()
+		cfg, err = getConnParamsFromEnvVars()
 		if err != nil {
 			return nil, err
 		}
 	}
-	s := &S3{
-		sLimits: sLimits{
-			defPerm:     0644,
-			maxFileSize: 1024 * 1024 * 1024,
-			maxReadSize: 1024 * 1024 * 1024,
-			maxNumObjs:  1024 * 1024,
-		},
-		endpoint:   connParams.Endpoint,
-		accessKey:  connParams.AccessKey,
-		secretKey:  connParams.SecretKey,
-		bucketName: connParams.BucketName,
+	s := &Client{
+		Limits: filestorage.NewLimits(
+			0644,
+			1024*1024*1024,
+			1024*1024*1024,
+			1024*1024,
+		),
+		endpoint:   cfg.Endpoint,
+		accessKey:  cfg.AccessKey,
+		secretKey:  cfg.SecretKey,
+		bucketName: cfg.BucketName,
 	}
 
 	if stURL, err := url.Parse(s.endpoint); err == nil {
 		s.isSSL = stURL.Scheme == "https"
 		s.host = stURL.Host
 	} else {
-		return nil, ErrInternal
+		return nil, filestorage.ErrInternal
 	}
 
 	var err error
@@ -68,14 +69,14 @@ func NewS3(connParams *S3ConnParams) (IStorage, error) {
 		Secure: s.isSSL,
 	})
 	if err != nil {
-		return nil, ErrInternal
+		return nil, filestorage.ErrInternal
 	}
 
 	return s, nil
 }
 
-func getConnParamsFromEnvVars() (*S3ConnParams, error) {
-	params := &S3ConnParams{}
+func getConnParamsFromEnvVars() (*Config, error) {
+	params := &Config{}
 	var ok bool
 	genErr := func(missingEnvVar string) error {
 		return fmt.Errorf("environment variable %s is undefined", missingEnvVar)
@@ -102,19 +103,19 @@ func getConnParamsFromEnvVars() (*S3ConnParams, error) {
 }
 
 // ListDir is function that return listing directory with filea info
-func (s *S3) ListDir(path string) (map[string]os.FileInfo, error) {
+func (c *Client) ListDir(path string) (map[string]os.FileInfo, error) {
 	var numObjs int64
 	tree := make(map[string]os.FileInfo)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	path = normPath(path)
-	objectCh := s.con.ListObjects(ctx, s.bucketName, minio.ListObjectsOptions{
+	path = filestorage.NormPath(path)
+	objectCh := c.con.ListObjects(ctx, c.bucketName, minio.ListObjectsOptions{
 		Prefix:    path,
 		Recursive: true,
 	})
 	for object := range objectCh {
 		if object.Err != nil {
-			return nil, ErrListFailed
+			return nil, filestorage.ErrListFailed
 		}
 		shortPath := strings.TrimPrefix(object.Key, path)
 		if !strings.HasPrefix(shortPath, "/") {
@@ -123,7 +124,7 @@ func (s *S3) ListDir(path string) (map[string]os.FileInfo, error) {
 		dirName, fileName := filepath.Split(shortPath)
 		spl := strings.Split(dirName, "/")
 		if dirName == "/" {
-			tree[shortPath] = &S3FileInfo{
+			tree[shortPath] = &FileInfo{
 				isDir:      false,
 				path:       fileName,
 				ObjectInfo: &object,
@@ -132,15 +133,15 @@ func (s *S3) ListDir(path string) (map[string]os.FileInfo, error) {
 		} else if len(spl) >= 2 {
 			dir := "/" + spl[1]
 			if _, ok := tree[dir]; !ok {
-				tree[dir] = &S3FileInfo{
+				tree[dir] = &FileInfo{
 					isDir: true,
 					path:  spl[1],
 				}
 				numObjs++
 			}
 		}
-		if numObjs >= s.maxNumObjs {
-			return nil, ErrLimitExceeded
+		if numObjs >= c.Limits.MaxNumObjs() {
+			return nil, filestorage.ErrLimitExceeded
 		}
 	}
 
@@ -148,24 +149,24 @@ func (s *S3) ListDir(path string) (map[string]os.FileInfo, error) {
 }
 
 // addFile is additional function for walking on directory and return back info
-func (s *S3) addFile(base string, tree map[string]os.FileInfo, numObjs *int64) error {
-	ttree, err := s.ListDir(base)
+func (c *Client) addFile(base string, tree map[string]os.FileInfo, numObjs *int64) error {
+	ttree, err := c.ListDir(base)
 	if err != nil {
 		return err
 	}
 
 	for path, info := range ttree {
-		npath := normPath(base + path)
+		npath := filestorage.NormPath(base + path)
 		if _, ok := tree[npath]; !ok {
 			tree[npath] = info
 			(*numObjs)++
 			if info.IsDir() {
-				if err = s.addFile(npath, tree, numObjs); err != nil {
+				if err = c.addFile(npath, tree, numObjs); err != nil {
 					return err
 				}
 			}
-			if *numObjs >= s.maxNumObjs {
-				return ErrLimitExceeded
+			if *numObjs >= c.Limits.MaxNumObjs() {
+				return filestorage.ErrLimitExceeded
 			}
 		}
 	}
@@ -174,11 +175,11 @@ func (s *S3) addFile(base string, tree map[string]os.FileInfo, numObjs *int64) e
 }
 
 // ListDirRec is function that return listing directory with filea info
-func (s *S3) ListDirRec(path string) (map[string]os.FileInfo, error) {
+func (c *Client) ListDirRec(path string) (map[string]os.FileInfo, error) {
 	var numObjs int64
 	tree := make(map[string]os.FileInfo)
-	path = normPath(path)
-	if err := s.addFile(path, tree, &numObjs); err != nil {
+	path = filestorage.NormPath(path)
+	if err := c.addFile(path, tree, &numObjs); err != nil {
 		return nil, err
 	}
 
@@ -194,24 +195,24 @@ func (s *S3) ListDirRec(path string) (map[string]os.FileInfo, error) {
 }
 
 // GetInfo is function that return file info
-func (s *S3) GetInfo(path string) (os.FileInfo, error) {
-	path = normPath(path)
+func (c *Client) GetInfo(path string) (os.FileInfo, error) {
+	path = filestorage.NormPath(path)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	objInfo, err := s.con.StatObject(ctx, s.bucketName, path, minio.StatObjectOptions{})
+	objInfo, err := c.con.StatObject(ctx, c.bucketName, path, minio.StatObjectOptions{})
 	if err != nil {
-		tree, err := s.ListDir(path)
+		tree, err := c.ListDir(path)
 		if err != nil || len(tree) == 0 {
-			return nil, ErrNotFound
+			return nil, filestorage.ErrNotFound
 		}
-		return &S3FileInfo{
+		return &FileInfo{
 			isDir: true,
 			path:  "/",
 		}, nil
 	}
 	_, fileName := filepath.Split(path)
 
-	return &S3FileInfo{
+	return &FileInfo{
 		isDir:      false,
 		path:       fileName,
 		ObjectInfo: &objInfo,
@@ -219,8 +220,8 @@ func (s *S3) GetInfo(path string) (os.FileInfo, error) {
 }
 
 // IsExist is function that return true if file exists
-func (s *S3) IsExist(path string) bool {
-	if _, err := s.GetInfo(path); err != nil {
+func (c *Client) IsExist(path string) bool {
+	if _, err := c.GetInfo(path); err != nil {
 		return false
 	}
 
@@ -228,42 +229,42 @@ func (s *S3) IsExist(path string) bool {
 }
 
 // IsNotExist is function that return true if file not exists
-func (s *S3) IsNotExist(path string) bool {
-	return !s.IsExist(path)
+func (c *Client) IsNotExist(path string) bool {
+	return !c.IsExist(path)
 }
 
 // ReadFile is function that return the file data
-func (s *S3) ReadFile(path string) ([]byte, error) {
+func (c *Client) ReadFile(path string) ([]byte, error) {
 	var objData []byte
 	var objInfo minio.ObjectInfo
-	if info, err := s.GetInfo(path); err != nil {
+	if info, err := c.GetInfo(path); err != nil {
 		return nil, err
 	} else if info.IsDir() {
-		return nil, ErrNotFound
-	} else if info.Size() > s.maxFileSize {
-		return nil, ErrLimitExceeded
+		return nil, filestorage.ErrNotFound
+	} else if info.Size() > c.Limits.MaxReadSize() {
+		return nil, filestorage.ErrLimitExceeded
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	obj, err := s.con.GetObject(ctx, s.bucketName, path, minio.GetObjectOptions{})
+	obj, err := c.con.GetObject(ctx, c.bucketName, path, minio.GetObjectOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrReadFailed, err)
+		return nil, fmt.Errorf("%w: %v", filestorage.ErrReadFailed, err)
 	}
 	defer obj.Close()
 	if objInfo, err = obj.Stat(); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrReadFailed, err)
+		return nil, fmt.Errorf("%w: %v", filestorage.ErrReadFailed, err)
 	}
 	objData = make([]byte, objInfo.Size)
 	if n, err := io.ReadFull(obj, objData); err != nil || n != int(objInfo.Size) {
-		return nil, fmt.Errorf("%w: %v", ErrReadFailed, err)
+		return nil, fmt.Errorf("%w: %v", filestorage.ErrReadFailed, err)
 	}
 
 	return objData, nil
 }
 
 // readFiles is additional function for reading files data by path
-func (s *S3) readFiles(files map[string]os.FileInfo, base string) (map[string][]byte, error) {
+func (c *Client) readFiles(files map[string]os.FileInfo, base string) (map[string][]byte, error) {
 	var err error
 	var numObjs, readSize int64
 	tree := make(map[string][]byte)
@@ -272,14 +273,14 @@ func (s *S3) readFiles(files map[string]os.FileInfo, base string) (map[string][]
 			continue
 		}
 
-		fpath := normPath(base + name)
-		if tree[name], err = s.ReadFile(fpath); err != nil {
+		fpath := filestorage.NormPath(base + name)
+		if tree[name], err = c.ReadFile(fpath); err != nil {
 			return nil, err
 		}
 		numObjs++
 		readSize += info.Size()
-		if numObjs >= s.maxNumObjs || readSize >= s.maxReadSize {
-			return nil, ErrLimitExceeded
+		if numObjs >= c.Limits.MaxNumObjs() || readSize >= c.Limits.MaxReadSize() {
+			return nil, filestorage.ErrLimitExceeded
 		}
 	}
 
@@ -287,96 +288,96 @@ func (s *S3) readFiles(files map[string]os.FileInfo, base string) (map[string][]
 }
 
 // ReadDir is function that read all files in the directory
-func (s *S3) ReadDir(path string) (map[string][]byte, error) {
-	path = normPath(path)
-	files, err := s.ListDir(path)
+func (c *Client) ReadDir(path string) (map[string][]byte, error) {
+	path = filestorage.NormPath(path)
+	files, err := c.ListDir(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.readFiles(files, path)
+	return c.readFiles(files, path)
 }
 
 // ReadDirRec is function that recursive read all files in the directory
-func (s *S3) ReadDirRec(path string) (map[string][]byte, error) {
-	path = normPath(path)
-	files, err := s.ListDirRec(path)
+func (c *Client) ReadDirRec(path string) (map[string][]byte, error) {
+	path = filestorage.NormPath(path)
+	files, err := c.ListDirRec(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.readFiles(files, path)
+	return c.readFiles(files, path)
 }
 
 // CreateDir is function for create new directory if not exists
-func (s *S3) CreateDir(path string) error {
-	path = normPath(path)
-	if !s.IsExist(path) {
+func (c *Client) CreateDir(path string) error {
+	path = filestorage.NormPath(path)
+	if !c.IsExist(path) {
 		return nil
 	}
 
-	return ErrAlreadyExists
+	return filestorage.ErrAlreadyExists
 }
 
 // CreateFile is function for create new file if not exists
-func (s *S3) CreateFile(path string) error {
-	path = normPath(path)
-	if !s.IsExist(path) {
+func (c *Client) CreateFile(path string) error {
+	path = filestorage.NormPath(path)
+	if !c.IsExist(path) {
 		r := bytes.NewReader([]byte{})
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		_, err := s.con.PutObject(ctx, s.bucketName, path[1:], r, 0,
+		_, err := c.con.PutObject(ctx, c.bucketName, path[1:], r, 0,
 			minio.PutObjectOptions{ContentType: "application/octet-stream"})
 		if err != nil {
-			return ErrCreateFailed
+			return filestorage.ErrCreateFailed
 		}
 		return nil
 	}
 
-	return ErrAlreadyExists
+	return filestorage.ErrAlreadyExists
 }
 
 // WriteFile is function that write (override) data to a file
-func (s *S3) WriteFile(path string, data []byte) error {
-	path = normPath(path)
+func (c *Client) WriteFile(path string, data []byte) error {
+	path = filestorage.NormPath(path)
 	r := bytes.NewReader(data)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, err := s.con.PutObject(ctx, s.bucketName, path[1:], r, r.Size(),
+	_, err := c.con.PutObject(ctx, c.bucketName, path[1:], r, r.Size(),
 		minio.PutObjectOptions{ContentType: "application/octet-stream"})
 	if err != nil {
-		return ErrWriteFailed
+		return filestorage.ErrWriteFailed
 	}
 
 	return nil
 }
 
 // AppendFile is function that append data to an exist file
-func (s *S3) AppendFile(path string, data []byte) error {
-	rdata, err := s.ReadFile(path)
+func (c *Client) AppendFile(path string, data []byte) error {
+	rdata, err := c.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	return s.WriteFile(path, append(rdata, data...))
+	return c.WriteFile(path, append(rdata, data...))
 }
 
 // RemoveDir is function that remove an exist directory
-func (s *S3) RemoveDir(path string) error {
-	path = normPath(path)
-	info, err := s.GetInfo(path)
+func (c *Client) RemoveDir(path string) error {
+	path = filestorage.NormPath(path)
+	info, err := c.GetInfo(path)
 	if err == nil && info.IsDir() {
-		files, err := s.ListDirRec(path)
+		files, err := c.ListDirRec(path)
 		if err != nil {
-			return ErrRemoveFailed
+			return filestorage.ErrRemoveFailed
 		}
 		for fpath, info := range files {
 			if !info.IsDir() {
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
-				if s.con.RemoveObject(ctx, s.bucketName, path+fpath,
+				if c.con.RemoveObject(ctx, c.bucketName, path+fpath,
 					minio.RemoveObjectOptions{}) != nil {
-					return ErrRemoveFailed
+					return filestorage.ErrRemoveFailed
 				}
 			}
 		}
@@ -387,15 +388,15 @@ func (s *S3) RemoveDir(path string) error {
 }
 
 // RemoveFile is function that remove an exist file
-func (s *S3) RemoveFile(path string) error {
-	path = normPath(path)
-	info, err := s.GetInfo(path)
+func (c *Client) RemoveFile(path string) error {
+	path = filestorage.NormPath(path)
+	info, err := c.GetInfo(path)
 	if err == nil && !info.IsDir() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		if s.con.RemoveObject(ctx, s.bucketName, path,
+		if c.con.RemoveObject(ctx, c.bucketName, path,
 			minio.RemoveObjectOptions{}) != nil {
-			return ErrRemoveFailed
+			return filestorage.ErrRemoveFailed
 		}
 		return nil
 	}
@@ -404,53 +405,98 @@ func (s *S3) RemoveFile(path string) error {
 }
 
 // Remove is function that remove any exist object
-func (s *S3) Remove(path string) error {
-	info, err := s.GetInfo(path)
+func (c *Client) Remove(path string) error {
+	info, err := c.GetInfo(path)
 	if err == nil && !info.IsDir() {
-		return s.RemoveFile(path)
+		return c.RemoveFile(path)
 	} else if err == nil && info.IsDir() {
-		return s.RemoveDir(path)
+		return c.RemoveDir(path)
 	}
 
-	return ErrRemoveFailed
+	return filestorage.ErrRemoveFailed
 }
 
 // Rename is function that rename any exist object to new
-func (s *S3) Rename(src, dst string) error {
-	if err := s.CopyFile(src, dst); err != nil {
+func (c *Client) Rename(src, dst string) error {
+	if err := c.CopyFile(src, dst); err != nil {
 		return err
 	}
 
-	if s.RemoveFile(src) != nil {
-		return ErrRenameFailed
+	if c.RemoveFile(src) != nil {
+		return filestorage.ErrRenameFailed
 	}
 
 	return nil
 }
 
 // CopyFile is function that copies a file from src to dst
-func (s *S3) CopyFile(src, dst string) error {
-	isrc, err := s.GetInfo(src)
+func (c *Client) CopyFile(src, dst string) error {
+	isrc, err := c.GetInfo(src)
 	if err != nil || isrc.IsDir() {
-		return ErrNotFound
+		return filestorage.ErrNotFound
 	}
-	if s.IsExist(dst) {
-		return ErrAlreadyExists
+	if c.IsExist(dst) {
+		return filestorage.ErrAlreadyExists
 	}
 
 	nsrc := minio.CopySrcOptions{
-		Bucket: s.bucketName,
-		Object: normPath(src)[1:],
+		Bucket: c.bucketName,
+		Object: filestorage.NormPath(src)[1:],
 	}
 	ndst := minio.CopyDestOptions{
-		Bucket: s.bucketName,
-		Object: normPath(dst)[1:],
+		Bucket: c.bucketName,
+		Object: filestorage.NormPath(dst)[1:],
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if _, err = s.con.CopyObject(ctx, ndst, nsrc); err != nil {
-		return ErrCopyFailed
+	if _, err = c.con.CopyObject(ctx, ndst, nsrc); err != nil {
+		return filestorage.ErrCopyFailed
 	}
 
+	return nil
+}
+
+// FileInfo is struct with interface os.FileInfo
+type FileInfo struct {
+	isDir bool
+	path  string
+	*minio.ObjectInfo
+}
+
+// Name is function that return file name
+func (f *FileInfo) Name() string {
+	return f.path
+}
+
+// Size is function that return file size
+func (f *FileInfo) Size() int64 {
+	if f.ObjectInfo == nil {
+		return 0
+	}
+
+	return f.ObjectInfo.Size
+}
+
+// Mode is function that return file mod structure
+func (f *FileInfo) Mode() os.FileMode {
+	return 0644
+}
+
+// ModTime is function that return last modification time
+func (f *FileInfo) ModTime() time.Time {
+	if f.ObjectInfo == nil {
+		return time.Now()
+	}
+
+	return f.ObjectInfo.LastModified
+}
+
+// IsDir is function that return true if it's directory
+func (f *FileInfo) IsDir() bool {
+	return f.isDir
+}
+
+// Sys is function that return dummy info
+func (f *FileInfo) Sys() interface{} {
 	return nil
 }

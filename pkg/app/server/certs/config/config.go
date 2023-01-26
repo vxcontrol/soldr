@@ -1,12 +1,14 @@
 package config
 
-import "soldr/pkg/storage"
+import (
+	"soldr/pkg/filestorage"
+)
 
 type Config struct {
 	StaticProvider *StaticProvider `json:"static_provider"`
 }
 
 type StaticProvider struct {
-	Reader   storage.IFileReader
+	Reader   filestorage.Reader
 	CertsDir string
 }

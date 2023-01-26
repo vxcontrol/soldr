@@ -7,10 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 )
 
 type services struct {
@@ -54,29 +54,29 @@ func NewServicesService(db *gorm.DB) *ServicesService {
 // @Summary Retrieve services list by filters
 // @Tags Services
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=services} "services list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting services not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting services"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=services} "services list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting services not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting services"
 // @Router /services/ [get]
 func (s *ServicesService) GetServices(c *gin.Context) {
 	var (
 		err   error
-		query utils.TableQuery
+		query storage.TableQuery
 		resp  services
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
 
 	query.Init("services", servicesSQLMappers)
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -87,20 +87,20 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 			},
 		})
 	default:
-		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
+		logger.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Services); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding services")
+		logger.FromContext(c).WithError(err).Errorf("error finding services")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Services); i++ {
 		if err = resp.Services[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Services[i].Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Services[i].Hash)
 			response.Error(c, response.ErrServicesInvalidData, err)
 			return
 		}
@@ -114,10 +114,10 @@ func (s *ServicesService) GetServices(c *gin.Context) {
 // @Tags Services
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.Service} "service received successful"
-// @Failure 403 {object} utils.errorResp "getting service not permitted
-// @Failure 404 {object} utils.errorResp "service not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting service"
+// @Success 200 {object} response.successResp{data=models.Service} "service received successful"
+// @Failure 403 {object} response.errorResp "getting service not permitted
+// @Failure 404 {object} response.errorResp "service not found"
+// @Failure 500 {object} response.errorResp "internal error on getting service"
 // @Router /services/{hash} [get]
 func (s *ServicesService) GetService(c *gin.Context) {
 	var (
@@ -126,8 +126,8 @@ func (s *ServicesService) GetService(c *gin.Context) {
 		resp models.Service
 	)
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -141,7 +141,7 @@ func (s *ServicesService) GetService(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrServicesNotFound, err)
 		} else {
@@ -149,7 +149,7 @@ func (s *ServicesService) GetService(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating service data '%s'", resp.Hash)
 		response.Error(c, response.ErrServicesInvalidData, err)
 		return
 	}
@@ -163,10 +163,10 @@ func (s *ServicesService) GetService(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.Service true "service model to create from"
-// @Success 201 {object} utils.successResp{data=models.Service} "service created successful"
-// @Failure 400 {object} utils.errorResp "invalid service request data"
-// @Failure 403 {object} utils.errorResp "creating service not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating service"
+// @Success 201 {object} response.successResp{data=models.Service} "service created successful"
+// @Failure 400 {object} response.errorResp "invalid service request data"
+// @Failure 403 {object} response.errorResp "creating service not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating service"
 // @Router /services/ [post]
 func (s *ServicesService) CreateService(c *gin.Context) {
 	var (
@@ -175,28 +175,28 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&service); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
 
 	switch rid {
 	case models.RoleSAdmin:
 	case models.RoleUser, models.RoleAdmin, models.RoleExternal:
 		service.TenantID = tid
 	default:
-		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
+		logger.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
-	service.Hash = utils.MakeServiceHash(service.Name)
+	service.Hash = storage.MakeServiceHash(service.Name)
 
 	if err = s.db.Create(&service).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error creating service")
+		logger.FromContext(c).WithError(err).Errorf("error creating service")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -210,11 +210,11 @@ func (s *ServicesService) CreateService(c *gin.Context) {
 // @Produce json
 // @Param json body models.Service true "service model to update"
 // @Param hash path string true "service hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.Service} "service updated successful"
-// @Failure 400 {object} utils.errorResp "invalid service request data"
-// @Failure 403 {object} utils.errorResp "updating service not permitted"
-// @Failure 404 {object} utils.errorResp "service not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating service"
+// @Success 200 {object} response.successResp{data=models.Service} "service updated successful"
+// @Failure 400 {object} response.errorResp "invalid service request data"
+// @Failure 403 {object} response.errorResp "updating service not permitted"
+// @Failure 404 {object} response.errorResp "service not found"
+// @Failure 500 {object} response.errorResp "internal error on updating service"
 // @Router /services/{hash} [put]
 func (s *ServicesService) PatchService(c *gin.Context) {
 	var (
@@ -224,23 +224,23 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&service); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	} else if hash != service.Hash {
-		utils.FromContext(c).Errorf("mismatch service hash to requested one")
+		logger.FromContext(c).Errorf("mismatch service hash to requested one")
 		response.Error(c, response.ErrServicesInvalidRequest, nil)
 		return
 	} else if err = service.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating service JSON")
+		logger.FromContext(c).WithError(err).Errorf("error validating service JSON")
 		response.Error(c, response.ErrServicesInvalidRequest, err)
 		return
 	}
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
 	if rid == models.RoleExternal {
-		utils.FromContext(c).Errorf("error: no rights to patch service")
+		logger.FromContext(c).Errorf("error: no rights to patch service")
 		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
@@ -259,11 +259,11 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 	public_info := []interface{}{"info", "name", "status"}
 	err = s.db.Scopes(scope).Select("", public_info...).Save(&service).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).Errorf("error updating service by hash '%s', service not found", hash)
+		logger.FromContext(c).Errorf("error updating service by hash '%s', service not found", hash)
 		response.Error(c, response.ErrServicesNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating service by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error updating service by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -276,10 +276,10 @@ func (s *ServicesService) PatchService(c *gin.Context) {
 // @Tags Services
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "service deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting service not permitted"
-// @Failure 404 {object} utils.errorResp "service not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting service"
+// @Success 200 {object} response.successResp "service deleted successful"
+// @Failure 403 {object} response.errorResp "deleting service not permitted"
+// @Failure 404 {object} response.errorResp "service not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting service"
 // @Router /services/{hash} [delete]
 func (s *ServicesService) DeleteService(c *gin.Context) {
 	var (
@@ -288,10 +288,10 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 		service models.Service
 	)
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
 	if rid == models.RoleExternal {
-		utils.FromContext(c).Errorf("error: no rights to delete service")
+		logger.FromContext(c).Errorf("error: no rights to delete service")
 		response.Error(c, response.ErrNotPermitted, nil)
 		return
 	}
@@ -308,7 +308,7 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&service).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding service by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding service by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrServicesNotFound, err)
 		} else {
@@ -316,13 +316,13 @@ func (s *ServicesService) DeleteService(c *gin.Context) {
 		}
 		return
 	} else if err = service.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating service data '%s'", service.Hash)
 		response.Error(c, response.ErrServicesInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&service).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting service by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error deleting service by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

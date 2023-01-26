@@ -9,22 +9,23 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/storage/mem"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/filestorage"
+	"soldr/pkg/filestorage/s3"
+	"soldr/pkg/mysql"
 	"soldr/pkg/secret"
-	"soldr/pkg/storage"
-	"soldr/pkg/storage/mysql"
 )
 
 type AgentServerClient struct {
 	db      *gorm.DB
-	dbConns *mem.DBConnectionStorage
-	s3Conns *mem.S3ConnectionStorage
+	dbConns *storage.DBConnectionStorage
+	s3Conns *storage.S3ConnectionStorage
 }
 
 func NewAgentServerClient(
 	db *gorm.DB,
-	serviceDBConns *mem.DBConnectionStorage,
-	serviceS3Conns *mem.S3ConnectionStorage,
+	serviceDBConns *storage.DBConnectionStorage,
+	serviceS3Conns *storage.S3ConnectionStorage,
 ) *AgentServerClient {
 	return &AgentServerClient{
 		db:      db,
@@ -70,10 +71,10 @@ func (c *AgentServerClient) GetDB(ctx context.Context, hash string) (*gorm.DB, e
 	return dbWithORM, nil
 }
 
-func (c *AgentServerClient) GetS3(hash string) (storage.IStorage, error) {
-	s3, err := c.s3Conns.Get(hash)
+func (c *AgentServerClient) GetS3(hash string) (filestorage.Storage, error) {
+	s3Conn, err := c.s3Conns.Get(hash)
 	if err == nil {
-		return s3, nil
+		return s3Conn, nil
 	}
 
 	var service models.Service
@@ -81,7 +82,7 @@ func (c *AgentServerClient) GetS3(hash string) (storage.IStorage, error) {
 		return nil, fmt.Errorf("could not get service by hash '%s': %w", hash, err)
 	}
 
-	s3Conn, err := storage.NewS3(service.Info.S3.ToS3ConnParams())
+	s3Conn, err = s3.New(service.Info.S3.ToS3ConnParams())
 	if err != nil {
 		return nil, fmt.Errorf("could not create S3 client: %w", err)
 	}

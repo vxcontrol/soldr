@@ -1,13 +1,10 @@
-package storage
+package filestorage
 
 import (
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"github.com/minio/minio-go/v7"
 )
 
 // Error list of storage package
@@ -27,8 +24,8 @@ var (
 	ErrRenameFailed  = errors.New("can't rename")
 )
 
-// IStorage is main interface for using external storages
-type IStorage interface {
+// Storage is main interface for using external storages
+type Storage interface {
 	ListDir(path string) (map[string]os.FileInfo, error)
 	ListDirRec(path string) (map[string]os.FileInfo, error)
 	GetInfo(path string) (os.FileInfo, error)
@@ -45,16 +42,16 @@ type IStorage interface {
 	Remove(path string) error
 	Rename(old, new string) error
 	CopyFile(src, dst string) error
-	IFileReader
-	ILimits
+	Reader
+	Limiter
 }
 
-type IFileReader interface {
+type Reader interface {
 	ReadFile(path string) ([]byte, error)
 }
 
-// ILimits is additional interface for limits control
-type ILimits interface {
+// Limiter is additional interface for limits control
+type Limiter interface {
 	DefPerm() os.FileMode
 	SetDefPerm(perm os.FileMode)
 	MaxFileSize() int64
@@ -65,92 +62,51 @@ type ILimits interface {
 	SetMaxNumObjs(max int64)
 }
 
-type sLimits struct {
+type Limits struct {
 	defPerm     os.FileMode
 	maxFileSize int64
 	maxReadSize int64
 	maxNumObjs  int64
 }
 
-func (l *sLimits) DefPerm() os.FileMode {
+func NewLimits(defPerm os.FileMode, maxFileSize int64, maxReadSize int64, maxNumObjs int64) *Limits {
+	return &Limits{defPerm: defPerm, maxFileSize: maxFileSize, maxReadSize: maxReadSize, maxNumObjs: maxNumObjs}
+}
+
+func (l *Limits) DefPerm() os.FileMode {
 	return l.defPerm
 }
 
-func (l *sLimits) SetDefPerm(perm os.FileMode) {
+func (l *Limits) SetDefPerm(perm os.FileMode) {
 	l.defPerm = perm
 }
 
-func (l *sLimits) MaxFileSize() int64 {
+func (l *Limits) MaxFileSize() int64 {
 	return l.maxFileSize
 }
 
-func (l *sLimits) SetMaxFileSize(max int64) {
+func (l *Limits) SetMaxFileSize(max int64) {
 	l.maxFileSize = max
 }
 
-func (l *sLimits) MaxReadSize() int64 {
+func (l *Limits) MaxReadSize() int64 {
 	return l.maxReadSize
 }
 
-func (l *sLimits) SetMaxReadSize(max int64) {
+func (l *Limits) SetMaxReadSize(max int64) {
 	l.maxReadSize = max
 }
 
-func (l *sLimits) MaxNumObjs() int64 {
+func (l *Limits) MaxNumObjs() int64 {
 	return l.maxNumObjs
 }
 
-func (l *sLimits) SetMaxNumObjs(max int64) {
+func (l *Limits) SetMaxNumObjs(max int64) {
 	l.maxNumObjs = max
 }
 
-// S3FileInfo is struct with interface os.FileInfo
-type S3FileInfo struct {
-	isDir bool
-	path  string
-	*minio.ObjectInfo
-}
-
-// Name is function that return file name
-func (si *S3FileInfo) Name() string {
-	return si.path
-}
-
-// Size is function that return file size
-func (si *S3FileInfo) Size() int64 {
-	if si.ObjectInfo == nil {
-		return 0
-	}
-
-	return si.ObjectInfo.Size
-}
-
-// Mode is function that return file mod structure
-func (si *S3FileInfo) Mode() os.FileMode {
-	return 0644
-}
-
-// ModTime is function that return last modification time
-func (si *S3FileInfo) ModTime() time.Time {
-	if si.ObjectInfo == nil {
-		return time.Now()
-	}
-
-	return si.ObjectInfo.LastModified
-}
-
-// IsDir is function that return true if it's directory
-func (si *S3FileInfo) IsDir() bool {
-	return si.isDir
-}
-
-// Sys is function that return dummy info
-func (si *S3FileInfo) Sys() interface{} {
-	return nil
-}
-
-// normPath is function that return path which was normalization
-func normPath(path string) string {
+// NormPath is function that return path which was normalization
+func NormPath(path string) string {
 	if path != "" {
 		path = strings.Replace(filepath.Clean(path), "\\", "/", -1)
 	}

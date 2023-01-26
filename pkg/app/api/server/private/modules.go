@@ -20,15 +20,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
+	"soldr/pkg/app/api/modules"
 	"soldr/pkg/app/api/server/response"
-	useraction "soldr/pkg/app/api/user_action"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/app/api/useraction"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/crypto"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage"
+	"soldr/pkg/filestorage/fs"
+	"soldr/pkg/filestorage/s3"
+	"soldr/pkg/semvertooling"
 )
 
 type agentModuleDetails struct {
@@ -142,13 +148,13 @@ const sqlPolicyModuleDetails = `
 var modulesSQLMappers = map[string]interface{}{
 	"status":               "`{{table}}`.status",
 	"system":               "`{{table}}`.system",
-	"actions":              utils.ActionsMapper,
-	"events":               utils.EventsMapper,
-	"fields":               utils.FieldsMapper,
-	"tags":                 utils.TagsMapper,
-	"os":                   utils.ModulesOSMapper,
-	"os_arch":              utils.ModulesOSArchMapper,
-	"os_type":              utils.ModulesOSTypeMapper,
+	"actions":              storage.ActionsMapper,
+	"events":               storage.EventsMapper,
+	"fields":               storage.FieldsMapper,
+	"tags":                 storage.TagsMapper,
+	"os":                   storage.ModulesOSMapper,
+	"os_arch":              storage.ModulesOSArchMapper,
+	"os_type":              storage.ModulesOSTypeMapper,
 	"version":              "`{{table}}`.version",
 	"ver_major":            "`{{table}}`.ver_major",
 	"ver_minor":            "`{{table}}`.ver_minor",
@@ -175,9 +181,9 @@ func getService(c *gin.Context) *models.Service {
 	var sv *models.Service
 
 	if val, ok := c.Get("SV"); !ok {
-		utils.FromContext(c).Errorf("error getting vxservice instance from context")
+		logger.FromContext(c).Errorf("error getting vxservice instance from context")
 	} else if sv = val.(*models.Service); sv == nil {
-		utils.FromContext(c).Errorf("got nil value vxservice instance from context")
+		logger.FromContext(c).Errorf("got nil value vxservice instance from context")
 	}
 
 	return sv
@@ -187,9 +193,9 @@ func getDBEncryptor(c *gin.Context) crypto.IDBConfigEncryptor {
 	var encryptor crypto.IDBConfigEncryptor
 
 	if cr, ok := c.Get("crp"); !ok {
-		utils.FromContext(c).Errorf("error getting secure config encryptor from context")
+		logger.FromContext(c).Errorf("error getting secure config encryptor from context")
 	} else if encryptor = cr.(crypto.IDBConfigEncryptor); encryptor == nil {
-		utils.FromContext(c).Errorf("got nil value secure config encryptor from context")
+		logger.FromContext(c).Errorf("got nil value secure config encryptor from context")
 	}
 
 	return encryptor
@@ -208,7 +214,7 @@ func removeLeadSlash(files map[string][]byte) map[string][]byte {
 	return rfiles
 }
 
-func readDir(s storage.IStorage, path string) ([]string, error) {
+func readDir(s filestorage.Storage, path string) ([]string, error) {
 	var files []string
 	list, err := s.ListDir(path)
 	if err != nil {
@@ -579,19 +585,15 @@ func BuildModuleSConfig(module *models.ModuleS) (map[string][]byte, error) {
 	return files, nil
 }
 
-func LoadModuleSTemplate(mi *models.ModuleInfo) (Template, *models.ModuleS, error) {
-	fs, err := storage.NewFS()
+func LoadModuleSTemplate(mi *models.ModuleInfo, templatesDir string) (Template, *models.ModuleS, error) {
+	fs, err := fs.New()
 	if err != nil {
-		return nil, nil, errors.New("failed initialize FS driver: " + err.Error())
+		return nil, nil, errors.New("failed initialize LocalStorage driver: " + err.Error())
 	}
 
 	var module *models.ModuleS
 	template := make(Template)
 	loadModuleDir := func(dir string) (map[string][]byte, error) {
-		templatesDir := "templates"
-		if dir, ok := os.LookupEnv("TEMPLATES_DIR"); ok {
-			templatesDir = dir
-		}
 		tpath := joinPath(templatesDir, mi.Template, dir)
 		if fs.IsNotExist(tpath) {
 			return nil, errors.New("template directory not found")
@@ -633,9 +635,9 @@ func LoadModuleSTemplate(mi *models.ModuleInfo) (Template, *models.ModuleS, erro
 }
 
 func LoadModuleSFromGlobalS3(mi *models.ModuleInfo) (Template, error) {
-	s3, err := storage.NewS3(nil)
+	s3, err := s3.New(nil)
 	if err != nil {
-		return nil, errors.New("failed to initialize FS driver: " + err.Error())
+		return nil, errors.New("failed to initialize LocalStorage driver: " + err.Error())
 	}
 
 	template := make(Template)
@@ -664,7 +666,7 @@ func LoadModuleSFromGlobalS3(mi *models.ModuleInfo) (Template, error) {
 }
 
 func StoreModuleSToGlobalS3(mi *models.ModuleInfo, mf Template) error {
-	s3, err := storage.NewS3(nil)
+	s3, err := s3.New(nil)
 	if err != nil {
 		return errors.New("failed initialize S3 driver: " + err.Error())
 	}
@@ -681,7 +683,7 @@ func StoreModuleSToGlobalS3(mi *models.ModuleInfo, mf Template) error {
 }
 
 func StoreCleanModuleSToGlobalS3(mi *models.ModuleInfo, mf Template) error {
-	s3, err := storage.NewS3(nil)
+	s3, err := s3.New(nil)
 	if err != nil {
 		return errors.New("failed initialize S3 driver: " + err.Error())
 	}
@@ -714,7 +716,7 @@ func StoreCleanModuleSToGlobalS3(mi *models.ModuleInfo, mf Template) error {
 }
 
 func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) error {
-	gS3, err := storage.NewS3(nil)
+	gS3, err := s3.New(nil)
 	if err != nil {
 		return errors.New("failed to initialize global S3 driver: " + err.Error())
 	}
@@ -731,7 +733,7 @@ func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) err
 		return errors.New("failed to read utils files: " + err.Error())
 	}
 
-	iS3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
+	iS3, err := s3.New(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
 		return errors.New("failed to initialize instance S3 driver: " + err.Error())
 	}
@@ -871,14 +873,14 @@ func removeUnusedModuleVersion(c *gin.Context, iDB *gorm.DB, name, version strin
 	}
 
 	if count == 0 {
-		s3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
+		s3, err := s3.New(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+			logrus.WithError(err).Errorf("error openning connection to S3")
 			return err
 		}
 
 		if err = s3.RemoveDir(name + "/" + version + "/"); err != nil && err.Error() != "not found" {
-			utils.FromContext(c).WithError(err).Errorf("error removing module data from s3")
+			logrus.WithError(err).Errorf("error removing module data from s3")
 			return err
 		}
 	}
@@ -894,7 +896,7 @@ func updateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name strin
 	)
 
 	if err = iDB.Find(&modules, "dependencies LIKE ?", `%"`+name+`"%`).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding modules by dependencies")
+		logrus.WithError(err).Errorf("error finding modules by dependencies")
 		return err
 	}
 
@@ -921,7 +923,7 @@ func updateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name strin
 		m.DynamicDependencies = ddeps
 
 		if err = iDB.Select("", incl...).Save(&m).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating config module")
+			logrus.WithError(err).Errorf("error updating config module")
 			return err
 		}
 	}
@@ -930,17 +932,17 @@ func updateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name strin
 }
 
 func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *models.Service) error {
-	iDB := utils.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
+	iDB := storage.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 		strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 	if iDB == nil {
-		utils.FromContext(c).Errorf("error openning connection to instance DB")
+		logrus.Errorf("error openning connection to instance DB")
 		return errors.New("failed to connect to instance DB")
 	}
 	defer iDB.Close()
 
 	encryptor := getDBEncryptor(c)
 	if encryptor == nil {
-		utils.FromContext(c).Errorf("encryptor not found")
+		logrus.Errorf("encryptor not found")
 		return errors.New("encryptor not found")
 	}
 
@@ -950,7 +952,7 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
 	}
 	if err := iDB.Scopes(scope).Find(&modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).
+		logger.FromContext(c).WithError(err).
 			Errorf("error finding policy modules by name and version '%s' '%s'",
 				moduleS.Info.Name, moduleS.Info.Version.String())
 		return err
@@ -959,7 +961,7 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	}
 
 	if err := CopyModuleAFilesToInstanceS3(&moduleS.Info, sv); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error copying module files to S3")
+		logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 		return err
 	}
 
@@ -968,26 +970,38 @@ func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 		var err error
 		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, moduleS, encryptor)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("invalid module state")
+			logger.FromContext(c).WithError(err).Errorf("invalid module state")
 			return err
 		}
 
 		if err := moduleA.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("invalid module state")
+			logger.FromContext(c).WithError(err).Errorf("invalid module state")
 			return err
 		}
 
 		err = moduleA.EncryptSecureParameters(encryptor)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+			logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			return fmt.Errorf("failed to encrypt module secure config: %w", err)
 		}
 		if err := iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating module")
+			logger.FromContext(c).WithError(err).Errorf("error updating module")
 			return err
 		}
 	}
 
+	return nil
+}
+
+func validateFileOnSave(path string, data []byte) error {
+	fileName := filepath.Base(path)
+	fileDir := filepath.Base(filepath.Dir(path))
+	if utils.StringInSlice(fileDir, []string{"cmodule", "smodule"}) && fileName == "args.json" {
+		args := make(map[string][]string)
+		if err := json.Unmarshal(data, &args); err != nil {
+			return fmt.Errorf("failed to parse the module '%s' args: %w", path, err)
+		}
+	}
 	return nil
 }
 
@@ -1053,7 +1067,7 @@ func mergeModuleACurrentConfig(cc, dc models.ModuleConfig, sh models.Schema) mod
 	}
 
 	mcsh := copySchema(&sh.Type, sh.Definitions)
-	icc := utils.MergeTwoInterfacesBySchema(cc, dc, mcsh)
+	icc := modules.MergeTwoInterfacesBySchema(cc, dc, mcsh)
 	if res, err := mcsh.ValidateGo(icc); err != nil || !res.Valid() {
 		return dc
 	} else if rcc, ok := icc.(models.ModuleConfig); !ok {
@@ -1077,7 +1091,7 @@ func mergeModuleASecureCurrentConfig(cc, dc models.ModuleSecureConfig, sh models
 	}
 
 	mcsh := copySchema(&sh.Type, sh.Definitions)
-	icc := utils.MergeTwoInterfacesBySchema(cc, dc, mcsh)
+	icc := modules.MergeTwoInterfacesBySchema(cc, dc, mcsh)
 	if res, err := mcsh.ValidateGo(icc); err != nil || !res.Valid() {
 		return dc
 	} else if rcc, ok := icc.(models.ModuleSecureConfig); !ok {
@@ -1111,7 +1125,7 @@ func mergeModuleACurrentActionConfig(cac, dac models.ActionConfig, sh models.Sch
 
 	rcac := models.ActionConfig{}
 	acsh := copySchema(&sh.Type, models.GetACSDefinitions(sh.Definitions))
-	icac := utils.MergeTwoInterfacesBySchema(convertToRawInterface(cac), convertToRawInterface(dac), acsh)
+	icac := modules.MergeTwoInterfacesBySchema(convertToRawInterface(cac), convertToRawInterface(dac), acsh)
 	if res, err := acsh.ValidateGo(icac); err != nil || !res.Valid() {
 		return dac
 	} else if b, err := json.Marshal(icac); err != nil {
@@ -1130,7 +1144,7 @@ func mergeModuleACurrentActionConfig(cac, dac models.ActionConfig, sh models.Sch
 func mergeModuleAEventConfigItem(ceci, deci models.EventConfigItem, sh models.Schema) models.EventConfigItem {
 	reci := models.EventConfigItem{}
 	iceci, ideci := convertToRawInterface(ceci), convertToRawInterface(deci)
-	rieci := utils.MergeTwoInterfacesBySchema(iceci, ideci, sh)
+	rieci := modules.MergeTwoInterfacesBySchema(iceci, ideci, sh)
 	if b, err := json.Marshal(rieci); err != nil {
 		return deci
 	} else if err = json.Unmarshal(b, &reci); err != nil {
@@ -1237,16 +1251,6 @@ func MergeModuleAConfigFromModuleS(moduleA *models.ModuleA, moduleS *models.Modu
 	return moduleR, nil
 }
 
-// cleanupSecureConfig removes serverOnly parameters from the agent module config
-func cleanupSecureConfig(module *models.ModuleA) {
-	for k, v := range module.SecureDefaultConfig {
-		if serverOnly := v.ServerOnly; serverOnly != nil && *serverOnly {
-			module.SecureDefaultConfig[k] = models.ModuleSecureParameter{}
-			module.SecureCurrentConfig[k] = models.ModuleSecureParameter{}
-		}
-	}
-}
-
 func LatestModulesQuery(db *gorm.DB) *gorm.DB {
 	subQueryLatestVersion := db.Table("modules m2").
 		Select("m2.version").
@@ -1281,7 +1285,7 @@ func getModuleName(c *gin.Context, db *gorm.DB, name string, version string) (st
 		return "", errors.New("can't get service")
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", name, tid, sv.Type)
 	}
@@ -1297,17 +1301,20 @@ type ModuleService struct {
 	db               *gorm.DB
 	serverConnector  *client.AgentServerClient
 	userActionWriter useraction.Writer
+	templatesDir     string
 }
 
 func NewModuleService(
 	db *gorm.DB,
 	serverConnector *client.AgentServerClient,
 	userActionWriter useraction.Writer,
+	templatesDir string,
 ) *ModuleService {
 	return &ModuleService{
 		db:               db,
 		serverConnector:  serverConnector,
 		userActionWriter: userActionWriter,
+		templatesDir:     templatesDir,
 	}
 }
 
@@ -1316,37 +1323,37 @@ func NewModuleService(
 // @Tags Agents,Modules
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=agentModules} "agent modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agent modules not permitted"
-// @Failure 404 {object} utils.errorResp "agent or modules not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=agentModules} "agent modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agent modules not permitted"
+// @Failure 404 {object} response.errorResp "agent or modules not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent modules"
 // @Router /agents/{hash}/modules [get]
 func (s *ModuleService) GetAgentModules(c *gin.Context) {
 	var (
 		hash  = c.Param("hash")
 		pids  []uint64
-		query utils.TableQuery
+		query storage.TableQuery
 		resp  agentModules
 		sv    *models.Service
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1358,7 +1365,7 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 
 	var agentPolicies models.AgentPolicies
 	if err = iDB.Take(&agentPolicies, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetAgentModulesAgentNotFound, err)
 		} else {
@@ -1367,12 +1374,12 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(agentPolicies).Association("policies").Find(&agentPolicies.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
 		response.Error(c, response.ErrGetAgentModulesAgentPoliciesNotFound, err)
 		return
 	}
 	if err = agentPolicies.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
 		response.Error(c, response.ErrGetAgentModulesInvalidAgentPoliciesData, err)
 		return
 	}
@@ -1396,14 +1403,14 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		},
 	})
 	if resp.Total, err = query.Query(iDB, &resp.Modules); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent modules")
 		response.Error(c, response.ErrGetAgentModulesInvalidQuery, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).
+			logger.FromContext(c).WithError(err).
 				Errorf("error validating agent module data '%s'", resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrGetAgentModulesInvalidAgentData, err)
 			return
@@ -1415,20 +1422,20 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		modNames = append(modNames, module.Info.Name)
 	}
 	modules := make([]models.ModuleS, 0)
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
 	}
 
 	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
+		logger.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
 		response.Error(c, response.ErrGetAgentsGetSystemModulesFail, err)
 		return
 	}
 
 	var details []agentModuleDetails
 	if err = iDB.Raw(sqlAgentModuleDetails, agentPolicies.ID).Scan(&details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading agents modules details")
+		logger.FromContext(c).WithError(err).Errorf("error loading agents modules details")
 		response.Error(c, response.ErrGetAgentModulesDetailsNotFound, err)
 
 		return
@@ -1464,10 +1471,10 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp{data=models.ModuleA} "agent module data received successful"
-// @Failure 403 {object} utils.errorResp "getting agent module data not permitted"
-// @Failure 404 {object} utils.errorResp "agent or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent module"
+// @Success 200 {object} response.successResp{data=models.ModuleA} "agent module data received successful"
+// @Failure 403 {object} response.errorResp "getting agent module data not permitted"
+// @Failure 404 {object} response.errorResp "agent or module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent module"
 // @Router /agents/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetAgentModule(c *gin.Context) {
 	var (
@@ -1477,22 +1484,22 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 		pids       []uint64
 	)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	var agentPolicies models.AgentPolicies
 	if err = iDB.Take(&agentPolicies, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetAgentModuleAgentNotFound, err)
 		} else {
@@ -1501,12 +1508,12 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(agentPolicies).Association("policies").Find(&agentPolicies.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
 		response.Error(c, response.ErrGetAgentModuleAgentPoliceNotFound, err)
 		return
 	}
 	if err = agentPolicies.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
 		response.Error(c, response.ErrGetAgentModuleInvalidAgentPoliceData, err)
 		return
 	}
@@ -1519,11 +1526,11 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		response.Error(c, response.ErrModulesNotFound, err)
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
@@ -1539,7 +1546,7 @@ func (s *ModuleService) GetAgentModule(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param file query string false "path to the browser module file" default(main.vue)
 // @Success 200 {file} file "browser module vue code as a file"
-// @Failure 403 {object} utils.errorResp "getting agent module data not permitted"
+// @Failure 403 {object} response.errorResp "getting agent module data not permitted"
 // @Router /agents/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 	var (
@@ -1549,7 +1556,6 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		pids       []uint64
-		s3         storage.IStorage
 		sv         *models.Service
 	)
 
@@ -1562,15 +1568,15 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		c.Data(http.StatusOK, ctype, data)
 	}()
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1581,15 +1587,15 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 
 	var agentPolicies models.AgentPolicies
 	if err = iDB.Take(&agentPolicies, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		return
 	}
 	if err = iDB.Model(agentPolicies).Association("policies").Find(&agentPolicies.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent policies by agent model")
 		return
 	}
 	if err = agentPolicies.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating agent policies data '%s'", agentPolicies.Hash)
 		response.Error(c, response.ErrGetAgentBModuleInvalidAgentPoliceData, err)
 		return
 	}
@@ -1602,23 +1608,23 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
-	s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
+	s3Client, err := s3.New(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		return
 	}
 
 	path := path.Join(moduleName, module.Info.Version.String(), "bmodule", filepath)
-	if data, err = s3.ReadFile(path); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
+	if data, err = s3Client.ReadFile(path); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
 		return
 	}
 }
@@ -1628,38 +1634,38 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 // @Tags Groups,Modules
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=groupModules} "group modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting group modules not permitted"
-// @Failure 404 {object} utils.errorResp "group or modules not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting group modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=groupModules} "group modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting group modules not permitted"
+// @Failure 404 {object} response.errorResp "group or modules not found"
+// @Failure 500 {object} response.errorResp "internal error on getting group modules"
 // @Router /groups/{hash}/modules [get]
 func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	var (
 		gps   models.GroupPolicies
 		hash  = c.Param("hash")
 		pids  []uint64
-		query utils.TableQuery
+		query storage.TableQuery
 		resp  groupModules
 		sv    *models.Service
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1670,7 +1676,7 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&gps, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetGroupModulesGroupNotFound, err)
 		} else {
@@ -1679,12 +1685,12 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
+		logger.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		response.Error(c, response.ErrGetGroupModulesGroupPoliciesNotFound, err)
 		return
 	}
 	if err = gps.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
 		response.Error(c, response.ErrGetGroupModulesInvalidGroupPoliciesData, err)
 		return
 	}
@@ -1708,14 +1714,14 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		},
 	})
 	if resp.Total, err = query.Query(iDB, &resp.Modules); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding group modules")
 		response.Error(c, response.ErrGetGroupModulesInvalidGroupQuery, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).
+			logger.FromContext(c).WithError(err).
 				Errorf("error validating group module data '%s'",
 					resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrGetGroupModulesInvalidGroupData, err)
@@ -1728,20 +1734,20 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		modNames = append(modNames, module.Info.Name)
 	}
 	modules := make([]models.ModuleS, 0)
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
 	}
 
 	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
+		logger.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
 		response.Error(c, response.ErrGetGroupsGetSystemModulesFail, err)
 		return
 	}
 
 	var details []groupModuleDetails
 	if err = iDB.Raw(sqlGroupModuleDetails, gps.ID).Scan(&details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading group modules details")
+		logger.FromContext(c).WithError(err).Errorf("error loading group modules details")
 		response.Error(c, response.ErrGetGroupModulesDetailsNotFound, err)
 		return
 	}
@@ -1776,10 +1782,10 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp{data=models.ModuleA} "group module data received successful"
-// @Failure 403 {object} utils.errorResp "getting group module data not permitted"
-// @Failure 404 {object} utils.errorResp "group or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting group"
+// @Success 200 {object} response.successResp{data=models.ModuleA} "group module data received successful"
+// @Failure 403 {object} response.errorResp "getting group module data not permitted"
+// @Failure 404 {object} response.errorResp "group or module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting group"
 // @Router /groups/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetGroupModule(c *gin.Context) {
 	var (
@@ -1790,21 +1796,21 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 		pids       []uint64
 	)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&gps, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetGroupModuleGroupNotFound, err)
 		} else {
@@ -1813,12 +1819,12 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 		return
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
+		logger.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		response.Error(c, response.ErrGetGroupModuleGroupPoliciesNotFound, err)
 		return
 	}
 	if err = gps.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
 		response.Error(c, response.ErrGetGroupModuleInvalidGroupPoliciesData, err)
 		return
 	}
@@ -1831,12 +1837,12 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		response.Error(c, response.ErrModulesNotFound, err)
 
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
@@ -1852,7 +1858,7 @@ func (s *ModuleService) GetGroupModule(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param file query string false "path to the browser module file" default(main.vue)
 // @Success 200 {file} file "browser module vue code as a file"
-// @Failure 403 {object} utils.errorResp "getting group module data not permitted"
+// @Failure 403 {object} response.errorResp "getting group module data not permitted"
 // @Router /groups/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 	var (
@@ -1863,7 +1869,6 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		pids       []uint64
-		s3         storage.IStorage
 		sv         *models.Service
 	)
 
@@ -1876,15 +1881,15 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		c.Data(http.StatusOK, ctype, data)
 	}()
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1894,15 +1899,15 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&gps, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		return
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
+		logger.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		return
 	}
 	if err = gps.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating group policies data '%s'", gps.Hash)
 		response.Error(c, response.ErrGetGroupBModuleInvalidGroupPoliciesData, err)
 		return
 	}
@@ -1915,23 +1920,23 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		return db.Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, moduleName)
 	}
 	if err = iDB.Scopes(scopeModule).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by module name")
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
-	s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
+	s3Client, err := s3.New(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		return
 	}
 
 	path := path.Join(moduleName, module.Info.Version.String(), "bmodule", filepath)
-	if data, err = s3.ReadFile(path); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
+	if data, err = s3Client.ReadFile(path); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
 		return
 	}
 }
@@ -1941,12 +1946,12 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 // @Tags Policies,Modules
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=policyModules} "policy modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data
-// @Failure 403 {object} utils.errorResp "getting policy modules not permitted"
-// @Failure 404 {object} utils.errorResp "policy or modules not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=policyModules} "policy modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data
+// @Failure 403 {object} response.errorResp "getting policy modules not permitted"
+// @Failure 404 {object} response.errorResp "policy or modules not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy modules"
 // @Router /policies/{hash}/modules [get]
 func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	var (
@@ -1954,7 +1959,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		modulesA []models.ModuleA
 		modulesS []models.ModuleS
 		policy   models.Policy
-		query    utils.TableQuery
+		query    storage.TableQuery
 		resp     policyModules
 		sv       *models.Service
 	)
@@ -1964,15 +1969,15 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1983,7 +1988,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetPolicyModulesPolicyNotFound, err)
 		} else {
@@ -1991,17 +1996,17 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrGetPolicyModulesInvalidPolicyData, err)
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 
 	queryA := query
 	queryA.Page = 0
 	queryA.Size = 0
-	queryA.Filters = []utils.TableFilter{}
+	queryA.Filters = []storage.TableFilter{}
 	queryA.Init("modules", modulesSQLMappers)
 	queryA.SetFilters([]func(db *gorm.DB) *gorm.DB{
 		func(db *gorm.DB) *gorm.DB {
@@ -2012,7 +2017,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		},
 	})
 	if _, err = queryA.Query(iDB, &modulesA); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy modules")
 		response.Error(c, response.ErrGetPolicyModulesInvalidPolicyQuery, err)
 		return
 	}
@@ -2040,14 +2045,14 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		},
 	}
 	if resp.Total, err = queryS.Query(s.db, &modulesS, funcs...); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding system modules")
 		response.Error(c, response.ErrGetPolicyModulesInvalidModulesQuery, err)
 		return
 	}
 
 	var details []policyModuleDetails
 	if err = iDB.Raw(sqlPolicyModuleDetails, policy.ID).Scan(&details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading policies modules details")
+		logger.FromContext(c).WithError(err).Errorf("error loading policies modules details")
 		response.Error(c, response.ErrGetPolicyModulesDetailsNotFound, err)
 		return
 	}
@@ -2086,7 +2091,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).
+			logger.FromContext(c).WithError(err).
 				Errorf("error validating policy module data '%s'", resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrGetPolicyModulesInvalidPolicyData, err)
 			return
@@ -2101,7 +2106,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	}
 	duplicateMap, err := CheckMultipleModulesDuplicate(iDB, moduleNames, policy.ID)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
+		logger.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2119,10 +2124,10 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp{data=models.ModuleA} "policy module data received successful"
-// @Failure 403 {object} utils.errorResp "getting policy module data not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy module"
+// @Success 200 {object} response.successResp{data=models.ModuleA} "policy module data received successful"
+// @Failure 403 {object} response.errorResp "getting policy module data not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy module"
 // @Router /policies/{hash}/modules/{module_name} [get]
 func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 	var (
@@ -2132,21 +2137,21 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 		policy     models.Policy
 	)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetPolicyModulePolicyNotFound, err)
 		} else {
@@ -2154,17 +2159,17 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrGetPolicyModuleInvalidPolicyData, err)
 		return
 	}
 
 	if err = iDB.Take(&module, "policy_id = ? AND name = ?", policy.ID, moduleName).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by name")
 		response.Error(c, response.ErrModulesNotFound, err)
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
@@ -2180,7 +2185,7 @@ func (s *ModuleService) GetPolicyModule(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param file query string false "path to the browser module file" default(main.vue)
 // @Success 200 {file} file "browser module vue code as a file"
-// @Failure 403 {object} utils.errorResp "getting policy module data not permitted"
+// @Failure 403 {object} response.errorResp "getting policy module data not permitted"
 // @Router /policies/{hash}/modules/{module_name}/bmodule.vue [get]
 func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 	var (
@@ -2190,7 +2195,6 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 		module     models.ModuleA
 		moduleName = c.Param("module_name")
 		policy     models.Policy
-		s3         storage.IStorage
 		sv         *models.Service
 	)
 
@@ -2203,15 +2207,15 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 		c.Data(http.StatusOK, ctype, data)
 	}()
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2221,24 +2225,24 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		return
 	}
 
 	if err = iDB.Take(&module, "policy_id = ? AND name = ?", policy.ID, moduleName).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by name")
 		return
 	}
 
-	s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
+	s3Client, err := s3.New(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		return
 	}
 
 	path := path.Join(moduleName, module.Info.Version.String(), "bmodule", filepath)
-	if data, err = s3.ReadFile(path); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
+	if data, err = s3Client.ReadFile(path); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error reading module file '%s'", path)
 		return
 	}
 }
@@ -2251,10 +2255,10 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
 // @Param json body policyModulePatch true "action on policy module as JSON data (activate, deactivate, store, update)"
-// @Success 200 {object} utils.successResp "policy module patched successful"
-// @Failure 403 {object} utils.errorResp "updating policy module not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating policy module"
+// @Success 200 {object} response.successResp "policy module patched successful"
+// @Failure 403 {object} response.errorResp "updating policy module not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on updating policy module"
 // @Router /policies/{hash}/modules/{module_name} [put]
 func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	var (
@@ -2271,15 +2275,15 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2289,7 +2293,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2300,7 +2304,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchPolicyModulePolicyNotFound, err)
 		} else {
@@ -2311,7 +2315,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
 	if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPatchPolicyModuleInvalidPolicyData, err)
 		return
 	}
@@ -2321,7 +2325,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		db = db.Where("name = ? AND tenant_id IN (0, ?) AND service_type = ?", moduleName, tid, sv.Type)
 		switch form.Version {
@@ -2333,7 +2337,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&moduleS).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -2341,7 +2345,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = moduleS.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2350,13 +2354,13 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		moduleA.FromModuleS(&moduleS)
 		moduleA.PolicyID = policy.ID
 	} else if err = moduleA.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if moduleA.ID == 0 && form.Action != "activate" {
-		utils.FromContext(c).Errorf("error on %s module, policy module not found", form.Action)
+		logger.FromContext(c).Errorf("error on %s module, policy module not found", form.Action)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2366,26 +2370,26 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	switch form.Action {
 	case "activate":
 		if err = CheckModulesDuplicate(iDB, &moduleA); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
+			logger.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
 			response.Error(c, response.ErrPatchPolicyModuleDuplicatedModule, err)
 			return
 		}
 
 		if moduleA.ID == 0 {
 			if err = CopyModuleAFilesToInstanceS3(&moduleA.Info, sv); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error copying module files to S3")
+				logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
 
 			if err = moduleA.ValidateEncryption(encryptor); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("module config not encrypted")
+				logger.FromContext(c).WithError(err).Errorf("module config not encrypted")
 				response.Error(c, response.ErrModulesDataNotEncryptedOnDBInsert, nil)
 				return
 			}
 
 			if err = iDB.Create(&moduleA).Error; err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error creating module")
+				logger.FromContext(c).WithError(err).Errorf("error creating module")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
@@ -2399,7 +2403,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		} else {
 			moduleA.Status = "joined"
 			if err = iDB.Select("", incl...).Save(&moduleA).Error; err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error updating module")
+				logger.FromContext(c).WithError(err).Errorf("error updating module")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
@@ -2408,28 +2412,28 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	case "deactivate":
 		moduleA.Status = "inactive"
 		if err = iDB.Select("", incl...).Save(&moduleA).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating module")
+			logger.FromContext(c).WithError(err).Errorf("error updating module")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 	case "store":
 		if err = form.Module.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating module")
+			logger.FromContext(c).WithError(err).Errorf("error validating module")
 			response.Error(c, response.ErrPatchPolicyModuleNewModuleInvalid, err)
 			return
 		}
 
 		changes, err := compareModulesChanges(form.Module, moduleA, encryptor)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("failed to compare modules changes")
+			logger.FromContext(c).WithError(err).Errorf("failed to compare modules changes")
 			response.Error(c, response.ErrModulesFailedToCompareChanges, err)
 			return
 		}
 
 		for _, ch := range changes {
 			if ch {
-				utils.FromContext(c).Errorf("error accepting module changes")
+				logger.FromContext(c).Errorf("error accepting module changes")
 				response.Error(c, response.ErrPatchPolicyModuleAcceptFail, nil)
 				return
 			}
@@ -2437,12 +2441,12 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 
 		err = form.Module.EncryptSecureParameters(encryptor)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+			logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 			return
 		}
 		if err = iDB.Omit(excl...).Save(&form.Module).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error saving module")
+			logger.FromContext(c).WithError(err).Errorf("error saving module")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -2450,51 +2454,51 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	case "update":
 		moduleVersion := moduleA.Info.Version.String()
 		if moduleVersion == moduleS.Info.Version.String() {
-			utils.FromContext(c).Errorf("error updating module to the same version: %s", moduleVersion)
+			logger.FromContext(c).Errorf("error updating module to the same version: %s", moduleVersion)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, &moduleS, encryptor)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("invalid module state")
+			logger.FromContext(c).WithError(err).Errorf("invalid module state")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = moduleA.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("invalid module state")
+			logger.FromContext(c).WithError(err).Errorf("invalid module state")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		err = moduleA.EncryptSecureParameters(encryptor)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+			logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 			return
 		}
 
 		if err = CopyModuleAFilesToInstanceS3(&moduleA.Info, sv); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error copying module files to S3")
+			logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating module")
+			logger.FromContext(c).WithError(err).Errorf("error updating module")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 		if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error removing unused module data")
+			logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
 
 	default:
-		utils.FromContext(c).Errorf("error making unknown action on module")
+		logger.FromContext(c).Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchPolicyModuleActionNotFound, nil)
 		return
 	}
@@ -2546,10 +2550,10 @@ func compareModulesChanges(moduleIn, moduleDB models.ModuleA, encryptor crypto.I
 // @Produce json
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp "policy module deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting policy module not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting policy module"
+// @Success 200 {object} response.successResp "policy module deleted successful"
+// @Failure 403 {object} response.errorResp "deleting policy module not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting policy module"
 // @Router /policies/{hash}/modules/{module_name} [delete]
 func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	var (
@@ -2563,21 +2567,21 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrDeletePolicyModulePolicyNotFound, err)
 		} else {
@@ -2585,7 +2589,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrDeletePolicyModuleInvalidPolicyData, err)
 		return
 	}
@@ -2597,7 +2601,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&module, "policy_id = ? AND name = ?", policy.ID, moduleName).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesNotFound, err)
 		} else {
@@ -2605,20 +2609,20 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if err = iDB.Delete(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting policy module by name '%s'", moduleName)
+		logger.FromContext(c).WithError(err).Errorf("error deleting policy module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	moduleVersion := module.Info.Version.String()
 	if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error removing unused module data")
+		logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2634,11 +2638,11 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 // @Param hash path string true "policy hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param module_name path string true "module name without spaces"
 // @Param json body models.ModuleConfig true "param name and value to be set"
-// @Success 200 {object} utils.successResp "parameter updated successfully"
-// @Success 400 {object} utils.errorResp "bad request"
-// @Failure 403 {object} utils.errorResp "updating parameter not permitted"
-// @Failure 404 {object} utils.errorResp "policy or module not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating secured parameter"
+// @Success 200 {object} response.successResp "parameter updated successfully"
+// @Success 400 {object} response.errorResp "bad request"
+// @Failure 403 {object} response.errorResp "updating parameter not permitted"
+// @Failure 404 {object} response.errorResp "policy or module not found"
+// @Failure 500 {object} response.errorResp "internal error on updating secured parameter"
 // @Router /policies/{hash}/modules/{module_name}/secure_config [post]
 func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	var (
@@ -2659,11 +2663,11 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	err := c.ShouldBindJSON(&payload)
 	switch {
 	case err != nil:
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	case len(payload) != 1:
-		utils.FromContext(c).WithError(err).Errorf("only one key-value pair in body allowed")
+		logger.FromContext(c).WithError(err).Errorf("only one key-value pair in body allowed")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2673,15 +2677,15 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 	uaf.ActionCode = fmt.Sprintf("%s, key: %s", uaf.ActionCode, paramName)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2697,7 +2701,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchPolicyModulePolicyNotFound, err)
 		} else {
@@ -2705,19 +2709,19 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPatchPolicyModuleInvalidPolicyData, err)
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id IN (0, ?) AND service_type = ?", moduleName, tid, sv.Type).
 			Order("ver_major DESC, ver_minor DESC, ver_patch DESC") // latest
 	}
 
 	if err = s.db.Scopes(scope).Take(&moduleS).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -2725,7 +2729,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = moduleS.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2735,13 +2739,13 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		moduleA.FromModuleS(&moduleS)
 		moduleA.PolicyID = policy.ID
 	} else if err = moduleA.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if err = moduleA.DecryptSecureParameters(encryptor); err != nil {
-		utils.FromContext(c).WithError(err).
+		logger.FromContext(c).WithError(err).
 			Errorf("error decrypting module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 		return
@@ -2749,7 +2753,7 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	param, ok := moduleA.SecureCurrentConfig[paramName]
 	if !ok {
-		utils.FromContext(c).WithError(err).Errorf("module secure parameter not exists")
+		logger.FromContext(c).WithError(err).Errorf("module secure parameter not exists")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2759,19 +2763,19 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		Value:      payload[paramName],
 	}
 	if err = moduleA.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error saving module")
+		logger.FromContext(c).WithError(err).Errorf("error saving module")
 		response.Error(c, response.ErrModulesInvalidParameterValue, err)
 		return
 	}
 
 	err = moduleA.EncryptSecureParameters(encryptor)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+		logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 		return
 	}
 	if err = iDB.Save(&moduleA).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error saving module")
+		logger.FromContext(c).WithError(err).Errorf("error saving module")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2787,9 +2791,9 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param param_name path string true "parameter name without spaces"
 // @Success 200 {object} models.ModuleConfig "secured param value received successfully"
-// @Failure 403 {object} utils.errorResp "get secured parameter not permitted"
-// @Failure 404 {object} utils.errorResp "policy, module or parameter not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting module secured parameter"
+// @Failure 403 {object} response.errorResp "get secured parameter not permitted"
+// @Failure 404 {object} response.errorResp "policy, module or parameter not found"
+// @Failure 500 {object} response.errorResp "internal error on getting module secured parameter"
 // @Router /policies/{hash}/modules/{module_name}/secure_config/{param_name} [get]
 func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	var (
@@ -2807,15 +2811,15 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	uaf := useraction.NewFields(c, "policy", "policy", actionCode, hash, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -2831,7 +2835,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchPolicyModulePolicyNotFound, err)
 		} else {
@@ -2839,19 +2843,19 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrPatchPolicyModuleInvalidPolicyData, err)
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id IN (0, ?) AND service_type = ?", moduleName, tid, sv.Type).
 			Order("ver_major DESC, ver_minor DESC, ver_patch DESC") // latest
 	}
 
 	if err = s.db.Scopes(scope).Take(&moduleS).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -2859,7 +2863,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		}
 		return
 	} else if err = moduleS.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", moduleS.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -2869,13 +2873,13 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		moduleA.FromModuleS(&moduleS)
 		moduleA.PolicyID = policy.ID
 	} else if err = moduleA.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesInvalidData, err)
 		return
 	}
 
 	if err = moduleA.DecryptSecureParameters(encryptor); err != nil {
-		utils.FromContext(c).WithError(err).
+		logger.FromContext(c).WithError(err).
 			Errorf("error decrypting module data '%s'", moduleA.Info.Name)
 		response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 		return
@@ -2883,7 +2887,7 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 
 	val, ok := moduleA.SecureCurrentConfig[paramName]
 	if !ok {
-		utils.FromContext(c).WithError(err).Errorf("module secure parameter not exists")
+		logger.FromContext(c).WithError(err).Errorf("module secure parameter not exists")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2897,15 +2901,15 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Summary Retrieve system modules by filters
 // @Tags Modules
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=systemModules} "system modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting system modules not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting system modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=systemModules} "system modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting system modules not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting system modules"
 // @Router /modules/ [get]
 func (s *ModuleService) GetModules(c *gin.Context) {
 	var (
-		query      utils.TableQuery
+		query      storage.TableQuery
 		sv         *models.Service
 		resp       systemModules
 		useVersion bool
@@ -2913,7 +2917,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -2928,7 +2932,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 
 	query.Init("modules", modulesSQLMappers)
 
@@ -2961,7 +2965,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 	}
 	total, err := query.Query(s.db, &resp.Modules, funcs...)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding system modules")
 		response.Error(c, response.ErrGetModulesInvalidModulesQuery, err)
 		return
 	}
@@ -2969,14 +2973,14 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 
 	for _, module := range resp.Modules {
 		if err = module.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).
+			logger.FromContext(c).WithError(err).
 				Errorf("error validating system module data '%s'", module.Info.Name)
 			response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 			return
 		}
 
 		if err = module.DecryptSecureParameters(encryptor); err != nil {
-			utils.FromContext(c).WithError(err).
+			logger.FromContext(c).WithError(err).
 				Errorf("error decrypting module data '%s'", module.Info.Name)
 			response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 			return
@@ -2992,10 +2996,10 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.ModuleInfo true "module info to create one"
-// @Success 201 {object} utils.successResp{data=models.ModuleS} "system module created successful"
-// @Failure 400 {object} utils.errorResp "invalid system module info"
-// @Failure 403 {object} utils.errorResp "creating system module not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating system module"
+// @Success 201 {object} response.successResp{data=models.ModuleS} "system module created successful"
+// @Failure 400 {object} response.errorResp "invalid system module info"
+// @Failure 403 {object} response.errorResp "creating system module not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating system module"
 // @Router /modules/ [post]
 func (s *ModuleService) CreateModule(c *gin.Context) {
 	var (
@@ -3020,13 +3024,13 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 
 	if err := c.ShouldBindJSON(&info); err != nil || info.Valid() != nil {
 		if err == nil {
 			err = info.Valid()
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrCreateModuleInvalidInfo, err)
 		return
 	}
@@ -3037,11 +3041,11 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding number of system module")
+		logger.FromContext(c).WithError(err).Errorf("error finding number of system module")
 		response.Error(c, response.ErrCreateModuleGetCountFail, err)
 		return
 	} else if count >= 1 {
-		utils.FromContext(c).Errorf("error creating second system module")
+		logger.FromContext(c).Errorf("error creating second system module")
 		response.Error(c, response.ErrCreateModuleSecondSystemModule, err)
 		return
 	}
@@ -3049,8 +3053,8 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	info.System = false
 
 	var err error
-	if template, module, err = LoadModuleSTemplate(&info); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading module")
+	if template, module, err = LoadModuleSTemplate(&info, s.templatesDir); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error loading module")
 		response.Error(c, response.ErrCreateModuleLoadFail, err)
 		return
 	}
@@ -3060,13 +3064,13 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	module.TenantID = tid
 	module.ServiceType = sv.Type
 	if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module")
+		logger.FromContext(c).WithError(err).Errorf("error validating module")
 		response.Error(c, response.ErrCreateModuleValidationFail, err)
 		return
 	}
 
 	if err = StoreModuleSToGlobalS3(&info, template); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error storing module to S3")
+		logger.FromContext(c).WithError(err).Errorf("error storing module to S3")
 		response.Error(c, response.ErrCreateModuleStoreS3Fail, err)
 		return
 	}
@@ -3076,7 +3080,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return
 	}
 	if err = s.db.Create(module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error creating module")
+		logger.FromContext(c).WithError(err).Errorf("error creating module")
 		response.Error(c, response.ErrCreateModuleStoreDBFail, err)
 		return
 	}
@@ -3089,17 +3093,16 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 // @Tags Modules
 // @Produce json
 // @Param module_name path string true "module name without spaces"
-// @Success 200 {object} utils.successResp "system module deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module or services not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting system module"
+// @Success 200 {object} response.successResp "system module deleted successful"
+// @Failure 403 {object} response.errorResp "deleting system module not permitted"
+// @Failure 404 {object} response.errorResp "system module or services not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting system module"
 // @Router /modules/{module_name} [delete]
 func (s *ModuleService) DeleteModule(c *gin.Context) {
 	var (
 		err        error
 		modules    []models.ModuleS
 		moduleName = c.Param("module_name")
-		s3         storage.IStorage
 		sv         *models.Service
 		services   []models.Service
 	)
@@ -3112,13 +3115,13 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil || len(modules) == 0 {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if err == nil && len(modules) == 0 {
 			response.Error(c, response.ErrModulesNotFound, err)
 		} else {
@@ -3132,35 +3135,34 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		var (
 			err     error
 			modules []models.ModuleA
-			s3      storage.IStorage
 		)
 
-		iDB := utils.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
+		iDB := storage.GetDB(s.Info.DB.User, s.Info.DB.Pass, s.Info.DB.Host,
 			strconv.Itoa(int(s.Info.DB.Port)), s.Info.DB.Name)
 		if iDB == nil {
-			utils.FromContext(c).Errorf("error openning connection to instance DB")
+			logger.FromContext(c).Errorf("error openning connection to instance DB")
 			return errors.New("failed to connect to instance DB")
 		}
 		defer iDB.Close()
 
 		if err = iDB.Find(&modules, "name = ?", moduleName).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding modules by name")
+			logger.FromContext(c).WithError(err).Errorf("error finding modules by name")
 			return err
 		} else if len(modules) == 0 {
 			return updateDependenciesWhenModuleRemove(c, iDB, moduleName)
 		} else if err = iDB.Where("name = ?", moduleName).Delete(&modules).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error deleting module by name '%s'", moduleName)
+			logger.FromContext(c).WithError(err).Errorf("error deleting module by name '%s'", moduleName)
 			return err
 		}
 
-		s3, err = storage.NewS3(sv.Info.S3.ToS3ConnParams())
+		s3Client, err := s3.New(sv.Info.S3.ToS3ConnParams())
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+			logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 			return err
 		}
 
-		if err = s3.RemoveDir(moduleName + "/"); err != nil && err.Error() != "not found" {
-			utils.FromContext(c).WithError(err).Errorf("error removing modules files")
+		if err = s3Client.RemoveDir(moduleName + "/"); err != nil && err.Error() != "not found" {
+			logger.FromContext(c).WithError(err).Errorf("error removing modules files")
 			return err
 		}
 
@@ -3168,7 +3170,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	}
 
 	if err = s.db.Find(&services, "tenant_id = ? AND type = ?", tid, sv.Type).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding services")
+		logger.FromContext(c).WithError(err).Errorf("error finding services")
 		response.Error(c, response.ErrDeleteModuleServiceNotFound, err)
 		return
 	}
@@ -3181,19 +3183,20 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	}
 
 	if err = s.db.Where("name = ?", moduleName).Delete(&modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
+		logger.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	if s3, err = storage.NewS3(nil); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+	s3Client, err := s3.New(nil)
+	if err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	if err = s3.RemoveDir(moduleName + "/"); err != nil && err.Error() != "not found" {
-		utils.FromContext(c).WithError(err).Errorf("error removing system modules files")
+	if err = s3Client.RemoveDir(moduleName + "/"); err != nil && err.Error() != "not found" {
+		logger.FromContext(c).WithError(err).Errorf("error removing system modules files")
 		response.Error(c, response.ErrDeleteModuleDeleteFilesFail, err)
 		return
 	}
@@ -3206,22 +3209,22 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 // @Tags Modules
 // @Produce json
 // @Param module_name path string true "module name without spaces"
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=systemShortModules} "system modules received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting system modules not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting system modules"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=systemShortModules} "system modules received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting system modules not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting system modules"
 // @Router /modules/{module_name}/versions/ [get]
 func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 	var (
 		moduleName = c.Param("module_name")
-		query      utils.TableQuery
+		query      storage.TableQuery
 		sv         *models.Service
 		resp       systemShortModules
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -3231,7 +3234,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 
 	query.Init("modules", modulesSQLMappers)
 	query.SetFilters([]func(db *gorm.DB) *gorm.DB{
@@ -3246,7 +3249,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 	})
 	total, err := query.Query(s.db, &resp.Modules)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding system modules")
 		response.Error(c, response.ErrGetModuleVersionsInvalidModulesQuery, err)
 		return
 	}
@@ -3254,7 +3257,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 
 	for i := 0; i < len(resp.Modules); i++ {
 		if err = resp.Modules[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).
+			logger.FromContext(c).WithError(err).
 				Errorf("error validating system module data '%s'", resp.Modules[i].Info.Name)
 			response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 			return
@@ -3270,10 +3273,10 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp{data=models.ModuleS} "system module data received successful"
-// @Failure 403 {object} utils.errorResp "getting system module data not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting system module"
+// @Success 200 {object} response.successResp{data=models.ModuleS} "system module data received successful"
+// @Failure 403 {object} response.errorResp "getting system module data not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting system module"
 // @Router /modules/{module_name}/versions/{version} [get]
 func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 	var (
@@ -3294,13 +3297,13 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesNotFound, err)
 
@@ -3309,13 +3312,13 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
 	if err := module.DecryptSecureParameters(encryptor); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error decrypting module data")
+		logger.FromContext(c).WithError(err).Errorf("error decrypting module data")
 		response.Error(c, response.ErrModulesFailedToDecryptSecureConfig, err)
 		return
 	}
@@ -3331,10 +3334,10 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param json body moduleVersionPatch true "module info to create one"
-// @Success 200 {object} utils.successResp "system module updated successful"
-// @Failure 403 {object} utils.errorResp "updating system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module or services not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating system module"
+// @Success 200 {object} response.successResp "system module updated successful"
+// @Failure 403 {object} response.errorResp "updating system module not permitted"
+// @Failure 404 {object} response.errorResp "system module or services not found"
+// @Failure 500 {object} response.errorResp "internal error on updating system module"
 // @Router /modules/{module_name}/versions/{version} [put]
 func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	var (
@@ -3360,7 +3363,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
@@ -3382,13 +3385,13 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3396,13 +3399,13 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
 	if module.State == "release" {
-		utils.FromContext(c).Errorf("error changing released system module")
+		logger.FromContext(c).Errorf("error changing released system module")
 		response.Error(c, response.ErrPatchModuleVersionAcceptReleaseChangesFail, nil)
 		return
 	}
@@ -3418,7 +3421,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 	for _, ch := range changes {
 		if ch {
-			utils.FromContext(c).Errorf("error accepting system module changes")
+			logger.FromContext(c).Errorf("error accepting system module changes")
 			response.Error(c, response.ErrPatchModuleVersionAcceptSystemChangesFail, nil)
 			return
 		}
@@ -3426,24 +3429,24 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 
 	err := form.Module.EncryptSecureParameters(encryptor)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+		logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 		return
 	}
 	if sqlResult := s.db.Omit("last_update").Save(&form.Module); sqlResult.Error != nil {
-		utils.FromContext(c).WithError(sqlResult.Error).Errorf("error saving system module")
+		logger.FromContext(c).WithError(sqlResult.Error).Errorf("error saving system module")
 		response.Error(c, response.ErrPatchModuleVersionUpdateFail, err)
 		return
 	} else if sqlResult.RowsAffected != 0 {
 		if cfiles, err = BuildModuleSConfig(&form.Module); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error building system module files")
+			logger.FromContext(c).WithError(err).Errorf("error building system module files")
 			response.Error(c, response.ErrPatchModuleVersionBuildFilesFail, err)
 			return
 		}
 
 		template["config"] = cfiles
 		if err = StoreModuleSToGlobalS3(&form.Module.Info, template); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error storing system module files to S3")
+			logger.FromContext(c).WithError(err).Errorf("error storing system module files to S3")
 			response.Error(c, response.ErrPatchModuleVersionUpdateS3Fail, err)
 			return
 		}
@@ -3451,13 +3454,13 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 
 	if module.State == "draft" && form.Module.State == "release" {
 		if err = s.db.Find(&services, "tenant_id = ? AND type = ?", tid, sv.Type).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding services")
+			logger.FromContext(c).WithError(err).Errorf("error finding services")
 			response.Error(c, response.ErrPatchModuleVersionServiceNotFound, err)
 			return
 		}
 
 		if err = s.db.Model(&form.Module).Take(&module).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding system module by id '%d'", form.Module.ID)
+			logger.FromContext(c).WithError(err).Errorf("error finding system module by id '%d'", form.Module.ID)
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -3481,11 +3484,11 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format"
 // @Param json body models.ChangelogVersion true "module changelog to add to created module"
-// @Success 201 {object} utils.successResp{data=models.ModuleS} "system module created successful"
-// @Failure 400 {object} utils.errorResp "invalid system module info"
-// @Failure 403 {object} utils.errorResp "creating system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on creating system module"
+// @Success 201 {object} response.successResp{data=models.ModuleS} "system module created successful"
+// @Failure 400 {object} response.errorResp "invalid system module info"
+// @Failure 403 {object} response.errorResp "creating system module not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on creating system module"
 // @Router /modules/{module_name}/versions/{version} [post]
 func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	var (
@@ -3521,18 +3524,18 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion("latest"), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3544,7 +3547,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if err := module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -3554,33 +3557,33 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	}
 
 	if err := s.db.Scopes(scope, draft).Model(&module).Count(&count).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding number of system module drafts")
+		logger.FromContext(c).WithError(err).Errorf("error finding number of system module drafts")
 		response.Error(c, response.ErrCreateModuleVersionGetDraftNumberFail, err)
 		return
 	} else if count >= 1 {
-		utils.FromContext(c).Errorf("error creating system module second draft")
+		logger.FromContext(c).Errorf("error creating system module second draft")
 		response.Error(c, response.ErrCreateModuleVersionSecondSystemModuleDraft, err)
 		return
 	}
 
 	newModuleVersion, err := semver.NewVersion(version)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error parsing new version '%s'", version)
+		logger.FromContext(c).WithError(err).Errorf("error parsing new version '%s'", version)
 		response.Error(c, response.ErrCreateModuleVersionInvalidModuleVersionFormat, err)
 		return
 	}
 
-	switch utils.CompareVersions(module.Info.Version.String(), version) {
-	case utils.TargetVersionGreat:
+	switch semvertooling.CompareVersions(module.Info.Version.String(), version) {
+	case semvertooling.TargetVersionGreat:
 	default:
-		utils.FromContext(c).Errorf("error validating new version '%s' -> '%s'",
+		logger.FromContext(c).Errorf("error validating new version '%s' -> '%s'",
 			module.Info.Version.String(), version)
 		response.Error(c, response.ErrCreateModuleVersionInvalidModuleVersion, nil)
 		return
 	}
 
 	if template, err = LoadModuleSFromGlobalS3(&module.Info); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error building system module files")
+		logger.FromContext(c).WithError(err).Errorf("error building system module files")
 		response.Error(c, response.ErrCreateModuleVersionBuildFilesFail, err)
 		return
 	}
@@ -3593,32 +3596,32 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	module.Info.Version.Patch = newModuleVersion.Patch()
 	module.Changelog[module.Info.Version.String()] = clver
 	if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating module")
+		logger.FromContext(c).WithError(err).Errorf("error validating module")
 		response.Error(c, response.ErrCreateModuleVersionValidationFail, err)
 		return
 	}
 
 	if cfiles, err = BuildModuleSConfig(&module); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error building system module files")
+		logger.FromContext(c).WithError(err).Errorf("error building system module files")
 		response.Error(c, response.ErrCreateModuleVersionBuildFilesFail, err)
 		return
 	}
 
 	template["config"] = cfiles
 	if err = StoreModuleSToGlobalS3(&module.Info, template); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error storing module to S3")
+		logger.FromContext(c).WithError(err).Errorf("error storing module to S3")
 		response.Error(c, response.ErrCreateModuleVersionStoreS3Fail, err)
 		return
 	}
 
 	err = module.EncryptSecureParameters(encryptor)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
+		logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 		response.Error(c, response.ErrModulesFailedToEncryptSecureConfig, err)
 		return
 	}
 	if err = s.db.Create(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error creating module")
+		logger.FromContext(c).WithError(err).Errorf("error creating module")
 		response.Error(c, response.ErrCreateModuleVersionStoreDBFail, err)
 		return
 	}
@@ -3632,10 +3635,10 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp "system module deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting system module not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting system module"
+// @Success 200 {object} response.successResp "system module deleted successful"
+// @Failure 403 {object} response.errorResp "deleting system module not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting system module"
 // @Router /modules/{module_name}/versions/{version} [delete]
 func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	var (
@@ -3654,23 +3657,23 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(scope).Model(&module).Count(&count).Error; err != nil || count == 0 {
-		utils.FromContext(c).WithError(err).Errorf("error finding number of system module versions")
+		logger.FromContext(c).WithError(err).Errorf("error finding number of system module versions")
 		response.Error(c, response.ErrDeleteModuleVersionGetVersionNumberFail, err)
 		return
 	} else if count == 1 {
-		utils.FromContext(c).Errorf("error deleting last system module version")
+		logger.FromContext(c).Errorf("error deleting last system module version")
 		response.Error(c, response.ErrDeleteModuleVersionDeleteLastVersionFail, nil)
 		return
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3678,28 +3681,28 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if err := s.db.Delete(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
+		logger.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	s3, err := storage.NewS3(nil)
+	s3, err := s3.New(nil)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	path := moduleName + "/" + module.Info.Version.String() + "/"
 	if err = s3.RemoveDir(path); err != nil && err.Error() != "not found" {
-		utils.FromContext(c).WithError(err).Errorf("error removing system modules files")
+		logger.FromContext(c).WithError(err).Errorf("error removing system modules files")
 		response.Error(c, response.ErrDeleteModuleVersionDeleteFilesFail, err)
 		return
 	}
@@ -3713,10 +3716,10 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp{data=policyModulesUpdates} "policy modules list received successful"
-// @Failure 403 {object} utils.errorResp "getting policy modules list not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting policy modules list to update"
+// @Success 200 {object} response.successResp{data=policyModulesUpdates} "policy modules list received successful"
+// @Failure 403 {object} response.errorResp "getting policy modules list not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting policy modules list to update"
 // @Router /modules/{module_name}/versions/{version}/updates [get]
 func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	var (
@@ -3729,15 +3732,15 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -3747,13 +3750,13 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope = func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3761,7 +3764,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -3771,7 +3774,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 			module.Info.Name, module.Info.Version.String(), module.LastUpdate)
 	}
 	if err = iDB.Scopes(scope).Find(&resp.Modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).
+		logger.FromContext(c).WithError(err).
 			Errorf("error finding policy modules by name and version '%s' '%s'",
 				module.Info.Name, module.Info.Version.String())
 		response.Error(c, response.ErrInternal, err)
@@ -3783,13 +3786,13 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 	}
 
 	if err = iDB.Find(&resp.Policies, "id IN (?)", pids).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policies by IDs")
+		logger.FromContext(c).WithError(err).Errorf("error finding policies by IDs")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
 		for _, policy := range resp.Policies {
 			if err = policy.Valid(); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+				logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 				response.Error(c, response.ErrGetModuleVersionUpdatesInvalidPolicyData, err)
 				return
 			}
@@ -3806,10 +3809,10 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 201 {object} utils.successResp "policy modules update run successful"
-// @Failure 403 {object} utils.errorResp "running policy modules updates not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on running policy modules updates"
+// @Success 201 {object} response.successResp "policy modules update run successful"
+// @Failure 403 {object} response.errorResp "running policy modules updates not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on running policy modules updates"
 // @Router /modules/{module_name}/versions/{version}/updates [post]
 func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	var (
@@ -3827,13 +3830,13 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3841,7 +3844,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -3861,10 +3864,10 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 // @Produce json
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
-// @Success 200 {object} utils.successResp{data=[]string} "system module files received successful"
-// @Failure 403 {object} utils.errorResp "getting system module files not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting system module files"
+// @Success 200 {object} response.successResp{data=[]string} "system module files received successful"
+// @Failure 403 {object} response.errorResp "getting system module files not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting system module files"
 // @Router /modules/{module_name}/versions/{version}/files [get]
 func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 	var (
@@ -3880,13 +3883,13 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3894,21 +3897,21 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
-	s3, err := storage.NewS3(nil)
+	s3Client, err := s3.New(nil)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	path := moduleName + "/" + module.Info.Version.String()
-	if files, err = readDir(s3, path); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error listening module files from S3")
+	if files, err = readDir(s3Client, path); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error listening module files from S3")
 		response.Error(c, response.ErrGetModuleVersionFilesListenFail, err)
 		return
 	}
@@ -3923,10 +3926,10 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param path query string true "relative path to module file"
-// @Success 200 {object} utils.successResp{data=systemModuleFile} "system module file content received successful"
-// @Failure 403 {object} utils.errorResp "getting system module file content not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting system module file"
+// @Success 200 {object} response.successResp{data=systemModuleFile} "system module file content received successful"
+// @Failure 403 {object} response.errorResp "getting system module file content not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting system module file"
 // @Router /modules/{module_name}/versions/{version}/files/file [get]
 func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 	var (
@@ -3944,13 +3947,13 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -3958,27 +3961,27 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 
-	s3, err := storage.NewS3(nil)
+	s3, err := s3.New(nil)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(filePath, prefix) || strings.Contains(filePath, "..") {
-		utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
+		logger.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrGetModuleVersionFileParsePathFail, nil)
 		return
 	}
 
 	if fileData, err = s3.ReadFile(filePath); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error reading module file '%s'", filePath)
+		logger.FromContext(c).WithError(err).Errorf("error reading module file '%s'", filePath)
 		response.Error(c, response.ErrGetModuleVersionFileReadFail, err)
 		return
 	}
@@ -3995,10 +3998,10 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param json body systemModuleFilePatch true "action, relative path and file content for module file"
-// @Success 200 {object} utils.successResp "action on system module file did successful"
-// @Failure 403 {object} utils.errorResp "making action on system module file not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on making action system module file"
+// @Success 200 {object} response.successResp "action on system module file did successful"
+// @Failure 403 {object} response.errorResp "making action on system module file not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on making action system module file"
 // @Router /modules/{module_name}/versions/{version}/files/file [put]
 func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	var (
@@ -4020,13 +4023,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -4034,34 +4037,34 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
 	if module.State == "release" {
-		utils.FromContext(c).Errorf("error patching released module")
+		logger.FromContext(c).Errorf("error patching released module")
 		response.Error(c, response.ErrPatchModuleVersionFileUpdateFail, nil)
 		return
 	}
 
-	s3, err := storage.NewS3(nil)
+	s3, err := s3.New(nil)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = c.ShouldBindJSON(&form); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrModulesInvalidRequest, err)
 		return
 	}
 
 	prefix := moduleName + "/" + module.Info.Version.String() + "/"
 	if !strings.HasPrefix(form.Path, prefix) || strings.Contains(form.Path, "..") {
-		utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
+		logger.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 		response.Error(c, response.ErrPatchModuleVersionFileParsePathFail, nil)
 		return
 	}
@@ -4069,33 +4072,39 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	switch form.Action {
 	case "save":
 		if data, err = base64.StdEncoding.DecodeString(form.Data); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error decoding file data")
+			logger.FromContext(c).WithError(err).Errorf("error decoding file data")
+			response.Error(c, response.ErrPatchModuleVersionFileParseModuleFileFail, err)
+			return
+		}
+
+		if err = validateFileOnSave(form.Path, data); err != nil {
+			logger.FromContext(c).WithError(err).Errorf("error validating file data before write to S3")
 			response.Error(c, response.ErrPatchModuleVersionFileParseModuleFileFail, err)
 			return
 		}
 
 		if err = s3.WriteFile(form.Path, data); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error writing file data to S3")
+			logger.FromContext(c).WithError(err).Errorf("error writing file data to S3")
 			response.Error(c, response.ErrPatchModuleVersionFileWriteModuleFileFail, err)
 			return
 		}
 
 	case "remove":
 		if err = s3.Remove(form.Path); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error removing file from S3")
+			logger.FromContext(c).WithError(err).Errorf("error removing file from S3")
 			response.Error(c, response.ErrPatchModuleVersionFileWriteModuleObjectFail, err)
 			return
 		}
 
 	case "move":
 		if !strings.HasPrefix(form.NewPath, prefix) || strings.Contains(form.NewPath, "..") {
-			utils.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
+			logger.FromContext(c).Errorf("error parsing path to file: mismatch base prefix")
 			response.Error(c, response.ErrPatchModuleVersionFileParseNewpathFail, nil)
 			return
 		}
 
 		if info, err = s3.GetInfo(form.Path); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error getting file info from S3")
+			logger.FromContext(c).WithError(err).Errorf("error getting file info from S3")
 			response.Error(c, response.ErrPatchModuleVersionFileObjectNotFound, err)
 			return
 		} else if !info.IsDir() {
@@ -4104,13 +4113,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				utils.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
+				logger.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
 
 			if err = s3.Rename(form.Path, form.NewPath); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error renaming file in S3")
+				logger.FromContext(c).WithError(err).Errorf("error renaming file in S3")
 				response.Error(c, response.ErrPatchModuleVersionFileObjectMoveFail, err)
 				return
 			}
@@ -4123,13 +4132,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			}
 
 			if form.Path == form.NewPath {
-				utils.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
+				logger.FromContext(c).Errorf("error moving file in S3: newpath is identical to path")
 				response.Error(c, response.ErrPatchModuleVersionFilePathIdentical, nil)
 				return
 			}
 
 			if files, err = s3.ListDirRec(form.Path); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error getting files by path from S3")
+				logger.FromContext(c).WithError(err).Errorf("error getting files by path from S3")
 				response.Error(c, response.ErrPatchModuleVersionFileGetFilesFail, err)
 				return
 			}
@@ -4139,7 +4148,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 					curfile := filepath.Join(form.Path, obj)
 					newfile := filepath.Join(form.NewPath, obj)
 					if err = s3.Rename(curfile, newfile); err != nil {
-						utils.FromContext(c).WithError(err).Errorf("error moving file in S3")
+						logger.FromContext(c).WithError(err).Errorf("error moving file in S3")
 						response.Error(c, response.ErrPatchModuleVersionFileObjectMoveFail, err)
 						return
 					}
@@ -4148,13 +4157,13 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		}
 
 	default:
-		utils.FromContext(c).Errorf("error making unknown action on module")
+		logger.FromContext(c).Errorf("error making unknown action on module")
 		response.Error(c, response.ErrPatchModuleVersionFileActionNotFound, nil)
 		return
 	}
 
 	if err = s.db.Model(&module).UpdateColumn("last_update", gorm.Expr("NOW()")).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating system module")
+		logger.FromContext(c).WithError(err).Errorf("error updating system module")
 		response.Error(c, response.ErrPatchModuleVersionFileSystemModuleUpdateFail, err)
 		return
 	}
@@ -4169,10 +4178,10 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 // @Param module_name path string true "module name without spaces"
 // @Param version path string true "module version string according semantic version format" default(latest)
 // @Param option_name path string true "module option without spaces" Enums(id, tenant_id, service_type, state, config_schema, default_config, static_dependencies, fields_schema, action_config_schema, default_action_config, event_config_schema, default_event_config, changelog, locale, info, last_update, event_config_schema_definitions, action_config_schema_definitions)
-// @Success 200 {object} utils.successResp{data=interface{}} "module option received successful"
-// @Failure 403 {object} utils.errorResp "getting module option not permitted"
-// @Failure 404 {object} utils.errorResp "system module not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting module option"
+// @Success 200 {object} response.successResp{data=interface{}} "module option received successful"
+// @Failure 403 {object} response.errorResp "getting module option not permitted"
+// @Failure 404 {object} response.errorResp "system module not found"
+// @Failure 500 {object} response.errorResp "internal error on getting module option"
 // @Router /modules/{module_name}/versions/{version}/options/{option_name} [get]
 func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	var (
@@ -4188,13 +4197,13 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
 	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
 		} else {
@@ -4202,7 +4211,7 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		}
 		return
 	} else if err = module.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
+		logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 		response.Error(c, response.ErrModulesInvalidSystemModuleData, err)
 		return
 	}
@@ -4220,15 +4229,15 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 	options := make(map[string]json.RawMessage)
 	data, err := json.Marshal(module)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error building system module JSON")
+		logger.FromContext(c).WithError(err).Errorf("error building system module JSON")
 		response.Error(c, response.ErrGetModuleVersionOptionMakeJsonFail, err)
 		return
 	} else if err = json.Unmarshal(data, &options); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error parsing system module JSON")
+		logger.FromContext(c).WithError(err).Errorf("error parsing system module JSON")
 		response.Error(c, response.ErrGetModuleVersionOptionParseJsonFail, err)
 		return
 	} else if _, ok := options[optionName]; !ok {
-		utils.FromContext(c).WithError(err).Errorf("error finding system module option by name")
+		logger.FromContext(c).WithError(err).Errorf("error finding system module option by name")
 		response.Error(c, response.ErrGetModuleVersionOptionNotFound, err)
 		return
 	}

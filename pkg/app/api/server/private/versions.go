@@ -8,9 +8,9 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/client"
-	srvcontext "soldr/pkg/app/api/server/context"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 )
 
 type versions struct {
@@ -18,7 +18,7 @@ type versions struct {
 	Total    uint64   `json:"total"`
 }
 
-func getVersionMappers(query *utils.TableQuery) (string, map[string]interface{}, error) {
+func getVersionMappers(query *storage.TableQuery) (string, map[string]interface{}, error) {
 	var table string
 	var sqlMappers = map[string]interface{}{
 		"id":      "`{{table}}`.id",
@@ -67,42 +67,42 @@ func NewVersionService(db *gorm.DB, serverConnector *client.AgentServerClient) *
 // @Summary Retrieve versions list by filters
 // @Tags Versions
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=versions} "versions list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting versions not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting versions"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=versions} "versions list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting versions not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting versions"
 // @Router /versions/ [get]
 func (s *VersionService) GetVersions(c *gin.Context) {
 	var (
-		query      utils.TableQuery
+		query      storage.TableQuery
 		resp       versions
 		sqlMappers map[string]interface{}
 		table      string
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrVersionsInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getVersionMappers(&query)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting version mappers by query")
+		logger.FromContext(c).WithError(err).Errorf("error getting version mappers by query")
 		response.Error(c, response.ErrVersionsMapperNotFound, err)
 		return
 	}
@@ -130,7 +130,7 @@ func (s *VersionService) GetVersions(c *gin.Context) {
 	}
 
 	if resp.Total, err = query.Query(iDB, &resp.Versions, funcs...); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding versions")
+		logger.FromContext(c).WithError(err).Errorf("error finding versions")
 		response.Error(c, response.ErrVersionsInvalidQuery, err)
 		return
 	}

@@ -1,133 +1,283 @@
-package utils
+package storage
 
 import (
 	"crypto/md5"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
 	"github.com/qor/validations"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
-	"soldr/pkg/logger"
-	"soldr/pkg/storage"
-	"soldr/pkg/system"
-	"soldr/pkg/version"
-
-	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/utils/meter"
+	"soldr/pkg/mysql"
 )
 
-// Constant enum as a return code from compare two semantic version
-const (
-	CompareVersionError = iota - 4
-	SourceVersionInvalid
-	SourceVersionEmpty
-	SourceVersionGreat
-	VersionsEqual
-	TargetVersionGreat
-	TargetVersionEmpty
-	TargetVersionInvalid
-)
-
-const DefaultSessionTimeout int = 3 * 3600 // 3 hours
-
-const (
-	// URL prefix for each REST API endpoint
-	PrefixPathAPI = "/api/v1"
-)
-
-func GetAgentName(db *gorm.DB, hash string) (string, error) {
-	var agent models.Agent
-	if err := db.Take(&agent, "hash = ?", hash).Error; err != nil {
-		return "", err
-	}
-	return agent.Description, nil
+// TableFilter is auxiliary struct to contain method of filtering
+type TableFilter struct {
+	Value interface{} `form:"value" json:"value" binding:"required" swaggertype:"object"`
+	Field string      `form:"field" json:"field" binding:"required"`
 }
 
-func GetGroupName(db *gorm.DB, hash string) (string, error) {
-	var group models.Group
-	if err := db.Take(&group, "hash = ?", hash).Error; err != nil {
-		return "", err
-	}
-	return group.Info.Name.En, nil
+// TableSort is auxiliary struct to contain method of sorting
+type TableSort struct {
+	Prop  string `form:"prop" json:"prop" binding:"omitempty"`
+	Order string `form:"order" json:"order" binding:"omitempty"`
 }
 
-type GroupedData struct {
-	Grouped []string `json:"grouped"`
-	Total   uint64   `json:"total"`
+// TableQuery is main struct to contain input params
+type TableQuery struct {
+	// Number of page (since 1)
+	Page int `form:"page" json:"page" binding:"min=1,required" default:"1" minimum:"1"`
+	// Amount items per page (min -1, max 100, -1 means unlimited)
+	Size int `form:"pageSize" json:"pageSize" binding:"min=-1,max=100,required" default:"5" minimum:"-1" maximum:"100"`
+	// Type of request
+	Type string `form:"type" json:"type" binding:"oneof=sort filter init page size,required" default:"init" enums:"sort,filter,init,page,size"`
+	// Language of result data
+	Lang string `form:"lang" json:"lang" binding:"oneof=ru en,required" default:"en" enums:"en,ru"`
+	// Sorting result on server e.g. {"prop":"...","order":"..."}
+	//   field order is "ascending" or "descending" value
+	Sort TableSort `form:"sort" json:"sort" binding:"required" swaggertype:"string" default:"{}"`
+	// Filtering result on server e.g. {"value":[...],"field":"..."}
+	//   field value should be integer or string or array type
+	Filters []TableFilter `form:"filters[]" json:"filters[]" binding:"omitempty" swaggertype:"array,string"`
+	// Field to group results by
+	Group string `form:"group" json:"group" binding:"omitempty" swaggertype:"string"`
+	// non input arguments
+	table      string                                        `form:"-" json:"-"`
+	groupField string                                        `form:"-" json:"-"`
+	sqlMappers map[string]interface{}                        `form:"-" json:"-"`
+	sqlFind    func(out interface{}) func(*gorm.DB) *gorm.DB `form:"-" json:"-"`
+	sqlFilters []func(*gorm.DB) *gorm.DB                     `form:"-" json:"-"`
+	sqlOrders  []func(*gorm.DB) *gorm.DB                     `form:"-" json:"-"`
 }
 
-//lint:ignore U1000 successResp
-type successResp struct {
-	Status string      `json:"status" example:"success"`
-	Data   interface{} `json:"data" swaggertype:"object"`
-} // @name SuccessResponse
-
-//lint:ignore U1000 errorResp
-type errorResp struct {
-	Status  string `json:"status" example:"error"`
-	Code    string `json:"code" example:"Internal"`
-	Msg     string `json:"msg,omitempty" example:"internal server error"`
-	Error   string `json:"error,omitempty" example:"original server error message"`
-	TraceID string `json:"trace_id,omitempty" example:"1234567890abcdef1234567890abcdef"`
-} // @name ErrorResponse
-
-// IsUseSSL is function to return true if server configured to use TLS for incoming connections
-func IsUseSSL() bool {
-	return os.Getenv("API_USE_SSL") == "true"
-}
-
-// FromContext is function to get logrus Entry with context
-func FromContext(c *gin.Context) *logrus.Entry {
-	return logrus.WithContext(c.Request.Context())
-}
-
-// UniqueUint64InSlice is function to remove duplicates in slice of uint64
-func UniqueUint64InSlice(slice []uint64) []uint64 {
-	keys := make(map[uint64]bool)
-	list := []uint64{}
-	for _, entry := range slice {
-		if _, value := keys[entry]; !value {
-			keys[entry] = true
-			list = append(list, entry)
+// Init is function to set table name and sql mapping to data columns
+func (q *TableQuery) Init(table string, sqlMappers map[string]interface{}) error {
+	q.table = table
+	q.sqlFind = func(out interface{}) func(db *gorm.DB) *gorm.DB {
+		return func(db *gorm.DB) *gorm.DB {
+			return db.Find(out)
 		}
 	}
-	return list
-}
-
-// StringInSlice is function to lookup string value in slice of strings
-func StringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
+	q.sqlMappers = make(map[string]interface{})
+	q.sqlOrders = append(q.sqlOrders, func(db *gorm.DB) *gorm.DB {
+		return db.Order("id DESC")
+	})
+	for k, v := range sqlMappers {
+		switch t := v.(type) {
+		case string:
+			t = q.DoConditionFormat(t)
+			if strings.HasSuffix(t, "id") {
+				q.sqlMappers[k] = t
+			} else {
+				q.sqlMappers[k] = "LOWER(" + t + ")"
+			}
+		case func(q *TableQuery, db *gorm.DB, value interface{}) *gorm.DB:
+			q.sqlMappers[k] = t
+		default:
+			continue
 		}
 	}
-	return false
-}
-
-// StringsInSlice is function to lookup all strings in slice of strings
-func StringsInSlice(a []string, list []string) bool {
-	for _, b := range a {
-		if !StringInSlice(b, list) {
-			return false
+	if q.Group != "" {
+		var ok bool
+		q.groupField, ok = q.sqlMappers[q.Group].(string)
+		if !ok {
+			return errors.New("wrong field for grouping")
 		}
 	}
-	return true
+	return nil
+}
+
+// DoConditionFormat is auxiliary function to prepare condition to the table
+func (q *TableQuery) DoConditionFormat(cond string) string {
+	cond = strings.ReplaceAll(cond, "{{lang}}", q.Lang)
+	cond = strings.ReplaceAll(cond, "{{type}}", q.Type)
+	cond = strings.ReplaceAll(cond, "{{table}}", q.table)
+	cond = strings.ReplaceAll(cond, "{{page}}", strconv.Itoa(q.Page))
+	cond = strings.ReplaceAll(cond, "{{size}}", strconv.Itoa(q.Size))
+	return cond
+}
+
+// SetFilters is function to set custom filters to build target SQL query
+func (q *TableQuery) SetFilters(sqlFilters []func(*gorm.DB) *gorm.DB) {
+	q.sqlFilters = sqlFilters
+}
+
+// SetFind is function to set custom find function to build target SQL query
+func (q *TableQuery) SetFind(find func(out interface{}) func(*gorm.DB) *gorm.DB) {
+	q.sqlFind = find
+}
+
+// SetOrders is function to set custom ordering to build target SQL query
+func (q *TableQuery) SetOrders(sqlOrders []func(*gorm.DB) *gorm.DB) {
+	q.sqlOrders = sqlOrders
+}
+
+// Mappers is getter for private field (SQL find funcction to use it in custom query)
+func (q *TableQuery) Find(out interface{}) func(*gorm.DB) *gorm.DB {
+	return q.sqlFind(out)
+}
+
+// Mappers is getter for private field (SQL mappers fields to table ones)
+func (q *TableQuery) Mappers() map[string]interface{} {
+	return q.sqlMappers
+}
+
+// Table is getter for private field (table name)
+func (q *TableQuery) Table() string {
+	return q.table
+}
+
+// Ordering is function to get order of data rows according with input params
+func (q *TableQuery) Ordering() func(db *gorm.DB) *gorm.DB {
+	field := ""
+	arrow := ""
+	switch q.Sort.Order {
+	case "ascending":
+		arrow = "ASC"
+	case "descending":
+		arrow = "DESC"
+	}
+	if v, ok := q.sqlMappers[q.Sort.Prop]; ok {
+		if s, ok := v.(string); ok {
+			field = s
+		}
+	}
+	return func(db *gorm.DB) *gorm.DB {
+		if field != "" && arrow != "" {
+			db = db.Order(field + " " + arrow)
+		}
+		for _, order := range q.sqlOrders {
+			db = order(db)
+		}
+		return db
+	}
+}
+
+// Paginate is function to navigate between pages according with input params
+func (q *TableQuery) Paginate() func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if q.Page <= 0 && q.Size > 0 {
+			return db.Limit(q.Size)
+		} else if q.Page > 0 && q.Size > 0 {
+			offset := (q.Page - 1) * q.Size
+			return db.Offset(offset).Limit(q.Size)
+		}
+		return db
+	}
+}
+
+// GroupBy is function to group results by some field
+func (q *TableQuery) GroupBy(total *uint64, result interface{}) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Group(q.groupField).Where(q.groupField+`<> "NULL"`).Count(total).Pluck(q.groupField, result)
+	}
+}
+
+// DataFilter is function to build main data filter from filters input params
+func (q *TableQuery) DataFilter() func(db *gorm.DB) *gorm.DB {
+	fl := make(map[string][]interface{})
+	setFilter := func(field string, value interface{}) {
+		fvalue := []interface{}{}
+		if fv, ok := fl[field]; ok {
+			fvalue = fv
+		}
+		switch tvalue := value.(type) {
+		case string, float64, bool:
+			fl[field] = append(fvalue, tvalue)
+		case []interface{}:
+			fl[field] = append(fvalue, tvalue)
+		}
+	}
+
+	for _, f := range q.Filters {
+		if _, ok := q.sqlMappers[f.Field]; ok {
+			if v, ok := f.Value.(string); ok && v != "" {
+				setFilter(f.Field, "%"+strings.ToLower(v)+"%")
+			}
+			if v, ok := f.Value.(float64); ok {
+				setFilter(f.Field, v)
+			}
+			if v, ok := f.Value.(bool); ok {
+				setFilter(f.Field, v)
+			}
+			if v, ok := f.Value.([]interface{}); ok && len(v) != 0 {
+				var vi []interface{}
+				for _, ti := range v {
+					if ts, ok := ti.(string); ok {
+						vi = append(vi, strings.ToLower(ts))
+					}
+					if ts, ok := ti.(float64); ok {
+						vi = append(vi, ts)
+					}
+					if ts, ok := ti.(bool); ok {
+						vi = append(vi, ts)
+					}
+				}
+				if len(vi) != 0 {
+					setFilter(f.Field, vi)
+				}
+			}
+		}
+	}
+
+	return func(db *gorm.DB) *gorm.DB {
+		doFilter := func(db *gorm.DB, k, s string, v interface{}) *gorm.DB {
+			switch t := q.sqlMappers[k].(type) {
+			case string:
+				return db.Where(t+s, v)
+			case func(q *TableQuery, db *gorm.DB, value interface{}) *gorm.DB:
+				return t(q, db, v)
+			default:
+				return db
+			}
+		}
+		for k, f := range fl {
+			for _, v := range f {
+				if _, ok := v.([]interface{}); ok {
+					db = doFilter(db, k, " IN (?)", v)
+				} else {
+					db = doFilter(db, k, " LIKE ?", v)
+				}
+			}
+		}
+		for _, filter := range q.sqlFilters {
+			db = filter(db)
+		}
+		return db
+	}
+}
+
+// Query is function to retrieve table data according with input params
+func (q *TableQuery) Query(db *gorm.DB, result interface{},
+	funcs ...func(*gorm.DB) *gorm.DB) (uint64, error) {
+	var total uint64
+	err := ApplyToChainDB(
+		ApplyToChainDB(db.Table(q.Table()), funcs...).Scopes(q.DataFilter()).Count(&total),
+		q.Ordering(),
+		q.Paginate(),
+		q.Find(result),
+	).Error
+	return uint64(total), err
+}
+
+// QueryGrouped is function to retrieve grouped data according with input params
+func (q *TableQuery) QueryGrouped(db *gorm.DB, result interface{},
+	funcs ...func(*gorm.DB) *gorm.DB) (uint64, error) {
+	var total uint64
+	err := ApplyToChainDB(
+		ApplyToChainDB(db.Table(q.Table()), funcs...).Scopes(q.DataFilter()),
+		q.GroupBy(&total, result),
+	).Error
+	return uint64(total), err
 }
 
 // GetDB is function to make GORM DB connection
@@ -146,7 +296,7 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 		return nil
 	}
 
-	conn.SetLogger(&logger.GormLogger{})
+	conn.SetLogger(&mysql.GormLogger{})
 	if _, exists := os.LookupEnv("DEBUG"); exists {
 		conn.LogMode(true)
 	}
@@ -157,7 +307,7 @@ func GetDB(user, pass, host, port, name string) *gorm.DB {
 	conn.DB().SetMaxOpenConns(100)
 	conn.DB().SetConnMaxLifetime(time.Hour)
 
-	meter.ApplyGorm(conn)
+	mysql.ApplyGormMetrics(conn)
 
 	return conn
 }
@@ -323,15 +473,6 @@ func BinaryChksumsMapper(q *TableQuery, db *gorm.DB, value interface{}) *gorm.DB
 	return BinaryFieldMapper(cond, db, value)
 }
 
-// RandBase64String is function to generate random base64 with set length (bytes)
-func RandBase64String(nByte int) (string, error) {
-	b := make([]byte, nByte)
-	if _, err := io.ReadFull(rand.Reader, b); err != nil {
-		return "", err
-	}
-	return base64.RawURLEncoding.EncodeToString(b), nil
-}
-
 // MakeMD5Hash is function to generate common hash by value
 func MakeMD5Hash(value, salt string) string {
 	currentTime := time.Now().Format("2006-01-02 15:04:05.000000000")
@@ -369,30 +510,6 @@ func MakeUserHash(name string) string {
 	return MakeMD5Hash(name, "335e5be8ff97eedb86414062a94898619599b1da")
 }
 
-// MakeTaskHash is function to generate task hash
-func MakeTaskHash(name string) string {
-	return MakeMD5Hash(name, "e849827ddba8916293e1e52769144f78f5545986")
-}
-
-// MakeCookieStoreKey is function to generate secure key for cookie store
-func MakeCookieStoreKey() []byte {
-	md5Hash := func(value, salt string) string {
-		hash := md5.Sum([]byte(value + "|" + salt))
-		return hex.EncodeToString(hash[:])
-	}
-	key := strings.Join([]string{
-		md5Hash(version.GetBinaryVersion(), "972bf553c89cd103feb198f62a24e305b06a8840"),
-		system.MakeAgentID(),
-	}, "|")
-	hash := sha256.Sum256([]byte(key))
-	return hash[:]
-}
-
-// MakeResultHash is function to generate result hash
-func MakeResultHash(name string) string {
-	return MakeMD5Hash(name, "fd872289fff6348f00085c3ca330868014359929")
-}
-
 // MakeUuidStrFromHash is function to convert format view from hash to UUID
 func MakeUuidStrFromHash(hash string) (string, error) {
 	hashBytes, err := hex.DecodeString(hash)
@@ -404,154 +521,4 @@ func MakeUuidStrFromHash(hash string) (string, error) {
 		return "", err
 	}
 	return userIdUuid.String(), nil
-}
-
-// GetGormDB is function to get gorm object from request context
-// Do not use, pass db as a dependency for service.
-// For agent server DB use mem.ServiceDBConnectionStorage.
-// Deprecated
-func GetGormDB(c *gin.Context, name string) *gorm.DB {
-	var db *gorm.DB
-
-	if val, ok := c.Get(name); !ok {
-		FromContext(c).WithField("component", "gorm_conn_getter").
-			Errorf("error getting '" + name + "' from context")
-	} else if db = val.(*gorm.DB); db == nil {
-		FromContext(c).WithField("component", "gorm_conn_getter").
-			Errorf("got nil value '" + name + "' from context")
-	}
-
-	return db
-}
-
-// GetPureSemVer is function to get the most value data from semantic version string
-// only major, minor and patch numbers
-func GetPureSemVer(version string) string {
-	min := func(a, b int) int {
-		if a < b {
-			return a
-		}
-		return b
-	}
-	worev := strings.Split(version, "-")[0]
-	parts := strings.Split(worev, ".")
-	wobnum := strings.Join(parts[:min(len(parts), 3)], ".")
-	return strings.Trim(wobnum, " ")
-}
-
-// CompareVersions is function to check and compare two semantic versions
-// comparing mechanism is using only major, minor and patch versions
-// the function may return next values:
-//
-//	-4 means internal error in compare mechanism
-//	-3 means that sourceVersion has invalid format
-//	-2 means that sourceVersion is empty
-//	-1 means that sourceVersion is greater than targetVersion
-//	 0 means that two versions are equal
-//	 1 means that targetVersion is greater than sourceVersion
-//	 2 means that targetVersion is empty
-//	 3 means that targetVersion has invalid format
-func CompareVersions(sourceVersion, targetVersion string) int {
-	targetPureVersion := GetPureSemVer(targetVersion)
-	if targetPureVersion == "" {
-		return TargetVersionEmpty
-	}
-	targetVersionSemver, err := semver.NewVersion(targetPureVersion)
-	if err != nil {
-		return TargetVersionInvalid
-	}
-
-	sourcePureVersion := GetPureSemVer(sourceVersion)
-	if sourcePureVersion == "" {
-		return SourceVersionEmpty
-	}
-	sourceVersionSemver, err := semver.NewVersion(sourcePureVersion)
-	if err != nil {
-		return SourceVersionInvalid
-	}
-
-	comparisonValue := targetVersionSemver.Compare(sourceVersionSemver)
-	switch comparisonValue {
-	case -1:
-		return SourceVersionGreat
-	case 0:
-		return VersionsEqual
-	case 1:
-		return TargetVersionGreat
-	default:
-		return CompareVersionError
-	}
-}
-
-func ValidateBinaryFileByChksums(data []byte, chksums models.BinaryChksum) error {
-	md5Hash := md5.Sum(data)
-	if chksums.MD5 != "" && chksums.MD5 != hex.EncodeToString(md5Hash[:]) {
-		return fmt.Errorf("failed to match binary file MD5 hash sum: %s", chksums.MD5)
-	}
-
-	sha256Hash := sha256.Sum256(data)
-	if chksums.SHA256 != "" && chksums.SHA256 != hex.EncodeToString(sha256Hash[:]) {
-		return fmt.Errorf("failed to match binary file SHA256 hash sum: %s", chksums.SHA256)
-	}
-
-	return nil
-}
-
-// UploadAgentBinariesToInstBucket is function to check and upload agent binaries to S3 instance bucket
-func UploadAgentBinariesToInstBucket(binary models.Binary, iS3 storage.IStorage) error {
-	joinPath := func(args ...string) string {
-		tpath := filepath.Join(args...)
-		return strings.Replace(tpath, "\\", "/", -1)
-	}
-
-	gS3, err := storage.NewS3(nil)
-	if err != nil {
-		return fmt.Errorf("failed to initialize global S3 driver: %w", err)
-	}
-
-	prefix := joinPath("vxagent", binary.Version)
-	ifiles, err := gS3.ListDirRec(prefix)
-	if err != nil {
-		return fmt.Errorf("failed to read info about agent binaries files: %w", err)
-	}
-
-	for _, fpath := range binary.Info.Files {
-		if _, ok := ifiles[strings.TrimPrefix(fpath, prefix)]; !ok {
-			return fmt.Errorf("failed to get agent binary file from global S3 '%s'", fpath)
-		}
-	}
-
-	for fpath, finfo := range ifiles {
-		ifpath := joinPath(prefix, fpath)
-		if finfo.IsDir() || iS3.IsExist(ifpath) {
-			continue
-		}
-
-		ifdata, err := gS3.ReadFile(ifpath)
-		if err != nil {
-			return fmt.Errorf("failed to read agent binary file '%s': %w", ifpath, err)
-		}
-
-		chksums, ok := binary.Info.Chksums[ifpath]
-		if !ok {
-			return fmt.Errorf("failed to get check sums of agent binary file '%s'", ifpath)
-		}
-		if err := ValidateBinaryFileByChksums(ifdata, chksums); err != nil {
-			return fmt.Errorf("failed to check agent binary file '%s': %w", ifpath, err)
-		}
-		if err := iS3.WriteFile(ifpath, ifdata); err != nil {
-			return fmt.Errorf("failed to write agent binary file to S3 '%s': %w", ifpath, err)
-		}
-
-		tpdata, err := json.Marshal(chksums)
-		if err != nil {
-			return fmt.Errorf("failed to make agent binary thumbprint for '%s': %w", ifpath, err)
-		}
-		tpfpath := ifpath + ".thumbprint"
-		if err := iS3.WriteFile(tpfpath, tpdata); err != nil {
-			return fmt.Errorf("failed to write agent binary thumbprint to S3 '%s': %w", tpfpath, err)
-		}
-	}
-
-	return nil
 }

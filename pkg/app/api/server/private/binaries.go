@@ -10,12 +10,12 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/jinzhu/gorm"
 
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
-	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils"
-	"soldr/pkg/storage"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/app/api/useraction"
+	"soldr/pkg/filestorage/s3"
 )
 
 type binaries struct {
@@ -33,8 +33,8 @@ var binariesSQLMappers = map[string]interface{}{
 	"ver_build": "`{{table}}`.ver_build",
 	"ver_rev":   "`{{table}}`.ver_rev",
 	"version":   "`{{table}}`.version",
-	"files":     utils.BinaryFilesMapper,
-	"chksum":    utils.BinaryChksumsMapper,
+	"files":     storage.BinaryFilesMapper,
+	"chksum":    storage.BinaryChksumsMapper,
 	"data": "CONCAT(`{{table}}`.version, ' | ', " +
 		"`{{table}}`.hash, ' | ', " +
 		"`{{table}}`.type, ' | ', " +
@@ -56,7 +56,7 @@ func NewBinariesService(
 	}
 }
 
-func patchOrderingByVersion(query *utils.TableQuery) {
+func patchOrderingByVersion(query *storage.TableQuery) {
 	if query.Sort.Prop != "version" {
 		return
 	}
@@ -88,26 +88,26 @@ func patchOrderingByVersion(query *utils.TableQuery) {
 // @Summary Retrieve agent binaries list by filters
 // @Tags Binaries
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=binaries} "agent binaries list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agent binaries not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent binaries"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=binaries} "agent binaries list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agent binaries not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting agent binaries"
 // @Router /binaries/vxagent [get]
 func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	var (
 		err   error
-		query utils.TableQuery
+		query storage.TableQuery
 		resp  binaries
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrAgentBinariesInvalidRequest, err)
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	patchOrderingByVersion(&query)
 
 	query.Init("binaries", binariesSQLMappers)
@@ -121,14 +121,14 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 	})
 
 	if resp.Total, err = query.Query(s.db, &resp.Binaries); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent binaries")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent binaries")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	for i := 0; i < len(resp.Binaries); i++ {
 		if err = resp.Binaries[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating agent binaries data '%s'", resp.Binaries[i].Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating agent binaries data '%s'", resp.Binaries[i].Hash)
 			response.Error(c, response.ErrAgentBinariesInvalidData, err)
 			return
 		}
@@ -145,10 +145,10 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 // @Param arch path string true "agent info arch" default(amd64) Enums(386, amd64)
 // @Param version path string true "agent version string according semantic version format" default(latest)
 // @Success 200 {file} file "agent binary as a file"
-// @Failure 400 {object} utils.errorResp "invalid agent info"
-// @Failure 403 {object} utils.errorResp "getting agent binary file not permitted"
-// @Failure 404 {object} utils.errorResp "agent binary file not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent binary file"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "getting agent binary file not permitted"
+// @Failure 404 {object} response.errorResp "agent binary file not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent binary file"
 // @Router /binaries/vxagent/{os}/{arch}/{version} [get]
 func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 	var (
@@ -159,10 +159,8 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		binary       models.Binary
 		chksums      models.BinaryChksum
 		data         []byte
-		err          error
 		ok           bool
 		resultName   string
-		s3           storage.IStorage
 		validate     = validator.New()
 	)
 	uaf := useraction.NewFields(c, "agent", "distribution", "downloading", "", useraction.UnknownObjectDisplayName)
@@ -188,7 +186,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		return
 	}
 
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		db = db.Where("tenant_id IN (?)", []uint64{0, tid}).Where("type LIKE ?", "vxagent")
 		if agentVersion == "latest" {
@@ -198,13 +196,13 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		}
 	}
 
-	err = s.db.Scopes(scope).Model(&binary).Take(&binary).Error
+	err := s.db.Scopes(scope).Model(&binary).Take(&binary).Error
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).Errorf("error getting binary info by version '%s', record not found", agentVersion)
+		logger.FromContext(c).Errorf("error getting binary info by version '%s', record not found", agentVersion)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", agentVersion)
+		logger.FromContext(c).WithError(err).Errorf("error getting binary info by version '%s'", agentVersion)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -212,25 +210,27 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentName)
 	if chksums, ok = binary.Info.Chksums[path]; !ok {
-		utils.FromContext(c).Errorf("error getting agent binary file check sums: '%s' not found", path)
+		logger.FromContext(c).Errorf("error getting agent binary file check sums: '%s' not found", path)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, nil)
 		return
 	}
 
-	if s3, err = storage.NewS3(nil); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error openning connection to S3")
+	s3Client, err := s3.New(nil)
+	if err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error openning connection to S3")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	if data, err = s3.ReadFile(path); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error reading agent binary file '%s'", path)
+	data, err = s3Client.ReadFile(path)
+	if err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error reading agent binary file '%s'", path)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
-	if err = utils.ValidateBinaryFileByChksums(data, chksums); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent binary file by check sums '%s'", path)
+	if err = validateBinaryFileByChksums(data, chksums); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error validating agent binary file by check sums '%s'", path)
 		response.Error(c, response.ErrAgentBinaryFileCorrupted, err)
 		return
 	}

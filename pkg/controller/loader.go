@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"soldr/pkg/db"
+	"soldr/pkg/filestorage"
 	"soldr/pkg/loader"
-	"soldr/pkg/storage"
 )
 
 // tConfigLoaderType is type for loading config
@@ -112,10 +112,11 @@ func (cl *configLoaderDB) load() ([]*loader.ModuleConfig, error) {
 		const moduleInfoField = "info"
 		if info, ok := m[moduleInfoField]; ok {
 			if err = json.Unmarshal([]byte(info), &mc); err != nil {
-				return nil, fmt.Errorf("failed to parse the module config: %w", err)
+				return nil, fmt.Errorf("failed to parse the module '%s' config: %w", mc.Name, err)
 			}
 		} else {
-			return nil, fmt.Errorf("failed to load the module config: returned rows do not contain the field '%s'", moduleInfoField)
+			return nil, fmt.Errorf("failed to load the module '%s' config: returned rows don't contain the field '%s'",
+				mc.Name, moduleInfoField)
 		}
 		if groupID, ok := m["group_id"]; ok {
 			mc.GroupID = groupID
@@ -165,7 +166,7 @@ func (cl *configLoaderDB) load() ([]*loader.ModuleConfig, error) {
 	return ml, nil
 }
 
-func readConfig(s storage.IStorage, path string) ([]*loader.ModuleConfig, error) {
+func readConfig(s filestorage.Storage, path string) ([]*loader.ModuleConfig, error) {
 	var mcl []*loader.ModuleConfig
 	if s.IsNotExist(path) {
 		return nil, fmt.Errorf("the config directory '%s' not found", path)
@@ -184,7 +185,7 @@ func readConfig(s storage.IStorage, path string) ([]*loader.ModuleConfig, error)
 	return mcl, nil
 }
 
-func writeConfig(s storage.IStorage, path string, mcl []*loader.ModuleConfig) error {
+func writeConfig(s filestorage.Storage, path string, mcl []*loader.ModuleConfig) error {
 	if s.IsNotExist(path) {
 		return fmt.Errorf("config directory '%s' not found", path)
 	}
@@ -209,14 +210,14 @@ func parsePathToFile(mpath string) (string, string, error) {
 		}
 	}
 	if len(pparts) < 3 {
-		return "", "", fmt.Errorf("invalid path format: expected 3 parts, actually got %d", len(pparts))
+		return "", "", fmt.Errorf("invalid path format '%s': expected 3 parts, actually got %d", mpath, len(pparts))
 	}
 	mname := pparts[len(pparts)-3]
 	bpath := joinPath(pparts[:len(pparts)-3]...)
 	return mname, bpath, nil
 }
 
-func getStorageCb(s storage.IStorage, mpath, file string) getCallback {
+func getStorageCb(s filestorage.Storage, mpath, file string) getCallback {
 	return func() string {
 		data, err := s.ReadFile(joinPath(mpath, file))
 		if err == nil {
@@ -227,7 +228,7 @@ func getStorageCb(s storage.IStorage, mpath, file string) getCallback {
 	}
 }
 
-func setStorageCb(s storage.IStorage, mpath, file string) setCallback {
+func setStorageCb(s filestorage.Storage, mpath, file string) setCallback {
 	return func(val string) bool {
 		mname, bpath, err := parsePathToFile(mpath)
 		if err != nil {
@@ -250,7 +251,7 @@ func setStorageCb(s storage.IStorage, mpath, file string) setCallback {
 	}
 }
 
-func loadConfig(s storage.IStorage, path string) ([]*loader.ModuleConfig, error) {
+func loadConfig(s filestorage.Storage, path string) ([]*loader.ModuleConfig, error) {
 	mcl, err := readConfig(s, path)
 	if err != nil {
 		return nil, err
@@ -287,21 +288,21 @@ func loadConfig(s storage.IStorage, path string) ([]*loader.ModuleConfig, error)
 
 // configLoaderS3 is container for config which loaded from D3
 type configLoaderS3 struct {
-	sc storage.IStorage
+	sc filestorage.Storage
 }
 
-// load is function what retrieve modules config list from S3
+// load is function what retrieve modules config list from RemoteStorage
 func (cl *configLoaderS3) load() ([]*loader.ModuleConfig, error) {
 	return loadConfig(cl.sc, "/")
 }
 
-// configLoaderFS is container for config which loaded from FS
+// configLoaderFS is container for config which loaded from LocalStorage
 type configLoaderFS struct {
 	path string
-	sc   storage.IStorage
+	sc   filestorage.Storage
 }
 
-// load is function what retrieve modules config list from FS
+// load is function what retrieve modules config list from LocalStorage
 func (cl *configLoaderFS) load() ([]*loader.ModuleConfig, error) {
 	return loadConfig(cl.sc, cl.path)
 }
@@ -314,7 +315,7 @@ func removeLeadSlash(files map[string][]byte) map[string][]byte {
 	return rfiles
 }
 
-func loadUtils(s storage.IStorage, path string) (map[string][]byte, error) {
+func loadUtils(s filestorage.Storage, path string) (map[string][]byte, error) {
 	var err error
 	upath := joinPath(path, "utils")
 	if s.IsNotExist(upath) {
@@ -330,7 +331,7 @@ func loadUtils(s storage.IStorage, path string) (map[string][]byte, error) {
 	return files, nil
 }
 
-func loadFiles(s storage.IStorage, path string, mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
+func loadFiles(s filestorage.Storage, path string, mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
 	var mfl []*loader.ModuleFiles
 	if s.IsNotExist(path) {
 		return nil, fmt.Errorf("modules directory '%s' not found", path)
@@ -362,7 +363,7 @@ func loadFiles(s storage.IStorage, path string, mcl []*loader.ModuleConfig) ([]*
 			args := make(map[string][]string)
 			if data, ok := files["args.json"]; ok {
 				if err = json.Unmarshal(data, &args); err != nil {
-					return nil, fmt.Errorf("failed to parse the module args: %w", err)
+					return nil, fmt.Errorf("failed to parse the module '%s' args: %w", mpath, err)
 				}
 			}
 			mi.SetArgs(args)
@@ -386,12 +387,12 @@ func loadFiles(s storage.IStorage, path string, mcl []*loader.ModuleConfig) ([]*
 	return mfl, nil
 }
 
-// filesLoaderS3 is container for files structure which loaded from S3
+// filesLoaderS3 is container for files structure which loaded from RemoteStorage
 type filesLoaderS3 struct {
-	sc storage.IStorage
+	sc filestorage.Storage
 }
 
-// load is function what retrieve modules files data from S3
+// load is function what retrieve modules files data from RemoteStorage
 func (fl *filesLoaderS3) load(mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
 	if len(mcl) == 0 {
 		return []*loader.ModuleFiles{}, nil
@@ -400,13 +401,13 @@ func (fl *filesLoaderS3) load(mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles
 	return loadFiles(fl.sc, "/", mcl)
 }
 
-// filesLoaderFS is container for files structure which loaded from FS
+// filesLoaderFS is container for files structure which loaded from LocalStorage
 type filesLoaderFS struct {
 	path string
-	sc   storage.IStorage
+	sc   filestorage.Storage
 }
 
-// load is function what retrieve modules files data from FS
+// load is function what retrieve modules files data from LocalStorage
 func (fl *filesLoaderFS) load(mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
 	if len(mcl) == 0 {
 		return []*loader.ModuleFiles{}, nil

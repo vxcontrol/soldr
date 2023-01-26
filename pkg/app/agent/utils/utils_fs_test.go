@@ -1,6 +1,3 @@
-//go:build fsTests
-// +build fsTests
-
 package utils
 
 import (
@@ -65,7 +62,7 @@ func Test_getDirsToCreate(t *testing.T) {
 			}
 			defer func() {
 				if err := os.Chdir(oldWd); err != nil {
-					t.Errorf("failed to change back to the dir %s: %w", oldWd, err)
+					t.Errorf("failed to change back to the dir %s: %v", oldWd, err)
 				}
 			}()
 			if err := testGetDirsToCreateWithRootDir(".", &tc); err != nil {

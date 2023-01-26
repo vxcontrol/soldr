@@ -4,9 +4,9 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 
-	"soldr/pkg/storage"
-
 	"github.com/jinzhu/gorm"
+
+	"soldr/pkg/filestorage/s3"
 )
 
 // ServiceInfoDB is model to contain service external config to connetion to DB
@@ -23,7 +23,7 @@ func (sidb ServiceInfoDB) Valid() error {
 	return validate.Struct(sidb)
 }
 
-// ServiceInfoS3 is model to contain service external config to connetion to S3
+// ServiceInfoS3 is model to contain service external config to connection to S3
 type ServiceInfoS3 struct {
 	Endpoint   string `form:"endpoint" json:"endpoint" validate:"max=100,required"`
 	AccessKey  string `form:"access_key" json:"access_key" validate:"max=50,required"`
@@ -32,8 +32,8 @@ type ServiceInfoS3 struct {
 }
 
 // ToS3ConnParams is a helper function to convert the structure to the vxcommon version one
-func (sis3 *ServiceInfoS3) ToS3ConnParams() *storage.S3ConnParams {
-	return &storage.S3ConnParams{
+func (sis3 *ServiceInfoS3) ToS3ConnParams() *s3.Config {
+	return &s3.Config{
 		Endpoint:   sis3.Endpoint,
 		AccessKey:  sis3.AccessKey,
 		SecretKey:  sis3.SecretKey,

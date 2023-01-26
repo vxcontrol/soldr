@@ -1371,7 +1371,7 @@ definitions:
         type: string
       filters:
         items:
-          $ref: '#/definitions/utils.TableFilter'
+          $ref: '#/definitions/storage.TableFilter'
         type: array
       to:
         minimum: 0
@@ -1498,7 +1498,7 @@ definitions:
       total:
         type: integer
     type: object
-  private.events:
+  private.eventResponse:
     properties:
       agents:
         items:
@@ -1945,7 +1945,7 @@ definitions:
     properties:
       filters:
         items:
-          $ref: '#/definitions/utils.TableFilter'
+          $ref: '#/definitions/storage.TableFilter'
         type: array
       version:
         type: string
@@ -2000,7 +2000,7 @@ definitions:
       user:
         $ref: '#/definitions/models.User'
     type: object
-  utils.TableFilter:
+  storage.TableFilter:
     properties:
       field:
         type: string
@@ -2802,7 +2802,7 @@ paths:
             - $ref: '#/definitions/SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/private.events'
+                  $ref: '#/definitions/private.eventResponse'
               type: object
         "400":
           description: invalid query request data

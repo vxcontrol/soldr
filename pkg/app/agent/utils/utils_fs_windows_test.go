@@ -1,5 +1,5 @@
-//go:build windows && fsTests
-// +build windows,fsTests
+//go:build windows
+// +build windows
 
 package utils
 

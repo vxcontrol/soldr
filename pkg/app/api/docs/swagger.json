@@ -1173,7 +1173,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/private.events"
+                                            "$ref": "#/definitions/private.eventResponse"
                                         }
                                     }
                                 }
@@ -8662,7 +8662,7 @@
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/utils.TableFilter"
+                        "$ref": "#/definitions/storage.TableFilter"
                     }
                 },
                 "to": {
@@ -8850,7 +8850,7 @@
                 }
             }
         },
-        "private.events": {
+        "private.eventResponse": {
             "type": "object",
             "properties": {
                 "agents": {
@@ -9523,7 +9523,7 @@
                 "filters": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/utils.TableFilter"
+                        "$ref": "#/definitions/storage.TableFilter"
                     }
                 },
                 "version": {
@@ -9605,7 +9605,7 @@
                 }
             }
         },
-        "utils.TableFilter": {
+        "storage.TableFilter": {
             "type": "object",
             "required": [
                 "field",

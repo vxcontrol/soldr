@@ -9,9 +9,9 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/client"
-	srvcontext "soldr/pkg/app/api/server/context"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 )
 
 const maxJsonArrayTagsAmount int = 20
@@ -21,7 +21,7 @@ type tags struct {
 	Total uint64   `json:"total"`
 }
 
-func getTagMappers(query *utils.TableQuery) (string, map[string]interface{}, error) {
+func getTagMappers(query *storage.TableQuery) (string, map[string]interface{}, error) {
 	var table string
 	var sqlMappers = map[string]interface{}{
 		"id":   "`{{table}}`.id",
@@ -68,7 +68,7 @@ func getTagMappers(query *utils.TableQuery) (string, map[string]interface{}, err
 	return table, sqlMappers, nil
 }
 
-func getTagFilters(query *utils.TableQuery) []func(db *gorm.DB) *gorm.DB {
+func getTagFilters(query *storage.TableQuery) []func(db *gorm.DB) *gorm.DB {
 	return []func(db *gorm.DB) *gorm.DB{
 		func(db *gorm.DB) *gorm.DB {
 			return db.
@@ -157,15 +157,15 @@ func NewTagService(db *gorm.DB, serverConnector *client.AgentServerClient) *TagS
 // @Summary Retrieve tags list by filters
 // @Tags Tags
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=tags} "tags list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting tags not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting tags"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=tags} "tags list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting tags not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting tags"
 // @Router /tags/ [get]
 func (s *TagService) GetTags(c *gin.Context) {
 	var (
-		query      utils.TableQuery
+		query      storage.TableQuery
 		resp       tags
 		sqlMappers map[string]interface{}
 		table      string
@@ -175,27 +175,27 @@ func (s *TagService) GetTags(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrTagsInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	table, sqlMappers, err = getTagMappers(&query)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting tag mappers by query")
+		logger.FromContext(c).WithError(err).Errorf("error getting tag mappers by query")
 		response.Error(c, response.ErrTagsMappersNotFound, err)
 		return
 	}
@@ -237,7 +237,7 @@ func (s *TagService) GetTags(c *gin.Context) {
 	funcs := getTagFilters(&query)
 	funcs = append(funcs, getTagJoinFuncs(table, useGroup, useModule, usePolicy)...)
 	if resp.Total, err = query.Query(iDB, &resp.Tags, funcs...); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding tags")
+		logger.FromContext(c).WithError(err).Errorf("error finding tags")
 		response.Error(c, response.ErrTagsInvalidQuery, err)
 		return
 	}

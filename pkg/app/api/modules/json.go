@@ -1,4 +1,4 @@
-package utils
+package modules
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"github.com/xeipuuv/gojsonreference"
 
 	"soldr/pkg/app/api/models"
+	"soldr/pkg/app/api/utils"
 )
 
 type jsonType int
@@ -299,7 +300,7 @@ func mergeArray(ov1, ov2 reflect.Value, sh models.Schema) reflect.Value {
 func addObjectRequiredKeys(v1, v2, mv reflect.Value, sh models.Schema) reflect.Value {
 	for _, k := range v2.MapKeys() {
 		kv1, kv2 := v1.MapIndex(k), v2.MapIndex(k)
-		if kv2.IsValid() && StringInSlice(k.String(), sh.Required) {
+		if kv2.IsValid() && utils.StringInSlice(k.String(), sh.Required) {
 			// value not found in current
 			if !kv1.IsValid() {
 				mv.SetMapIndex(k, kv2)

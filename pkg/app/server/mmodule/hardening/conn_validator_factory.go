@@ -10,7 +10,7 @@ import (
 	"soldr/pkg/app/server/certs"
 	"soldr/pkg/app/server/mmodule/hardening/v1/approver"
 	v1Validator "soldr/pkg/app/server/mmodule/hardening/v1/validator"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage"
 	"soldr/pkg/vxproto"
 )
 
@@ -21,7 +21,7 @@ type ConnectionValidatorFactory struct {
 func NewConnectionValidatorFactory(
 	ctx context.Context,
 	gdbc *gorm.DB,
-	fs storage.IFileReader,
+	fs filestorage.Reader,
 	store interface{},
 	basePath string,
 	certsProvider certs.Provider,

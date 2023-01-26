@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage"
 	"soldr/pkg/vxproto"
 )
 
@@ -45,7 +45,7 @@ type Item struct {
 }
 
 type Cache struct {
-	store       storage.IStorage
+	store       filestorage.Storage
 	cache       map[Key]*Item
 	cacheMux    *sync.Mutex
 	tracker     *lruTracker
@@ -58,7 +58,7 @@ const (
 	cacheSize = 6
 )
 
-func NewCache(store storage.IStorage) (*Cache, error) {
+func NewCache(store filestorage.Storage) (*Cache, error) {
 	tracker, err := newLRUTracker(cacheSize)
 	if err != nil {
 		return nil, err

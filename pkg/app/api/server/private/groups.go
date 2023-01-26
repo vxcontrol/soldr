@@ -9,11 +9,11 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/client"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
-	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/app/api/useraction"
 )
 
 type groupDetails struct {
@@ -59,7 +59,7 @@ var groupsSQLMappers = map[string]interface{}{
 	"module_name":  "`modules`.name",
 	"agent_count":  "count(`agents`.id)",
 	"name":         "JSON_UNQUOTE(JSON_EXTRACT(`{{table}}`.info, '$.name.{{lang}}'))",
-	"tags":         utils.TagsMapper,
+	"tags":         storage.TagsMapper,
 	"data": "CONCAT(`{{table}}`.hash, ' | ', " +
 		"COALESCE(JSON_EXTRACT(`{{table}}`.info, '$.name.ru'), ''), ' | ', " +
 		"COALESCE(JSON_EXTRACT(`{{table}}`.info, '$.name.en'), ''), ' | ', " +
@@ -202,12 +202,12 @@ func NewGroupService(
 // @Summary Retrieve groups list by filters
 // @Tags Groups
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=groups} "groups list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting groups not permitted"
-// @Failure 404 {object} utils.errorResp "groups not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting groups"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=groups} "groups list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting groups not permitted"
+// @Failure 404 {object} response.errorResp "groups not found"
+// @Failure 500 {object} response.errorResp "internal error on getting groups"
 // @Router /groups/ [get]
 func (s *GroupService) GetGroups(c *gin.Context) {
 	var (
@@ -215,35 +215,35 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		gpss          []models.GroupToPolicy
 		modulesa      []models.ModuleAShort
 		policiesa     []models.Policy
-		query         utils.TableQuery
+		query         storage.TableQuery
 		resp          groups
-		groupedResp   utils.GroupedData
+		groupedResp   response.GroupedData
 		useModule     bool
 		usePolicy     bool
 		usePolicyName bool
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGroupsInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("groups", groupsSQLMappers); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGroupsInvalidRequest, err)
 		return
 	}
@@ -292,13 +292,13 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 
 	if query.Group == "" {
 		if resp.Total, err = query.Query(iDB, &resp.Groups, funcs...); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding groups")
+			logger.FromContext(c).WithError(err).Errorf("error finding groups")
 			response.Error(c, response.ErrGroupsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding grouped groups")
+			logger.FromContext(c).WithError(err).Errorf("error finding grouped groups")
 			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
@@ -309,7 +309,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 	for i := 0; i < len(resp.Groups); i++ {
 		gids = append(gids, resp.Groups[i].ID)
 		if err = resp.Groups[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Groups[i].Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Groups[i].Hash)
 			response.Error(c, response.ErrGroupsInvalidData, err)
 			return
 		}
@@ -317,7 +317,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 
 	sqlQuery := sqlGroupDetails + ` WHERE g.id IN (?) AND g.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, gids).Scan(&resp.Details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading groups details")
+		logger.FromContext(c).WithError(err).Errorf("error loading groups details")
 		response.Error(c, response.ErrGetGroupsDetailsNotFound, err)
 		return
 	}
@@ -328,7 +328,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
 		Find(&modulesa, "gtp.group_id IN (?) AND status = 'joined'", gids).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy modules")
 		response.Error(c, response.ErrGetGroupsModulesNotFound, err)
 		return
 	} else {
@@ -337,7 +337,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 			name := modulesa[i].Info.Name
 			policy_id := modulesa[i].PolicyID
 			if err = modulesa[i].Valid(); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
+				logger.FromContext(c).WithError(err).Errorf("error validating policy module data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
 				return
 			}
@@ -350,7 +350,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 	}
 
 	if err = iDB.Find(&gpss, "group_id IN (?)", gids).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
 		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
 		return
 	}
@@ -361,7 +361,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = policies.id AND gtp.group_id IN (?)`, gids).
 		Find(&policiesa).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group policies")
+		logger.FromContext(c).WithError(err).Errorf("error finding group policies")
 		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	} else {
@@ -369,7 +369,7 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 			id := policiesa[i].ID
 			name := policiesa[i].Info.Name
 			if err = policiesa[i].Valid(); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
+				logger.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
 				return
 			}
@@ -419,10 +419,10 @@ func (s *GroupService) GetGroups(c *gin.Context) {
 // @Tags Groups
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=group} "group info received successful"
-// @Failure 403 {object} utils.errorResp "getting group info not permitted"
-// @Failure 404 {object} utils.errorResp "group not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting group"
+// @Success 200 {object} response.successResp{data=group} "group info received successful"
+// @Failure 403 {object} response.errorResp "getting group info not permitted"
+// @Failure 404 {object} response.errorResp "group not found"
+// @Failure 500 {object} response.errorResp "internal error on getting group"
 // @Router /groups/{hash} [get]
 func (s *GroupService) GetGroup(c *gin.Context) {
 	var (
@@ -430,21 +430,21 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		resp group
 	)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Group, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGroupsNotFound, err)
 		} else {
@@ -452,14 +452,14 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Group.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Group.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", resp.Group.Hash)
 		response.Error(c, response.ErrGroupsInvalidData, err)
 		return
 	}
 
 	sqlQuery := sqlGroupDetails + ` WHERE g.hash = ? AND g.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, hash).Scan(&resp.Details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading details by group hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error loading details by group hash '%s'", hash)
 		response.Error(c, response.ErrGetGroupDetailsNotFound, err)
 		return
 	}
@@ -469,7 +469,7 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
 		Find(&resp.Details.Modules, "gtp.group_id = ? AND status = 'joined'", resp.Group.ID).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Group.ID)
+		logger.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Group.ID)
 		response.Error(c, response.ErrGetGroupModulesNotFound, err)
 		return
 	} else {
@@ -477,7 +477,7 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 			if err = resp.Details.Modules[i].Valid(); err != nil {
 				id := resp.Details.Modules[i].ID
 				name := resp.Details.Modules[i].Info.Name
-				utils.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
+				logger.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetGroupsInvalidModuleData, err)
 				return
 			}
@@ -489,7 +489,7 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 		Group: resp.Group,
 	}
 	if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
+		logger.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 		response.Error(c, response.ErrGetGroupsPoliciesNotFound, err)
 		return
 	}
@@ -505,11 +505,11 @@ func (s *GroupService) GetGroup(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body models.Group true "group info as JSON data"
-// @Success 200 {object} utils.successResp{data=models.Group} "group info updated successful"
-// @Failure 400 {object} utils.errorResp "invalid group info"
-// @Failure 403 {object} utils.errorResp "updating group info not permitted"
-// @Failure 404 {object} utils.errorResp "group not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating group"
+// @Success 200 {object} response.successResp{data=models.Group} "group info updated successful"
+// @Failure 400 {object} response.errorResp "invalid group info"
+// @Failure 403 {object} response.errorResp "updating group info not permitted"
+// @Failure 404 {object} response.errorResp "group not found"
+// @Failure 500 {object} response.errorResp "internal error on updating group"
 // @Router /groups/{hash} [put]
 func (s *GroupService) PatchGroup(c *gin.Context) {
 	var (
@@ -521,15 +521,15 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	uaf := useraction.NewFields(c, "group", "group", "editing", hash, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -542,7 +542,7 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrGroupsValidationFail, err)
 		return
 	}
@@ -550,13 +550,13 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	uaf.ObjectDisplayName = group.Info.Name.En
 
 	if hash != group.Hash {
-		utils.FromContext(c).Errorf("mismatch group hash to requested one")
+		logger.FromContext(c).Errorf("mismatch group hash to requested one")
 		response.Error(c, response.ErrGroupsValidationFail, nil)
 		return
 	}
 
 	if err = iDB.Model(&group).Count(&count).Error; err != nil || count == 0 {
-		utils.FromContext(c).Errorf("error updating group by hash '%s', group not found", hash)
+		logger.FromContext(c).Errorf("error updating group by hash '%s', group not found", hash)
 		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	}
@@ -565,11 +565,11 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&group).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).Errorf("error updating group by hash '%s', group not found", hash)
+		logger.FromContext(c).Errorf("error updating group by hash '%s', group not found", hash)
 		response.Error(c, response.ErrGroupsNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating group by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error updating group by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -584,11 +584,11 @@ func (s *GroupService) PatchGroup(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body groupPolicyPatch true "action on group policy as JSON data (activate, deactivate)"
-// @Success 200 {object} utils.successResp "group policy patched successful"
-// @Failure 400 {object} utils.errorResp "invalid patch request data"
-// @Failure 403 {object} utils.errorResp "updating group policy not permitted"
-// @Failure 404 {object} utils.errorResp "group or policy not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting updating group policy"
+// @Success 200 {object} response.successResp "group policy patched successful"
+// @Failure 400 {object} response.errorResp "invalid patch request data"
+// @Failure 403 {object} response.errorResp "updating group policy not permitted"
+// @Failure 404 {object} response.errorResp "group or policy not found"
+// @Failure 500 {object} response.errorResp "internal error on getting updating group policy"
 // @Router /groups/{hash}/policies [put]
 func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	var (
@@ -602,7 +602,7 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&form); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrGroupsInvalidRequest, err)
 		return
 	}
@@ -615,21 +615,21 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 	uaf.ObjectID = form.Policy.Hash
 	uaf.ObjectDisplayName = form.Policy.Info.Name.En
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&group, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGroupsNotFound, err)
 		} else {
@@ -637,13 +637,13 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 		}
 		return
 	} else if err = group.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
 		response.Error(c, response.ErrGroupsInvalidData, err)
 		return
 	}
 
 	if err = iDB.Take(&policy, "hash = ?", form.Policy.Hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetGroupsPoliciesNotFound, err)
 		} else {
@@ -651,14 +651,14 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 		}
 		return
 	} else if err = policy.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating policy data '%s'", policy.Hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	httpErr, err := makeGroupPolicyAction(form.Action, iDB, group, policy)
 	if httpErr != nil {
-		utils.FromContext(c).WithError(err).Errorf("error patching group policy by action: %s", httpErr.Error())
+		logger.FromContext(c).WithError(err).Errorf("error patching group policy by action: %s", httpErr.Error())
 		response.Error(c, httpErr, err)
 	}
 
@@ -671,10 +671,10 @@ func (s *GroupService) PatchGroupPolicy(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body groupInfo true "group info to create one"
-// @Success 201 {object} utils.successResp{data=models.Group} "group created successful"
-// @Failure 400 {object} utils.errorResp "invalid group info"
-// @Failure 403 {object} utils.errorResp "creating group not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating group"
+// @Success 201 {object} response.successResp{data=models.Group} "group created successful"
+// @Failure 400 {object} response.errorResp "invalid group info"
+// @Failure 403 {object} response.errorResp "creating group not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating group"
 // @Router /groups/ [post]
 func (s *GroupService) CreateGroup(c *gin.Context) {
 	var (
@@ -686,27 +686,27 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
 	if err := c.ShouldBindJSON(&info); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 	uaf.ObjectDisplayName = info.Name
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	group := models.Group{
-		Hash: utils.MakeGroupHash(info.Name),
+		Hash: storage.MakeGroupHash(info.Name),
 		Info: models.GroupInfo{
 			Name: models.GroupItemLocale{
 				Ru: info.Name,
@@ -720,11 +720,11 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 
 	if info.From != 0 {
 		if err = iDB.Take(&groupFrom, "id = ?", info.From).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding source group by ID")
+			logger.FromContext(c).WithError(err).Errorf("error finding source group by ID")
 			response.Error(c, response.ErrCreateGroupSourceNotFound, err)
 			return
 		} else if err = groupFrom.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", groupFrom.Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", groupFrom.Hash)
 			response.Error(c, response.ErrGetAgentInvalidGroupData, err)
 			return
 		}
@@ -733,7 +733,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 		group.ID = 0
 		group.Info.System = false
 		group.CreatedDate = time.Time{}
-		group.Hash = utils.MakeGroupHash(group.Hash)
+		group.Hash = storage.MakeGroupHash(group.Hash)
 		if info.Name != "" {
 			group.Info.Name = models.GroupItemLocale{
 				Ru: info.Name,
@@ -749,7 +749,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 	}
 
 	if err = iDB.Create(&group).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error creating group")
+		logger.FromContext(c).WithError(err).Errorf("error creating group")
 		response.Error(c, response.ErrCreateGroupCreateFail, err)
 		return
 	}
@@ -758,7 +758,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 		var groupToPolicy []models.GroupToPolicy
 		err = iDB.Where("group_id = ?", groupFrom.ID).Find(&groupToPolicy).Error
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding group policies by group ID")
+			logger.FromContext(c).WithError(err).Errorf("error finding group policies by group ID")
 			response.Error(c, response.ErrCreateGroupGetPolicies, err)
 			return
 		}
@@ -766,7 +766,7 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 			gpt.ID = 0
 			gpt.GroupID = group.ID
 			if err = iDB.Create(&gpt).Error; err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error creating group policies")
+				logger.FromContext(c).WithError(err).Errorf("error creating group policies")
 				response.Error(c, response.ErrCreateGroupCreatePolicies, err)
 				return
 			}
@@ -781,10 +781,10 @@ func (s *GroupService) CreateGroup(c *gin.Context) {
 // @Tags Groups
 // @Produce json
 // @Param hash path string true "group hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "group deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting group not permitted"
-// @Failure 404 {object} utils.errorResp "group not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting group"
+// @Success 200 {object} response.successResp "group deleted successful"
+// @Failure 403 {object} response.errorResp "deleting group not permitted"
+// @Failure 404 {object} response.errorResp "group not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting group"
 // @Router /groups/{hash} [delete]
 func (s *GroupService) DeleteGroup(c *gin.Context) {
 	var (
@@ -795,21 +795,21 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 	uaf := useraction.NewFields(c, "group", "group", "deletion", hash, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&group, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding group by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGroupsNotFound, err)
 			return
@@ -817,7 +817,7 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else if err = group.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
 		response.Error(c, response.ErrGroupsInvalidData, err)
 		return
 	}
@@ -825,7 +825,7 @@ func (s *GroupService) DeleteGroup(c *gin.Context) {
 	uaf.ObjectDisplayName = group.Info.Name.En
 
 	if err = iDB.Delete(&group).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting group by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error deleting group by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

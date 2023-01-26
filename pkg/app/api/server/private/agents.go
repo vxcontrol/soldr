@@ -11,11 +11,12 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/client"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
-	useraction "soldr/pkg/app/api/user_action"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
+	"soldr/pkg/app/api/useraction"
+	"soldr/pkg/semvertooling"
 )
 
 type agentDetails struct {
@@ -56,9 +57,9 @@ type agentCount struct {
 }
 
 type AgentsAction struct {
-	Action  string              `form:"action" json:"action" binding:"oneof=authorize block delete unauthorize move,required" enums:"authorize,block,delete,unauthorize,move"`
-	Filters []utils.TableFilter `form:"filters" json:"filters" binding:"omitempty"`
-	To      uint64              `form:"to" json:"to" binding:"min=0,numeric,omitempty"`
+	Action  string                `form:"action" json:"action" binding:"oneof=authorize block delete unauthorize move,required" enums:"authorize,block,delete,unauthorize,move"`
+	Filters []storage.TableFilter `form:"filters" json:"filters" binding:"omitempty"`
+	To      uint64                `form:"to" json:"to" binding:"min=0,numeric,omitempty"`
 }
 
 type patchAgentAction struct {
@@ -91,7 +92,7 @@ var agentsSQLMappers = map[string]interface{}{
 	"connected_date": "`{{table}}`.connected_date",
 	"created_date":   "`{{table}}`.created_date",
 	"net_ips":        "JSON_EXTRACT(`{{table}}`.info, '$.net.ips')",
-	"tags":           utils.TagsMapper,
+	"tags":           storage.TagsMapper,
 	"users":          "JSON_EXTRACT(`{{table}}`.info, '$.users')",
 	"data": "CONCAT(`{{table}}`.hash, ' | ', " +
 		"`{{table}}`.description, ' | ', " +
@@ -157,8 +158,8 @@ func getAgentConsistency(modules []models.ModuleAShort, agent *models.Agent) (bo
 			}
 
 			var sdeps bool
-			switch utils.CompareVersions(agent.Version, dep.MinAgentVersion) {
-			case utils.TargetVersionEmpty, utils.VersionsEqual, utils.SourceVersionGreat:
+			switch semvertooling.CompareVersions(agent.Version, dep.MinAgentVersion) {
+			case semvertooling.TargetVersionEmpty, semvertooling.VersionsEqual, semvertooling.SourceVersionGreat:
 				sdeps = true
 			default:
 				rdeps = false
@@ -250,11 +251,11 @@ func NewAgentService(
 // @Summary Retrieve agents list by filters
 // @Tags Agents
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=agents} "agents list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting agents not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting agents"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=agents} "agents list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting agents not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting agents"
 // @Router /agents/ [get]
 func (s *AgentService) GetAgents(c *gin.Context) {
 	var (
@@ -267,9 +268,9 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		modulesa    []models.ModuleAShort
 		policies    = make(map[uint64][]models.Policy)
 		policiesa   []models.Policy
-		query       utils.TableQuery
+		query       storage.TableQuery
 		resp        agents
-		groupedResp utils.GroupedData
+		groupedResp response.GroupedData
 		tasks       []models.AgentUpgradeTask
 		useGroup    bool
 		useModule   bool
@@ -277,26 +278,26 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGetAgentsInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("agents", agentsSQLMappers); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrGetAgentsInvalidRequest, err)
 		return
 	}
@@ -343,13 +344,13 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 
 	if query.Group == "" {
 		if resp.Total, err = query.Query(iDB, &resp.Agents, funcs...); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding agents")
+			logger.FromContext(c).WithError(err).Errorf("error finding agents")
 			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding grouped agents")
+			logger.FromContext(c).WithError(err).Errorf("error finding grouped agents")
 			response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 			return
 		}
@@ -361,19 +362,19 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		aids = append(aids, resp.Agents[i].ID)
 		gids = append(gids, resp.Agents[i].GroupID)
 		if err = resp.Agents[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agents[i].Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agents[i].Hash)
 			response.Error(c, response.ErrAgentsInvalidData, err)
 			return
 		}
 	}
 	if err = iDB.Where("id IN (?)", gids).Find(&groupsa).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked groups")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked groups")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
 	for i := 0; i < len(groupsa); i++ {
 		if err = groupsa[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", groupsa[i].Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", groupsa[i].Hash)
 			response.Error(c, response.ErrAgentsInvalidData, err)
 			return
 		}
@@ -382,7 +383,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 
 	sqlQuery := sqlAgentDetails + ` WHERE a.id IN (?) AND a.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, aids).Scan(&resp.Details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading details agents")
+		logger.FromContext(c).WithError(err).Errorf("error loading details agents")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
@@ -397,7 +398,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			QueryExpr()).
 		Find(&tasks).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked agent upgrade tasks")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked agent upgrade tasks")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	}
@@ -408,7 +409,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
 		Find(&modulesa, "gtp.group_id IN (?) AND status = 'joined'", gids).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding group modules")
 		response.Error(c, response.ErrGetAgentsInvalidQuery, err)
 		return
 	} else {
@@ -417,7 +418,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			name := modulesa[i].Info.Name
 			policy_id := modulesa[i].PolicyID
 			if err = modulesa[i].Valid(); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
+				logger.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
 				response.Error(c, response.ErrAgentsInvalidData, err)
 				return
 			}
@@ -430,7 +431,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 	}
 
 	if err = iDB.Find(&gpss, "group_id IN (?)", gids).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
+		logger.FromContext(c).WithError(err).Errorf("error finding policy to groups links")
 		response.Error(c, response.ErrGroupPolicyGroupsNotFound, err)
 		return
 	}
@@ -441,7 +442,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 		Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = policies.id AND gtp.group_id IN (?)`, gids).
 		Find(&policiesa).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding group policies")
+		logger.FromContext(c).WithError(err).Errorf("error finding group policies")
 		response.Error(c, response.ErrGroupPolicyPoliciesNotFound, err)
 		return
 	} else {
@@ -449,7 +450,7 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 			id := policiesa[i].ID
 			name := policiesa[i].Info.Name
 			if err = policiesa[i].Valid(); err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
+				logger.FromContext(c).WithError(err).Errorf("error validating policy data '%d' '%s'", id, name)
 				response.Error(c, response.ErrGetAgentsInvalidAgentModuleData, err)
 				return
 			}
@@ -510,15 +511,15 @@ func (s *AgentService) GetAgents(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body AgentsAction true "action on agents as JSON data"
-// @Success 200 {object} utils.successResp{data=agentsActionResult} "agents updated successful"
-// @Failure 400 {object} utils.errorResp "invalid agents action"
-// @Failure 403 {object} utils.errorResp "updating agents not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on updating agents"
+// @Success 200 {object} response.successResp{data=agentsActionResult} "agents updated successful"
+// @Failure 400 {object} response.errorResp "invalid agents action"
+// @Failure 403 {object} response.errorResp "updating agents not permitted"
+// @Failure 500 {object} response.errorResp "internal error on updating agents"
 // @Router /agents/ [put]
 func (s *AgentService) PatchAgents(c *gin.Context) {
 	var (
 		action AgentsAction
-		query  utils.TableQuery
+		query  storage.TableQuery
 		resp   agentsActionResult
 	)
 
@@ -533,21 +534,21 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	}()
 
 	if err := c.ShouldBindBodyWith(&action, binding.JSON); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPatchAgentsInvalidAction, err)
 		return
 	}
 	uafArr[0].ActionCode = getActionCode(action.Action)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -559,7 +560,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 
 	var agents []models.Agent
 	if err = iDB.Scopes(scope).Model(&models.Agent{}).Count(&resp.Total).Find(&agents).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error collecting agents by filter")
+		logger.FromContext(c).WithError(err).Errorf("error collecting agents by filter")
 		response.Error(c, response.ErrPatchAgentsInvalidQuery, err)
 		return
 	}
@@ -585,7 +586,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 					"reason": "Canceled.By.User",
 				}).Error
 			if err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error updating tasks by filter")
+				logger.FromContext(c).WithError(err).Errorf("error updating tasks by filter")
 				response.Error(c, response.ErrPatchAgentsUpdateTasksFail, err)
 				return false
 			}
@@ -593,7 +594,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		err = iDB.Scopes(scope).Model(&models.Agent{}).
 			Count(&resp.Total).UpdateColumns(update_fields).Error
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating agents by filter")
+			logger.FromContext(c).WithError(err).Errorf("error updating agents by filter")
 			response.Error(c, response.ErrPatchAgentsUpdateAgentsFail, err)
 			return false
 		}
@@ -604,7 +605,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 	case "delete":
 		for _, agent := range agents {
 			if err = iDB.Delete(&agent).Error; err != nil {
-				utils.FromContext(c).WithError(err).Errorf("error deleting agents by filter")
+				logger.FromContext(c).WithError(err).Errorf("error deleting agents by filter")
 				response.Error(c, response.ErrPatchAgentsDeleteAgentsFail, err)
 				return
 			}
@@ -626,7 +627,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 			var group models.Group
 			err = iDB.Where("id = ?", action.To).Take(&group).Error
 			if err != nil || group.ID == 0 {
-				utils.FromContext(c).WithError(err).Errorf("error getting agents group")
+				logger.FromContext(c).WithError(err).Errorf("error getting agents group")
 				response.Error(c, response.ErrPatchAgentsMoveFail, err)
 				return
 			}
@@ -647,7 +648,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		err = iDB.Where("agent_id IN (?)", agentIds).
 			Delete(&models.Event{}).Error
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error deleting agents on moving")
+			logger.FromContext(c).WithError(err).Errorf("error deleting agents on moving")
 			response.Error(c, response.ErrPatchAgentsMoveFail, err)
 			return
 		}
@@ -659,7 +660,7 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 		err = iDB.Scopes(query.DataFilter()).Model(&models.Agent{}).Count(&resp.Total).
 			UpdateColumns(update_fields).Error
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating agents on moving")
+			logger.FromContext(c).WithError(err).Errorf("error updating agents on moving")
 			response.Error(c, response.ErrPatchAgentsMoveFail, err)
 			return
 		}
@@ -673,10 +674,10 @@ func (s *AgentService) PatchAgents(c *gin.Context) {
 // @Tags Agents
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=agent} "agent info received successful"
-// @Failure 403 {object} utils.errorResp "getting agent info not permitted"
-// @Failure 404 {object} utils.errorResp "agent not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting agent"
+// @Success 200 {object} response.successResp{data=agent} "agent info received successful"
+// @Failure 403 {object} response.errorResp "getting agent info not permitted"
+// @Failure 404 {object} response.errorResp "agent not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent"
 // @Router /agents/{hash} [get]
 func (s *AgentService) GetAgent(c *gin.Context) {
 	var (
@@ -687,21 +688,21 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 		task  models.AgentUpgradeTask
 	)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&resp.Agent, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, err)
 		} else {
@@ -709,14 +710,14 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Agent.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agent.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", resp.Agent.Hash)
 		response.Error(c, response.ErrAgentsInvalidData, err)
 		return
 	}
 
 	sqlQuery := sqlAgentDetails + ` WHERE a.hash = ? AND a.deleted_at IS NULL`
 	if err = iDB.Raw(sqlQuery, hash).Scan(&resp.Details).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error loading details by agent hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error loading details by agent hash '%s'", hash)
 		response.Error(c, response.ErrGetAgentDetailsNotFound, err)
 		return
 	}
@@ -733,7 +734,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 
 	if resp.Agent.GroupID != 0 {
 		if err = iDB.Take(&group, "id = ?", resp.Agent.GroupID).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding group by id")
+			logger.FromContext(c).WithError(err).Errorf("error finding group by id")
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Error(c, response.ErrGetAgentGroupNotFound, err)
 			} else {
@@ -741,7 +742,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			}
 			return
 		} else if err = group.Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating group data '%s'", group.Hash)
 			response.Error(c, response.ErrGetAgentInvalidGroupData, err)
 			return
 		}
@@ -753,7 +754,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			Joins(`LEFT JOIN groups_to_policies gtp ON gtp.policy_id = modules.policy_id`).
 			Find(&resp.Details.Modules, "gtp.group_id = ? AND status = 'joined'", resp.Agent.GroupID).Error
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Agent.GroupID)
+			logger.FromContext(c).WithError(err).Errorf("error finding group modules by group ID '%d'", resp.Agent.GroupID)
 			response.Error(c, response.ErrGetAgentGroupModulesNotFound, err)
 			return
 		} else {
@@ -761,7 +762,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 				if err = resp.Details.Modules[i].Valid(); err != nil {
 					id := resp.Details.Modules[i].ID
 					name := resp.Details.Modules[i].Info.Name
-					utils.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
+					logger.FromContext(c).WithError(err).Errorf("error validating group module data '%d' '%s'", id, name)
 					response.Error(c, response.ErrGetAgentInvalidAgentModuleData, err)
 					return
 				}
@@ -773,7 +774,7 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 			Group: *resp.Details.Group,
 		}
 		if err = iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
+			logger.FromContext(c).WithError(err).Errorf("error finding group policies by group model")
 			response.Error(c, response.ErrGetAgentPoliciesNotFound, err)
 			return
 		}
@@ -790,11 +791,11 @@ func (s *AgentService) GetAgent(c *gin.Context) {
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
 // @Param json body patchAgentAction true "agent info as JSON data"
-// @Success 200 {object} utils.successResp{data=models.Agent} "agent info updated successful"
-// @Failure 400 {object} utils.errorResp "invalid agent info"
-// @Failure 403 {object} utils.errorResp "updating agent info not permitted"
-// @Failure 404 {object} utils.errorResp "agent not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating agent"
+// @Success 200 {object} response.successResp{data=models.Agent} "agent info updated successful"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "updating agent info not permitted"
+// @Failure 404 {object} response.errorResp "agent not found"
+// @Failure 500 {object} response.errorResp "internal error on updating agent"
 // @Router /agents/{hash} [put]
 func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "undefined action", "", useraction.UnknownObjectDisplayName)
@@ -802,15 +803,15 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 
 	hash := c.Param("hash")
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -820,11 +821,11 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 		if err == nil {
 			err = action.Agent.Valid()
 		}
-		name, nameErr := utils.GetAgentName(iDB, hash)
+		name, nameErr := storage.GetAgentName(iDB, hash)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrPatchAgentValidationError, err)
 		return
 	}
@@ -833,14 +834,14 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	uaf.ObjectDisplayName = action.Agent.Description
 
 	if hash != action.Agent.Hash {
-		utils.FromContext(c).Errorf("mismatch agent hash to requested one")
+		logger.FromContext(c).Errorf("mismatch agent hash to requested one")
 		response.Error(c, response.ErrPatchAgentValidationError, nil)
 		return
 	}
 
 	var count int64
 	if err = iDB.Model(&action.Agent).Count(&count).Error; err != nil || count == 0 {
-		utils.FromContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
+		logger.FromContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	}
@@ -855,7 +856,7 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 				"reason": "Canceled.By.User",
 			}).Error
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error updating tasks by agent")
+			logger.FromContext(c).WithError(err).Errorf("error updating tasks by agent")
 			response.Error(c, response.ErrPatchAgentTaskUpdateFail, err)
 			return
 		}
@@ -865,11 +866,11 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 	err = iDB.Select("", public_info...).Save(&action.Agent).Error
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
+		logger.FromContext(c).Errorf("error updating agent by hash '%s', agent not found", hash)
 		response.Error(c, response.ErrAgentsNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating agent by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error updating agent by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -883,10 +884,10 @@ func (s *AgentService) PatchAgent(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body agentInfo true "agent info to create one"
-// @Success 201 {object} utils.successResp{data=models.Agent} "agent created successful"
-// @Failure 400 {object} utils.errorResp "invalid agent info"
-// @Failure 403 {object} utils.errorResp "creating agent not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating agent"
+// @Success 201 {object} response.successResp{data=models.Agent} "agent created successful"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "creating agent not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating agent"
 // @Router /agents/ [post]
 func (s *AgentService) CreateAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "creation", "", useraction.UnknownObjectDisplayName)
@@ -894,21 +895,21 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 
 	var info agentInfo
 	if err := c.ShouldBindJSON(&info); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrCreateAgentValidationError, err)
 		return
 	}
 	uaf.ObjectDisplayName = info.Name
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -918,7 +919,7 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 		Groups: []string{"unknown"},
 	}
 	newAgent := models.Agent{
-		Hash:        utils.MakeAgentHash(info.Name),
+		Hash:        storage.MakeAgentHash(info.Name),
 		IP:          "0.0.0.0",
 		Description: info.Name,
 		Version:     "v1.0.0",
@@ -945,7 +946,7 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 	uaf.ObjectID = newAgent.Hash
 
 	if err = iDB.Create(&newAgent).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error creating agent")
+		logger.FromContext(c).WithError(err).Errorf("error creating agent")
 		response.Error(c, response.ErrCreateAgentCreateError, err)
 		return
 	}
@@ -958,10 +959,10 @@ func (s *AgentService) CreateAgent(c *gin.Context) {
 // @Tags Agents
 // @Produce json
 // @Param hash path string true "agent hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "agent deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting agent not permitted"
-// @Failure 404 {object} utils.errorResp "agent not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting agent"
+// @Success 200 {object} response.successResp "agent deleted successful"
+// @Failure 403 {object} response.errorResp "deleting agent not permitted"
+// @Failure 404 {object} response.errorResp "agent not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting agent"
 // @Router /agents/{hash} [delete]
 func (s *AgentService) DeleteAgent(c *gin.Context) {
 	var (
@@ -972,21 +973,21 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 	uaf := useraction.NewFields(c, "agent", "agent", "deletion", "", useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = iDB.Take(&agent, "hash = ?", hash).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding agent by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding agent by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrAgentsNotFound, err)
 		} else {
@@ -994,14 +995,14 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 		}
 		return
 	} else if err = agent.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating agent data '%s'", agent.Hash)
 		response.Error(c, response.ErrAgentsInvalidData, err)
 		return
 	}
 	uaf.ObjectDisplayName = agent.Description
 
 	if err = iDB.Delete(&agent).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting agent by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error deleting agent by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -1013,8 +1014,8 @@ func (s *AgentService) DeleteAgent(c *gin.Context) {
 // @Summary Retrieve groups of counted agents
 // @Tags Agents
 // @Produce json
-// @Success 200 {object} utils.successResp{data=agentCount} "groups of counted agents retrieved successfully"
-// @Failure 500 {object} utils.errorResp "internal error"
+// @Success 200 {object} response.successResp{data=agentCount} "groups of counted agents retrieved successfully"
+// @Failure 500 {object} response.errorResp "internal error"
 // @Router /agents/count [get]
 func (s *AgentService) GetAgentsCount(c *gin.Context) {
 	uaf := useraction.Fields{
@@ -1025,15 +1026,15 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 	}
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
@@ -1053,7 +1054,7 @@ func (s *AgentService) GetAgentsCount(c *gin.Context) {
 		Scan(&resp).
 		Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("could not count agents")
+		logger.FromContext(c).WithError(err).Errorf("could not count agents")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

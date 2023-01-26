@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage/fs"
+	"soldr/pkg/filestorage/s3"
 )
 
 // sFiles is universal container for modules files loader
@@ -11,8 +12,8 @@ type sFiles struct {
 }
 
 // NewFilesFromS3 is function which constructed Files loader object
-func NewFilesFromS3(connParams *storage.S3ConnParams) (IFilesLoader, error) {
-	sc, err := storage.NewS3(connParams)
+func NewFilesFromS3(connParams *s3.Config) (IFilesLoader, error) {
+	sc, err := s3.New(connParams)
 	if err != nil {
 		return nil, generateDriverInitErrMsg(driverTypeS3, err)
 	}
@@ -24,7 +25,7 @@ func NewFilesFromS3(connParams *storage.S3ConnParams) (IFilesLoader, error) {
 
 // NewFilesFromFS is function which constructed Files loader object
 func NewFilesFromFS(path string) (IFilesLoader, error) {
-	sc, err := storage.NewFS()
+	sc, err := fs.New()
 	if err != nil {
 		return nil, generateDriverInitErrMsg(driverTypeFS, err)
 	}

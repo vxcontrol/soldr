@@ -8,30 +8,30 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 )
 
 func makeTokenClaims(c *gin.Context, cpt string) (*models.ProtoAuthTokenClaims, error) {
-	rid, okRID := srvcontext.GetUint64(c, "rid")
-	if !okRID || rid == 0 {
+	rid := c.GetUint64("rid")
+	if rid == 0 {
 		return nil, fmt.Errorf("input RID invalid %d", rid)
 	}
 
-	sid, okSID := srvcontext.GetUint64(c, "sid")
-	if !okSID || sid == 0 {
+	sid := c.GetUint64("sid")
+	if sid == 0 {
 		return nil, fmt.Errorf("input SID invalid %d", sid)
 	}
 
-	tid, okTID := srvcontext.GetUint64(c, "tid")
-	if !okTID || tid == 0 {
+	tid := c.GetUint64("tid")
+	if tid == 0 {
 		return nil, fmt.Errorf("input TID invalid %d", tid)
 	}
 
-	uid, okUID := srvcontext.GetUint64(c, "uid")
-	if !okUID || uid == 0 {
+	uid := c.GetUint64("uid")
+	if uid == 0 {
 		return nil, fmt.Errorf("input UID invalid %d", uid)
 	}
 
@@ -58,7 +58,7 @@ func MakeToken(c *gin.Context, req *models.ProtoAuthTokenRequest) (string, error
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(utils.MakeCookieStoreKey())
+	tokenString, err := token.SignedString(storage.MakeCookieStoreKey())
 	if err != nil {
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
@@ -68,7 +68,7 @@ func MakeToken(c *gin.Context, req *models.ProtoAuthTokenRequest) (string, error
 func ValidateToken(tokenString string) (*models.ProtoAuthTokenClaims, error) {
 	var claims models.ProtoAuthTokenClaims
 	token, err := jwt.ParseWithClaims(tokenString, &claims, func(token *jwt.Token) (interface{}, error) {
-		return utils.MakeCookieStoreKey(), nil
+		return storage.MakeCookieStoreKey(), nil
 	})
 
 	if token.Valid {
@@ -91,31 +91,31 @@ func ValidateToken(tokenString string) (*models.ProtoAuthTokenClaims, error) {
 // @Accept json
 // @Produce json
 // @Param json body models.ProtoAuthTokenRequest true "Proto auth token request JSON data"
-// @Success 201 {object} utils.successResp{data=models.ProtoAuthToken} "token created successful"
-// @Failure 400 {object} utils.errorResp "invalid requested token info"
-// @Failure 403 {object} utils.errorResp "creating token not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating token"
+// @Success 201 {object} response.successResp{data=models.ProtoAuthToken} "token created successful"
+// @Failure 400 {object} response.errorResp "invalid requested token info"
+// @Failure 403 {object} response.errorResp "creating token not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating token"
 // @Router /token/vxproto [post]
 func CreateAuthToken(c *gin.Context) {
 	var req models.ProtoAuthTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrProtoInvalidRequest, err)
 		return
 	} else if err := req.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating JSON")
+		logger.FromContext(c).WithError(err).Errorf("error validating JSON")
 		response.Error(c, response.ErrProtoInvalidRequest, err)
 		return
 	}
 
 	token, err := MakeToken(c, &req)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error on making token")
+		logger.FromContext(c).WithError(err).Errorf("error on making token")
 		response.Error(c, response.ErrProtoCreateTokenFail, err)
 		return
 	}
 	if _, err := ValidateToken(token); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error on validating token")
+		logger.FromContext(c).WithError(err).Errorf("error on validating token")
 		response.Error(c, response.ErrProtoInvalidToken, err)
 		return
 	}

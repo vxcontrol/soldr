@@ -12,7 +12,7 @@ import (
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/utils"
 	"soldr/pkg/crypto"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage/s3"
 )
 
 type agentModuleDetails struct {
@@ -50,7 +50,7 @@ func joinPath(args ...string) string {
 }
 
 func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) error {
-	gS3, err := storage.NewS3(nil)
+	gS3, err := s3.New(nil)
 	if err != nil {
 		return errors.New("failed to initialize global S3 driver: " + err.Error())
 	}
@@ -67,7 +67,7 @@ func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) err
 		return errors.New("failed to read utils files: " + err.Error())
 	}
 
-	iS3, err := storage.NewS3(sv.Info.S3.ToS3ConnParams())
+	iS3, err := s3.New(sv.Info.S3.ToS3ConnParams())
 	if err != nil {
 		return errors.New("failed to initialize instance S3 driver: " + err.Error())
 	}
@@ -168,7 +168,7 @@ func mergeModuleACurrentConfig(cc, dc models.ModuleConfig, sh models.Schema) mod
 	}
 
 	mcsh := copySchema(&sh.Type, sh.Definitions)
-	icc := utils.MergeTwoInterfacesBySchema(cc, dc, mcsh)
+	icc := MergeTwoInterfacesBySchema(cc, dc, mcsh)
 	if res, err := mcsh.ValidateGo(icc); err != nil || !res.Valid() {
 		return dc
 	} else if rcc, ok := icc.(models.ModuleConfig); !ok {
@@ -192,7 +192,7 @@ func mergeModuleASecureCurrentConfig(cc, dc models.ModuleSecureConfig, sh models
 	}
 
 	mcsh := copySchema(&sh.Type, sh.Definitions)
-	icc := utils.MergeTwoInterfacesBySchema(cc, dc, mcsh)
+	icc := MergeTwoInterfacesBySchema(cc, dc, mcsh)
 	if res, err := mcsh.ValidateGo(icc); err != nil || !res.Valid() {
 		return dc
 	} else if rcc, ok := icc.(models.ModuleSecureConfig); !ok {
@@ -226,7 +226,7 @@ func mergeModuleACurrentActionConfig(cac, dac models.ActionConfig, sh models.Sch
 
 	rcac := models.ActionConfig{}
 	acsh := copySchema(&sh.Type, models.GetACSDefinitions(sh.Definitions))
-	icac := utils.MergeTwoInterfacesBySchema(convertToRawInterface(cac), convertToRawInterface(dac), acsh)
+	icac := MergeTwoInterfacesBySchema(convertToRawInterface(cac), convertToRawInterface(dac), acsh)
 	if res, err := acsh.ValidateGo(icac); err != nil || !res.Valid() {
 		return dac
 	} else if b, err := json.Marshal(icac); err != nil {
@@ -245,7 +245,7 @@ func mergeModuleACurrentActionConfig(cac, dac models.ActionConfig, sh models.Sch
 func mergeModuleAEventConfigItem(ceci, deci models.EventConfigItem, sh models.Schema) models.EventConfigItem {
 	reci := models.EventConfigItem{}
 	iceci, ideci := convertToRawInterface(ceci), convertToRawInterface(deci)
-	rieci := utils.MergeTwoInterfacesBySchema(iceci, ideci, sh)
+	rieci := MergeTwoInterfacesBySchema(iceci, ideci, sh)
 	if b, err := json.Marshal(rieci); err != nil {
 		return deci
 	} else if err = json.Unmarshal(b, &reci); err != nil {

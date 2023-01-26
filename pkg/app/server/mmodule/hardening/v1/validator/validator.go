@@ -16,8 +16,8 @@ import (
 	"soldr/pkg/app/server/mmodule/hardening/v1/ssa"
 	tunnelConfigurer "soldr/pkg/app/server/mmodule/hardening/v1/tunnel"
 	"soldr/pkg/app/server/mmodule/hardening/v1/validator/ainfo"
+	"soldr/pkg/filestorage"
 	"soldr/pkg/protoagent"
-	"soldr/pkg/storage"
 	"soldr/pkg/vxproto"
 	"soldr/pkg/vxproto/tunnel"
 )
@@ -61,7 +61,7 @@ type ConnectionValidator struct {
 func NewConnectionValidator(
 	ctx context.Context,
 	gdbc *gorm.DB,
-	fs storage.IFileReader,
+	fs filestorage.Reader,
 	store interface{},
 	basePath string,
 	certsProvider certs.Provider,

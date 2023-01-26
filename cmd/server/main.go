@@ -34,8 +34,10 @@ import (
 	"soldr/pkg/app/server/mmodule"
 	"soldr/pkg/controller"
 	"soldr/pkg/db"
+	"soldr/pkg/filestorage"
+	"soldr/pkg/filestorage/fs"
+	"soldr/pkg/filestorage/s3"
 	"soldr/pkg/observability"
-	"soldr/pkg/storage"
 	"soldr/pkg/system"
 	"soldr/pkg/utils"
 	"soldr/pkg/vxproto"
@@ -104,7 +106,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 	case loaderTypeFS:
 		cl, err = controller.NewConfigFromFS(s.config.Base)
 	case loaderTypeS3:
-		var s3ConnParams *storage.S3ConnParams
+		var s3ConnParams *s3.Config
 		s3ConnParams, err = s3ConnParamsFromConfig(&s.config.S3)
 		if err != nil {
 			err = fmt.Errorf("failed to compose s3 connection params from config: %w", err)
@@ -133,7 +135,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 	case loaderTypeFS:
 		fl, err = controller.NewFilesFromFS(s.config.Base)
 	case loaderTypeS3:
-		var s3ConnParams *storage.S3ConnParams
+		var s3ConnParams *s3.Config
 		s3ConnParams, err = s3ConnParamsFromConfig(&s.config.S3)
 		if err != nil {
 			err = fmt.Errorf("failed to compose s3 connection params from config: %w", err)
@@ -150,7 +152,7 @@ func (s *Server) Init(env svc.Environment) (err error) {
 	logger.Info("modules files loader was created")
 
 	utils.RemoveUnusedTempDir()
-	store, err := storage.NewS3(&storage.S3ConnParams{
+	store, err := s3.New(&s3.Config{
 		Endpoint:   s.config.S3.Endpoint,
 		AccessKey:  s.config.S3.AccessKey,
 		SecretKey:  s.config.S3.SecretKey,
@@ -214,7 +216,7 @@ func dsnFromConfig(c *config.DB) (*db.DSN, error) {
 	}, nil
 }
 
-func s3ConnParamsFromConfig(c *config.S3) (*storage.S3ConnParams, error) {
+func s3ConnParamsFromConfig(c *config.S3) (*s3.Config, error) {
 	if c == nil {
 		return nil, fmt.Errorf("passed config is nil")
 	}
@@ -230,7 +232,7 @@ func s3ConnParamsFromConfig(c *config.S3) (*storage.S3ConnParams, error) {
 	if len(c.BucketName) == 0 {
 		return nil, fmt.Errorf("bucket name is empty")
 	}
-	return &storage.S3ConnParams{
+	return &s3.Config{
 		Endpoint:   c.Endpoint,
 		AccessKey:  c.AccessKey,
 		SecretKey:  c.SecretKey,
@@ -238,11 +240,11 @@ func s3ConnParamsFromConfig(c *config.S3) (*storage.S3ConnParams, error) {
 	}, nil
 }
 
-func initCertProvider(c *config.CertsConfig, s3 storage.IFileReader) (certs.Provider, error) {
+func initCertProvider(c *config.CertsConfig, s3FileReader filestorage.Reader) (certs.Provider, error) {
 	if c == nil {
 		return nil, fmt.Errorf("passed config object is nil")
 	}
-	createFileProvider := func(store storage.IFileReader, base string) (certs.Provider, error) {
+	createFileProvider := func(store filestorage.Reader, base string) (certs.Provider, error) {
 		conf := &certsConfig.Config{
 			StaticProvider: &certsConfig.StaticProvider{
 				Reader:   store,
@@ -257,13 +259,13 @@ func initCertProvider(c *config.CertsConfig, s3 storage.IFileReader) (certs.Prov
 	}
 	switch c.Type {
 	case loaderTypeFS:
-		store, err := storage.NewFS()
+		store, err := fs.New()
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize a file store: %w", err)
 		}
 		return createFileProvider(store, c.Base)
 	case loaderTypeS3:
-		return createFileProvider(s3, c.Base)
+		return createFileProvider(s3FileReader, c.Base)
 	default:
 		return nil, fmt.Errorf("store type %s is not available for certificate providers", c.Type)
 	}

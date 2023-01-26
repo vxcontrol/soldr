@@ -7,13 +7,14 @@ import (
 	"github.com/jinzhu/gorm"
 
 	"soldr/pkg/app/api/client"
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
+	"soldr/pkg/app/api/storage"
 	"soldr/pkg/app/api/utils"
 )
 
-type events struct {
+type eventResponse struct {
 	Events   []models.Event        `json:"events"`
 	Agents   []models.Agent        `json:"agents"`
 	Groups   []models.Group        `json:"groups"`
@@ -46,17 +47,17 @@ var eventsSQLMappers = map[string]interface{}{
 		"CONCAT('$.events.', `{{table}}`.name, '.{{lang}}.description')))",
 }
 
-func dataMapper(q *utils.TableQuery, db *gorm.DB, value interface{}) *gorm.DB {
+func dataMapper(q *storage.TableQuery, db *gorm.DB, value interface{}) *gorm.DB {
 	return db.Where("`events`.data_text LIKE ? OR `events`.name LIKE ?", value, value)
 }
 
-func getAgentIDs(iDB *gorm.DB, query *utils.TableQuery, epids []uint64) ([]uint64, error) {
+func getAgentIDs(iDB *gorm.DB, query *storage.TableQuery, epids []uint64) ([]uint64, error) {
 	var (
 		eaids         []uint64
-		eventsFilters []utils.TableFilter
-		eventsSort    utils.TableSort
-		aidsFilters   []utils.TableFilter
-		aidsSort      utils.TableSort
+		eventsFilters []storage.TableFilter
+		eventsSort    storage.TableSort
+		aidsFilters   []storage.TableFilter
+		aidsSort      storage.TableSort
 	)
 
 	midsKeys := []string{
@@ -92,17 +93,17 @@ func getAgentIDs(iDB *gorm.DB, query *utils.TableQuery, epids []uint64) ([]uint6
 	query.Filters = eventsFilters
 	query.Sort = eventsSort
 
-	return utils.UniqueUint64InSlice(eaids), err
+	return UniqueUint64InSlice(eaids), err
 }
 
-func getModuleIDs(iDB *gorm.DB, query *utils.TableQuery) ([]uint64, []uint64, error) {
+func getModuleIDs(iDB *gorm.DB, query *storage.TableQuery) ([]uint64, []uint64, error) {
 	var (
 		emids         []uint64
 		epids         []uint64
-		eventsFilters []utils.TableFilter
-		eventsSort    utils.TableSort
-		midsFilters   []utils.TableFilter
-		midsSort      utils.TableSort
+		eventsFilters []storage.TableFilter
+		eventsSort    storage.TableSort
+		midsFilters   []storage.TableFilter
+		midsSort      storage.TableSort
 	)
 
 	midsKeys := []string{
@@ -138,10 +139,10 @@ func getModuleIDs(iDB *gorm.DB, query *utils.TableQuery) ([]uint64, []uint64, er
 	query.Filters = eventsFilters
 	query.Sort = eventsSort
 
-	return utils.UniqueUint64InSlice(emids), utils.UniqueUint64InSlice(epids), err
+	return UniqueUint64InSlice(emids), UniqueUint64InSlice(epids), err
 }
 
-func getFilters(query *utils.TableQuery) []func(db *gorm.DB) *gorm.DB {
+func getFilters(query *storage.TableQuery) []func(db *gorm.DB) *gorm.DB {
 	var (
 		useAgent  bool
 		useGroup  bool
@@ -219,7 +220,7 @@ func getFilters(query *utils.TableQuery) []func(db *gorm.DB) *gorm.DB {
 	return funcs
 }
 
-func doQuery(iDB *gorm.DB, query *utils.TableQuery, resp *events, funcs []func(db *gorm.DB) *gorm.DB) error {
+func doQuery(iDB *gorm.DB, query *storage.TableQuery, resp *eventResponse, funcs []func(db *gorm.DB) *gorm.DB) error {
 	var (
 		eids []uint64
 		err  error
@@ -272,11 +273,11 @@ func NewEventService(serverConnector *client.AgentServerClient) *EventService {
 // @Summary Retrieve events list by filters
 // @Tags Events
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=events} "events list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting events not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting events"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=eventResponse} "events list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting events not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting events"
 // @Router /events/ [get]
 func (s *EventService) GetEvents(c *gin.Context) {
 	var (
@@ -287,46 +288,46 @@ func (s *EventService) GetEvents(c *gin.Context) {
 		gids        []uint64
 		mids        []uint64
 		pids        []uint64
-		query       utils.TableQuery
-		resp        events
-		groupedResp utils.GroupedData
+		query       storage.TableQuery
+		resp        eventResponse
+		groupedResp response.GroupedData
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
-	serviceHash, ok := srvcontext.GetString(c, "svc")
-	if !ok {
-		utils.FromContext(c).Errorf("could not get service hash")
+	serviceHash := c.GetString("svc")
+	if serviceHash == "" {
+		logger.FromContext(c).Errorf("could not get service hash")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 	iDB, err := s.serverConnector.GetDB(c, serviceHash)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Error()
+		logger.FromContext(c).WithError(err).Error()
 		response.Error(c, response.ErrInternalDBNotFound, err)
 		return
 	}
 
 	if err = query.Init("events", eventsSQLMappers); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
 
 	emids, epids, err = getModuleIDs(iDB, &query)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting modules list by filter")
+		logger.FromContext(c).WithError(err).Errorf("error getting modules list by filter")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
 	eaids, err = getAgentIDs(iDB, &query, epids)
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error getting agents list by filter")
+		logger.FromContext(c).WithError(err).Errorf("error getting agents list by filter")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
@@ -341,7 +342,7 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	copyEventsSQLMappers["module_id"] = "`events`.module_id"
 	copyEventsSQLMappers["policy_id"] = "`modules`.policy_id"
 	if err = query.Init("events", copyEventsSQLMappers); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrEventsInvalidRequest, err)
 		return
 	}
@@ -355,13 +356,13 @@ func (s *EventService) GetEvents(c *gin.Context) {
 
 	if query.Group == "" {
 		if err = doQuery(iDB, &query, &resp, funcs); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding events")
+			logger.FromContext(c).WithError(err).Errorf("error finding events")
 			response.Error(c, response.ErrEventsInvalidQuery, err)
 			return
 		}
 	} else {
 		if groupedResp.Total, err = query.QueryGrouped(iDB, &groupedResp.Grouped, funcs...); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error finding grouped events")
+			logger.FromContext(c).WithError(err).Errorf("error finding grouped events")
 			response.Error(c, response.ErrEventsInvalidQuery, err)
 			return
 		}
@@ -373,20 +374,20 @@ func (s *EventService) GetEvents(c *gin.Context) {
 		aids = append(aids, resp.Events[i].AgentID)
 		mids = append(mids, resp.Events[i].ModuleID)
 		if resp.Events[i].Valid() != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating event data")
+			logger.FromContext(c).WithError(err).Errorf("error validating event data")
 			response.Error(c, response.ErrEventsInvalidData, err)
 			return
 		}
 	}
-	aids = utils.UniqueUint64InSlice(aids)
+	aids = UniqueUint64InSlice(aids)
 	if err = iDB.Where("id IN (?)", aids).Find(&resp.Agents).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked agents")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked agents")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
-	mids = utils.UniqueUint64InSlice(mids)
+	mids = UniqueUint64InSlice(mids)
 	if err = iDB.Where("id IN (?)", mids).Find(&resp.Modules).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked modules")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked modules")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
@@ -394,9 +395,9 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	for i := 0; i < len(resp.Agents); i++ {
 		gids = append(gids, resp.Agents[i].GroupID)
 	}
-	gids = utils.UniqueUint64InSlice(gids)
+	gids = UniqueUint64InSlice(gids)
 	if err = iDB.Where("id IN (?)", gids).Find(&resp.Groups).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked gloups")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked gloups")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
@@ -404,12 +405,25 @@ func (s *EventService) GetEvents(c *gin.Context) {
 	for i := 0; i < len(resp.Modules); i++ {
 		pids = append(pids, resp.Modules[i].PolicyID)
 	}
-	pids = utils.UniqueUint64InSlice(pids)
+	pids = UniqueUint64InSlice(pids)
 	if err = iDB.Where("id IN (?)", pids).Find(&resp.Policies).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked policies")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked policies")
 		response.Error(c, response.ErrEventsInvalidQuery, err)
 		return
 	}
 
 	response.Success(c, http.StatusOK, resp)
+}
+
+// UniqueUint64InSlice is function to remove duplicates in slice of uint64
+func UniqueUint64InSlice(slice []uint64) []uint64 {
+	keys := make(map[uint64]bool)
+	list := []uint64{}
+	for _, entry := range slice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
 }

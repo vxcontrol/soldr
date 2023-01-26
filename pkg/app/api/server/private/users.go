@@ -8,10 +8,10 @@ import (
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
 
+	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
-	srvcontext "soldr/pkg/app/api/server/context"
 	"soldr/pkg/app/api/server/response"
-	"soldr/pkg/app/api/utils"
+	"soldr/pkg/app/api/storage"
 )
 
 type users struct {
@@ -47,10 +47,10 @@ func NewUserService(db *gorm.DB) *UserService {
 // @Summary Retrieve current user information
 // @Tags Users
 // @Produce json
-// @Success 200 {object} utils.successResp{data=models.UserRoleTenant} "user info received successful"
-// @Failure 403 {object} utils.errorResp "getting current user not permitted"
-// @Failure 404 {object} utils.errorResp "current user not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting current user"
+// @Success 200 {object} response.successResp{data=models.UserRoleTenant} "user info received successful"
+// @Failure 403 {object} response.errorResp "getting current user not permitted"
+// @Failure 404 {object} response.errorResp "current user not found"
+// @Failure 500 {object} response.errorResp "internal error on getting current user"
 // @Router /user/ [get]
 func (s *UserService) GetCurrentUser(c *gin.Context) {
 	var (
@@ -58,13 +58,13 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 		resp models.UserRoleTenant
 	)
 
-	uid, _ := srvcontext.GetUint64(c, "uid")
+	uid := c.GetUint64("uid")
 
 	err = s.db.Take(&resp.User, "id = ?", uid).
 		Related(&resp.Role).
 		Related(&resp.Tenant).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding current user")
+		logger.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -72,7 +72,7 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 		}
 		return
 	} else if err = resp.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
@@ -86,11 +86,11 @@ func (s *UserService) GetCurrentUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.Password true "container to validate and update account password"
-// @Success 200 {object} utils.successResp "account password updated successful"
-// @Failure 400 {object} utils.errorResp "invalid account password form data"
-// @Failure 403 {object} utils.errorResp "updating account password not permitted"
-// @Failure 404 {object} utils.errorResp "current user not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating account password"
+// @Success 200 {object} response.successResp "account password updated successful"
+// @Failure 400 {object} response.errorResp "invalid account password form data"
+// @Failure 403 {object} response.errorResp "updating account password not permitted"
+// @Failure 404 {object} response.errorResp "current user not found"
+// @Failure 500 {object} response.errorResp "internal error on updating account password"
 // @Router /user/password [put]
 func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	var (
@@ -104,18 +104,18 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 		if err == nil {
 			err = form.Valid()
 		}
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrChangePasswordCurrentUserInvalidPassword, err)
 		return
 	}
 
-	uid, _ := srvcontext.GetUint64(c, "uid")
+	uid := c.GetUint64("uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("id = ?", uid)
 	}
 
 	if err = s.db.Scopes(scope).Take(&user).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding current user")
+		logger.FromContext(c).WithError(err).Errorf("error finding current user")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -123,19 +123,19 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 		}
 		return
 	} else if err = user.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(form.CurrentPassword)); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error checking password for current user")
+		logger.FromContext(c).WithError(err).Errorf("error checking password for current user")
 		response.Error(c, response.ErrChangePasswordCurrentUserInvalidCurrentPassword, err)
 		return
 	}
 
-	if encPass, err = utils.EncryptPassword(form.Password); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error making new password for current user")
+	if encPass, err = storage.EncryptPassword(form.Password); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error making new password for current user")
 		response.Error(c, response.ErrChangePasswordCurrentUserInvalidNewPassword, err)
 		return
 	}
@@ -143,7 +143,7 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 	user.PasswordChangeRequired = false
 
 	if err = s.db.Scopes(scope).Select("password", "password_change_required").Save(&user).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating password for current user")
+		logger.FromContext(c).WithError(err).Errorf("error updating password for current user")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -155,16 +155,16 @@ func (s *UserService) ChangePasswordCurrentUser(c *gin.Context) {
 // @Summary Retrieve users list by filters
 // @Tags Users
 // @Produce json
-// @Param request query utils.TableQuery true "query table params"
-// @Success 200 {object} utils.successResp{data=users} "users list received successful"
-// @Failure 400 {object} utils.errorResp "invalid query request data"
-// @Failure 403 {object} utils.errorResp "getting users not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on getting users"
+// @Param request query storage.TableQuery true "query table params"
+// @Success 200 {object} response.successResp{data=users} "users list received successful"
+// @Failure 400 {object} response.errorResp "invalid query request data"
+// @Failure 403 {object} response.errorResp "getting users not permitted"
+// @Failure 500 {object} response.errorResp "internal error on getting users"
 // @Router /users/ [get]
 func (s *UserService) GetUsers(c *gin.Context) {
 	var (
 		err    error
-		query  utils.TableQuery
+		query  storage.TableQuery
 		resp   users
 		rids   []uint64
 		roles  []models.Role
@@ -173,16 +173,16 @@ func (s *UserService) GetUsers(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindQuery(&query); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding query")
+		logger.FromContext(c).WithError(err).Errorf("error binding query")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
 
 	query.Init("users", usersSQLMappers)
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
-	uid, _ := srvcontext.GetUint64(c, "uid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
+	uid := c.GetUint64("uid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -199,13 +199,13 @@ func (s *UserService) GetUsers(c *gin.Context) {
 			},
 		})
 	default:
-		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
+		logger.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if resp.Total, err = query.Query(s.db, &resp.Users); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding users")
+		logger.FromContext(c).WithError(err).Errorf("error finding users")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -216,13 +216,13 @@ func (s *UserService) GetUsers(c *gin.Context) {
 	}
 
 	if err = s.db.Find(&roles, "id IN (?)", rids).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked roles")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked roles")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.db.Find(&tenans, "id IN (?)", tids).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding linked tenants")
+		logger.FromContext(c).WithError(err).Errorf("error finding linked tenants")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -247,7 +247,7 @@ func (s *UserService) GetUsers(c *gin.Context) {
 
 	for i := 0; i < len(resp.Users); i++ {
 		if err = resp.Users[i].Valid(); err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Users[i].Hash)
+			logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Users[i].Hash)
 			response.Error(c, response.ErrUsersInvalidData, err)
 			return
 		}
@@ -261,10 +261,10 @@ func (s *UserService) GetUsers(c *gin.Context) {
 // @Tags Users
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.UserRoleTenant} "user received successful"
-// @Failure 403 {object} utils.errorResp "getting user not permitted
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on getting user"
+// @Success 200 {object} response.successResp{data=models.UserRoleTenant} "user received successful"
+// @Failure 403 {object} response.errorResp "getting user not permitted
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on getting user"
 // @Router /users/{hash} [get]
 func (s *UserService) GetUser(c *gin.Context) {
 	var (
@@ -273,9 +273,9 @@ func (s *UserService) GetUser(c *gin.Context) {
 		resp models.UserRoleTenant
 	)
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
-	uid, _ := srvcontext.GetUint64(c, "uid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
+	uid := c.GetUint64("uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -291,7 +291,7 @@ func (s *UserService) GetUser(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -300,7 +300,7 @@ func (s *UserService) GetUser(c *gin.Context) {
 		return
 	}
 	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrGetUserModelsNotFound, err)
 		} else {
@@ -309,7 +309,7 @@ func (s *UserService) GetUser(c *gin.Context) {
 		return
 	}
 	if err = resp.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
@@ -323,10 +323,10 @@ func (s *UserService) GetUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param json body models.UserPassword true "user model to create from"
-// @Success 201 {object} utils.successResp{data=models.UserRoleTenant} "user created successful"
-// @Failure 400 {object} utils.errorResp "invalid user request data"
-// @Failure 403 {object} utils.errorResp "creating user not permitted"
-// @Failure 500 {object} utils.errorResp "internal error on creating user"
+// @Success 201 {object} response.successResp{data=models.UserRoleTenant} "user created successful"
+// @Failure 400 {object} response.errorResp "invalid user request data"
+// @Failure 403 {object} response.errorResp "creating user not permitted"
+// @Failure 500 {object} response.errorResp "internal error on creating user"
 // @Router /users/ [post]
 func (s *UserService) CreateUser(c *gin.Context) {
 	var (
@@ -337,13 +337,13 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&user); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
 
 	switch rid {
 	case models.RoleSAdmin:
@@ -355,21 +355,21 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		}
 		user.TenantID = tid
 	default:
-		utils.FromContext(c).Errorf("error filtering user role services: unexpected role")
+		logger.FromContext(c).Errorf("error filtering user role services: unexpected role")
 		response.Error(c, response.ErrInternal, nil)
 		return
 	}
 
 	user.ID = 0
-	user.Hash = utils.MakeUserHash(user.Name)
+	user.Hash = storage.MakeUserHash(user.Name)
 	if err = user.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user")
+		logger.FromContext(c).WithError(err).Errorf("error validating user")
 		response.Error(c, response.ErrCreateUserInvalidUser, err)
 		return
 	}
 
-	if encPassword, err = utils.EncryptPassword(user.Password); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error encoding password")
+	if encPassword, err = storage.EncryptPassword(user.Password); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error encoding password")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
@@ -377,7 +377,7 @@ func (s *UserService) CreateUser(c *gin.Context) {
 	}
 
 	if err = s.db.Create(&user).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error creating user")
+		logger.FromContext(c).WithError(err).Errorf("error creating user")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -386,11 +386,11 @@ func (s *UserService) CreateUser(c *gin.Context) {
 		Related(&resp.Role).
 		Related(&resp.Tenant).Error
 	if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else if err = resp.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
@@ -404,11 +404,11 @@ func (s *UserService) CreateUser(c *gin.Context) {
 // @Produce json
 // @Param json body models.UserPassword true "user model to update"
 // @Param hash path string true "user hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp{data=models.UserRoleTenant} "user updated successful"
-// @Failure 400 {object} utils.errorResp "invalid user request data"
-// @Failure 403 {object} utils.errorResp "updating user not permitted"
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on updating user"
+// @Success 200 {object} response.successResp{data=models.UserRoleTenant} "user updated successful"
+// @Failure 400 {object} response.errorResp "invalid user request data"
+// @Failure 403 {object} response.errorResp "updating user not permitted"
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on updating user"
 // @Router /users/{hash} [put]
 func (s *UserService) PatchUser(c *gin.Context) {
 	var (
@@ -419,26 +419,26 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	)
 
 	if err = c.ShouldBindJSON(&user); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error binding JSON")
+		logger.FromContext(c).WithError(err).Errorf("error binding JSON")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if hash != user.Hash {
-		utils.FromContext(c).Errorf("mismatch user hash to requested one")
+		logger.FromContext(c).Errorf("mismatch user hash to requested one")
 		response.Error(c, response.ErrUsersInvalidRequest, nil)
 		return
 	} else if err = user.User.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user JSON")
+		logger.FromContext(c).WithError(err).Errorf("error validating user JSON")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	} else if err = user.Valid(); user.Password != "" && err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user password")
+		logger.FromContext(c).WithError(err).Errorf("error validating user password")
 		response.Error(c, response.ErrUsersInvalidRequest, err)
 		return
 	}
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
-	uid, _ := srvcontext.GetUint64(c, "uid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
+	uid := c.GetUint64("uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -456,9 +456,9 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	public_info := []interface{}{"mail", "name", "status"}
 	if user.Password != "" {
 		var encPassword []byte
-		encPassword, err = utils.EncryptPassword(user.Password)
+		encPassword, err = storage.EncryptPassword(user.Password)
 		if err != nil {
-			utils.FromContext(c).WithError(err).Errorf("error encoding password")
+			logger.FromContext(c).WithError(err).Errorf("error encoding password")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
@@ -471,17 +471,17 @@ func (s *UserService) PatchUser(c *gin.Context) {
 	}
 
 	if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-		utils.FromContext(c).Errorf("error updating user by hash '%s', user not found", hash)
+		logger.FromContext(c).Errorf("error updating user by hash '%s', user not found", hash)
 		response.Error(c, response.ErrUsersNotFound, err)
 		return
 	} else if err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error updating user by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error updating user by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 
 	if err = s.db.Scopes(scope).Take(&resp.User).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -490,7 +490,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 		return
 	}
 	if err = s.db.Model(&resp.User).Related(&resp.Role).Related(&resp.Tenant).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrPatchUserModelsNotFound, err)
 		} else {
@@ -499,7 +499,7 @@ func (s *UserService) PatchUser(c *gin.Context) {
 		return
 	}
 	if err = resp.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", resp.Hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -512,10 +512,10 @@ func (s *UserService) PatchUser(c *gin.Context) {
 // @Tags Users
 // @Produce json
 // @Param hash path string true "hash in hex format (md5)" minlength(32) maxlength(32)
-// @Success 200 {object} utils.successResp "user deleted successful"
-// @Failure 403 {object} utils.errorResp "deleting user not permitted"
-// @Failure 404 {object} utils.errorResp "user not found"
-// @Failure 500 {object} utils.errorResp "internal error on deleting user"
+// @Success 200 {object} response.successResp "user deleted successful"
+// @Failure 403 {object} response.errorResp "deleting user not permitted"
+// @Failure 404 {object} response.errorResp "user not found"
+// @Failure 500 {object} response.errorResp "internal error on deleting user"
 // @Router /users/{hash} [delete]
 func (s *UserService) DeleteUser(c *gin.Context) {
 	var (
@@ -524,9 +524,9 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		user models.UserRoleTenant
 	)
 
-	rid, _ := srvcontext.GetUint64(c, "rid")
-	tid, _ := srvcontext.GetUint64(c, "tid")
-	uid, _ := srvcontext.GetUint64(c, "uid")
+	rid := c.GetUint64("rid")
+	tid := c.GetUint64("tid")
+	uid := c.GetUint64("uid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		switch rid {
 		case models.RoleSAdmin:
@@ -542,7 +542,7 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 	}
 
 	if err = s.db.Scopes(scope).Take(&user.User).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding user by hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding user by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrUsersNotFound, err)
 		} else {
@@ -551,7 +551,7 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		return
 	}
 	if err = s.db.Model(&user.User).Related(&user.Role).Related(&user.Tenant).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
+		logger.FromContext(c).WithError(err).Errorf("error finding related models by user hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrDeleteUserModelsNotFound, err)
 		} else {
@@ -560,13 +560,13 @@ func (s *UserService) DeleteUser(c *gin.Context) {
 		return
 	}
 	if err = user.Valid(); err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
+		logger.FromContext(c).WithError(err).Errorf("error validating user data '%s'", user.Hash)
 		response.Error(c, response.ErrUsersInvalidData, err)
 		return
 	}
 
 	if err = s.db.Delete(&user.User).Error; err != nil {
-		utils.FromContext(c).WithError(err).Errorf("error deleting user by hash '%s'", hash)
+		logger.FromContext(c).WithError(err).Errorf("error deleting user by hash '%s'", hash)
 		response.Error(c, response.ErrInternal, err)
 		return
 	}

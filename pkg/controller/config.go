@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"soldr/pkg/db"
-	"soldr/pkg/storage"
+	"soldr/pkg/filestorage/fs"
+	"soldr/pkg/filestorage/s3"
 )
 
 type getCallback func() string
@@ -229,8 +230,8 @@ func NewConfigFromDB(dsn *db.DSN) (IConfigLoader, error) {
 }
 
 // NewConfigFromS3 is function which constructed Configuration loader object
-func NewConfigFromS3(connParams *storage.S3ConnParams) (IConfigLoader, error) {
-	sc, err := storage.NewS3(connParams)
+func NewConfigFromS3(connParams *s3.Config) (IConfigLoader, error) {
+	sc, err := s3.New(connParams)
 	if err != nil {
 		return nil, generateDriverInitErrMsg(driverTypeS3, err)
 	}
@@ -242,7 +243,7 @@ func NewConfigFromS3(connParams *storage.S3ConnParams) (IConfigLoader, error) {
 
 // NewConfigFromFS is function which constructed Configuration loader object
 func NewConfigFromFS(path string) (IConfigLoader, error) {
-	sc, err := storage.NewFS()
+	sc, err := fs.New()
 	if err != nil {
 		return nil, generateDriverInitErrMsg(driverTypeFS, err)
 	}
