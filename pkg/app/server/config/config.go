@@ -54,7 +54,7 @@ type DB struct {
 	Name           string `json:"name"`
 	User           string `json:"user"`
 	Pass           string `json:"pass"`
-	MigrationsPath string `json:"migrations_path"`
+	MigrationsPath string `json:"migration_dir"`
 }
 
 type S3 struct {
@@ -141,7 +141,7 @@ var defaultConfig = &Config{
 		Base: "./security/vconf",
 	},
 	DB: DB{
-		MigrationsPath: "migrations",
+		MigrationsPath: "db/server/migrations",
 	},
 	MaxConcSyncingAgents: 100,
 }
@@ -209,7 +209,7 @@ func parseEnvVars() (*Config, error) {
 	c.DB.User = os.Getenv("DB_USER")
 	c.DB.Pass = os.Getenv("DB_PASS")
 	c.DB.Name = os.Getenv("DB_NAME")
-	c.DB.MigrationsPath = os.Getenv("DB_MIGRATIONS_PATH")
+	c.DB.MigrationsPath = os.Getenv("MIGRATION_DIR")
 
 	c.S3.AccessKey = os.Getenv("MINIO_ACCESS_KEY")
 	c.S3.SecretKey = os.Getenv("MINIO_SECRET_KEY")
