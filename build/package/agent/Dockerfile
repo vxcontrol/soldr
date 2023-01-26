@@ -1,5 +1,8 @@
 FROM debian:buster-slim
 
+RUN apt update && apt install -y libssl1.1 && \
+    apt clean && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p /opt/vxagent/bin && \
     mkdir -p /opt/vxagent/bin/data && \
     mkdir -p /opt/vxagent/bin/logs
