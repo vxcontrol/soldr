@@ -3,12 +3,9 @@ package server
 import (
 	"errors"
 	"fmt"
-	"regexp"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
@@ -20,144 +17,11 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"soldr/pkg/app/api/models"
-	"soldr/pkg/app/api/server/private"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/utils/dbencryptor"
 	obs "soldr/pkg/observability"
 )
 
-func authTokenProtoRequired(apiBaseURL string) gin.HandlerFunc {
-	privInteractive := "vxapi.modules.interactive"
-	connTypeRegexp := regexp.MustCompile(
-		fmt.Sprintf("%s/vxpws/(aggregate|browser|external)/.*", apiBaseURL),
-	)
-	return func(c *gin.Context) {
-		if c.IsAborted() {
-			return
-		}
-
-		authFallback := func(msg string) {
-			session := sessions.Default(c)
-			uid := session.Get("uid")
-			rid := session.Get("rid")
-			sid := session.Get("sid")
-			tid := session.Get("tid")
-			prm := session.Get("prm")
-			exp := session.Get("exp")
-			gtm := session.Get("gtm")
-			uname := session.Get("uname")
-
-			attrs := []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname}
-			for _, attr := range attrs {
-				if attr == nil {
-					response.Error(c, response.ErrNotPermitted, errors.New(msg))
-					return
-				}
-			}
-
-			if prms, ok := prm.([]string); !ok {
-				response.Error(c, response.ErrNotPermitted, nil)
-				return
-			} else {
-				if !lookupPerm(prms, privInteractive) {
-					response.Error(c, response.ErrNotPermitted, nil)
-					return
-				}
-				c.Set("prm", prms)
-			}
-
-			connTypeVal := connTypeRegexp.ReplaceAllString(c.Request.URL.Path, "$1")
-			switch connTypeVal {
-			case "aggregate", "browser", "external":
-			default:
-				connTypeVal = "browser"
-			}
-
-			c.Set("uid", uid.(uint64))
-			c.Set("rid", rid.(uint64))
-			c.Set("sid", sid.(uint64))
-			c.Set("tid", tid.(uint64))
-			c.Set("exp", exp.(int64))
-			c.Set("gtm", gtm.(int64))
-			c.Set("cpt", connTypeVal)
-			c.Set("uname", uname.(string))
-
-			c.Next()
-		}
-		auth := c.Request.Header.Get("Authorization")
-		if auth == "" {
-			authFallback("token required")
-			return
-		}
-		token := strings.TrimPrefix(auth, "Bearer ")
-		if token == auth {
-			authFallback("must be used bearer schema")
-			return
-		}
-		claims, err := private.ValidateToken(token)
-		if err != nil {
-			authFallback("token invalid")
-			return
-		}
-
-		c.Set("uid", claims.UID)
-		c.Set("rid", claims.RID)
-		c.Set("sid", claims.SID)
-		c.Set("tid", claims.TID)
-		c.Set("cpt", claims.CPT)
-		c.Set("prm", []string{privInteractive})
-
-		c.Next()
-	}
-}
-
-func authRequired() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		if c.IsAborted() {
-			return
-		}
-
-		session := sessions.Default(c)
-		uid := session.Get("uid")
-		rid := session.Get("rid")
-		sid := session.Get("sid")
-		tid := session.Get("tid")
-		prm := session.Get("prm")
-		exp := session.Get("exp")
-		gtm := session.Get("gtm")
-		uname := session.Get("uname")
-		svc := session.Get("svc")
-
-		attrs := []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname, svc}
-		for _, attr := range attrs {
-			if attr == nil {
-				response.Error(c, response.ErrAuthRequired, errors.New("token claim invalid"))
-				return
-			}
-		}
-
-		if prms, ok := prm.([]string); !ok {
-			response.Error(c, response.ErrAuthRequired, nil)
-			return
-		} else {
-			c.Set("prm", prms)
-		}
-
-		c.Set("uid", uid.(uint64))
-		c.Set("rid", rid.(uint64))
-		c.Set("sid", sid.(uint64))
-		c.Set("tid", tid.(uint64))
-		c.Set("exp", exp.(int64))
-		c.Set("gtm", gtm.(int64))
-		c.Set("uname", uname.(string))
-		c.Set("svc", svc.(string))
-
-		c.Next()
-	}
-}
-
-// localUserRequired checks that role of the caller is not External
-// This middleware must be used in the chain after authRequired.
 func localUserRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.IsAborted() {

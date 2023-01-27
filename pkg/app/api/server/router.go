@@ -155,19 +155,21 @@ func NewRouter(
 	tenantService := private.NewTenantService(db)
 	userService := private.NewUserService(db)
 
+	authMiddleware := NewAuthMiddleware(cfg.BaseURL)
+
 	// set api handlers
 	api := router.Group(cfg.BaseURL)
 	api.Use(setGlobalDB(db))
 	{
-		setPublicGroup(api, authService)
+		setPublicGroup(api, authService, authMiddleware)
 
-		setSwaggerGroup(api)
+		setSwaggerGroup(api, authMiddleware)
 
-		setVXProtoGroup(api, db, protoService, cfg.BaseURL)
+		setVXProtoGroup(api, db, protoService, authMiddleware)
 	}
 
 	privateGroup := api.Group("/")
-	privateGroup.Use(authRequired())
+	privateGroup.Use(authMiddleware.AuthRequired)
 	privateGroup.Use(setServiceInfo(db))
 	{
 		setTokenGroup(privateGroup)
@@ -204,7 +206,7 @@ func NewRouter(
 	return router
 }
 
-func setPublicGroup(parent *gin.RouterGroup, svc *public.AuthService) {
+func setPublicGroup(parent *gin.RouterGroup, svc *public.AuthService, authMiddleware *AuthMiddleware) {
 	publicGroup := parent.Group("/")
 	{
 		publicGroup.GET("/info", svc.Info)
@@ -215,24 +217,24 @@ func setPublicGroup(parent *gin.RouterGroup, svc *public.AuthService) {
 		}
 
 		authPrivateGroup := publicGroup.Group("/auth")
-		authPrivateGroup.Use(authRequired())
+		authPrivateGroup.Use(authMiddleware.AuthRequired)
 		{
 			authPrivateGroup.POST("/switch-service", svc.AuthSwitchService)
 		}
 	}
 }
 
-func setSwaggerGroup(parent *gin.RouterGroup) {
+func setSwaggerGroup(parent *gin.RouterGroup, authMiddleware *AuthMiddleware) {
 	swaggerGroup := parent.Group("/")
-	swaggerGroup.Use(authRequired())
+	swaggerGroup.Use(authMiddleware.AuthRequired)
 	{
 		swaggerGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 }
 
-func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService, apiBaseURL string) {
+func setVXProtoGroup(parent *gin.RouterGroup, db *gorm.DB, svc *proto.ProtoService, authMiddleware *AuthMiddleware) {
 	vxProtoGroup := parent.Group("/vxpws")
-	vxProtoGroup.Use(authTokenProtoRequired(apiBaseURL))
+	vxProtoGroup.Use(authMiddleware.AuthTokenProtoRequired)
 	vxProtoGroup.Use(setServiceInfo(db))
 	{
 		vxProtoGroup.GET("/aggregate/:group_id/", svc.AggregateWSConnect)

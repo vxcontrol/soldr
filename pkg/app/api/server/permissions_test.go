@@ -8,7 +8,8 @@ import (
 )
 
 func TestPrivilegesRequiredPatchAgents(t *testing.T) {
-	server := newTestServer(t, "/test", authRequired, privilegesRequiredPatchAgents)
+	authMiddleware := NewAuthMiddleware("/base/url")
+	server := newTestServer(t, "/test", authMiddleware.AuthRequired, privilegesRequiredPatchAgents())
 	defer server.Close()
 
 	server.SetSessionCheckFunc(func(t *testing.T, c *gin.Context) {
@@ -35,10 +36,10 @@ func TestPrivilegesRequiredPatchAgents(t *testing.T) {
 
 	server.Authorize(t, []string{"vxapi.agents.api.delete"})
 	id, ok = server.TestCallWithData(t, `{"action": "delete"}`)
-	assert.False(t, ok)
+	assert.True(t, ok)
 	assert.True(t, server.Called(id))
 
-	for _, action := range []string{"authorize", "block", "delete", "unauthorize", "move"} {
+	for _, action := range []string{"authorize", "block", "unauthorize", "move"} {
 		server.Authorize(t, []string{"vxapi.agents.api.delete"})
 		id, ok = server.TestCallWithData(t, `{"action": "`+action+`"}`)
 		assert.False(t, ok)
@@ -46,16 +47,14 @@ func TestPrivilegesRequiredPatchAgents(t *testing.T) {
 
 		server.Authorize(t, []string{"vxapi.agents.api.edit"})
 		id, ok = server.TestCallWithData(t, `{"action": "`+action+`"}`)
-		assert.False(t, ok)
+		assert.True(t, ok)
 		assert.True(t, server.Called(id))
 	}
 }
 
 func TestPrivilegesRequired(t *testing.T) {
-	privilegesMiddleware := func() gin.HandlerFunc {
-		return privilegesRequired("priv1", "priv2")
-	}
-	server := newTestServer(t, "/test", authRequired, privilegesMiddleware)
+	authMiddleware := NewAuthMiddleware("/base/url")
+	server := newTestServer(t, "/test", authMiddleware.AuthRequired, privilegesRequired("priv1", "priv2"))
 	defer server.Close()
 
 	server.SetSessionCheckFunc(func(t *testing.T, c *gin.Context) {

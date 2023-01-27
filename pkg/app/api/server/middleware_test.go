@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -25,12 +24,10 @@ import (
 )
 
 func TestAuthTokenProtoRequiredAuthWithCookie(t *testing.T) {
-	baseURL := "/api/v1"
-	testFunc := func() gin.HandlerFunc {
-		return authTokenProtoRequired(baseURL)
-	}
+	authMiddleware := NewAuthMiddleware("/base/url")
+
 	t.Run("test URL", func(t *testing.T) {
-		server := newTestServer(t, "/test", testFunc)
+		server := newTestServer(t, "/test", authMiddleware.AuthTokenProtoRequired)
 		defer server.Close()
 
 		server.SetSessionCheckFunc(func(t *testing.T, c *gin.Context) {
@@ -65,7 +62,7 @@ func TestAuthTokenProtoRequiredAuthWithCookie(t *testing.T) {
 
 	for _, kind := range []string{"aggregate", "browser", "external"} {
 		t.Run(kind+" URL", func(t *testing.T) {
-			server := newTestServer(t, baseURL+"/vxpws/"+kind+"/test", testFunc)
+			server := newTestServer(t, "/base/url/vxpws/"+kind+"/test", authMiddleware.AuthTokenProtoRequired)
 			defer server.Close()
 
 			server.SetSessionCheckFunc(func(t *testing.T, c *gin.Context) {
@@ -79,15 +76,11 @@ func TestAuthTokenProtoRequiredAuthWithCookie(t *testing.T) {
 }
 
 func TestAuthTokenProtoRequiredAuthWithToken(t *testing.T) {
-	baseURL := "/api/v1"
-	testFunc := func() gin.HandlerFunc {
-		return authTokenProtoRequired(baseURL)
-	}
+	authMiddleware := NewAuthMiddleware("/base/url")
 
 	for _, kind := range []string{"aggregate", "browser", "external"} {
 		t.Run(kind+" type", func(t *testing.T) {
-
-			server := newTestServer(t, "/test", testFunc)
+			server := newTestServer(t, "/test", authMiddleware.AuthTokenProtoRequired)
 			defer server.Close()
 
 			server.Authorize(t, []string{"vxapi.modules.interactive"})
@@ -123,7 +116,9 @@ func TestAuthTokenProtoRequiredAuthWithToken(t *testing.T) {
 }
 
 func TestAuthRequiredAuthWithCookie(t *testing.T) {
-	server := newTestServer(t, "/test", authRequired)
+	authMiddleware := NewAuthMiddleware("/base/url")
+
+	server := newTestServer(t, "/test", authMiddleware.AuthRequired)
 	defer server.Close()
 
 	server.SetSessionCheckFunc(func(t *testing.T, c *gin.Context) {
@@ -154,7 +149,7 @@ type testServer struct {
 	*httptest.Server
 }
 
-func newTestServer(t *testing.T, testEndpoint string, middlewares ...func() gin.HandlerFunc) *testServer {
+func newTestServer(t *testing.T, testEndpoint string, middlewares ...gin.HandlerFunc) *testServer {
 	t.Helper()
 
 	server := &testServer{}
@@ -171,7 +166,6 @@ func newTestServer(t *testing.T, testEndpoint string, middlewares ...func() gin.
 	server.testEndpoint = testEndpoint
 
 	router.GET("/auth", func(c *gin.Context) {
-		fmt.Println("AUTH ENDPOINT")
 		t.Helper()
 		privs, _ := c.GetQueryArray("privileges")
 		expString, ok := c.GetQuery("expiration")
@@ -183,10 +177,9 @@ func newTestServer(t *testing.T, testEndpoint string, middlewares ...func() gin.
 
 	authRoutes := router.Group("")
 	for _, middleware := range middlewares {
-		authRoutes.Use(middleware())
+		authRoutes.Use(middleware)
 	}
 	authRoutes.GET(server.testEndpoint, func(c *gin.Context) {
-		fmt.Println("TEST ENDPOINT")
 		t.Helper()
 		id, _ := c.GetQuery("id")
 		require.NotEmpty(t, id)
