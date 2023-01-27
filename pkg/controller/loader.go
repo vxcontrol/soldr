@@ -332,6 +332,10 @@ func loadUtils(s filestorage.Storage, path string) (map[string][]byte, error) {
 }
 
 func loadFiles(s filestorage.Storage, path string, mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
+	if len(mcl) == 0 {
+		return []*loader.ModuleFiles{}, nil
+	}
+
 	var mfl []*loader.ModuleFiles
 	if s.IsNotExist(path) {
 		return nil, fmt.Errorf("modules directory '%s' not found", path)
@@ -387,31 +391,13 @@ func loadFiles(s filestorage.Storage, path string, mcl []*loader.ModuleConfig) (
 	return mfl, nil
 }
 
-// filesLoaderS3 is container for files structure which loaded from RemoteStorage
-type filesLoaderS3 struct {
-	sc filestorage.Storage
+// filesLoader is container for loading module files structure
+type filesLoader struct {
+	path    string
+	storage filestorage.Storage
 }
 
-// load is function what retrieve modules files data from RemoteStorage
-func (fl *filesLoaderS3) load(mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
-	if len(mcl) == 0 {
-		return []*loader.ModuleFiles{}, nil
-	}
-
-	return loadFiles(fl.sc, "/", mcl)
-}
-
-// filesLoaderFS is container for files structure which loaded from LocalStorage
-type filesLoaderFS struct {
-	path string
-	sc   filestorage.Storage
-}
-
-// load is function what retrieve modules files data from LocalStorage
-func (fl *filesLoaderFS) load(mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
-	if len(mcl) == 0 {
-		return []*loader.ModuleFiles{}, nil
-	}
-
-	return loadFiles(fl.sc, fl.path, mcl)
+// load is function what retrieve modules files data
+func (fl *filesLoader) load(mcl []*loader.ModuleConfig) ([]*loader.ModuleFiles, error) {
+	return loadFiles(fl.storage, fl.path, mcl)
 }

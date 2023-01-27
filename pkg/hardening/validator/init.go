@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"soldr/pkg/app/agent"
 	vxcommonErrors "soldr/pkg/errors"
 	"soldr/pkg/hardening/luavm/vm"
-	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 )
 
-func (v *Validator) OnInitConnect(ctx context.Context, socket vxproto.SyncWS, agentInfo *protoagent.Information) (err error) {
+func (v *Validator) OnInitConnect(ctx context.Context, socket vxproto.SyncWS, agentInfo *agent.Information) (err error) {
 	defer func() {
 		if err != nil {
 			v.vm.ResetInitConnection()
@@ -27,7 +27,7 @@ func (v *Validator) OnInitConnect(ctx context.Context, socket vxproto.SyncWS, ag
 	return nil
 }
 
-func (v *Validator) sendInitConnectRequest(ctx context.Context, ws vxproto.SyncWS, info *protoagent.Information) error {
+func (v *Validator) sendInitConnectRequest(ctx context.Context, ws vxproto.SyncWS, info *agent.Information) error {
 	req, err := v.vm.PrepareInitConnectionRequest(&vm.InitConnectionAgentInfo{
 		ID:      v.agentID,
 		Version: v.version,

@@ -1,7 +1,6 @@
 package private
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,16 +10,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/copier"
 	"github.com/jinzhu/gorm"
-	"github.com/sirupsen/logrus"
 
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
@@ -29,10 +24,7 @@ import (
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
 	"soldr/pkg/app/api/useraction"
-	"soldr/pkg/app/api/utils"
 	"soldr/pkg/crypto"
-	"soldr/pkg/filestorage"
-	"soldr/pkg/filestorage/fs"
 	"soldr/pkg/filestorage/s3"
 	"soldr/pkg/semvertooling"
 )
@@ -174,1129 +166,6 @@ var modulesSQLMappers = map[string]interface{}{
 	"name": "`{{table}}`.name",
 }
 
-// Template is container for all module files
-type Template map[string]map[string][]byte
-
-func getService(c *gin.Context) *models.Service {
-	var sv *models.Service
-
-	if val, ok := c.Get("SV"); !ok {
-		logger.FromContext(c).Errorf("error getting vxservice instance from context")
-	} else if sv = val.(*models.Service); sv == nil {
-		logger.FromContext(c).Errorf("got nil value vxservice instance from context")
-	}
-
-	return sv
-}
-
-func getDBEncryptor(c *gin.Context) crypto.IDBConfigEncryptor {
-	var encryptor crypto.IDBConfigEncryptor
-
-	if cr, ok := c.Get("crp"); !ok {
-		logger.FromContext(c).Errorf("error getting secure config encryptor from context")
-	} else if encryptor = cr.(crypto.IDBConfigEncryptor); encryptor == nil {
-		logger.FromContext(c).Errorf("got nil value secure config encryptor from context")
-	}
-
-	return encryptor
-}
-
-func joinPath(args ...string) string {
-	tpath := filepath.Join(args...)
-	return strings.Replace(tpath, "\\", "/", -1)
-}
-
-func removeLeadSlash(files map[string][]byte) map[string][]byte {
-	rfiles := make(map[string][]byte)
-	for name, data := range files {
-		rfiles[name[1:]] = data
-	}
-	return rfiles
-}
-
-func readDir(s filestorage.Storage, path string) ([]string, error) {
-	var files []string
-	list, err := s.ListDir(path)
-	if err != nil {
-		return files, err
-	}
-	for _, info := range list {
-		if info.IsDir() {
-			list, err := readDir(s, path+"/"+info.Name())
-			if err != nil {
-				return files, err
-			}
-			files = append(files, list...)
-		} else {
-			files = append(files, path+"/"+info.Name())
-		}
-	}
-	return files, nil
-}
-
-func LoadModuleSConfig(files map[string][]byte) (*models.ModuleS, error) {
-	var module models.ModuleS
-	targets := map[string]interface{}{
-		"action_config_schema":  &module.ActionConfigSchema,
-		"changelog":             &module.Changelog,
-		"config_schema":         &module.ConfigSchema,
-		"default_action_config": &module.DefaultActionConfig,
-		"default_config":        &module.DefaultConfig,
-		"default_event_config":  &module.DefaultEventConfig,
-		"event_config_schema":   &module.EventConfigSchema,
-		"fields_schema":         &module.FieldsSchema,
-		"locale":                &module.Locale,
-		"static_dependencies":   &module.StaticDependencies,
-		"secure_config_schema":  &module.SecureConfigSchema,
-		"secure_default_config": &module.SecureDefaultConfig,
-	}
-
-	fillMissingFileContents("", files)
-
-	for filename, container := range targets {
-		if err := json.Unmarshal(files[filename+".json"], container); err != nil {
-			return nil, errors.New("failed unmarshal " + filename + ": " + err.Error())
-		}
-	}
-
-	return &module, nil
-}
-
-func PatchModuleSConfig(module *models.ModuleS) error {
-	type patchLocaleCfg struct {
-		src     map[string]models.ModuleLocaleDesc
-		list    []string
-		locType string
-	}
-	type patchLocaleLst struct {
-		src     map[string]map[string]models.ModuleLocaleDesc
-		list    []string
-		locType string
-	}
-
-	placeholder := "{{placeholder}}"
-	languages := []string{"ru", "en"}
-	patchLocaleLstList := []patchLocaleLst{
-		{
-			src:     module.Locale.ActionConfig,
-			list:    module.Info.Actions,
-			locType: "actions",
-		},
-		{
-			src:     module.Locale.EventConfig,
-			list:    module.Info.Events,
-			locType: "events",
-		},
-	}
-	patchLocaleCfgList := []patchLocaleCfg{
-		{
-			src:     module.Locale.Actions,
-			list:    module.Info.Actions,
-			locType: "actions",
-		},
-		{
-			src:     module.Locale.Events,
-			list:    module.Info.Events,
-			locType: "events",
-		},
-		{
-			src:     module.Locale.Fields,
-			list:    module.Info.Fields,
-			locType: "fields",
-		},
-		{
-			src:     module.Locale.Tags,
-			list:    module.Info.Tags,
-			locType: "tags",
-		},
-	}
-
-	updateFieldsInSchema := func(sh *models.Type) {
-		if len(sh.AllOf) >= 2 && sh.AllOf[0].Ref != "" {
-			enum := make([]interface{}, 0)
-			if len(module.Info.Fields) > 0 {
-				for _, field := range module.Info.Fields {
-					enum = append(enum, field)
-				}
-			} else {
-				enum = append(enum, nil)
-			}
-			sh.AllOf[1].Properties["fields"] = &models.Type{
-				Type: "array",
-				Items: &models.Type{
-					Type: "string",
-					Enum: enum,
-				},
-				Default:  module.Info.Fields,
-				MinItems: len(module.Info.Fields),
-				MaxItems: len(module.Info.Fields),
-			}
-		}
-	}
-
-	getReplacesMap := func(keys []string) map[string]string {
-		replaces := make(map[string]string)
-		for _, key := range keys {
-			if strings.Contains(key, "{{module_name}}") {
-				replaces[key] = strings.ReplaceAll(key, "{{module_name}}", module.Info.Name)
-			}
-		}
-		return replaces
-	}
-
-	currentTime := time.Now()
-	patchLocaleCl := map[string]string{
-		"ru": currentTime.Format("02.01.2006"),
-		"en": currentTime.Format("01-02-2006"),
-	}
-
-	module.ActionConfigSchema.Required = module.Info.Actions
-	if acsItems := module.ActionConfigSchema.Properties; len(acsItems) >= 1 {
-		if acsItem, ok := acsItems[placeholder]; ok {
-			delete(acsItems, placeholder)
-			updateFieldsInSchema(acsItem)
-			for _, actionID := range module.Info.Actions {
-				acsItems[actionID] = acsItem
-			}
-		} else {
-			return errors.New("failed to get action_config_schema placeholder")
-		}
-	} else {
-		return errors.New("action_config_schema is invalid format")
-	}
-
-	if dacItems := module.DefaultActionConfig; len(dacItems) >= 1 {
-		if dacItem, ok := dacItems[placeholder]; ok {
-			delete(dacItems, placeholder)
-			for _, actionID := range module.Info.Actions {
-				dacItem.Fields = module.Info.Fields
-				dacItems[actionID] = dacItem
-			}
-		} else {
-			return errors.New("failed to get default_action_config placeholder")
-		}
-	} else {
-		return errors.New("default_action_config is invalid format")
-	}
-
-	module.EventConfigSchema.Required = module.Info.Events
-	if ecsItems := module.EventConfigSchema.Properties; len(ecsItems) >= 1 {
-		keys := make([]string, 0, len(ecsItems))
-		for ecsName := range ecsItems {
-			keys = append(keys, ecsName)
-		}
-		replaces := getReplacesMap(keys)
-		for old, new := range replaces {
-			ecsItems[new] = ecsItems[old]
-			delete(ecsItems, old)
-			module.EventConfigSchema.Required = append(module.EventConfigSchema.Required, new)
-		}
-		if ecsItem, ok := ecsItems[placeholder]; ok {
-			delete(ecsItems, placeholder)
-			updateFieldsInSchema(ecsItem)
-			for _, eventID := range module.Info.Events {
-				ecsItems[eventID] = ecsItem
-			}
-		} else {
-			return errors.New("failed to get event_config_schema placeholder")
-		}
-	} else {
-		return errors.New("event_config_schema is invalid format")
-	}
-
-	if decItems := module.DefaultEventConfig; len(decItems) >= 1 {
-		keys := make([]string, 0, len(decItems))
-		for decName := range decItems {
-			keys = append(keys, decName)
-		}
-		replaces := getReplacesMap(keys)
-		for old, new := range replaces {
-			decItems[new] = decItems[old]
-			delete(decItems, old)
-		}
-		if decItem, ok := decItems[placeholder]; ok {
-			delete(decItems, placeholder)
-			for _, eventID := range module.Info.Events {
-				decItem.Fields = module.Info.Fields
-				decItems[eventID] = decItem
-			}
-		} else {
-			return errors.New("failed to get default_event_config placeholder")
-		}
-	} else {
-		return errors.New("default_event_config is invalid format")
-	}
-
-	if fsItems := module.FieldsSchema.Properties; len(fsItems) >= 1 {
-		if fsItem, ok := fsItems[placeholder]; ok {
-			delete(fsItems, placeholder)
-			for _, fieldID := range module.Info.Fields {
-				fsItems[fieldID] = fsItem
-			}
-		} else {
-			return errors.New("failed to get fields_schema placeholder")
-		}
-	} else {
-		return errors.New("fields_schema is invalid format")
-	}
-
-	if clItems := module.Changelog; len(clItems) >= 1 {
-		if clItem, ok := clItems[placeholder]; ok {
-			delete(clItems, placeholder)
-			for lng, date := range patchLocaleCl {
-				if clDesc, ok := clItem[lng]; ok {
-					clDesc.Date = date
-					clItem[lng] = clDesc
-				}
-			}
-			clItems[module.Info.Version.String()] = clItem
-		} else {
-			return errors.New("failed to get changelog placeholder")
-		}
-	} else {
-		return errors.New("changelog is invalid format")
-	}
-
-	for _, pLoc := range patchLocaleLstList {
-		if locItems := pLoc.src; len(locItems) >= 1 {
-			keys := make([]string, 0, len(locItems))
-			for locName := range locItems {
-				keys = append(keys, locName)
-			}
-			replaces := getReplacesMap(keys)
-			for old, new := range replaces {
-				locItems[new] = locItems[old]
-				delete(locItems, old)
-			}
-			if locItem, ok := locItems[placeholder]; ok {
-				delete(locItems, placeholder)
-				for _, itemID := range pLoc.list {
-					locItems[itemID] = locItem
-				}
-			} else {
-				return errors.New("failed to get locale " + pLoc.locType + " config placeholder")
-			}
-		} else {
-			return errors.New("locale " + pLoc.locType + " config is invalid format")
-		}
-	}
-
-	for _, pLoc := range patchLocaleCfgList {
-		if locItems := pLoc.src; len(locItems) >= 1 {
-			keys := make([]string, 0, len(locItems))
-			for locName := range locItems {
-				keys = append(keys, locName)
-			}
-			replaces := getReplacesMap(keys)
-			for old, new := range replaces {
-				locItems[new] = locItems[old]
-				delete(locItems, old)
-			}
-			if locItemEtl, ok := locItems[placeholder]; ok {
-				delete(locItems, placeholder)
-				for _, itemID := range pLoc.list {
-					locItem := make(models.ModuleLocaleDesc)
-					for _, lng := range languages {
-						if itemDescEtl, ok := locItemEtl[lng]; ok {
-							locItem[lng] = models.LocaleDesc{
-								Title:       itemID,
-								Description: itemDescEtl.Description,
-							}
-						}
-					}
-					locItems[itemID] = locItem
-				}
-			} else {
-				return errors.New("failed to get locale " + pLoc.locType + " placeholder")
-			}
-			for locKey := range locItems {
-				if !utils.StringInSlice(locKey, pLoc.list) {
-					pLoc.list = append(pLoc.list, locKey)
-				}
-			}
-			switch pLoc.locType {
-			case "actions":
-				module.Info.Actions = pLoc.list
-			case "events":
-				module.Info.Events = pLoc.list
-			case "fields":
-				module.Info.Fields = pLoc.list
-			case "tags":
-				module.Info.Tags = pLoc.list
-			default:
-				return errors.New("unknown locale type " + pLoc.locType)
-			}
-		} else {
-			return errors.New("locale " + pLoc.locType + " is invalid format")
-		}
-	}
-
-	for _, lng := range languages {
-		if itemDescEtl, ok := module.Locale.Module[lng]; ok {
-			module.Locale.Module[lng] = models.LocaleDesc{
-				Title:       module.Info.Name + " " + itemDescEtl.Title,
-				Description: itemDescEtl.Description,
-			}
-		}
-	}
-
-	return nil
-}
-
-func BuildModuleSConfig(module *models.ModuleS) (map[string][]byte, error) {
-	files := make(map[string][]byte)
-	targets := map[string]interface{}{
-		"action_config_schema":  &module.ActionConfigSchema,
-		"changelog":             &module.Changelog,
-		"config_schema":         &module.ConfigSchema,
-		"current_action_config": &module.DefaultActionConfig,
-		"current_config":        &module.DefaultConfig,
-		"current_event_config":  &module.DefaultEventConfig,
-		"default_action_config": &module.DefaultActionConfig,
-		"default_config":        &module.DefaultConfig,
-		"default_event_config":  &module.DefaultEventConfig,
-		"dynamic_dependencies":  &models.Dependencies{},
-		"event_config_schema":   &module.EventConfigSchema,
-		"fields_schema":         &module.FieldsSchema,
-		"info":                  &module.Info,
-		"locale":                &module.Locale,
-		"static_dependencies":   &module.StaticDependencies,
-		"secure_config_schema":  &module.SecureConfigSchema,
-		"secure_default_config": &module.SecureDefaultConfig,
-		"secure_current_config": &module.SecureDefaultConfig,
-	}
-
-	for filename, container := range targets {
-		var (
-			containerOut  bytes.Buffer
-			containerData []byte
-			err           error
-		)
-		if containerData, err = json.Marshal(container); err != nil {
-			return nil, errors.New("failed marshal " + filename + ": " + err.Error())
-		}
-
-		if err = json.Indent(&containerOut, containerData, "", "    "); err != nil {
-			return nil, errors.New("failed json.Indent " + filename + ": " + err.Error())
-		}
-		files[filename+".json"] = containerOut.Bytes()
-	}
-
-	return files, nil
-}
-
-func LoadModuleSTemplate(mi *models.ModuleInfo, templatesDir string) (Template, *models.ModuleS, error) {
-	fs, err := fs.New()
-	if err != nil {
-		return nil, nil, errors.New("failed initialize LocalStorage driver: " + err.Error())
-	}
-
-	var module *models.ModuleS
-	template := make(Template)
-	loadModuleDir := func(dir string) (map[string][]byte, error) {
-		tpath := joinPath(templatesDir, mi.Template, dir)
-		if fs.IsNotExist(tpath) {
-			return nil, errors.New("template directory not found")
-		}
-		files, err := fs.ReadDirRec(tpath)
-		if err != nil {
-			return nil, errors.New("failed to read template files: " + err.Error())
-		}
-
-		return removeLeadSlash(files), nil
-	}
-
-	for _, dir := range []string{"bmodule", "cmodule", "smodule"} {
-		if files, err := loadModuleDir(dir); err != nil {
-			return nil, nil, err
-		} else {
-			template[dir] = files
-		}
-	}
-
-	if files, err := loadModuleDir("config"); err != nil {
-		return nil, nil, err
-	} else {
-		if module, err = LoadModuleSConfig(files); err != nil {
-			return nil, nil, err
-		}
-		module.Info = *mi
-		if err = PatchModuleSConfig(module); err != nil {
-			return nil, nil, err
-		}
-		if cfiles, err := BuildModuleSConfig(module); err != nil {
-			return nil, nil, err
-		} else {
-			template["config"] = cfiles
-		}
-	}
-
-	return template, module, nil
-}
-
-func LoadModuleSFromGlobalS3(mi *models.ModuleInfo) (Template, error) {
-	s3, err := s3.New(nil)
-	if err != nil {
-		return nil, errors.New("failed to initialize LocalStorage driver: " + err.Error())
-	}
-
-	template := make(Template)
-	loadModuleDir := func(dir string) (map[string][]byte, error) {
-		vpath := joinPath(mi.Name, mi.Version.String(), dir)
-		if s3.IsNotExist(vpath) {
-			return nil, errors.New("module to version directory not found")
-		}
-		files, err := s3.ReadDirRec(vpath)
-		if err != nil {
-			return nil, errors.New("failed to read module version files: " + err.Error())
-		}
-
-		return removeLeadSlash(files), nil
-	}
-
-	for _, dir := range []string{"bmodule", "cmodule", "smodule"} {
-		if files, err := loadModuleDir(dir); err != nil {
-			return nil, err
-		} else {
-			template[dir] = files
-		}
-	}
-
-	return template, nil
-}
-
-func StoreModuleSToGlobalS3(mi *models.ModuleInfo, mf Template) error {
-	s3, err := s3.New(nil)
-	if err != nil {
-		return errors.New("failed initialize S3 driver: " + err.Error())
-	}
-
-	for _, dir := range []string{"bmodule", "cmodule", "smodule", "config"} {
-		for fpath, fdata := range mf[dir] {
-			if err := s3.WriteFile(joinPath(mi.Name, mi.Version.String(), dir, fpath), fdata); err != nil {
-				return errors.New("failed to write file to S3: " + err.Error())
-			}
-		}
-	}
-
-	return nil
-}
-
-func StoreCleanModuleSToGlobalS3(mi *models.ModuleInfo, mf Template) error {
-	s3, err := s3.New(nil)
-	if err != nil {
-		return errors.New("failed initialize S3 driver: " + err.Error())
-	}
-
-	for _, dir := range []string{"bmodule", "cmodule", "smodule", "config"} {
-		files, _ := s3.ListDirRec(joinPath(mi.Name, mi.Version.String(), dir))
-		for fpath, fdata := range mf[dir] {
-			if err := s3.WriteFile(joinPath(mi.Name, mi.Version.String(), dir, fpath), fdata); err != nil {
-				return errors.New("failed to write file to S3: " + err.Error())
-			}
-		}
-		if files == nil {
-			continue
-		}
-		for fpath, finfo := range files {
-			fpath = strings.TrimPrefix(fpath, "/")
-			if finfo.IsDir() || fpath == "" {
-				continue
-			}
-			if _, ok := mf[dir][fpath]; ok {
-				continue
-			}
-			if err := s3.RemoveFile(joinPath(mi.Name, mi.Version.String(), dir, fpath)); err != nil {
-				return errors.New("failed to remove unused file from S3: " + err.Error())
-			}
-		}
-	}
-
-	return nil
-}
-
-func CopyModuleAFilesToInstanceS3(mi *models.ModuleInfo, sv *models.Service) error {
-	gS3, err := s3.New(nil)
-	if err != nil {
-		return errors.New("failed to initialize global S3 driver: " + err.Error())
-	}
-
-	mfiles, err := gS3.ReadDirRec(joinPath(mi.Name, mi.Version.String()))
-	if err != nil {
-		return errors.New("failed to read system module files: " + err.Error())
-	}
-
-	fillMissingFileContents("/config", mfiles)
-
-	ufiles, err := gS3.ReadDirRec("utils")
-	if err != nil {
-		return errors.New("failed to read utils files: " + err.Error())
-	}
-
-	iS3, err := s3.New(sv.Info.S3.ToS3ConnParams())
-	if err != nil {
-		return errors.New("failed to initialize instance S3 driver: " + err.Error())
-	}
-
-	if iS3.RemoveDir(joinPath(mi.Name, mi.Version.String())); err != nil {
-		return errors.New("failed to remove module directory from instance S3: " + err.Error())
-	}
-
-	for fpath, fdata := range mfiles {
-		if err := iS3.WriteFile(joinPath(mi.Name, mi.Version.String(), fpath), fdata); err != nil {
-			return errors.New("failed to write system module file to S3: " + err.Error())
-		}
-	}
-
-	for fpath, fdata := range ufiles {
-		if err := iS3.WriteFile(joinPath("utils", fpath), fdata); err != nil {
-			return errors.New("failed to write utils file to S3: " + err.Error())
-		}
-	}
-
-	return nil
-}
-
-func fillMissingFileContents(path string, files map[string][]byte) {
-	const emptyConfigFileContent = "{}"
-	lackFiles := []string{
-		joinPath(path, "secure_config_schema.json"),
-		joinPath(path, "secure_default_config.json"),
-		joinPath(path, "secure_current_config.json"),
-	}
-
-	for _, file := range lackFiles {
-		if _, ok := files[file]; !ok {
-			files[file] = []byte(emptyConfigFileContent)
-		}
-	}
-}
-
-func CheckMultipleModulesDuplicate(iDB *gorm.DB, moduleNames []string, policyId uint64) (map[string]struct{}, error) {
-	var pgs models.PolicyGroups
-	if err := iDB.Take(&pgs, "id = ?", policyId).Error; err != nil {
-		return nil, errors.New("failed to get module policy")
-	}
-	if err := iDB.Model(pgs).Association("groups").Find(&pgs.Groups).Error; err != nil {
-		return nil, errors.New("failed to get linked groups to module policy")
-	}
-
-	pidsMap := make(map[uint64]struct{})
-	for _, group := range pgs.Groups {
-		gps := models.GroupPolicies{Group: group}
-		if err := iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-			return nil, errors.New("failed to get linked policies to group")
-		}
-		for _, p := range gps.Policies {
-			pidsMap[p.ID] = struct{}{}
-		}
-	}
-	var pids []uint64
-	for k := range pidsMap {
-		pids = append(pids, k)
-	}
-
-	rows, err := iDB.
-		Table((&models.ModuleA{}).TableName()).
-		Select("name").
-		Where("deleted_at IS NULL").
-		Where("policy_id IN (?) AND name IN (?) AND status = 'joined'", pids, moduleNames).
-		Group("name").Rows()
-	if err != nil {
-		return nil, errors.New("failed to merge modules")
-	}
-
-	moduleNamesMap := make(map[string]struct{})
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, errors.New("failed to scan module name")
-		}
-		moduleNamesMap[name] = struct{}{}
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, errors.New("failed to scan module name")
-	}
-
-	return moduleNamesMap, nil
-}
-
-func CheckModulesDuplicate(iDB *gorm.DB, ma *models.ModuleA) error {
-	var pgs models.PolicyGroups
-	if err := iDB.Take(&pgs, "id = ?", ma.PolicyID).Error; err != nil {
-		return errors.New("failed to get module policy")
-	}
-	if err := iDB.Model(pgs).Association("groups").Find(&pgs.Groups).Error; err != nil {
-		return errors.New("failed to get linked groups to module policy")
-	}
-
-	for _, group := range pgs.Groups {
-		gps := models.GroupPolicies{Group: group}
-		if err := iDB.Model(gps).Association("policies").Find(&gps.Policies).Error; err != nil {
-			return errors.New("failed to get linked policies to group")
-		}
-
-		var pids []uint64
-		for _, p := range gps.Policies {
-			pids = append(pids, p.ID)
-		}
-
-		var cnts []int64
-		findDupsQuery := iDB.
-			Table((&models.ModuleA{}).TableName()).
-			Select("count(*) AS cnt").
-			Where("deleted_at IS NULL").
-			Where("policy_id IN (?) AND name = ? AND status = 'joined'", pids, ma.Info.Name).
-			Group("name").
-			Find(&cnts)
-		if err := findDupsQuery.Error; err != nil {
-			return errors.New("failed to merge modules")
-		}
-
-		if len(cnts) != 0 {
-			return errors.New("found duplicate modules")
-		}
-	}
-
-	return nil
-}
-
-func removeUnusedModuleVersion(c *gin.Context, iDB *gorm.DB, name, version string, sv *models.Service) error {
-	var count int64
-	err := iDB.
-		Model(&models.ModuleA{}).
-		Where("name LIKE ? AND version LIKE ?", name, version).
-		Count(&count).Error
-	if err != nil {
-		return errors.New("failed to get count modules by version")
-	}
-
-	if count == 0 {
-		s3, err := s3.New(sv.Info.S3.ToS3ConnParams())
-		if err != nil {
-			logrus.WithError(err).Errorf("error openning connection to S3")
-			return err
-		}
-
-		if err = s3.RemoveDir(name + "/" + version + "/"); err != nil && err.Error() != "not found" {
-			logrus.WithError(err).Errorf("error removing module data from s3")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func updateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name string) error {
-	var (
-		err     error
-		modules []models.ModuleA
-		incl    = []interface{}{"current_event_config", "dynamic_dependencies"}
-	)
-
-	if err = iDB.Find(&modules, "dependencies LIKE ?", `%"`+name+`"%`).Error; err != nil {
-		logrus.WithError(err).Errorf("error finding modules by dependencies")
-		return err
-	}
-
-	for _, m := range modules {
-		curevs := make(models.EventConfig)
-		for eid, ev := range m.CurrentEventConfig {
-			actions := make([]models.EventConfigAction, 0)
-			for _, act := range ev.Actions {
-				if act.ModuleName != name {
-					actions = append(actions, act)
-				}
-			}
-			ev.Actions = actions
-			curevs[eid] = ev
-		}
-		m.CurrentEventConfig = curevs
-
-		ddeps := make(models.Dependencies, 0)
-		for _, dep := range m.DynamicDependencies {
-			if dep.ModuleName != name {
-				ddeps = append(ddeps, dep)
-			}
-		}
-		m.DynamicDependencies = ddeps
-
-		if err = iDB.Select("", incl...).Save(&m).Error; err != nil {
-			logrus.WithError(err).Errorf("error updating config module")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func updatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *models.Service) error {
-	iDB := storage.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
-		strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
-	if iDB == nil {
-		logrus.Errorf("error openning connection to instance DB")
-		return errors.New("failed to connect to instance DB")
-	}
-	defer iDB.Close()
-
-	encryptor := getDBEncryptor(c)
-	if encryptor == nil {
-		logrus.Errorf("encryptor not found")
-		return errors.New("encryptor not found")
-	}
-
-	var modules []models.ModuleA
-	scope := func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update NOT LIKE ?",
-			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
-	}
-	if err := iDB.Scopes(scope).Find(&modules).Error; err != nil {
-		logger.FromContext(c).WithError(err).
-			Errorf("error finding policy modules by name and version '%s' '%s'",
-				moduleS.Info.Name, moduleS.Info.Version.String())
-		return err
-	} else if len(modules) == 0 {
-		return nil
-	}
-
-	if err := CopyModuleAFilesToInstanceS3(&moduleS.Info, sv); err != nil {
-		logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
-		return err
-	}
-
-	excl := []string{"policy_id", "status", "join_date", "last_update"}
-	for _, moduleA := range modules {
-		var err error
-		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, moduleS, encryptor)
-		if err != nil {
-			logger.FromContext(c).WithError(err).Errorf("invalid module state")
-			return err
-		}
-
-		if err := moduleA.Valid(); err != nil {
-			logger.FromContext(c).WithError(err).Errorf("invalid module state")
-			return err
-		}
-
-		err = moduleA.EncryptSecureParameters(encryptor)
-		if err != nil {
-			logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
-			return fmt.Errorf("failed to encrypt module secure config: %w", err)
-		}
-		if err := iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
-			logger.FromContext(c).WithError(err).Errorf("error updating module")
-			return err
-		}
-	}
-
-	return nil
-}
-
-func validateFileOnSave(path string, data []byte) error {
-	fileName := filepath.Base(path)
-	fileDir := filepath.Base(filepath.Dir(path))
-	if utils.StringInSlice(fileDir, []string{"cmodule", "smodule"}) && fileName == "args.json" {
-		args := make(map[string][]string)
-		if err := json.Unmarshal(data, &args); err != nil {
-			return fmt.Errorf("failed to parse the module '%s' args: %w", path, err)
-		}
-	}
-	return nil
-}
-
-// helper method to return fully copy of object json schema and following modification
-func copySchema(sht *models.Type, defs models.Definitions) models.Schema {
-	rsh := models.Schema{}
-	copier.Copy(&rsh.Type, sht)
-	rsh.Definitions = defs
-	return rsh
-}
-
-// this method is need to convert object to the golang types such as map, slice, etc.
-func convertToRawInterface(iv interface{}) interface{} {
-	var ir interface{}
-	if b, err := json.Marshal(iv); err != nil {
-		return nil
-	} else if err = json.Unmarshal(b, &ir); err != nil {
-		return nil
-	}
-	return ir
-}
-
-// this method receives current event actions list and event fields and does filter the list by fields
-// all received fields for action must return from current event according to its configuration
-func filterEventActionsListByFields(acts []models.EventConfigAction, fields []string) []models.EventConfigAction {
-	racts := []models.EventConfigAction{}
-	for _, act := range acts {
-		if utils.StringsInSlice(act.Fields, fields) {
-			racts = append(racts, act)
-		}
-	}
-	return racts
-}
-
-// this method is removing new keys from current map and adding not existing ones from default
-// args:
-//
-//	curMap is current document of config keys which user modified early and which we tried to keep
-//	defMap is default document of config keys which we are using as a reference data structure
-func clearMapKeysList(curMap, defMap map[string]interface{}) map[string]interface{} {
-	resMap := make(map[string]interface{}, len(defMap))
-	for k, v2 := range defMap {
-		if v1, ok := curMap[k]; ok {
-			resMap[k] = v1
-		} else {
-			resMap[k] = v2
-		}
-	}
-	return resMap
-}
-
-// args:
-//
-//	cc is Current module Config from old module version which we tried to keep
-//	dc is Default module Config from actual module version which we are using as a reference
-//	sh is JSON Schema structure from actual module version which wa are using to check result document
-func mergeModuleACurrentConfig(cc, dc models.ModuleConfig, sh models.Schema) models.ModuleConfig {
-	// add new config values from default
-	for cik, civ := range dc {
-		if _, ok := cc[cik]; !ok {
-			cc[cik] = civ
-		}
-	}
-
-	mcsh := copySchema(&sh.Type, sh.Definitions)
-	icc := modules.MergeTwoInterfacesBySchema(cc, dc, mcsh)
-	if res, err := mcsh.ValidateGo(icc); err != nil || !res.Valid() {
-		return dc
-	} else if rcc, ok := icc.(models.ModuleConfig); !ok {
-		return dc
-	} else {
-		return rcc
-	}
-}
-
-// args:
-//
-//	cc is Current module SecureConfig from old module version which we tried to keep
-//	dc is Default module SecureConfig from actual module version which we are using as a reference
-//	sh is JSON Schema structure from actual module version which wa are using to check result document
-func mergeModuleASecureCurrentConfig(cc, dc models.ModuleSecureConfig, sh models.Schema) models.ModuleSecureConfig {
-	// add new config values from default
-	for k, v := range dc {
-		if _, ok := cc[k]; !ok {
-			cc[k] = v
-		}
-	}
-
-	mcsh := copySchema(&sh.Type, sh.Definitions)
-	icc := modules.MergeTwoInterfacesBySchema(cc, dc, mcsh)
-	if res, err := mcsh.ValidateGo(icc); err != nil || !res.Valid() {
-		return dc
-	} else if rcc, ok := icc.(models.ModuleSecureConfig); !ok {
-		return dc
-	} else {
-		return rcc
-	}
-}
-
-// args:
-//
-//	cac is Current Action Config from old module version which we tried to keep
-//	dac is Default Action Config from actual module version which we are using as a reference
-//	sh is JSON Schema structure from actual module version which wa are using to check result document
-func mergeModuleACurrentActionConfig(cac, dac models.ActionConfig, sh models.Schema) models.ActionConfig {
-	for acn, daci := range dac {
-		if caci, ok := cac[acn]; ok {
-			caci.Fields = daci.Fields
-			caci.Priority = daci.Priority
-			caci.Config = clearMapKeysList(caci.Config, daci.Config)
-			cac[acn] = caci
-		} else {
-			cac[acn] = daci
-		}
-	}
-	for acn := range cac {
-		if _, ok := dac[acn]; !ok {
-			delete(cac, acn)
-		}
-	}
-
-	rcac := models.ActionConfig{}
-	acsh := copySchema(&sh.Type, models.GetACSDefinitions(sh.Definitions))
-	icac := modules.MergeTwoInterfacesBySchema(convertToRawInterface(cac), convertToRawInterface(dac), acsh)
-	if res, err := acsh.ValidateGo(icac); err != nil || !res.Valid() {
-		return dac
-	} else if b, err := json.Marshal(icac); err != nil {
-		return dac
-	} else if err = json.Unmarshal(b, &rcac); err != nil {
-		return dac
-	}
-	return rcac
-}
-
-// args:
-//
-//	ceci is Current Event Config Item from old module version which we tried to keep
-//	deci is Default Event Config Item from actual module version which we are using as a reference
-//	sh is JSON Schema structure from actual module version which wa are using to check result document
-func mergeModuleAEventConfigItem(ceci, deci models.EventConfigItem, sh models.Schema) models.EventConfigItem {
-	reci := models.EventConfigItem{}
-	iceci, ideci := convertToRawInterface(ceci), convertToRawInterface(deci)
-	rieci := modules.MergeTwoInterfacesBySchema(iceci, ideci, sh)
-	if b, err := json.Marshal(rieci); err != nil {
-		return deci
-	} else if err = json.Unmarshal(b, &reci); err != nil {
-		return deci
-	}
-	return reci
-}
-
-// args:
-//
-//	cec is Current Event Config from old module version which we tried to keep
-//	dec is Default Event Config from actual module version which we are using as a reference
-//	sh is JSON Schema structure from actual module version which wa are using to check result document
-func mergeModuleACurrentEventConfig(cec, dec models.EventConfig, sh models.Schema) models.EventConfig {
-	ecsh := copySchema(&sh.Type, models.GetECSDefinitions(sh.Definitions))
-	for ecn, deci := range dec {
-		if ceci, ok := cec[ecn]; ok {
-			ceci.Fields = deci.Fields
-			ceci.Actions = filterEventActionsListByFields(ceci.Actions, ceci.Fields)
-			ceci.Config = clearMapKeysList(ceci.Config, deci.Config)
-			if sht, ok := ecsh.Properties[ecn]; ok {
-				ecish := copySchema(sht, ecsh.Definitions)
-				cec[ecn] = mergeModuleAEventConfigItem(ceci, deci, ecish)
-			} else {
-				cec[ecn] = ceci
-			}
-		} else {
-			cec[ecn] = deci
-		}
-	}
-	for ecn := range cec {
-		if _, ok := dec[ecn]; !ok {
-			delete(cec, ecn)
-		}
-	}
-
-	if res, err := ecsh.ValidateGo(cec); err != nil || !res.Valid() {
-		return dec
-	}
-	return cec
-}
-
-// args:
-//
-//	dd is Dynamic Dependencies from old module version which we tried to keep
-//	cec is Current Event Config which was got after merging to default (result Current Event Config)
-func clearModuleADynamicDependencies(dd models.Dependencies, cec models.EventConfig) models.Dependencies {
-	rdd := models.Dependencies{}
-	checkDepInActions := func(ec models.EventConfigItem, moduleName string) bool {
-		for _, act := range ec.Actions {
-			if act.ModuleName == moduleName {
-				return true
-			}
-		}
-		return false
-	}
-	for _, d := range dd {
-		for _, ec := range cec {
-			if checkDepInActions(ec, d.ModuleName) {
-				rdd = append(rdd, d)
-				break
-			}
-		}
-	}
-	return rdd
-}
-
-func MergeModuleAConfigFromModuleS(moduleA *models.ModuleA, moduleS *models.ModuleS, encryptor crypto.IDBConfigEncryptor) (models.ModuleA, error) {
-	err := moduleA.DecryptSecureParameters(encryptor)
-	if err != nil {
-		return models.ModuleA{}, err
-	}
-	err = moduleS.DecryptSecureParameters(encryptor)
-	if err != nil {
-		return models.ModuleA{}, err
-	}
-
-	moduleR := moduleS.ToModuleA()
-
-	// restore original key properties
-	moduleR.ID = moduleA.ID
-	moduleR.PolicyID = moduleA.PolicyID
-	moduleR.Status = moduleA.Status
-	moduleR.JoinDate = moduleA.JoinDate
-	moduleR.LastUpdate = moduleA.LastUpdate
-
-	// merge current and default config
-	moduleR.CurrentConfig = mergeModuleACurrentConfig(
-		moduleA.CurrentConfig, moduleS.DefaultConfig, moduleS.ConfigSchema,
-	)
-	moduleR.SecureCurrentConfig = mergeModuleASecureCurrentConfig(
-		moduleA.SecureCurrentConfig, moduleS.SecureDefaultConfig, moduleS.SecureConfigSchema,
-	)
-	moduleR.CurrentActionConfig = mergeModuleACurrentActionConfig(
-		moduleA.CurrentActionConfig, moduleS.DefaultActionConfig, moduleS.ActionConfigSchema,
-	)
-	moduleR.CurrentEventConfig = mergeModuleACurrentEventConfig(
-		moduleA.CurrentEventConfig, moduleS.DefaultEventConfig, moduleS.EventConfigSchema,
-	)
-	moduleR.DynamicDependencies = clearModuleADynamicDependencies(
-		moduleA.DynamicDependencies, moduleR.CurrentEventConfig,
-	)
-
-	return moduleR, nil
-}
-
-func LatestModulesQuery(db *gorm.DB) *gorm.DB {
-	subQueryLatestVersion := db.Table("modules m2").
-		Select("m2.version").
-		Where("m2.name LIKE mname").
-		Order("m2.ver_major DESC, m2.ver_minor DESC, m2.ver_patch DESC").
-		Limit(1).
-		SubQuery()
-	subQueryModulesList := db.Table("modules m1").
-		Select("m1.name AS mname, ? AS mversion", subQueryLatestVersion).
-		Group("m1.name").
-		SubQuery()
-	return db.Select("`modules`.*").
-		Joins("INNER JOIN ? AS ml ON name LIKE `ml`.mname AND version LIKE `ml`.mversion", subQueryModulesList)
-}
-
-func FilterModulesByVersion(version string) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		switch version {
-		case "all":
-			return db.Order("ver_major DESC, ver_minor DESC, ver_patch DESC")
-		case "latest":
-			return db.Order("ver_major DESC, ver_minor DESC, ver_patch DESC").Limit(1)
-		default:
-			return db.Where("version LIKE ?", version).Limit(1)
-		}
-	}
-}
-
-func getModuleName(c *gin.Context, db *gorm.DB, name string, version string) (string, error) {
-	sv := getService(c)
-	if sv == nil {
-		return "", errors.New("can't get service")
-	}
-
-	tid := c.GetUint64("tid")
-	scope := func(db *gorm.DB) *gorm.DB {
-		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", name, tid, sv.Type)
-	}
-
-	var module models.ModuleS
-	if err := db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
-		return "", err
-	}
-	return module.Locale.Module["en"].Title, nil
-}
-
 type ModuleService struct {
 	templatesDir     string
 	db               *gorm.DB
@@ -1361,7 +230,7 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -1424,13 +293,14 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 	for _, module := range resp.Modules {
 		modNames = append(modNames, module.Info.Name)
 	}
-	modules := make([]models.ModuleS, 0)
+	moduleList := make([]models.ModuleS, 0)
 	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
-		return LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
+		return modules.LatestModulesQuery(db).
+			Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(scope).Find(&moduleList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
 		response.Error(c, response.ErrGetAgentsGetSystemModulesFail, err)
 		return
@@ -1456,7 +326,7 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 				rmd.Policy = pd
 			}
 		}
-		for _, ms := range modules {
+		for _, ms := range moduleList {
 			if ms.Info.Name == ma.Info.Name {
 				rmd.Update = ma.Info.Version.String() != ms.Info.Version.String()
 				break
@@ -1584,7 +454,7 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		return
 	}
 
@@ -1673,7 +543,7 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -1736,13 +606,13 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 	for _, module := range resp.Modules {
 		modNames = append(modNames, module.Info.Name)
 	}
-	modules := make([]models.ModuleS, 0)
+	moduleList := make([]models.ModuleS, 0)
 	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
-		return LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
+		return modules.LatestModulesQuery(db).Where("name IN (?) AND tenant_id = ? AND service_type = ?", modNames, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(scope).Find(&moduleList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system modules list by names")
 		response.Error(c, response.ErrGetGroupsGetSystemModulesFail, err)
 		return
@@ -1767,7 +637,7 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 				rmd.Policy = pd
 			}
 		}
-		for _, ms := range modules {
+		for _, ms := range moduleList {
 			if ms.Info.Name == ma.Info.Name {
 				rmd.Update = ma.Info.Version.String() != ms.Info.Version.String()
 				break
@@ -1897,7 +767,7 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		return
 	}
 
@@ -1985,7 +855,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2043,7 +913,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 	}
 	funcs := []func(db *gorm.DB) *gorm.DB{
 		func(db *gorm.DB) *gorm.DB {
-			return LatestModulesQuery(db).Omit("id").
+			return modules.LatestModulesQuery(db).Omit("id").
 				Select("`modules`.*, IF(`name` IN (?), 'joined', 'inactive') AS `status`", modNames)
 		},
 	}
@@ -2107,7 +977,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 			moduleNames = append(moduleNames, v.Info.Name)
 		}
 	}
-	duplicateMap, err := CheckMultipleModulesDuplicate(iDB, moduleNames, policy.ID)
+	duplicateMap, err := modules.CheckMultipleModulesDuplicate(iDB, moduleNames, policy.ID)
 	if err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
 		response.Error(c, response.ErrInternal, err)
@@ -2223,7 +1093,7 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		return
 	}
 
@@ -2301,7 +1171,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -2323,7 +1193,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, err)
 		return
 	}
@@ -2372,18 +1242,21 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	excl := []string{"policy_id", "status", "join_date", "last_update"}
 	switch form.Action {
 	case "activate":
-		if err = CheckModulesDuplicate(iDB, &moduleA); err != nil {
+		if err = modules.CheckModulesDuplicate(iDB, &moduleA); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error checking duplicate modules")
 			response.Error(c, response.ErrPatchPolicyModuleDuplicatedModule, err)
 			return
 		}
 
 		if moduleA.ID == 0 {
-			if err = CopyModuleAFilesToInstanceS3(&moduleA.Info, sv); err != nil {
+			checksums, err := modules.CopyModuleAFilesToInstanceS3(&moduleA.Info, sv)
+			if err != nil {
 				logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
+
+			moduleA.FilesChecksums = checksums
 
 			if err = moduleA.ValidateEncryption(encryptor); err != nil {
 				logger.FromContext(c).WithError(err).Errorf("module config not encrypted")
@@ -2398,7 +1271,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			}
 
 			if moduleS.State == "draft" {
-				if err = updatePolicyModulesByModuleS(c, &moduleS, sv); err != nil {
+				if err = modules.UpdatePolicyModulesByModuleS(c, &moduleS, sv); err != nil {
 					response.Error(c, response.ErrInternal, err)
 					return
 				}
@@ -2427,7 +1300,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			return
 		}
 
-		changes, err := compareModulesChanges(form.Module, moduleA, encryptor)
+		changes, err := modules.CompareModulesChanges(form.Module, moduleA, encryptor)
 		if err != nil {
 			logger.FromContext(c).WithError(err).Errorf("failed to compare modules changes")
 			response.Error(c, response.ErrModulesFailedToCompareChanges, err)
@@ -2462,7 +1335,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			return
 		}
 
-		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, &moduleS, encryptor)
+		moduleA, err = modules.MergeModuleAConfigFromModuleS(&moduleA, &moduleS, encryptor)
 		if err != nil {
 			logger.FromContext(c).WithError(err).Errorf("invalid module state")
 			response.Error(c, response.ErrInternal, err)
@@ -2482,11 +1355,13 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			return
 		}
 
-		if err = CopyModuleAFilesToInstanceS3(&moduleA.Info, sv); err != nil {
+		checksums, err := modules.CopyModuleAFilesToInstanceS3(&moduleA.Info, sv)
+		if err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
 			response.Error(c, response.ErrInternal, err)
 			return
 		}
+		moduleA.FilesChecksums = checksums
 
 		if err = iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error updating module")
@@ -2494,7 +1369,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			return
 		}
 
-		if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
+		if err = modules.RemoveUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return
@@ -2507,43 +1382,6 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, struct{}{})
-}
-
-func compareModulesChanges(moduleIn, moduleDB models.ModuleA, encryptor crypto.IDBConfigEncryptor) ([]bool, error) {
-	err := moduleIn.DecryptSecureParameters(encryptor)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt moduleIn secure config: %w", err)
-	}
-	err = moduleDB.DecryptSecureParameters(encryptor)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt moduleDB secure config: %w", err)
-	}
-
-	secDefConfigCompare := !reflect.DeepEqual(moduleIn.SecureDefaultConfig, moduleDB.SecureDefaultConfig)
-	secCurrentConfigCompare := !reflect.DeepEqual(moduleIn.SecureCurrentConfig, moduleDB.SecureCurrentConfig)
-
-	err = moduleIn.EncryptSecureParameters(encryptor)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt moduleIn secure config: %w", err)
-	}
-	err = moduleDB.EncryptSecureParameters(encryptor)
-	if err != nil {
-		return nil, fmt.Errorf("failed to encrypt moduleDB secure config: %w", err)
-	}
-
-	return []bool{
-		moduleIn.ID != moduleDB.ID,
-		moduleIn.Info.Name != moduleDB.Info.Name,
-		moduleIn.Info.System != moduleDB.Info.System,
-		moduleIn.Info.Template != moduleDB.Info.Template,
-		moduleIn.Info.Version.String() != moduleDB.Info.Version.String(),
-		moduleIn.PolicyID != moduleDB.PolicyID,
-		moduleIn.JoinDate != moduleDB.JoinDate,
-		moduleIn.LastModuleUpdate != moduleDB.LastModuleUpdate,
-		moduleIn.State != moduleDB.State,
-		secDefConfigCompare,
-		secCurrentConfigCompare,
-	}, nil
 }
 
 // DeletePolicyModule is a function to delete policy module instance
@@ -2598,7 +1436,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2624,7 +1462,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 
 	moduleVersion := module.Info.Version.String()
-	if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
+	if err = modules.RemoveUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 		response.Error(c, response.ErrInternal, err)
 		return
@@ -2693,12 +1531,12 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, err)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -2827,12 +1665,12 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, err)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -2925,12 +1763,12 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -2961,7 +1799,7 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 	funcs := []func(db *gorm.DB) *gorm.DB{
 		func(db *gorm.DB) *gorm.DB {
 			if !useVersion {
-				db = LatestModulesQuery(db)
+				db = modules.LatestModulesQuery(db)
 			}
 			return db
 		},
@@ -3010,19 +1848,19 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		info      models.ModuleInfo
 		module    *models.ModuleS
 		sv        *models.Service
-		template  Template
+		template  modules.Template
 		encryptor crypto.IDBConfigEncryptor
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation", "", useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -3056,7 +1894,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 	info.System = false
 
 	var err error
-	if template, module, err = LoadModuleSTemplate(&info, s.templatesDir); err != nil {
+	if template, module, err = modules.LoadModuleSTemplate(&info, s.templatesDir); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error loading module")
 		response.Error(c, response.ErrCreateModuleLoadFail, err)
 		return
@@ -3072,7 +1910,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 		return
 	}
 
-	if err = StoreModuleSToGlobalS3(&info, template); err != nil {
+	if err = modules.StoreModuleSToGlobalS3(&info, template); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error storing module to S3")
 		response.Error(c, response.ErrCreateModuleStoreS3Fail, err)
 		return
@@ -3104,7 +1942,7 @@ func (s *ModuleService) CreateModule(c *gin.Context) {
 func (s *ModuleService) DeleteModule(c *gin.Context) {
 	var (
 		err        error
-		modules    []models.ModuleS
+		moduleList []models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
 		services   []models.Service
@@ -3113,7 +1951,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "deletion", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3123,34 +1961,30 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(scope).Find(&modules).Error; err != nil || len(modules) == 0 {
+	if err = s.db.Scopes(scope).Find(&moduleList).Error; err != nil || len(moduleList) == 0 {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
-		if err == nil && len(modules) == 0 {
+		if err == nil && len(moduleList) == 0 {
 			response.Error(c, response.ErrModulesNotFound, err)
 		} else {
 			response.Error(c, response.ErrInternal, err)
 		}
 		return
 	}
-	uaf.ObjectDisplayName = modules[len(modules)-1].Locale.Module["en"].Title
+	uaf.ObjectDisplayName = moduleList[len(moduleList)-1].Locale.Module["en"].Title
 
 	deletePolicyModule := func(svc *models.Service) error {
-		var (
-			err     error
-			modules []models.ModuleA
-		)
-
 		iDB, err := s.serverConnector.GetDB(c, svc.Hash)
 		if err != nil {
 			return err
 		}
 
-		if err = iDB.Find(&modules, "name = ?", moduleName).Error; err != nil {
+		var agentModules []models.ModuleA
+		if err = iDB.Find(&agentModules, "name = ?", moduleName).Error; err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error finding modules by name")
 			return err
-		} else if len(modules) == 0 {
-			return updateDependenciesWhenModuleRemove(c, iDB, moduleName)
-		} else if err = iDB.Where("name = ?", moduleName).Delete(&modules).Error; err != nil {
+		} else if len(agentModules) == 0 {
+			return modules.UpdateDependenciesWhenModuleRemove(c, iDB, moduleName)
+		} else if err = iDB.Where("name = ?", moduleName).Delete(&agentModules).Error; err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error deleting module by name '%s'", moduleName)
 			return err
 		}
@@ -3166,7 +2000,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 			return err
 		}
 
-		if err = updateDependenciesWhenModuleRemove(c, iDB, moduleName); err != nil {
+		if err = modules.UpdateDependenciesWhenModuleRemove(c, iDB, moduleName); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error updating module dependencies")
 			return err
 		}
@@ -3187,7 +2021,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 		}
 	}
 
-	if err = s.db.Where("name = ?", moduleName).Delete(&modules).Error; err != nil {
+	if err = s.db.Where("name = ?", moduleName).Delete(&moduleList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error deleting system module by name '%s'", moduleName)
 		response.Error(c, response.ErrInternal, err)
 		return
@@ -3234,7 +2068,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3292,12 +2126,12 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		encryptor  crypto.IDBConfigEncryptor
 	)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -3307,7 +2141,7 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesNotFound, err)
@@ -3352,7 +2186,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		form       moduleVersionPatch
 		sv         *models.Service
 		services   []models.Service
-		template   = make(Template)
+		template   = make(modules.Template)
 		version    = c.Param("version")
 		encryptor  crypto.IDBConfigEncryptor
 	)
@@ -3364,7 +2198,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		if err == nil {
 			err = form.Module.Valid()
 		}
-		name, nameErr := getModuleName(c, s.db, moduleName, version)
+		name, nameErr := modules.GetModuleName(c, s.db, moduleName, version)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -3380,12 +2214,12 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = form.Module.Locale.Module["en"].Title
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -3395,7 +2229,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -3443,14 +2277,14 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		response.Error(c, response.ErrPatchModuleVersionUpdateFail, err)
 		return
 	} else if sqlResult.RowsAffected != 0 {
-		if cfiles, err = BuildModuleSConfig(&form.Module); err != nil {
+		if cfiles, err = modules.BuildModuleSConfig(&form.Module); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error building system module files")
 			response.Error(c, response.ErrPatchModuleVersionBuildFilesFail, err)
 			return
 		}
 
 		template["config"] = cfiles
-		if err = StoreModuleSToGlobalS3(&form.Module.Info, template); err != nil {
+		if err = modules.StoreModuleSToGlobalS3(&form.Module.Info, template); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error storing system module files to S3")
 			response.Error(c, response.ErrPatchModuleVersionUpdateS3Fail, err)
 			return
@@ -3471,7 +2305,7 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		}
 
 		for _, svc := range services {
-			if err = updatePolicyModulesByModuleS(c, &module, &svc); err != nil {
+			if err = modules.UpdatePolicyModulesByModuleS(c, &module, &svc); err != nil {
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
@@ -3503,7 +2337,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
-		template   Template
+		template   modules.Template
 		version    = c.Param("version")
 		encryptor  crypto.IDBConfigEncryptor
 	)
@@ -3511,12 +2345,12 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "creation of the draft", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = getDBEncryptor(c); encryptor == nil {
+	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -3525,7 +2359,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		if err == nil {
 			err = clver.Valid()
 		}
-		name, nameErr := getModuleName(c, s.db, moduleName, "latest")
+		name, nameErr := modules.GetModuleName(c, s.db, moduleName, "latest")
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -3539,7 +2373,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion("latest"), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion("latest"), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -3587,7 +2421,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return
 	}
 
-	if template, err = LoadModuleSFromGlobalS3(&module.Info); err != nil {
+	if template, err = modules.LoadModuleSFromGlobalS3(&module.Info); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error building system module files")
 		response.Error(c, response.ErrCreateModuleVersionBuildFilesFail, err)
 		return
@@ -3606,14 +2440,14 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return
 	}
 
-	if cfiles, err = BuildModuleSConfig(&module); err != nil {
+	if cfiles, err = modules.BuildModuleSConfig(&module); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error building system module files")
 		response.Error(c, response.ErrCreateModuleVersionBuildFilesFail, err)
 		return
 	}
 
 	template["config"] = cfiles
-	if err = StoreModuleSToGlobalS3(&module.Info, template); err != nil {
+	if err = modules.StoreModuleSToGlobalS3(&module.Info, template); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error storing module to S3")
 		response.Error(c, response.ErrCreateModuleVersionStoreS3Fail, err)
 		return
@@ -3657,7 +2491,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "deletion of the version", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3677,7 +2511,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 		return
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -3750,7 +2584,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3760,7 +2594,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err = s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -3830,7 +2664,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "version update in policies", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if svc = getService(c); svc == nil {
+	if svc = modules.GetService(c); svc == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3840,7 +2674,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, svc.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -3855,7 +2689,7 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
-	if err := updatePolicyModulesByModuleS(c, &module, svc); err != nil {
+	if err := modules.UpdatePolicyModulesByModuleS(c, &module, svc); err != nil {
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -3884,7 +2718,7 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3894,7 +2728,7 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -3916,7 +2750,7 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 	}
 
 	path := moduleName + "/" + module.Info.Version.String()
-	if files, err = readDir(s3Client, path); err != nil {
+	if files, err = modules.ReadDir(s3Client, path); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error listening module files from S3")
 		response.Error(c, response.ErrGetModuleVersionFilesListenFail, err)
 		return
@@ -3948,7 +2782,7 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3958,7 +2792,7 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -4024,7 +2858,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "module editing", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -4034,7 +2868,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)
@@ -4083,7 +2917,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 			return
 		}
 
-		if err = validateFileOnSave(form.Path, data); err != nil {
+		if err = modules.ValidateFileOnSave(form.Path, data); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error validating file data before write to S3")
 			response.Error(c, response.ErrPatchModuleVersionFileParseModuleFileFail, err)
 			return
@@ -4198,7 +3032,7 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -4208,7 +3042,7 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err := s.db.Scopes(FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
+	if err := s.db.Scopes(modules.FilterModulesByVersion(version), scope).Take(&module).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Error(c, response.ErrModulesSystemModuleNotFound, err)

@@ -19,7 +19,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"soldr/pkg/protoagent"
+	"soldr/pkg/app/agent"
 	"soldr/pkg/system"
 	"soldr/pkg/utils"
 	"soldr/pkg/vxproto/tunnel"
@@ -101,7 +101,7 @@ var packEncrypter, _ = tunnel.NewPackEncrypter(&tunnel.Config{
 
 func makeAgentSocket(vxp *vxProto) *agentSocket {
 	seconds := time.Now().Unix()
-	user := &protoagent.Information_User{
+	user := &agent.Information_User{
 		Name:   utils.GetRef("root"),
 		Groups: []string{"root"},
 	}
@@ -112,29 +112,29 @@ func makeAgentSocket(vxp *vxProto) *agentSocket {
 		src: serverToken,
 		at:  VXAgent,
 		auth: &AuthenticationData{
-			req: &protoagent.AuthenticationRequest{
+			req: &agent.AuthenticationRequest{
 				Timestamp: &seconds,
 				Atoken:    utils.GetRef(""),
 				Aversion:  utils.GetRef(vxp.GetVersion()),
 			},
-			resp: &protoagent.AuthenticationResponse{
+			resp: &agent.AuthenticationResponse{
 				Atoken:   utils.GetRef(agentToken),
 				Stoken:   utils.GetRef(serverToken),
 				Sversion: utils.GetRef(vxp.GetVersion()),
 				Status:   utils.GetRef("authorized"),
 			},
 		},
-		info: &protoagent.Information{
-			Os: &protoagent.Information_OS{
+		info: &agent.Information{
+			Os: &agent.Information_OS{
 				Type: utils.GetRef("linux"),
 				Name: utils.GetRef("Ubuntu 16.04"),
 				Arch: utils.GetRef("amd64"),
 			},
-			Net: &protoagent.Information_Net{
+			Net: &agent.Information_Net{
 				Hostname: utils.GetRef("test_pc"),
 				Ips:      []string{"127.0.0.1/8"},
 			},
-			Users: []*protoagent.Information_User{
+			Users: []*agent.Information_User{
 				user,
 			},
 		},

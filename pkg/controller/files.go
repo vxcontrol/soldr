@@ -18,8 +18,11 @@ func NewFilesFromS3(connParams *s3.Config) (IFilesLoader, error) {
 		return nil, generateDriverInitErrMsg(driverTypeS3, err)
 	}
 	return &sFiles{
-		flt:          eS3FilesLoader,
-		IFilesLoader: &filesLoaderS3{sc: sc},
+		flt: eS3FilesLoader,
+		IFilesLoader: &filesLoader{
+			storage: sc,
+			path:    "/",
+		},
 	}, nil
 }
 
@@ -30,7 +33,10 @@ func NewFilesFromFS(path string) (IFilesLoader, error) {
 		return nil, generateDriverInitErrMsg(driverTypeFS, err)
 	}
 	return &sFiles{
-		flt:          eFSFilesLoader,
-		IFilesLoader: &filesLoaderFS{path: path, sc: sc},
+		flt: eFSFilesLoader,
+		IFilesLoader: &filesLoader{
+			storage: sc,
+			path:    path,
+		},
 	}, nil
 }

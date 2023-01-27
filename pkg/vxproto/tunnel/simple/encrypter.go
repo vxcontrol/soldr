@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"soldr/pkg/protoagent"
+	"soldr/pkg/app/agent"
 	compressor "soldr/pkg/vxproto/tunnel/compressor/simple"
 )
 
@@ -45,7 +45,7 @@ func (e *Encryptor) Decrypt(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (e *Encryptor) Reset(config *protoagent.TunnelConfig) error {
+func (e *Encryptor) Reset(config *agent.TunnelConfig) error {
 	c := config.GetSimple()
 	if c == nil {
 		return fmt.Errorf("passed config is not of the type *TunnelConfig_Simple")

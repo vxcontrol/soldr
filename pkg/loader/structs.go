@@ -37,6 +37,10 @@ func (mc *ModuleConfig) Update(mcn *ModuleConfig) error {
 	return nil
 }
 
+func (mc *ModuleConfig) ID() string {
+	return mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+}
+
 // IConfigItem is common interface for manage module configuration
 type IConfigItem interface {
 	GetConfigSchema() string

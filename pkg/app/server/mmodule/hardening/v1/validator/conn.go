@@ -8,8 +8,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
+	"soldr/pkg/app/agent"
 	"soldr/pkg/app/server/mmodule/hardening/v1/pinger"
-	"soldr/pkg/protoagent"
 	"soldr/pkg/utils"
 	utilsErrors "soldr/pkg/utils/errors"
 	"soldr/pkg/vxproto"
@@ -86,13 +86,13 @@ func (v *ConnectionValidator) performChallenge(
 	emptyStr := ""
 	ver := socket.GetVersion()
 	respMsg := utilsErrors.ErrFailedResponseTunnelError.Error()
-	resp := &protoagent.AuthenticationResponse{
+	resp := &agent.AuthenticationResponse{
 		Atoken:   &emptyStr,
 		Stoken:   &emptyStr,
 		Sversion: &ver,
 		Status:   &respMsg,
 	}
-	data, packErr := protoagent.PackProtoMessage(resp, protoagent.Message_AUTHENTICATION_RESPONSE)
+	data, packErr := agent.PackProtoMessage(resp, agent.Message_AUTHENTICATION_RESPONSE)
 	if packErr != nil {
 		return fmt.Errorf("failed to pack the proto mesage (%v) while processing the error: %w", packErr, err)
 	}
@@ -105,10 +105,10 @@ func (v *ConnectionValidator) performChallenge(
 func (v *ConnectionValidator) sendConnectionChallenge(
 	ctx context.Context, asocket vxproto.IAgentSocket, nonce []byte,
 ) error {
-	req := &protoagent.ConnectionChallengeRequest{
+	req := &agent.ConnectionChallengeRequest{
 		Nonce: nonce,
 	}
-	msg, err := protoagent.PackProtoMessage(req, protoagent.Message_CONNECTION_CHALLENGE_REQUEST)
+	msg, err := agent.PackProtoMessage(req, agent.Message_CONNECTION_CHALLENGE_REQUEST)
 	if err != nil {
 		return fmt.Errorf("failed to pack the message: %w", err)
 	}
@@ -124,12 +124,12 @@ func (v *ConnectionValidator) checkConnectionChallengeResponse(
 	socket vxproto.IAgentSocket,
 	expectedChallenge []byte,
 ) error {
-	var resp protoagent.ConnectionChallengeResponse
+	var resp agent.ConnectionChallengeResponse
 	respData, err := socket.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read the message from the socket: %w", err)
 	}
-	if err := protoagent.UnpackProtoMessage(&resp, respData, protoagent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
+	if err := agent.UnpackProtoMessage(&resp, respData, agent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
 		return fmt.Errorf("failed to unpack the message: %w", err)
 	}
 	abh, err := v.abher.GetABHWithSocket(agentType, socket)
@@ -160,14 +160,14 @@ func (v *ConnectionValidator) requestConnectionStart(
 	if err := configureTunnel(tunnelConfig); err != nil {
 		return fmt.Errorf("failed to configure the tunnel: %w", err)
 	}
-	connReq := &protoagent.ConnectionStartRequest{
+	connReq := &agent.ConnectionStartRequest{
 		TunnelConfig: agentTunnelConfig,
 	}
 	connReq.Sbh, err = v.sbher.Get(context.TODO(), tlsConnState.ServerName)
 	if err != nil {
 		return fmt.Errorf("failed to get the SBH: %w", err)
 	}
-	req, err := protoagent.PackProtoMessage(connReq, protoagent.Message_CONNECTION_REQUEST)
+	req, err := agent.PackProtoMessage(connReq, agent.Message_CONNECTION_REQUEST)
 	if err != nil {
 		return fmt.Errorf("failed to prepare a request to start connection: %w", err)
 	}
@@ -178,8 +178,8 @@ func (v *ConnectionValidator) requestConnectionStart(
 	if err != nil {
 		return fmt.Errorf("failed to read a response to the start connection request: %w", err)
 	}
-	var resp protoagent.ConnectionStartResponse
-	if err := protoagent.UnpackProtoMessage(&resp, data, protoagent.Message_CONNECTION_REQUEST); err != nil {
+	var resp agent.ConnectionStartResponse
+	if err := agent.UnpackProtoMessage(&resp, data, agent.Message_CONNECTION_REQUEST); err != nil {
 		return fmt.Errorf("failed to unpack the response to the start connection request: %w", err)
 	}
 	return nil
@@ -210,23 +210,23 @@ func getOldToken(ctx context.Context, socket vxproto.IAgentSocket, logger *logru
 }
 
 func doHandshakeWithAgentOnServer(ctx context.Context, iasocket vxproto.IAgentSocket) error {
-	makeFailedResponse := func(err error) *protoagent.AuthenticationResponse {
-		return &protoagent.AuthenticationResponse{
+	makeFailedResponse := func(err error) *agent.AuthenticationResponse {
+		return &agent.AuthenticationResponse{
 			Atoken:   utils.GetRef(""),
 			Stoken:   utils.GetRef(""),
 			Sversion: utils.GetRef(iasocket.GetVersion()),
 			Status:   utils.GetRef(err.Error()),
 		}
 	}
-	makeSuccessResponse := func(atoken, stoken string) *protoagent.AuthenticationResponse {
-		return &protoagent.AuthenticationResponse{
+	makeSuccessResponse := func(atoken, stoken string) *agent.AuthenticationResponse {
+		return &agent.AuthenticationResponse{
 			Atoken:   utils.GetRef(atoken),
 			Stoken:   utils.GetRef(stoken),
 			Sversion: utils.GetRef(iasocket.GetVersion()),
 			Status:   utils.GetRef("authorized"),
 		}
 	}
-	sendResponse := func(resp *protoagent.AuthenticationResponse) error {
+	sendResponse := func(resp *agent.AuthenticationResponse) error {
 		respData, err := proto.Marshal(resp)
 		if err != nil {
 			return err
@@ -244,7 +244,7 @@ func doHandshakeWithAgentOnServer(ctx context.Context, iasocket vxproto.IAgentSo
 		_ = sendResponse(makeFailedResponse(fmt.Errorf("internal error")))
 		return fmt.Errorf("failed to read the message from the socket: %w", err)
 	}
-	var authReqMessage protoagent.AuthenticationRequest
+	var authReqMessage agent.AuthenticationRequest
 	err = proto.Unmarshal(authMessageData, &authReqMessage)
 	if err != nil {
 		_ = sendResponse(makeFailedResponse(utilsErrors.ErrFailedResponseCorrupted))

@@ -8,8 +8,8 @@ import (
 
 	"github.com/vxcontrol/luar"
 
+	"soldr/pkg/app/agent"
 	"soldr/pkg/lua"
-	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 )
 
@@ -19,7 +19,7 @@ type deferredModuleCallback func() bool
 type ModuleState struct {
 	name      string
 	item      *ModuleItem
-	status    protoagent.ModuleStatus_Status
+	status    agent.ModuleStatus_Status
 	wg        sync.WaitGroup
 	luaModule *lua.Module
 	luaState  *lua.State
@@ -32,7 +32,7 @@ func NewState(mc *ModuleConfig, mi *ModuleItem, p vxproto.IVXProto) (*ModuleStat
 	ms := &ModuleState{
 		name:   mc.Name,
 		item:   mi,
-		status: protoagent.ModuleStatus_UNKNOWN,
+		status: agent.ModuleStatus_UNKNOWN,
 	}
 
 	socket := p.NewModule(mc.Name, mc.GroupID)
@@ -114,27 +114,27 @@ func NewState(mc *ModuleConfig, mi *ModuleItem, p vxproto.IVXProto) (*ModuleStat
 		},
 	})
 
-	ms.status = protoagent.ModuleStatus_LOADED
+	ms.status = agent.ModuleStatus_LOADED
 	return ms, nil
 }
 
 // Start is function for running server module
 func (ms *ModuleState) Start() error {
 	switch ms.status {
-	case protoagent.ModuleStatus_LOADED:
+	case agent.ModuleStatus_LOADED:
 		fallthrough
-	case protoagent.ModuleStatus_STOPPED:
+	case agent.ModuleStatus_STOPPED:
 		if !ms.cbStart() {
 			return fmt.Errorf("failed to start the module '%s'", ms.name)
 		}
 		ms.wg.Add(1)
-		ms.status = protoagent.ModuleStatus_RUNNING
+		ms.status = agent.ModuleStatus_RUNNING
 		go func(ms *ModuleState) {
 			defer ms.wg.Done()
 			ms.luaModule.Start()
-			ms.status = protoagent.ModuleStatus_STOPPED
+			ms.status = agent.ModuleStatus_STOPPED
 		}(ms)
-	case protoagent.ModuleStatus_UNKNOWN, protoagent.ModuleStatus_RUNNING, protoagent.ModuleStatus_FREED:
+	case agent.ModuleStatus_UNKNOWN, agent.ModuleStatus_RUNNING, agent.ModuleStatus_FREED:
 		fallthrough
 	default:
 		return genModuleError(ms.status, ms.name)
@@ -146,15 +146,15 @@ func (ms *ModuleState) Start() error {
 // Stop stops server module
 func (ms *ModuleState) Stop(stopReason string) error {
 	switch ms.status {
-	case protoagent.ModuleStatus_LOADED:
-		ms.status = protoagent.ModuleStatus_STOPPED
-	case protoagent.ModuleStatus_RUNNING:
+	case agent.ModuleStatus_LOADED:
+		ms.status = agent.ModuleStatus_STOPPED
+	case agent.ModuleStatus_RUNNING:
 		ms.luaModule.Stop(stopReason)
 		if !ms.cbStop() {
 			return genFailedToStopModuleErr(ms.name)
 		}
-		ms.status = protoagent.ModuleStatus_STOPPED
-	case protoagent.ModuleStatus_UNKNOWN, protoagent.ModuleStatus_STOPPED, protoagent.ModuleStatus_FREED:
+		ms.status = agent.ModuleStatus_STOPPED
+	case agent.ModuleStatus_UNKNOWN, agent.ModuleStatus_STOPPED, agent.ModuleStatus_FREED:
 		fallthrough
 	default:
 		return genModuleError(ms.status, ms.name)
@@ -166,20 +166,20 @@ func (ms *ModuleState) Stop(stopReason string) error {
 // Close releases module object, stop the module beforehand if it is in a RUNNING state
 func (ms *ModuleState) Close(stopReason string) error {
 	switch ms.status {
-	case protoagent.ModuleStatus_RUNNING:
+	case agent.ModuleStatus_RUNNING:
 		ms.luaModule.Stop(stopReason)
 		if !ms.cbStop() {
 			return genFailedToStopModuleErr(ms.name)
 		}
-		ms.status = protoagent.ModuleStatus_STOPPED
+		ms.status = agent.ModuleStatus_STOPPED
 		fallthrough
-	case protoagent.ModuleStatus_STOPPED:
+	case agent.ModuleStatus_STOPPED:
 		ms.wg.Wait()
 		luar.Register(ms.luaState.L, "__config", luar.Map{})
 		ms.luaModule.Close(stopReason)
 		ms.luaState = nil
-		ms.status = protoagent.ModuleStatus_FREED
-	case protoagent.ModuleStatus_UNKNOWN, protoagent.ModuleStatus_LOADED, protoagent.ModuleStatus_FREED:
+		ms.status = agent.ModuleStatus_FREED
+	case agent.ModuleStatus_UNKNOWN, agent.ModuleStatus_LOADED, agent.ModuleStatus_FREED:
 		fallthrough
 	default:
 		return genModuleError(ms.status, ms.name)
@@ -192,13 +192,13 @@ func genFailedToStopModuleErr(moduleName string) error {
 	return fmt.Errorf("failed to stop the module '%s'", moduleName)
 }
 
-func genModuleError(status protoagent.ModuleStatus_Status, moduleName string) error {
+func genModuleError(status agent.ModuleStatus_Status, moduleName string) error {
 	switch status {
-	case protoagent.ModuleStatus_UNKNOWN:
+	case agent.ModuleStatus_UNKNOWN:
 		return fmt.Errorf("failed to load the module '%s'", moduleName)
-	case protoagent.ModuleStatus_RUNNING:
+	case agent.ModuleStatus_RUNNING:
 		return fmt.Errorf("module '%s' is already running", moduleName)
-	case protoagent.ModuleStatus_FREED:
+	case agent.ModuleStatus_FREED:
 		return fmt.Errorf("module '%s' is already closed", moduleName)
 	default:
 		return fmt.Errorf("the module '%s' has an unknown status %d", moduleName, status)
@@ -211,7 +211,7 @@ func (ms *ModuleState) GetName() string {
 }
 
 // GetStatus is function that return module status
-func (ms *ModuleState) GetStatus() protoagent.ModuleStatus_Status {
+func (ms *ModuleState) GetStatus() agent.ModuleStatus_Status {
 	return ms.status
 }
 

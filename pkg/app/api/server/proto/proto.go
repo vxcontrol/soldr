@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
+	"soldr/pkg/app/agent"
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
@@ -27,7 +28,6 @@ import (
 	"soldr/pkg/hardening/luavm/certs"
 	vxcommonVM "soldr/pkg/hardening/luavm/vm"
 	connValidator "soldr/pkg/hardening/validator"
-	"soldr/pkg/protoagent"
 	"soldr/pkg/system"
 	"soldr/pkg/version"
 	"soldr/pkg/vxproto"
@@ -40,7 +40,7 @@ const protoVersion string = "v1"
 type ctxVXConnection struct {
 	sockID   string
 	sockType string
-	authReq  *protoagent.AuthenticationRequest
+	authReq  *agent.AuthenticationRequest
 	connType vxproto.AgentType
 	ctx      context.Context
 	sv       *models.Service
@@ -123,7 +123,7 @@ func prepareClientWSConn(w http.ResponseWriter, r *http.Request) (vxproto.IWSCon
 
 func doVXServerConnection(
 	ctxConn *ctxVXConnection,
-	agentInfo *protoagent.Information,
+	agentInfo *agent.Information,
 	ltacGetter vxcommonVM.LTACGetter,
 	certsPath string,
 ) (*socket, error) {
@@ -181,8 +181,8 @@ func doVXServerConnection(
 	return serverConn, nil
 }
 
-func recvAuthReq(ctx context.Context, conn vxproto.IConnection) (*protoagent.AuthenticationRequest, error) {
-	var authReqMessage protoagent.AuthenticationRequest
+func recvAuthReq(ctx context.Context, conn vxproto.IConnection) (*agent.AuthenticationRequest, error) {
+	var authReqMessage agent.AuthenticationRequest
 	authMessageData, err := conn.Read(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to recv auth request from client: %w", err)
@@ -193,7 +193,7 @@ func recvAuthReq(ctx context.Context, conn vxproto.IConnection) (*protoagent.Aut
 	return &authReqMessage, nil
 }
 
-func sendAuthResp(ctx context.Context, conn vxproto.IConnection, authRespMessage *protoagent.AuthenticationResponse) error {
+func sendAuthResp(ctx context.Context, conn vxproto.IConnection, authRespMessage *agent.AuthenticationResponse) error {
 	authMessageData, err := proto.Marshal(authRespMessage)
 	if err != nil {
 		return fmt.Errorf("failed to build auth client response: %w", err)

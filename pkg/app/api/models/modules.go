@@ -824,6 +824,7 @@ type ModuleA struct {
 	LastModuleUpdate    time.Time          `form:"last_module_update" json:"last_module_update" validate:"required" gorm:"type:DATETIME;NOT NULL"`
 	LastUpdate          time.Time          `form:"last_update,omitempty" json:"last_update,omitempty" validate:"omitempty" gorm:"type:DATETIME;NOT NULL;default:CURRENT_TIMESTAMP"`
 	DeletedAt           *time.Time         `form:"deleted_at,omitempty" json:"deleted_at,omitempty" sql:"index"`
+	FilesChecksums      FilesChecksumsMap  `form:"files_checksums,omitempty" json:"files_checksums,omitempty" validate:"omitempty" gorm:"type:JSON;NOT NULL"`
 }
 
 // TableName returns the table name string to guaranty use correct table
@@ -930,6 +931,23 @@ func (ma ModuleA) DecryptSecureParameters(encryptor crypto.IDBConfigEncryptor) e
 		ma.SecureDefaultConfig,
 		ma.SecureCurrentConfig,
 	)
+}
+
+type FilesChecksumsMap map[string]FileChecksum
+
+type FileChecksum struct {
+	Sha256 string `json:"sha256"`
+}
+
+// Value is interface function to return current value to store to DB
+func (mi FilesChecksumsMap) Value() (driver.Value, error) {
+	b, err := json.Marshal(mi)
+	return string(b), err
+}
+
+// Scan is interface function to parse DB value when getting from DB
+func (mi *FilesChecksumsMap) Scan(input interface{}) error {
+	return scanFromJSON(input, mi)
 }
 
 // ModuleAShort is model to contain short agent module information to return it in details

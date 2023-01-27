@@ -12,12 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
+	"soldr/pkg/app/agent"
 	"soldr/pkg/app/agent/utils"
-	"soldr/pkg/protoagent"
 )
 
 type ReadinessChecker struct {
-	report      *protoagent.AgentReadinessReport
+	report      *agent.AgentReadinessReport
 	reportMux   *sync.Mutex
 	logFilePath string
 	isClosed    bool
@@ -30,7 +30,7 @@ func NewReadinessChecker(logDir string) (*ReadinessChecker, error) {
 		return nil, fmt.Errorf("failed to initialize a readiness checker: %w", err)
 	}
 	return &ReadinessChecker{
-		report: &protoagent.AgentReadinessReport{
+		report: &agent.AgentReadinessReport{
 			Header: initReportHeader(),
 		},
 		reportMux:   &sync.Mutex{},
@@ -49,9 +49,9 @@ func composeLogFilePath(logDir string) (string, error) {
 	return pathResolver.Resolve(logFileName), nil
 }
 
-func initReportHeader() *protoagent.AgentReadinessReportHeader {
+func initReportHeader() *agent.AgentReadinessReportHeader {
 	pid := int32(os.Getpid())
-	return &protoagent.AgentReadinessReportHeader{
+	return &agent.AgentReadinessReportHeader{
 		Pid: &pid,
 	}
 }
@@ -73,7 +73,7 @@ func (rc *ReadinessChecker) logCheck(ct checkType, hasPassed bool) {
 	defer rc.reportMux.Unlock()
 
 	checkTypeStr := string(ct)
-	rc.report.Checks = append(rc.report.Checks, &protoagent.AgentReadinessReportCheck{
+	rc.report.Checks = append(rc.report.Checks, &agent.AgentReadinessReportCheck{
 		Type:   &checkTypeStr,
 		Passed: &hasPassed,
 	})
@@ -96,7 +96,7 @@ func (rc *ReadinessChecker) checkOS() error {
 	return nil
 }
 
-func (rc *ReadinessChecker) Finalize(ctx context.Context, status protoagent.AgentReadinessReportStatus) error {
+func (rc *ReadinessChecker) Finalize(ctx context.Context, status agent.AgentReadinessReportStatus) error {
 	rc.isClosedMux.Lock()
 	defer rc.isClosedMux.Unlock()
 	if rc.isClosed {
@@ -141,11 +141,11 @@ func (rc *ReadinessChecker) dumpReport() (err error) {
 	return nil
 }
 
-func (rc *ReadinessChecker) writeAgentFinalStatus(status protoagent.AgentReadinessReportStatus) {
+func (rc *ReadinessChecker) writeAgentFinalStatus(status agent.AgentReadinessReportStatus) {
 	rc.report.Status = &status
 }
 
-func serializeReport(r *protoagent.AgentReadinessReport) ([]byte, error) {
+func serializeReport(r *agent.AgentReadinessReport) ([]byte, error) {
 	serializedReport, err := proto.Marshal(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize the readiness checker report: %w", err)
@@ -161,7 +161,7 @@ func openLogFile(path string) (*os.File, error) {
 	return f, nil
 }
 
-func ReadReport(ctx context.Context, logDir string) (*protoagent.AgentReadinessReport, error) {
+func ReadReport(ctx context.Context, logDir string) (*agent.AgentReadinessReport, error) {
 	logFilePath, err := composeLogFilePath(logDir)
 	if err != nil {
 		return nil, err
@@ -180,7 +180,7 @@ func ReadReport(ctx context.Context, logDir string) (*protoagent.AgentReadinessR
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve the readiness checker report data: %w", err)
 	}
-	var report protoagent.AgentReadinessReport
+	var report agent.AgentReadinessReport
 	if err := proto.Unmarshal(reportData, &report); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal the readiness checker report: %w", err)
 	}

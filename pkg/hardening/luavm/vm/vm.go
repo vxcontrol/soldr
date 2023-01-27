@@ -14,11 +14,11 @@ import (
 	"runtime"
 	"sync"
 
+	"soldr/pkg/app/agent"
 	vxcommonErrors "soldr/pkg/errors"
 	"soldr/pkg/hardening/luavm/certs"
 	"soldr/pkg/hardening/luavm/store"
 	storeTypes "soldr/pkg/hardening/luavm/store/types"
-	"soldr/pkg/protoagent"
 	utilsErrors "soldr/pkg/utils/errors"
 	vxprotoTunnel "soldr/pkg/vxproto/tunnel"
 )
@@ -57,7 +57,7 @@ type VM interface {
 	TLSConfigurer
 	ISecureConfigEncryptor
 
-	PrepareInitConnectionRequest(info *InitConnectionAgentInfo, agentInfo *protoagent.Information) ([]byte, error)
+	PrepareInitConnectionRequest(info *InitConnectionAgentInfo, agentInfo *agent.Information) ([]byte, error)
 	ProcessInitConnectionResponse(resp []byte) error
 	ResetInitConnection()
 
@@ -164,7 +164,7 @@ func (v *vm) popSCA() ([]byte, error) {
 	return sca, nil
 }
 
-func (v *vm) PrepareInitConnectionRequest(info *InitConnectionAgentInfo, agentInfo *protoagent.Information) (msg []byte, err error) {
+func (v *vm) PrepareInitConnectionRequest(info *InitConnectionAgentInfo, agentInfo *agent.Information) (msg []byte, err error) {
 	defer func() {
 		if err != nil {
 			v.popSCA()
@@ -194,8 +194,8 @@ func (v *vm) ProcessInitConnectionResponse(respData []byte) (err error) {
 			v.popSCA()
 		}
 	}()
-	var initConnResp protoagent.InitConnectionResponse
-	if err := protoagent.UnpackProtoMessage(&initConnResp, respData, protoagent.Message_INIT_CONNECTION); err != nil {
+	var initConnResp agent.InitConnectionResponse
+	if err := agent.UnpackProtoMessage(&initConnResp, respData, agent.Message_INIT_CONNECTION); err != nil {
 		return fmt.Errorf("failed to unpack the init connection response: %w", err)
 	}
 	key, err := v.popLTACTemplKey()
@@ -251,13 +251,13 @@ func (vm *vm) ProcessConnectionRequest(req []byte, packEncryptor vxprotoTunnel.P
 			err = fmt.Errorf("%w: %v", vxcommonErrors.ErrConnectionInitializationRequired, err)
 		}
 	}()
-	payload, msgType, err := protoagent.GetProtoMessagePayload(req)
+	payload, msgType, err := agent.GetProtoMessagePayload(req)
 	if err != nil {
 		return nil, err
 	}
-	if msgType == protoagent.Message_AUTHENTICATION_RESPONSE {
-		var authResp protoagent.AuthenticationResponse
-		if err := protoagent.UnpackProtoMessagePayload(&authResp, payload); err != nil {
+	if msgType == agent.Message_AUTHENTICATION_RESPONSE {
+		var authResp agent.AuthenticationResponse
+		if err := agent.UnpackProtoMessagePayload(&authResp, payload); err != nil {
 			return nil, err
 		}
 		if err := vm.processFailedConnectionChallengeResponse(&authResp); err != nil {
@@ -265,8 +265,8 @@ func (vm *vm) ProcessConnectionRequest(req []byte, packEncryptor vxprotoTunnel.P
 		}
 		return nil, fmt.Errorf("connection attempt has failed")
 	}
-	var connReq protoagent.ConnectionStartRequest
-	if err = protoagent.UnpackProtoMessage(&connReq, req, protoagent.Message_CONNECTION_REQUEST); err != nil {
+	var connReq agent.ConnectionStartRequest
+	if err = agent.UnpackProtoMessage(&connReq, req, agent.Message_CONNECTION_REQUEST); err != nil {
 		return nil, fmt.Errorf("failed to unpack the connection request proto message: %w", err)
 	}
 	if err = vm.checkSBH(connReq.Sbh); err != nil {
@@ -278,14 +278,14 @@ func (vm *vm) ProcessConnectionRequest(req []byte, packEncryptor vxprotoTunnel.P
 	if err = packEncryptor.Reset(connReq.TunnelConfig); err != nil {
 		return nil, fmt.Errorf("failed to configure the pack encryptor: %w", err)
 	}
-	resp, err = protoagent.PackProtoMessage(&protoagent.ConnectionStartResponse{}, protoagent.Message_CONNECTION_REQUEST)
+	resp, err = agent.PackProtoMessage(&agent.ConnectionStartResponse{}, agent.Message_CONNECTION_REQUEST)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare the start connection response: %w", err)
 	}
 	return resp, nil
 }
 
-func (v *vm) processFailedConnectionChallengeResponse(authResp *protoagent.AuthenticationResponse) error {
+func (v *vm) processFailedConnectionChallengeResponse(authResp *agent.AuthenticationResponse) error {
 	if authResp.GetStatus() == utilsErrors.ErrFailedResponseTunnelError.Error() {
 		if err := v.Store.Reset(); err != nil {
 			return err
@@ -348,21 +348,21 @@ func checkKeyPairValidity(pub interface{}, priv []byte) error {
 	return nil
 }
 
-func prepareInitConnReqProtoMsg(csr []byte, abh []byte, info *InitConnectionAgentInfo, agentInfo *protoagent.Information) ([]byte, error) {
+func prepareInitConnReqProtoMsg(csr []byte, abh []byte, info *InitConnectionAgentInfo, agentInfo *agent.Information) ([]byte, error) {
 	os := runtime.GOOS
 	arch := runtime.GOARCH
-	req := &protoagent.InitConnectionRequest{
+	req := &agent.InitConnectionRequest{
 		Csr:     csr,
 		Abh:     abh,
 		AgentID: []byte(info.ID),
-		AgentBinaryID: &protoagent.AgentBinaryID{
+		AgentBinaryID: &agent.AgentBinaryID{
 			Os:      &os,
 			Arch:    &arch,
 			Version: &info.Version,
 		},
 		Info: agentInfo,
 	}
-	payload, err := protoagent.PackProtoMessage(req, protoagent.Message_INIT_CONNECTION)
+	payload, err := agent.PackProtoMessage(req, agent.Message_INIT_CONNECTION)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack the init connection message: %w", err)
 	}
@@ -422,25 +422,25 @@ func (v *vm) GetTLSConfigForConnection() (*tls.Config, error) {
 }
 
 func (v *vm) ProcessConnectionChallengeRequest(ctx context.Context, req []byte) ([]byte, error) {
-	var connChallengeReq protoagent.ConnectionChallengeRequest
-	if err := protoagent.UnpackProtoMessage(&connChallengeReq, req, protoagent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
+	var connChallengeReq agent.ConnectionChallengeRequest
+	if err := agent.UnpackProtoMessage(&connChallengeReq, req, agent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
 		return nil, fmt.Errorf("failed to unpack the connection challenge request: %w", err)
 	}
 	ct, err := v.prepareChallengeResponseCT(&connChallengeReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare the connection challenge response: %w", err)
 	}
-	connChallengeResp := &protoagent.ConnectionChallengeResponse{
+	connChallengeResp := &agent.ConnectionChallengeResponse{
 		Ct: ct,
 	}
-	msg, err := protoagent.PackProtoMessage(connChallengeResp, protoagent.Message_CONNECTION_CHALLENGE_REQUEST)
+	msg, err := agent.PackProtoMessage(connChallengeResp, agent.Message_CONNECTION_CHALLENGE_REQUEST)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack the connection challenge response: %w", err)
 	}
 	return msg, nil
 }
 
-func (v *vm) prepareChallengeResponseCT(req *protoagent.ConnectionChallengeRequest) ([]byte, error) {
+func (v *vm) prepareChallengeResponseCT(req *agent.ConnectionChallengeRequest) ([]byte, error) {
 	response, err := v.challengeCalculator.PrepareChallengeResponse(req.GetNonce())
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare a challenge response: %w", err)

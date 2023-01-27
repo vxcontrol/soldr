@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"soldr/pkg/protoagent"
+	"soldr/pkg/app/agent"
 )
 
-func getUsersInformation() []*protoagent.Information_User {
-	users := make([]*protoagent.Information_User, 0)
+func getUsersInformation() []*agent.Information_User {
+	users := make([]*agent.Information_User, 0)
 
 	entries, err := loadEtcPasswd()
 	if err != nil {
@@ -24,7 +24,7 @@ func getUsersInformation() []*protoagent.Information_User {
 	updateEtcPasswd(entries)
 	for _, usr := range entries {
 		name := usr.username
-		item := &protoagent.Information_User{
+		item := &agent.Information_User{
 			Name:   &name,
 			Groups: []string{},
 		}

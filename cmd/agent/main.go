@@ -18,13 +18,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/natefinch/lumberjack.v2"
 
+	protoagent "soldr/pkg/app/agent"
 	"soldr/pkg/app/agent/config"
 	"soldr/pkg/app/agent/mmodule"
 	readinessChecker "soldr/pkg/app/agent/readiness_checker"
 	"soldr/pkg/app/agent/service"
 	"soldr/pkg/app/agent/upgrader"
 	"soldr/pkg/observability"
-	"soldr/pkg/protoagent"
 	"soldr/pkg/system"
 	"soldr/pkg/utils"
 )
@@ -80,7 +80,7 @@ func FinalizeReadinessCheckAndLogPotentialError(
 	finCtx, finSpan := observability.Observer.NewSpan(ctx, observability.SpanKindInternal, "rcheck_finalizer")
 	defer finSpan.End()
 
-	err := rc.Finalize(finCtx, protoagent.AgentReadinessReportStatus(status))
+	err := rc.Finalize(finCtx, status)
 	if err == nil {
 		return
 	}

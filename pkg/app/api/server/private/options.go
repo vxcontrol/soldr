@@ -10,6 +10,7 @@ import (
 
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
+	"soldr/pkg/app/api/modules"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
 )
@@ -175,7 +176,7 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 		return 0, response.ErrOptionsInvalidRequestData
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		return 0, response.ErrInternalServiceNotFound
 	}
 
@@ -201,7 +202,7 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 				subQuery = getBaseQueryForItem(db, option)
 			} else {
 				subQuery = getBaseQueryForList(db, option)
-				db = LatestModulesQuery(db)
+				db = modules.LatestModulesQuery(db)
 			}
 			return db.Select("`list`.*").
 				Joins("INNER JOIN ? AS list ON ? AND ?", subQuery, cond_name, cond_version)

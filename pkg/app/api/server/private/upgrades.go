@@ -19,6 +19,7 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
+	"soldr/pkg/app/api/modules"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
 	"soldr/pkg/app/api/useraction"
@@ -181,7 +182,7 @@ func (s *UpgradeService) CreateAgentsUpgrades(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -413,7 +414,7 @@ func (s *UpgradeService) PatchLastAgentUpgrade(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = agent.Description
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}

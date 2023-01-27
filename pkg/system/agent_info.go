@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"runtime"
 
-	"soldr/pkg/protoagent"
+	"soldr/pkg/app/agent"
 	"soldr/pkg/utils"
 )
 
 type AgentInfoGetter interface {
-	Get(ctx context.Context) (*protoagent.Information, error)
+	Get(ctx context.Context) (*agent.Information, error)
 }
 
-func GetAgentInfo(ctx context.Context) (*protoagent.Information, error) {
-	agentInfo := make(chan *protoagent.Information, 1)
+func GetAgentInfo(ctx context.Context) (*agent.Information, error) {
+	agentInfo := make(chan *agent.Information, 1)
 	go runFetcher(agentInfo)
 	select {
 	case info := <-agentInfo:
@@ -31,23 +31,23 @@ func GetAgentInfoAsync() AgentInfoGetter {
 }
 
 type agentInfoGetter struct {
-	agentInfo <-chan *protoagent.Information
+	agentInfo <-chan *agent.Information
 }
 
 func newAgentInfoGetter() *agentInfoGetter {
-	agentInfo := make(chan *protoagent.Information, 1)
+	agentInfo := make(chan *agent.Information, 1)
 	go runFetcher(agentInfo)
 	return &agentInfoGetter{
 		agentInfo: agentInfo,
 	}
 }
 
-func runFetcher(resp chan<- *protoagent.Information) {
+func runFetcher(resp chan<- *agent.Information) {
 	resp <- getAgentInformation()
 	close(resp)
 }
 
-func (a *agentInfoGetter) Get(ctx context.Context) (*protoagent.Information, error) {
+func (a *agentInfoGetter) Get(ctx context.Context) (*agent.Information, error) {
 	select {
 	case info, ok := <-a.agentInfo:
 		if !ok {
@@ -69,14 +69,14 @@ func MakeAgentID() string {
 	return hex.EncodeToString(hash[:])
 }
 
-func getAgentInformation() *protoagent.Information {
-	infoMessage := &protoagent.Information{
-		Os: &protoagent.Information_OS{
+func getAgentInformation() *agent.Information {
+	infoMessage := &agent.Information{
+		Os: &agent.Information_OS{
 			Type: utils.GetRef(runtime.GOOS),
 			Name: utils.GetRef(getOSName() + " " + getOSVer()),
 			Arch: utils.GetRef(runtime.GOARCH),
 		},
-		Net: &protoagent.Information_Net{
+		Net: &agent.Information_Net{
 			Hostname: utils.GetRef(getHostname()),
 			Ips:      getIPs(),
 		},

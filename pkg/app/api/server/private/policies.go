@@ -11,6 +11,7 @@ import (
 	"soldr/pkg/app/api/client"
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
+	"soldr/pkg/app/api/modules"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/storage"
 	"soldr/pkg/app/api/useraction"
@@ -194,7 +195,7 @@ func NewPolicyService(
 func (s *PolicyService) GetPolicies(c *gin.Context) {
 	var (
 		groups       []models.Group
-		modules      []models.ModuleSShort
+		moduleList   []models.ModuleSShort
 		modulesa     []models.ModuleAShort
 		pgss         []models.GroupToPolicy
 		pids         []uint64
@@ -226,7 +227,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -236,7 +237,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 		return db.Where("tenant_id = ? AND service_type = ?", tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(modules.LatestModulesQuery, scope).Find(&moduleList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error loading system modules latest version")
 		response.Error(c, response.ErrGetPoliciesSystemModulesNotFound, err)
 		return
@@ -383,7 +384,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 				continue
 			}
 			details.Modules = append(details.Modules, modulesa[i])
-			for _, module := range modules {
+			for _, module := range moduleList {
 				if !details.UpdateModules && module.Info.Name == name {
 					isSameVersion := module.Info.Version.String() == modulesa[i].Info.Version.String()
 					details.UpdateModules = !isSameVersion
@@ -420,10 +421,10 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 // @Router /policies/{hash} [get]
 func (s *PolicyService) GetPolicy(c *gin.Context) {
 	var (
-		hash    = c.Param("hash")
-		modules []models.ModuleSShort
-		resp    policy
-		sv      *models.Service
+		hash        = c.Param("hash")
+		modulesList []models.ModuleSShort
+		resp        policy
+		sv          *models.Service
 	)
 
 	serviceHash := c.GetString("svc")
@@ -439,7 +440,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -449,7 +450,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 		return db.Where("tenant_id = ? AND service_type = ?", tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(LatestModulesQuery, scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(modules.LatestModulesQuery, scope).Find(&modulesList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error loading system modules latest version")
 		response.Error(c, response.ErrGetPolicySystemModulesNotFound, err)
 		return
@@ -489,7 +490,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 				response.Error(c, response.ErrGetPolicyInvalidModuleData, err)
 				return
 			}
-			for _, module := range modules {
+			for _, module := range modulesList {
 				if !resp.Details.UpdateModules && module.Info.Name == name {
 					isSameVersion := module.Info.Version.String() == resp.Details.Modules[i].Info.Version.String()
 					resp.Details.UpdateModules = !isSameVersion
@@ -817,10 +818,10 @@ func (s *PolicyService) CreatePolicy(c *gin.Context) {
 // @Router /policies/{hash} [delete]
 func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	var (
-		hash    = c.Param("hash")
-		modules []models.ModuleAShort
-		policy  models.Policy
-		sv      *models.Service
+		hash       = c.Param("hash")
+		moduleList []models.ModuleAShort
+		policy     models.Policy
+		sv         *models.Service
 	)
 	uaf := useraction.Fields{
 		Domain:            "policy",
@@ -844,7 +845,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		return
 	}
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -884,7 +885,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		return
 	}
 
-	if err = iDB.Find(&modules, "policy_id = ?", policy.ID).Error; err != nil {
+	if err = iDB.Find(&moduleList, "policy_id = ?", policy.ID).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding policy modules by policy ID '%d'", policy.ID)
 		response.Error(c, response.ErrDeletePolicyModulesNotFound, err)
 		return
@@ -896,10 +897,10 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		return
 	}
 
-	for _, module := range modules {
+	for _, module := range moduleList {
 		moduleName := module.Info.Name
 		moduleVersion := module.Info.Version.String()
-		if err = removeUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
+		if err = modules.RemoveUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return

@@ -128,13 +128,13 @@ func updateModuleInPolicies(ctx context.Context, encryptor crypto.IDBConfigEncry
 		return
 	}
 
-	if err := modules.CopyModuleAFilesToInstanceS3(&moduleS.Info, srv.sv); err != nil {
+	checksums, err := modules.CopyModuleAFilesToInstanceS3(&moduleS.Info, srv.sv)
+	if err != nil {
 		logrus.WithContext(ctx).WithError(err).Warnf("error copying module files to S3")
 		return
 	}
 
 	excl := []string{"policy_id", "status", "join_date", "last_update"}
-	var err error
 	for _, moduleA := range modulesA {
 		moduleA, err = modules.MergeModuleAConfigFromModuleS(&moduleA, moduleS, encryptor)
 		if err != nil {
@@ -142,6 +142,7 @@ func updateModuleInPolicies(ctx context.Context, encryptor crypto.IDBConfigEncry
 				continue
 			}
 		}
+		moduleA.FilesChecksums = checksums
 		if err = srv.iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
 			logrus.WithContext(ctx).WithError(err).Warnf("error updating module: error saving module data")
 		}

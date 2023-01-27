@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"soldr/pkg/protoagent"
+	"soldr/pkg/app/agent"
 	"soldr/pkg/vxproto/tunnel"
 )
 
@@ -21,9 +21,9 @@ type IAgentSocket interface {
 	SetSource(src string)
 	GetDestination() string
 	SetVersion(string)
-	SetInfo(info *protoagent.Information)
-	SetAuthReq(req *protoagent.AuthenticationRequest)
-	SetAuthResp(resp *protoagent.AuthenticationResponse)
+	SetInfo(info *agent.Information)
+	SetAuthReq(req *agent.AuthenticationRequest)
+	SetAuthResp(resp *agent.AuthenticationResponse)
 	IConnection
 	IVaildator
 	IMMInformator
@@ -101,21 +101,21 @@ func (at *AgentType) UnmarshalJSON(data []byte) error {
 
 // AuthenticationData is struct which contains information about authentication
 type AuthenticationData struct {
-	req  *protoagent.AuthenticationRequest
-	resp *protoagent.AuthenticationResponse
+	req  *agent.AuthenticationRequest
+	resp *agent.AuthenticationResponse
 }
 
 // AgentInfo is struct which contains only public information about agent
 type AgentInfo struct {
-	IsOnlyForUpgrade bool                    `json:"-"`
-	ID               string                  `json:"id"`
-	GID              string                  `json:"gid"`
-	IP               string                  `json:"ip"`
-	Src              string                  `json:"src"`
-	Dst              string                  `json:"dst"`
-	Ver              string                  `json:"ver"`
-	Type             AgentType               `json:"type"`
-	Info             *protoagent.Information `json:"-"`
+	IsOnlyForUpgrade bool               `json:"-"`
+	ID               string             `json:"id"`
+	GID              string             `json:"gid"`
+	IP               string             `json:"ip"`
+	Src              string             `json:"src"`
+	Dst              string             `json:"dst"`
+	Ver              string             `json:"ver"`
+	Type             AgentType          `json:"type"`
+	Info             *agent.Information `json:"-"`
 }
 
 const (
@@ -138,7 +138,7 @@ type agentSocket struct {
 	src              string
 	ver              string
 	at               AgentType
-	info             *protoagent.Information
+	info             *agent.Information
 	auth             *AuthenticationData
 	packEncrypter    tunnel.PackEncryptor
 	pinger           Pinger
@@ -196,17 +196,17 @@ func (as *agentSocket) SetVersion(ver string) {
 }
 
 // SetInfo is function which storing information about agent
-func (as *agentSocket) SetInfo(info *protoagent.Information) {
+func (as *agentSocket) SetInfo(info *agent.Information) {
 	as.info = info
 }
 
 // SetAuthReq is function which storing authentication request about agent after handshake
-func (as *agentSocket) SetAuthReq(req *protoagent.AuthenticationRequest) {
+func (as *agentSocket) SetAuthReq(req *agent.AuthenticationRequest) {
 	as.auth.req = req
 }
 
 // SetAuthResp is function which storing authentication response about agent after handshake
-func (as *agentSocket) SetAuthResp(resp *protoagent.AuthenticationResponse) {
+func (as *agentSocket) SetAuthResp(resp *agent.AuthenticationResponse) {
 	as.auth.resp = resp
 }
 
