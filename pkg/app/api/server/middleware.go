@@ -156,16 +156,16 @@ func authRequired() gin.HandlerFunc {
 	}
 }
 
+// localUserRequired checks that role of the caller is not External
+// This middleware must be used in the chain after authRequired.
 func localUserRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if c.IsAborted() {
 			return
 		}
 
-		session := sessions.Default(c)
-		rid := session.Get("rid")
-
-		if rid == nil || rid.(uint64) == models.RoleExternal {
+		roleID := c.GetUint64("rid")
+		if roleID == models.RoleExternal {
 			response.Error(c, response.ErrLocalUserRequired, nil)
 			return
 		}

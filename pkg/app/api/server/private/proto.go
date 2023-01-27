@@ -71,7 +71,7 @@ func ValidateToken(tokenString string) (*models.ProtoAuthTokenClaims, error) {
 		return storage.MakeCookieStoreKey(), nil
 	})
 
-	if token.Valid {
+	if token != nil && token.Valid {
 		return &claims, nil
 	} else if ve, ok := err.(*jwt.ValidationError); ok {
 		if ve.Errors&jwt.ValidationErrorMalformed != 0 {
