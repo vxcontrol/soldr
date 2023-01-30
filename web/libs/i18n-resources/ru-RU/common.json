@@ -31,7 +31,6 @@
     "Common.Pseudo.Text.NotFound": "Ничего не найдено",
     "Common.Pseudo.Text.TByte": "ТБ",
     "Common.Pseudo.ValidationText.FormatInvalid": "Не соответствует формату",
-    "Common.Pseudo.ValidationText.MaxLengthEntityName": "Не больше 255 символов",
     "Common.Pseudo.ValidationText.MaxValue": "Больше максимального",
     "Common.Pseudo.ValidationText.MinLength": "Не меньше {minLength} символов",
     "Common.Pseudo.ValidationText.MinValue": "Меньше минимального",

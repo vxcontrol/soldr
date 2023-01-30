@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Host, Input, Output } from '@angular/core';
+import { ChangeDetectorRef, Component, EventEmitter, Host, Input, Output } from '@angular/core';
 
 import { ToggleListComponent } from '../toggle-list/toggle-list.component';
 
@@ -14,9 +14,10 @@ export class ToggleItemComponent {
 
     @Output() delete = new EventEmitter();
 
-    constructor(@Host() private list: ToggleListComponent) {}
+    constructor(@Host() private list: ToggleListComponent, private cdr: ChangeDetectorRef) {}
 
     toggle() {
         this.isExpanded = !this.isExpanded;
+        this.cdr.detectChanges();
     }
 }

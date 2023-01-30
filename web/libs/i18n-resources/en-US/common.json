@@ -31,7 +31,6 @@
     "Common.Pseudo.Text.NotFound": "No results found",
     "Common.Pseudo.Text.TByte": "TB",
     "Common.Pseudo.ValidationText.FormatInvalid": "Invalid format",
-    "Common.Pseudo.ValidationText.MaxLengthEntityName": "At most 255 characters",
     "Common.Pseudo.ValidationText.MaxValue": "More than the maximum",
     "Common.Pseudo.ValidationText.MinLength": "Minimum number of characters: {minLength}",
     "Common.Pseudo.ValidationText.MinValue": "Less than the minimum",
