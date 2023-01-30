@@ -7,7 +7,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/server/certs"
 	"soldr/pkg/app/server/mmodule/hardening/v1/abher"
 	"soldr/pkg/app/server/mmodule/hardening/v1/abher/types"
@@ -18,6 +17,7 @@ import (
 	tunnelConfigurer "soldr/pkg/app/server/mmodule/hardening/v1/tunnel"
 	"soldr/pkg/app/server/mmodule/hardening/v1/validator/ainfo"
 	"soldr/pkg/filestorage"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 	"soldr/pkg/vxproto/tunnel"
 )
@@ -41,7 +41,7 @@ type Challenger interface {
 }
 
 type TunnelConfigurer interface {
-	GetTunnelConfig() (*tunnel.Config, *agent.TunnelConfig, error)
+	GetTunnelConfig() (*tunnel.Config, *protoagent.TunnelConfig, error)
 }
 
 type ConnectionValidator struct {

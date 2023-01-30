@@ -19,8 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/vxcontrol/luar"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/lua"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/utils"
 	"soldr/pkg/vxproto"
 	"soldr/pkg/vxproto/tunnel"
@@ -74,7 +74,7 @@ func (mModule *FakeMainModule) GetConnectionValidatorFactory() vxproto.Connectio
 
 type agentConnectionValidator struct{}
 
-func (acv *agentConnectionValidator) OnInitConnect(context.Context, vxproto.SyncWS, *agent.Information) error {
+func (acv *agentConnectionValidator) OnInitConnect(context.Context, vxproto.SyncWS, *protoagent.Information) error {
 	return nil
 }
 
@@ -87,37 +87,37 @@ func (acv *agentConnectionValidator) OnConnect(
 	iasocket vxproto.IAgentSocket,
 	packEncryptor tunnel.PackEncryptor,
 	configurePingee func(p vxproto.Pinger) error,
-	info *agent.Information,
+	info *protoagent.Information,
 ) error {
 	configurePingee(&pinger{})
 	seconds := time.Now().Unix()
 	stoken := randString(20)
-	user := &agent.Information_User{
+	user := &protoagent.Information_User{
 		Name:   utils.GetRef("root"),
 		Groups: []string{"root"},
 	}
-	iasocket.SetAuthReq(&agent.AuthenticationRequest{
+	iasocket.SetAuthReq(&protoagent.AuthenticationRequest{
 		Timestamp: &seconds,
 		Atoken:    utils.GetRef(""),
 		Aversion:  utils.GetRef("develop"),
 	})
-	iasocket.SetAuthResp(&agent.AuthenticationResponse{
+	iasocket.SetAuthResp(&protoagent.AuthenticationResponse{
 		Atoken:   utils.GetRef(iasocket.GetSource()),
 		Stoken:   utils.GetRef(stoken),
 		Sversion: utils.GetRef(iasocket.GetVersion()),
 		Status:   utils.GetRef("authorized"),
 	})
-	iasocket.SetInfo(&agent.Information{
-		Os: &agent.Information_OS{
+	iasocket.SetInfo(&protoagent.Information{
+		Os: &protoagent.Information_OS{
 			Type: utils.GetRef("linux"),
 			Name: utils.GetRef("Ubuntu 16.04"),
 			Arch: utils.GetRef("amd64"),
 		},
-		Net: &agent.Information_Net{
+		Net: &protoagent.Information_Net{
 			Hostname: utils.GetRef("test_pc"),
 			Ips:      []string{"127.0.0.1/8"},
 		},
-		Users: []*agent.Information_User{
+		Users: []*protoagent.Information_User{
 			user,
 		},
 	})
@@ -1978,6 +1978,6 @@ func (e *MockPackEncryptor) Decrypt(data []byte) ([]byte, error) {
 	return data, nil
 }
 
-func (e *MockPackEncryptor) Reset(config *agent.TunnelConfig) error {
+func (e *MockPackEncryptor) Reset(config *protoagent.TunnelConfig) error {
 	return nil
 }

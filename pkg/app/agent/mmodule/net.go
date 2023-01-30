@@ -8,17 +8,17 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/loader"
 	obs "soldr/pkg/observability"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/system"
 	"soldr/pkg/utils"
 	"soldr/pkg/vxproto"
 )
 
 // responseAgent is function which send response to server
-func (mm *MainModule) getStatusModules() *agent.ModuleStatusList {
-	var modulesList agent.ModuleStatusList
+func (mm *MainModule) getStatusModules() *protoagent.ModuleStatusList {
+	var modulesList protoagent.ModuleStatusList
 	for _, id := range mm.loader.List() {
 		ms := mm.loader.Get(id)
 		if ms == nil {
@@ -30,14 +30,14 @@ func (mm *MainModule) getStatusModules() *agent.ModuleStatusList {
 			continue
 		}
 
-		var osList []*agent.Config_OS
+		var osList []*protoagent.Config_OS
 		for osType, archList := range mc.OS {
-			osList = append(osList, &agent.Config_OS{
+			osList = append(osList, &protoagent.Config_OS{
 				Type: utils.GetRef(osType),
 				Arch: archList,
 			})
 		}
-		config := &agent.Config{
+		config := &protoagent.Config{
 			Os:               osList,
 			GroupId:          utils.GetRef(mc.GroupID),
 			PolicyId:         utils.GetRef(mc.PolicyID),
@@ -52,7 +52,7 @@ func (mm *MainModule) getStatusModules() *agent.ModuleStatusList {
 			LastUpdate:       utils.GetRef(mc.LastUpdate),
 		}
 
-		iconfig := &agent.ConfigItem{
+		iconfig := &protoagent.ConfigItem{
 			ConfigSchema:        utils.GetRef(mc.GetConfigSchema()),
 			DefaultConfig:       utils.GetRef(mc.GetDefaultConfig()),
 			CurrentConfig:       utils.GetRef(mc.GetCurrentConfig()),
@@ -70,7 +70,7 @@ func (mm *MainModule) getStatusModules() *agent.ModuleStatusList {
 			SecureCurrentConfig: utils.GetRef(mc.GetSecureCurrentConfig()),
 		}
 
-		moduleStatus := &agent.ModuleStatus{
+		moduleStatus := &protoagent.ModuleStatus{
 			Name:       utils.GetRef(mc.Name),
 			Config:     config,
 			ConfigItem: iconfig,
@@ -82,7 +82,7 @@ func (mm *MainModule) getStatusModules() *agent.ModuleStatusList {
 	return &modulesList
 }
 
-func (mm *MainModule) getModuleConfig(m *agent.Module) *loader.ModuleConfig {
+func (mm *MainModule) getModuleConfig(m *protoagent.Module) *loader.ModuleConfig {
 	mci := &loader.ModuleConfigItem{
 		ConfigSchema:        m.GetConfigItem().GetConfigSchema(),
 		CurrentConfig:       m.GetConfigItem().GetCurrentConfig(),
@@ -133,7 +133,7 @@ func (mm *MainModule) getModuleConfig(m *agent.Module) *loader.ModuleConfig {
 	return mc
 }
 
-func (mm *MainModule) getModuleItem(m *agent.Module) *loader.ModuleItem {
+func (mm *MainModule) getModuleItem(m *protoagent.Module) *loader.ModuleItem {
 	mi := loader.NewItem()
 
 	mf := make(map[string][]byte)
@@ -162,7 +162,7 @@ const (
 )
 
 // responseAgent is function which send response to server
-func (mm *MainModule) responseAgent(ctx context.Context, dst string, msgType agent.Message_Type, payload []byte) error {
+func (mm *MainModule) responseAgent(ctx context.Context, dst string, msgType protoagent.Message_Type, payload []byte) error {
 	mm.mutexResp.Lock()
 	defer mm.mutexResp.Unlock()
 
@@ -170,7 +170,7 @@ func (mm *MainModule) responseAgent(ctx context.Context, dst string, msgType age
 		return fmt.Errorf(moduleSocketNotInitializedMsg)
 	}
 
-	messageData, err := agent.PackMessage(msgType, payload)
+	messageData, err := protoagent.PackMessage(msgType, payload)
 	if err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (mm *MainModule) sendInformation(ctx context.Context, dst string) error {
 		return err
 	}
 
-	return mm.responseAgent(ctx, dst, agent.Message_INFORMATION_RESULT, infoMessageData)
+	return mm.responseAgent(ctx, dst, protoagent.Message_INFORMATION_RESULT, infoMessageData)
 }
 
 func (mm *MainModule) sendStatusModules(ctx context.Context, dst string) error {
@@ -205,7 +205,7 @@ func (mm *MainModule) sendStatusModules(ctx context.Context, dst string) error {
 		return fmt.Errorf("failed to marshal modules status list: %w", err)
 	}
 
-	return mm.responseAgent(ctx, dst, agent.Message_STATUS_MODULES_RESULT, statusModulesData)
+	return mm.responseAgent(ctx, dst, protoagent.Message_STATUS_MODULES_RESULT, statusModulesData)
 }
 
 func (mm *MainModule) sendAction(ctx context.Context, name string, data proto.Message) error {
@@ -253,7 +253,7 @@ func (mm *MainModule) serveStartModules(ctx context.Context, dst string, data []
 		}
 	}()
 
-	var moduleList agent.ModuleList
+	var moduleList protoagent.ModuleList
 	if err = proto.Unmarshal(data, &moduleList); err != nil {
 		err = fmt.Errorf(failedToUnmarshalModulesInfoMsg, err)
 		return
@@ -311,7 +311,7 @@ func (mm *MainModule) serveStopModules(ctx context.Context, dst string, data []b
 		}
 	}()
 
-	var moduleList agent.ModuleList
+	var moduleList protoagent.ModuleList
 	if err = proto.Unmarshal(data, &moduleList); err != nil {
 		err = fmt.Errorf(failedToUnmarshalModulesInfoMsg, err)
 		return
@@ -357,7 +357,7 @@ func (mm *MainModule) serveUpdateModules(ctx context.Context, dst string, data [
 		}
 	}()
 
-	var moduleList agent.ModuleList
+	var moduleList protoagent.ModuleList
 	if err = proto.Unmarshal(data, &moduleList); err != nil {
 		err = fmt.Errorf(failedToUnmarshalModulesInfoMsg, err)
 		return
@@ -429,7 +429,7 @@ func (mm *MainModule) serveUpdateConfigModules(ctx context.Context, dst string, 
 		}
 	}()
 
-	var moduleList agent.ModuleList
+	var moduleList protoagent.ModuleList
 	if err = proto.Unmarshal(data, &moduleList); err != nil {
 		err = fmt.Errorf(failedToUnmarshalModulesInfoMsg, err)
 		return
@@ -463,12 +463,12 @@ func (mm *MainModule) serveUpdateConfigModules(ctx context.Context, dst string, 
 }
 
 func (mm *MainModule) serveUpdateExecPushMsg(ctx context.Context, src string, payload []byte) error {
-	var msg agent.AgentUpgradeExecPush
+	var msg protoagent.AgentUpgradeExecPush
 	if err := proto.Unmarshal(payload, &msg); err != nil {
 		return fmt.Errorf("failed to unmarshal the update exec push message: %w", err)
 	}
 	mm.upgraderWG.Add(1)
-	go func(msg *agent.AgentUpgradeExecPush) {
+	go func(msg *protoagent.AgentUpgradeExecPush) {
 		defer mm.upgraderWG.Done()
 		if err := mm.upgrader.startUpgrade(ctx, src, msg); err != nil {
 			logrus.WithContext(ctx).Error(fmt.Errorf("failed to start the agent update: %w", err))
@@ -478,25 +478,25 @@ func (mm *MainModule) serveUpdateExecPushMsg(ctx context.Context, src string, pa
 }
 
 func (mm *MainModule) serveData(ctx context.Context, src string, data *vxproto.Data) error {
-	var message agent.Message
+	var message protoagent.Message
 	if err := proto.Unmarshal(data.Data, &message); err != nil {
 		return err
 	}
 
 	switch message.GetType() {
-	case agent.Message_GET_INFORMATION:
+	case protoagent.Message_GET_INFORMATION:
 		return mm.sendInformation(ctx, src)
-	case agent.Message_GET_STATUS_MODULES:
+	case protoagent.Message_GET_STATUS_MODULES:
 		return mm.sendStatusModules(ctx, src)
-	case agent.Message_START_MODULES:
+	case protoagent.Message_START_MODULES:
 		return mm.serveStartModules(ctx, src, message.Payload)
-	case agent.Message_STOP_MODULES:
+	case protoagent.Message_STOP_MODULES:
 		return mm.serveStopModules(ctx, src, message.Payload)
-	case agent.Message_UPDATE_MODULES:
+	case protoagent.Message_UPDATE_MODULES:
 		return mm.serveUpdateModules(ctx, src, message.Payload)
-	case agent.Message_UPDATE_CONFIG_MODULES:
+	case protoagent.Message_UPDATE_CONFIG_MODULES:
 		return mm.serveUpdateConfigModules(ctx, src, message.Payload)
-	case agent.Message_AGENT_UPGRADE_EXEC_PUSH:
+	case protoagent.Message_AGENT_UPGRADE_EXEC_PUSH:
 		return mm.serveUpdateExecPushMsg(ctx, src, message.Payload)
 	default:
 		return fmt.Errorf("received unknown message type")

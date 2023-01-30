@@ -24,7 +24,6 @@ import (
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/server/certs"
 	"soldr/pkg/app/server/mmodule/hardening"
@@ -38,6 +37,7 @@ import (
 	"soldr/pkg/loader"
 	"soldr/pkg/lua"
 	obs "soldr/pkg/observability"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/system"
 	utilsErrors "soldr/pkg/utils/errors"
 	"soldr/pkg/vxproto"
@@ -371,7 +371,7 @@ func (mm *MainModule) HasAgentInfoValid(ctx context.Context, asocket vxproto.IAg
 	return nil
 }
 
-func checkAgentInfo(info *agent.Information) bool {
+func checkAgentInfo(info *protoagent.Information) bool {
 	switch info.GetOs().GetType() {
 	case "linux":
 	case "windows":
@@ -413,7 +413,7 @@ func (mm *MainModule) createAgent(
 	ip string,
 	description string,
 	version string,
-	agentInfo *agent.Information,
+	agentInfo *protoagent.Information,
 ) error {
 	agentInfoUsers := agentInfo.GetUsers()
 	agentUsers := make([]models.AgentUser, len(agentInfoUsers))
@@ -697,7 +697,7 @@ func (mm *MainModule) recvAction(ctx context.Context, src string, act *vxproto.A
 
 	switch act.Name {
 	case "push_event":
-		var ape agent.ActionPushEvent
+		var ape protoagent.ActionPushEvent
 		const msgBadActionData = "bad action data: push_event"
 		if err := proto.Unmarshal(act.Data, &ape); err != nil {
 			err := fmt.Errorf("failed to unmarshal action data")
@@ -727,7 +727,7 @@ func (mm *MainModule) recvAction(ctx context.Context, src string, act *vxproto.A
 		}
 
 	case "push_obs_packet":
-		var obsPacket agent.ObsPacket
+		var obsPacket protoagent.ObsPacket
 		if err := proto.Unmarshal(act.Data, &obsPacket); err != nil {
 			log.WithError(err).Error("bad action data: push_obs_packet")
 			return fmt.Errorf("failed to unmarshal action data")
@@ -1114,8 +1114,8 @@ func (mm *MainModule) filterModulesForAgent(ctx context.Context, mIDs []string, 
 
 // syncModules is a function to sync agent modules state to group modules state
 func (mm *MainModule) syncModules(ctx context.Context, gid, dst string, ainfo *agentInfo,
-	mStatusList *agent.ModuleStatusList,
-) (*agent.ModuleStatusList, error) {
+	mStatusList *protoagent.ModuleStatusList,
+) (*protoagent.ModuleStatusList, error) {
 	var err error
 	var (
 		wantStartModuleIDs  []string
@@ -1128,7 +1128,7 @@ func (mm *MainModule) syncModules(ctx context.Context, gid, dst string, ainfo *a
 	mStates := mm.cnt.GetModuleStates(mIDs)
 	mObjs := mm.cnt.GetModules(mIDs)
 
-	isEqualModuleConfig := func(mc1 *loader.ModuleConfig, mc2 *agent.Config) bool {
+	isEqualModuleConfig := func(mc1 *loader.ModuleConfig, mc2 *protoagent.Config) bool {
 		isSameState := mc1.State == mc2.GetState()
 		isSameTemplate := mc1.Template == mc2.GetTemplate()
 		isSameVersion := mc1.Version.String() == mc2.GetVersion()
@@ -1142,14 +1142,14 @@ func (mm *MainModule) syncModules(ctx context.Context, gid, dst string, ainfo *a
 		return true
 	}
 
-	isEqualModuleConfigItem := func(mc1 *loader.ModuleConfig, mc2 *agent.Config) bool {
+	isEqualModuleConfigItem := func(mc1 *loader.ModuleConfig, mc2 *protoagent.Config) bool {
 		return mc1.LastUpdate == mc2.GetLastUpdate()
 	}
 
 	for _, mStatusItem := range mStatusList.GetList() {
 		mConfig := mStatusItem.GetConfig()
 		mID := mConfig.GetGroupId() + ":" + mConfig.GetPolicyId() + ":" + mConfig.GetName()
-		if state, ok := mStates[mID]; ok && state != nil && state.GetStatus() == agent.ModuleStatus_RUNNING {
+		if state, ok := mStates[mID]; ok && state != nil && state.GetStatus() == protoagent.ModuleStatus_RUNNING {
 			if obj, ok := mObjs[mID]; ok && obj != nil {
 				if !isEqualModuleConfig(obj.GetConfig(), mConfig) {
 					wantUpdateModuleIDs = append(wantUpdateModuleIDs, mID)
@@ -1164,7 +1164,7 @@ func (mm *MainModule) syncModules(ctx context.Context, gid, dst string, ainfo *a
 	}
 
 	for _, mID := range mIDs {
-		var mStatus *agent.ModuleStatus
+		var mStatus *protoagent.ModuleStatus
 		for _, mStatusItem := range mStatusList.GetList() {
 			mConfig := mStatusItem.GetConfig()
 			if mID == mConfig.GetGroupId()+":"+mConfig.GetPolicyId()+":"+mConfig.GetName() {

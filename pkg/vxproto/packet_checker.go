@@ -7,7 +7,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
+	"soldr/pkg/protoagent"
 )
 
 func NewConnectionPolicyManagerIterator(versionsConfig ServerAPIVersionsConfig) (*ConnectionPolicyManagerIterator, error) {
@@ -277,12 +277,12 @@ func newUpgradePacketChecker() *upgradePacketChecker {
 				PTData,
 			)
 		}
-		var message agent.Message
+		var message protoagent.Message
 		if err := proto.Unmarshal(p.GetData().Data, &message); err != nil {
 			return fmt.Errorf("failed to unmarshal the received message: %w", err)
 		}
 		msgType := message.GetType()
-		if msgType != agent.Message_AGENT_UPGRADE_EXEC_PUSH_RESULT {
+		if msgType != protoagent.Message_AGENT_UPGRADE_EXEC_PUSH_RESULT {
 			return fmt.Errorf("message of type %s cannot be received", msgType.String())
 		}
 		return nil
@@ -293,12 +293,12 @@ func newUpgradePacketChecker() *upgradePacketChecker {
 		}
 		switch p.PType {
 		case PTData:
-			var message agent.Message
+			var message protoagent.Message
 			if err := proto.Unmarshal(p.GetData().Data, &message); err != nil {
 				return fmt.Errorf("failed to unmarshal the received message: %w", err)
 			}
 			msgType := message.GetType()
-			if msgType != agent.Message_AGENT_UPGRADE_EXEC_PUSH {
+			if msgType != protoagent.Message_AGENT_UPGRADE_EXEC_PUSH {
 				return fmt.Errorf("message of type %s cannot be sent", msgType.String())
 			}
 			return nil

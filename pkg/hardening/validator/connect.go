@@ -9,9 +9,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	vxcommonErrors "soldr/pkg/errors"
 	"soldr/pkg/hardening/pingee"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/utils"
 	utilsErrors "soldr/pkg/utils/errors"
 	"soldr/pkg/vxproto"
@@ -23,7 +23,7 @@ func (v *Validator) OnConnect(
 	socket vxproto.IAgentSocket,
 	encrypter tunnel.PackEncryptor,
 	configurePingee func(p vxproto.Pinger) error,
-	agentInfo *agent.Information,
+	agentInfo *protoagent.Information,
 ) error {
 	if err := v.doHandshakeWithServer(ctx, socket, encrypter, agentInfo); err != nil {
 		return fmt.Errorf("handshake with server has failed: %w", err)
@@ -58,7 +58,7 @@ func (v *Validator) doHandshakeWithServer(
 	ctx context.Context,
 	socket vxproto.IAgentSocket,
 	encrypter tunnel.PackEncryptor,
-	agentInfo *agent.Information,
+	agentInfo *protoagent.Information,
 ) error {
 	logrus.WithContext(ctx).Debug("doing handshake with server")
 	if err := doHandshakeWithServerOnAgent(ctx, socket, agentInfo); err != nil {
@@ -96,11 +96,11 @@ func (v *Validator) doHandshakeWithServer(
 func doHandshakeWithServerOnAgent(
 	ctx context.Context,
 	iasocket vxproto.IAgentSocket,
-	infoMessage *agent.Information,
+	infoMessage *protoagent.Information,
 ) error {
 	logrus.WithContext(ctx).Debug("doing handshake with server or agent")
 	seconds := time.Now().Unix()
-	authReqMessage := &agent.AuthenticationRequest{
+	authReqMessage := &protoagent.AuthenticationRequest{
 		Timestamp: &seconds,
 		Atoken:    utils.GetRef(iasocket.GetSource()),
 		Aversion:  utils.GetRef(iasocket.GetVersion()),
@@ -117,7 +117,7 @@ func doHandshakeWithServerOnAgent(
 		return err
 	}
 
-	var authRespMessage agent.AuthenticationResponse
+	var authRespMessage protoagent.AuthenticationResponse
 	authMessageData, err = iasocket.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read the authentication response: %w", err)

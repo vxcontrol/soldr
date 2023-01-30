@@ -17,7 +17,6 @@ import (
 	"github.com/vxcontrol/luar"
 	"go.opentelemetry.io/otel/attribute"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/api/models"
 	vxcommonErrors "soldr/pkg/errors"
 	"soldr/pkg/hardening/luavm/store/types"
@@ -26,6 +25,7 @@ import (
 	"soldr/pkg/loader"
 	"soldr/pkg/lua"
 	obs "soldr/pkg/observability"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/system"
 	"soldr/pkg/vxproto"
 	"soldr/pkg/vxproto/tunnel"
@@ -632,7 +632,7 @@ func (mm *MainModule) RegisterLuaAPI(state *lua.State, config *loader.ModuleConf
 				return false
 			}
 
-			err := mm.sendAction(eventCtx, pushEvent, &agent.ActionPushEvent{
+			err := mm.sendAction(eventCtx, pushEvent, &protoagent.ActionPushEvent{
 				ModuleName: &mname,
 				GroupId:    &gid,
 				PolicyId:   &pid,
@@ -718,7 +718,7 @@ func (mm *MainModule) registerUploadCallbacks() error {
 	}
 	const name = "push_obs_packet"
 	mm.tracerConfigClient.UploadCallback = func(ctx context.Context, traces [][]byte) error {
-		return mm.sendAction(ctx, name, &agent.ObsPacket{
+		return mm.sendAction(ctx, name, &protoagent.ObsPacket{
 			Traces: traces,
 		})
 	}
@@ -726,7 +726,7 @@ func (mm *MainModule) registerUploadCallbacks() error {
 		return errMeterNotInitialized
 	}
 	mm.meterConfigClient.UploadCallback = func(ctx context.Context, metrics [][]byte) error {
-		return mm.sendAction(ctx, name, &agent.ObsPacket{
+		return mm.sendAction(ctx, name, &protoagent.ObsPacket{
 			Metrics: metrics,
 		})
 	}

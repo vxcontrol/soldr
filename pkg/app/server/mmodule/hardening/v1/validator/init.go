@@ -16,9 +16,9 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/server/mmodule/hardening/v1/abher/types"
+	"soldr/pkg/protoagent"
 	utilsErrors "soldr/pkg/utils/errors"
 	"soldr/pkg/vxproto"
 )
@@ -60,7 +60,7 @@ func (v *ConnectionValidator) OnInitConnect(
 	})
 	logger.Infof("agent %s is performing its initial connection", string(req.AgentID))
 
-	resp := &agent.InitConnectionResponse{}
+	resp := &protoagent.InitConnectionResponse{}
 	resp.Ltac, err = v.processInitConnectRequest(initConnectCtx, tlsConnState, req, info, logger)
 	if err != nil {
 		logger.WithError(err).Error("failed to process the init connection request")
@@ -88,15 +88,15 @@ const (
 	syncConnectedDateForInitAgent = time.Second * 60
 )
 
-func getInitConnectRequest(ctx context.Context, ws vxproto.SyncWS) (*agent.InitConnectionRequest, error) {
+func getInitConnectRequest(ctx context.Context, ws vxproto.SyncWS) (*protoagent.InitConnectionRequest, error) {
 	ctx, cancelCtx := context.WithTimeout(ctx, initRequestTimeout)
 	defer cancelCtx()
 	msg, err := ws.Read(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read the init connect request: %w", err)
 	}
-	var initConnectReq agent.InitConnectionRequest
-	if err := agent.UnpackProtoMessage(&initConnectReq, msg, agent.Message_INIT_CONNECTION); err != nil {
+	var initConnectReq protoagent.InitConnectionRequest
+	if err := protoagent.UnpackProtoMessage(&initConnectReq, msg, protoagent.Message_INIT_CONNECTION); err != nil {
 		return nil, fmt.Errorf("failed to unpack the init connect message: %w", err)
 	}
 	return &initConnectReq, nil
@@ -105,7 +105,7 @@ func getInitConnectRequest(ctx context.Context, ws vxproto.SyncWS) (*agent.InitC
 func (v *ConnectionValidator) processInitConnectRequest(
 	ctx context.Context,
 	tlsConnState *tls.ConnectionState,
-	req *agent.InitConnectionRequest,
+	req *protoagent.InitConnectionRequest,
 	info *vxproto.InitConnectionInfo,
 	logger *logrus.Entry,
 ) ([]byte, error) {
@@ -208,8 +208,8 @@ func (v *ConnectionValidator) validateABH(
 	return nil
 }
 
-func sendInitConnectResponse(ctx context.Context, ws vxproto.SyncWS, resp *agent.InitConnectionResponse) error {
-	respMsg, err := agent.PackProtoMessage(resp, agent.Message_INIT_CONNECTION)
+func sendInitConnectResponse(ctx context.Context, ws vxproto.SyncWS, resp *protoagent.InitConnectionResponse) error {
+	respMsg, err := protoagent.PackProtoMessage(resp, protoagent.Message_INIT_CONNECTION)
 	if err != nil {
 		return fmt.Errorf("failed to pack the init connection response: %w", err)
 	}
@@ -235,7 +235,7 @@ func (v *ConnectionValidator) upsertAgent(
 	ctx context.Context,
 	agentID string,
 	version string,
-	info *agent.Information,
+	info *protoagent.Information,
 	connInfo *vxproto.InitConnectionInfo,
 ) error {
 	if v.gdbc == nil {
@@ -321,7 +321,7 @@ func (v *ConnectionValidator) upsertAgent(
 	return nil
 }
 
-func getAgentUsers(info *agent.Information) []models.AgentUser {
+func getAgentUsers(info *protoagent.Information) []models.AgentUser {
 	agentInfoUsers := info.GetUsers()
 	agentUsers := make([]models.AgentUser, len(agentInfoUsers))
 	for _, u := range agentInfoUsers {

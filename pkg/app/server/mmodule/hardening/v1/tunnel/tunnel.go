@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"fmt"
 
-	"soldr/pkg/app/agent"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto/tunnel"
 	tunnelSimple "soldr/pkg/vxproto/tunnel/simple"
 )
@@ -15,7 +15,7 @@ func NewConfigurer() *Configurer {
 	return &Configurer{}
 }
 
-func (c *Configurer) GetTunnelConfig() (*tunnel.Config, *agent.TunnelConfig, error) {
+func (c *Configurer) GetTunnelConfig() (*tunnel.Config, *protoagent.TunnelConfig, error) {
 	b := make([]byte, 1)
 	if _, err := rand.Read(b); err != nil {
 		return nil, nil, fmt.Errorf("failed to get a random byte: %w", err)
@@ -26,9 +26,9 @@ func (c *Configurer) GetTunnelConfig() (*tunnel.Config, *agent.TunnelConfig, err
 			Simple: &tunnelSimple.Config{
 				Key: key,
 			},
-		}, &agent.TunnelConfig{
-			Config: &agent.TunnelConfig_Simple{
-				Simple: &agent.TunnelConfig_TunnelConfigSimple{
+		}, &protoagent.TunnelConfig{
+			Config: &protoagent.TunnelConfig_Simple{
+				Simple: &protoagent.TunnelConfig_TunnelConfigSimple{
 					Key: &keyAgentConfig,
 				},
 			},

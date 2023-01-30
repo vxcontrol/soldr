@@ -11,7 +11,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/agent/config"
 	readinessChecker "soldr/pkg/app/agent/readiness_checker"
 	"soldr/pkg/app/agent/service"
@@ -21,6 +20,7 @@ import (
 	upgraderUtils "soldr/pkg/app/agent/upgrader/utils"
 	"soldr/pkg/app/agent/utils"
 	"soldr/pkg/app/agent/utils/pswatcher"
+	"soldr/pkg/protoagent"
 )
 
 func RunAsUpgrader(ctx context.Context, conf *config.Config) (Status, error) {
@@ -235,7 +235,7 @@ func (u *upgrader) checkAgentReport(ctx context.Context, agentPID int) error {
 	return nil
 }
 
-func (u *upgrader) readAgentReport(ctx context.Context) (*agent.AgentReadinessReport, error) {
+func (u *upgrader) readAgentReport(ctx context.Context) (*protoagent.AgentReadinessReport, error) {
 	for {
 		time.Sleep(time.Second * 1)
 		select {
@@ -255,7 +255,7 @@ func (u *upgrader) readAgentReport(ctx context.Context) (*agent.AgentReadinessRe
 	}
 }
 
-func (u *upgrader) verifyAgentReport(report *agent.AgentReadinessReport, agentPID int) error {
+func (u *upgrader) verifyAgentReport(report *protoagent.AgentReadinessReport, agentPID int) error {
 	if !u.conf.Service {
 		if err := checkAgentReportHeader(report.GetHeader(), agentPID); err != nil {
 			return err
@@ -270,7 +270,7 @@ func (u *upgrader) verifyAgentReport(report *agent.AgentReadinessReport, agentPI
 	return nil
 }
 
-func checkAgentReportHeader(header *agent.AgentReadinessReportHeader, agentPID int) error {
+func checkAgentReportHeader(header *protoagent.AgentReadinessReportHeader, agentPID int) error {
 	if header == nil {
 		return fmt.Errorf("the agent readiness report does not contain a header")
 	}
@@ -283,7 +283,7 @@ func checkAgentReportHeader(header *agent.AgentReadinessReportHeader, agentPID i
 	return nil
 }
 
-func checkAgentReportChecks(checks []*agent.AgentReadinessReportCheck) error {
+func checkAgentReportChecks(checks []*protoagent.AgentReadinessReportCheck) error {
 	failedChecks := make([]string, 0, len(checks))
 	for _, c := range checks {
 		if *c.Passed {
@@ -297,8 +297,8 @@ func checkAgentReportChecks(checks []*agent.AgentReadinessReportCheck) error {
 	return fmt.Errorf("the following checks have failed during the agent start: %s", strings.Join(failedChecks, ", "))
 }
 
-func checkAgentReportStatus(status agent.AgentReadinessReportStatus) error {
-	if status == agent.AgentReadinessReportStatus_SUCCESS {
+func checkAgentReportStatus(status protoagent.AgentReadinessReportStatus) error {
+	if status == protoagent.AgentReadinessReportStatus_SUCCESS {
 		return nil
 	}
 	return fmt.Errorf("the agent has returned a non-successful status: %s", status.String())

@@ -20,7 +20,6 @@ import (
 	"github.com/takama/daemon"
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/agent/config"
 	upgraderPack "soldr/pkg/app/agent/upgrader"
 	upgraderErrors "soldr/pkg/app/agent/upgrader/errors"
@@ -29,6 +28,7 @@ import (
 	upgraderUtils "soldr/pkg/app/agent/upgrader/utils"
 	"soldr/pkg/app/agent/utils"
 	obs "soldr/pkg/observability"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 )
 
@@ -116,7 +116,7 @@ func composeUpgraderFileName() string {
 	return "upgrader"
 }
 
-func (u *upgrader) startUpgrade(ctx context.Context, src string, msg *agent.AgentUpgradeExecPush) error {
+func (u *upgrader) startUpgrade(ctx context.Context, src string, msg *protoagent.AgentUpgradeExecPush) error {
 	upgraderCtx, upgraderSpan := obs.Observer.NewSpan(ctx, obs.SpanKindConsumer, componentUpgrader)
 	defer upgraderSpan.End()
 
@@ -167,7 +167,7 @@ func (u *upgrader) sendUpgradeResponseToServer(ctx context.Context, src string, 
 		respHint = e.Error()
 		respSuccess = false
 	}
-	resp := agent.AgentUpgradeExecPushResult{
+	resp := protoagent.AgentUpgradeExecPushResult{
 		Hint:    &respHint,
 		Success: &respSuccess,
 	}
@@ -175,13 +175,13 @@ func (u *upgrader) sendUpgradeResponseToServer(ctx context.Context, src string, 
 	if err != nil {
 		return fmt.Errorf("failed to marshal the upgrade exec push result message: %w", err)
 	}
-	if err := u.mm.responseAgent(ctx, src, agent.Message_AGENT_UPGRADE_EXEC_PUSH_RESULT, respData); err != nil {
+	if err := u.mm.responseAgent(ctx, src, protoagent.Message_AGENT_UPGRADE_EXEC_PUSH_RESULT, respData); err != nil {
 		return fmt.Errorf("failed to send the upgrade exec push result: %w", err)
 	}
 	return nil
 }
 
-func (u *upgrader) checkUpgraderFile(msg *agent.AgentUpgradeExecPush) error {
+func (u *upgrader) checkUpgraderFile(msg *protoagent.AgentUpgradeExecPush) error {
 	upgraderFileData, err := ioutil.ReadFile(u.upgraderFile)
 	if err != nil {
 		return fmt.Errorf("failed to read the upgrader file: %w", err)

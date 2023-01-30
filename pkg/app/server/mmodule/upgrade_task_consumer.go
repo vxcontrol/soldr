@@ -12,10 +12,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/server/mmodule/upgrader/cache"
 	"soldr/pkg/app/server/mmodule/upgrader/store"
 	"soldr/pkg/app/server/mmodule/upgrader/watcher"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 )
 
@@ -209,16 +209,16 @@ func (tc *upgradeTaskConsumer) requestAgentToUpgrade(ctx context.Context, versio
 	if err != nil {
 		return err
 	}
-	msg, err := proto.Marshal(&agent.AgentUpgradeExecPush{
+	msg, err := proto.Marshal(&protoagent.AgentUpgradeExecPush{
 		Thumbprint: upgrader.UpgraderThumbprint,
 	})
 	if err != nil {
 		return err
 	}
-	var resp agent.AgentUpgradeExecPushResult
+	var resp protoagent.AgentUpgradeExecPushResult
 	err = tc.mm.requestAgentWithDestStruct(
-		ctx, ainfo.info.Dst, agent.Message_AGENT_UPGRADE_EXEC_PUSH,
-		msg, agent.Message_AGENT_UPGRADE_EXEC_PUSH_RESULT, &resp)
+		ctx, ainfo.info.Dst, protoagent.Message_AGENT_UPGRADE_EXEC_PUSH,
+		msg, protoagent.Message_AGENT_UPGRADE_EXEC_PUSH_RESULT, &resp)
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (tc *upgradeTaskConsumer) requestAgentToUpgrade(ctx context.Context, versio
 }
 
 func (tc *upgradeTaskConsumer) processAgentUpgradeResponse(
-	ctx context.Context, resp *agent.AgentUpgradeExecPushResult, ainfo *agentInfo,
+	ctx context.Context, resp *protoagent.AgentUpgradeExecPushResult, ainfo *agentInfo,
 ) error {
 	if resp.Success == nil {
 		return fmt.Errorf("the AGENT_UPGRADE_EXEC_PUSH_RESULT message does not contain an indicator of the upgrade status")

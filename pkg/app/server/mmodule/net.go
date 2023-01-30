@@ -9,11 +9,11 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/server/mmodule/hardening/v1/storecryptor"
 	"soldr/pkg/controller"
 	"soldr/pkg/loader"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/utils"
 	"soldr/pkg/vxproto"
 )
@@ -25,8 +25,8 @@ const (
 
 // requestAgent is function which do request and wait any unstructured result
 func (mm *MainModule) requestAgent(
-	ctx context.Context, dst string, msgType agent.Message_Type, payload []byte,
-) (*agent.Message, error) {
+	ctx context.Context, dst string, msgType protoagent.Message_Type, payload []byte,
+) (*protoagent.Message, error) {
 	if mm.msocket == nil {
 		return nil, fmt.Errorf("module Socket didn't initialize")
 	}
@@ -40,9 +40,9 @@ func (mm *MainModule) requestAgent(
 func (mm *MainModule) requestAgentWithDestStruct(
 	ctx context.Context,
 	dst string,
-	reqType agent.Message_Type,
+	reqType protoagent.Message_Type,
 	reqPayload []byte,
-	respType agent.Message_Type,
+	respType protoagent.Message_Type,
 	resp proto.Message,
 ) error {
 	msg, err := mm.requestAgent(ctx, dst, reqType, reqPayload)
@@ -66,13 +66,13 @@ func (mm *MainModule) requestAgentWithDestStruct(
 func (mm *MainModule) sendMsgToAgent(
 	ctx context.Context,
 	dst string,
-	msgType agent.Message_Type,
+	msgType protoagent.Message_Type,
 	payload []byte,
-) (*agent.Message, error) {
+) (*protoagent.Message, error) {
 	if mm.msocket == nil {
 		return nil, errors.New("module Socket didn't initialize")
 	}
-	messageData, err := proto.Marshal(&agent.Message{
+	messageData, err := proto.Marshal(&protoagent.Message{
 		Type:    msgType.Enum(),
 		Payload: payload,
 	})
@@ -92,7 +92,7 @@ func (mm *MainModule) sendMsgToAgent(
 		return nil, err
 	}
 
-	var message agent.Message
+	var message protoagent.Message
 	if err = proto.Unmarshal(data.Data, &message); err != nil {
 		return nil, fmt.Errorf("error unmarshal response message packet: %w", err)
 	}
@@ -106,8 +106,8 @@ func (mm *MainModule) requestAgentAboutModules(
 	dst string,
 	ainfo *agentInfo,
 	mIDs []string,
-	msgType agent.Message_Type,
-) (*agent.ModuleStatusList, error) {
+	msgType protoagent.Message_Type,
+) (*protoagent.ModuleStatusList, error) {
 	mm.syncModulesSemaphore <- struct{}{}
 	defer func() {
 		<-mm.syncModulesSemaphore
@@ -123,7 +123,7 @@ func (mm *MainModule) requestAgentAboutModules(
 		return nil, err
 	}
 
-	var statusMessage agent.ModuleStatusList
+	var statusMessage protoagent.ModuleStatusList
 	if err = proto.Unmarshal(message.Payload, &statusMessage); err != nil {
 		return nil, fmt.Errorf("error unmarshal response packet of status modules: %w", err)
 	}
@@ -137,7 +137,7 @@ func (mm *MainModule) getModuleListData(
 	dst string,
 	ainfo *agentInfo,
 	mIDs []string,
-	msgType agent.Message_Type,
+	msgType protoagent.Message_Type,
 ) ([]byte, error) {
 	moduleListMessage, err := mm.getModuleList(ctx, dst, ainfo, mIDs, msgType)
 	if err != nil {
@@ -157,21 +157,21 @@ func (mm *MainModule) moduleToPB(
 	ainfo *agentInfo,
 	mc *loader.ModuleConfig,
 	mi *loader.ModuleItem,
-	msgType agent.Message_Type,
-) (*agent.Module, error) {
-	var args []*agent.Module_Arg
-	var files []*agent.Module_File
+	msgType protoagent.Message_Type,
+) (*protoagent.Module, error) {
+	var args []*protoagent.Module_Arg
+	var files []*protoagent.Module_File
 	os := ainfo.info.Info.GetOs().GetType()
 	arch := ainfo.info.Info.GetOs().GetArch()
 
-	var osList []*agent.Config_OS
+	var osList []*protoagent.Config_OS
 	for osType, archList := range mc.OS {
-		osList = append(osList, &agent.Config_OS{
+		osList = append(osList, &protoagent.Config_OS{
 			Type: utils.GetRef(osType),
 			Arch: archList,
 		})
 	}
-	config := &agent.Config{
+	config := &protoagent.Config{
 		Os:               osList,
 		GroupId:          utils.GetRef(mc.GroupID),
 		PolicyId:         utils.GetRef(mc.PolicyID),
@@ -191,7 +191,7 @@ func (mm *MainModule) moduleToPB(
 		return nil, fmt.Errorf("failed to get secure config for agent: %w", err)
 	}
 
-	iconfig := &agent.ConfigItem{
+	iconfig := &protoagent.ConfigItem{
 		ConfigSchema:        utils.GetRef(mc.GetConfigSchema()),
 		DefaultConfig:       utils.GetRef(mc.GetDefaultConfig()),
 		CurrentConfig:       utils.GetRef(mc.GetCurrentConfig()),
@@ -213,9 +213,9 @@ func (mm *MainModule) moduleToPB(
 		return nil, err
 	}
 
-	if msgType == agent.Message_START_MODULES || msgType == agent.Message_UPDATE_MODULES {
+	if msgType == protoagent.Message_START_MODULES || msgType == protoagent.Message_UPDATE_MODULES {
 		for path, data := range mi.GetFilesByFilter(os, arch) {
-			files = append(files, &agent.Module_File{
+			files = append(files, &protoagent.Module_File{
 				Path: utils.GetRef(path),
 				Data: data,
 			})
@@ -223,13 +223,13 @@ func (mm *MainModule) moduleToPB(
 	}
 
 	for key, value := range mi.GetArgs() {
-		args = append(args, &agent.Module_Arg{
+		args = append(args, &protoagent.Module_Arg{
 			Key:   utils.GetRef(key),
 			Value: value,
 		})
 	}
 
-	return &agent.Module{
+	return &protoagent.Module{
 		Name:       utils.GetRef(mc.Name),
 		Config:     config,
 		ConfigItem: iconfig,
@@ -270,7 +270,7 @@ func (mm *MainModule) getModuleSecureConfigForAgent(mc *loader.ModuleConfig) (st
 	return defaultSecConfig, currentSecConfig, nil
 }
 
-func (mm *MainModule) encryptSecureParamsUsingAgentKey(a *agentInfo, agentCfg *agent.ConfigItem) error {
+func (mm *MainModule) encryptSecureParamsUsingAgentKey(a *agentInfo, agentCfg *protoagent.ConfigItem) error {
 	cryptor := storecryptor.NewStoreCryptor(a.info.ID)
 	secureDefaultConfig, err := cryptor.EncryptData([]byte(*agentCfg.SecureDefaultConfig))
 	if err != nil {
@@ -293,9 +293,9 @@ func (mm *MainModule) getModuleList(
 	dst string,
 	ainfo *agentInfo,
 	mIDs []string,
-	msgType agent.Message_Type,
-) (*agent.ModuleList, error) {
-	var modules agent.ModuleList
+	msgType protoagent.Message_Type,
+) (*protoagent.ModuleList, error) {
+	var modules protoagent.ModuleList
 	mObjs := mm.cnt.GetModules(mIDs)
 
 	ids, err := mm.checkMismatchModuleChecksums(mObjs)
@@ -308,7 +308,7 @@ func (mm *MainModule) getModuleList(
 
 	for _, mID := range mIDs {
 		var (
-			module *agent.Module
+			module *protoagent.Module
 			err    error
 		)
 		if mObj, ok := mObjs[mID]; ok {
@@ -317,7 +317,7 @@ func (mm *MainModule) getModuleList(
 				return nil, err
 			}
 		} else {
-			module = &agent.Module{
+			module = &protoagent.Module{
 				Name: utils.GetRef(strings.Split(mID, ":")[2]),
 			}
 		}
@@ -393,13 +393,13 @@ func (mm *MainModule) getModulesInfoFromDB() ([]moduleChecksumsInfo, error) {
 // getInformation is API functions which execute remote logic
 //
 //lint:ignore U1000 it'll be use in the future
-func (mm *MainModule) getInformation(ctx context.Context, dst string) (*agent.Information, error) {
-	message, err := mm.requestAgent(ctx, dst, agent.Message_GET_INFORMATION, []byte{})
+func (mm *MainModule) getInformation(ctx context.Context, dst string) (*protoagent.Information, error) {
+	message, err := mm.requestAgent(ctx, dst, protoagent.Message_GET_INFORMATION, []byte{})
 	if err != nil {
 		return nil, err
 	}
 
-	var infoMessage agent.Information
+	var infoMessage protoagent.Information
 	if err = proto.Unmarshal(message.Payload, &infoMessage); err != nil {
 		return nil, fmt.Errorf("error unmarshal response packet of information: %w", err)
 	}
@@ -412,13 +412,13 @@ func (mm *MainModule) getStatusModules(
 	ctx context.Context,
 	dst string,
 	_ *agentInfo,
-) (*agent.ModuleStatusList, error) {
-	message, err := mm.requestAgent(ctx, dst, agent.Message_GET_STATUS_MODULES, []byte{})
+) (*protoagent.ModuleStatusList, error) {
+	message, err := mm.requestAgent(ctx, dst, protoagent.Message_GET_STATUS_MODULES, []byte{})
 	if err != nil {
 		return nil, err
 	}
 
-	var statusMessage agent.ModuleStatusList
+	var statusMessage protoagent.ModuleStatusList
 	if err = proto.Unmarshal(message.Payload, &statusMessage); err != nil {
 		return nil, fmt.Errorf("error unmarshal response packet of status modules: %w", err)
 	}
@@ -429,27 +429,27 @@ func (mm *MainModule) getStatusModules(
 // startModules is API functions which execute remote logic
 func (mm *MainModule) startModules(
 	ctx context.Context, dst string, ainfo *agentInfo, mIDs []string,
-) (*agent.ModuleStatusList, error) {
-	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, agent.Message_START_MODULES)
+) (*protoagent.ModuleStatusList, error) {
+	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, protoagent.Message_START_MODULES)
 }
 
 // stopModules is API functions which execute remote logic
 func (mm *MainModule) stopModules(
 	ctx context.Context, dst string, ainfo *agentInfo, mIDs []string,
-) (*agent.ModuleStatusList, error) {
-	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, agent.Message_STOP_MODULES)
+) (*protoagent.ModuleStatusList, error) {
+	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, protoagent.Message_STOP_MODULES)
 }
 
 // updateModules is API functions which execute remote logic
 func (mm *MainModule) updateModules(
 	ctx context.Context, dst string, ainfo *agentInfo, mIDs []string,
-) (*agent.ModuleStatusList, error) {
-	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, agent.Message_UPDATE_MODULES)
+) (*protoagent.ModuleStatusList, error) {
+	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, protoagent.Message_UPDATE_MODULES)
 }
 
 // updateModulesConfig is API functions which execute remote logic
 func (mm *MainModule) updateModulesConfig(
 	ctx context.Context, dst string, ainfo *agentInfo, mIDs []string,
-) (*agent.ModuleStatusList, error) {
-	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, agent.Message_UPDATE_CONFIG_MODULES)
+) (*protoagent.ModuleStatusList, error) {
+	return mm.requestAgentAboutModules(ctx, dst, ainfo, mIDs, protoagent.Message_UPDATE_CONFIG_MODULES)
 }

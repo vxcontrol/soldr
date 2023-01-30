@@ -3,7 +3,7 @@ package tunnel
 import (
 	"fmt"
 
-	"soldr/pkg/app/agent"
+	"soldr/pkg/protoagent"
 	tunnelRC4 "soldr/pkg/vxproto/tunnel/rc4"
 	tunnelSimple "soldr/pkg/vxproto/tunnel/simple"
 )
@@ -11,7 +11,7 @@ import (
 type PackEncryptor interface {
 	Encrypt(data []byte) ([]byte, error)
 	Decrypt(data []byte) ([]byte, error)
-	Reset(config *agent.TunnelConfig) error
+	Reset(config *protoagent.TunnelConfig) error
 }
 
 type Config struct {

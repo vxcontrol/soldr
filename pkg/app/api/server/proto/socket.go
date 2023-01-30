@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"soldr/pkg/app/agent"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 	"soldr/pkg/vxproto/tunnel"
 )
@@ -28,9 +28,9 @@ type socket struct {
 	ver           string
 	connected     bool
 	at            vxproto.AgentType
-	info          *agent.Information
-	authReq       *agent.AuthenticationRequest
-	authResp      *agent.AuthenticationResponse
+	info          *protoagent.Information
+	authReq       *protoagent.AuthenticationRequest
+	authResp      *protoagent.AuthenticationResponse
 	packEncrypter tunnel.PackEncryptor
 	pinger        vxproto.Pinger
 	vxproto.IWSConnection
@@ -83,17 +83,17 @@ func (s *socket) SetVersion(ver string) {
 }
 
 // SetInfo is function which storing information about agent
-func (s *socket) SetInfo(info *agent.Information) {
+func (s *socket) SetInfo(info *protoagent.Information) {
 	s.info = info
 }
 
 // SetAuthReq is function which storing authentication request about agent after handshake
-func (s *socket) SetAuthReq(req *agent.AuthenticationRequest) {
+func (s *socket) SetAuthReq(req *protoagent.AuthenticationRequest) {
 	s.authReq = req
 }
 
 // SetAuthResp is function which storing authentication response about agent after handshake
-func (s *socket) SetAuthResp(resp *agent.AuthenticationResponse) {
+func (s *socket) SetAuthResp(resp *protoagent.AuthenticationResponse) {
 	s.authResp = resp
 }
 

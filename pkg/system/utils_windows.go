@@ -13,7 +13,7 @@ import (
 	"github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
 
-	"soldr/pkg/app/agent"
+	"soldr/pkg/protoagent"
 )
 
 type user_info_2 struct {
@@ -82,7 +82,7 @@ func getOSVer() string {
 	return fmt.Sprintf("%.1f", cv)
 }
 
-func getUsersInformation() []*agent.Information_User {
+func getUsersInformation() []*protoagent.Information_User {
 	const (
 		USER_FILTER_NORMAL_ACCOUNT = 0x0002
 		USER_MAX_PREFERRED_LENGTH  = 0xFFFFFFFF
@@ -103,7 +103,7 @@ func getUsersInformation() []*agent.Information_User {
 		entriesRead  uint32
 		entriesTotal uint32
 		sizeTest     user_info_2
-		users        = make([]*agent.Information_User, 0)
+		users        = make([]*protoagent.Information_User, 0)
 	)
 
 	ret, _, _ := usrNetUserEnum.Call(
@@ -126,7 +126,7 @@ func getUsersInformation() []*agent.Information_User {
 	for i := uint32(0); i < entriesRead; i++ {
 		data := (*user_info_2)(unsafe.Pointer(iter))
 		name := utf16ToString(data.Usri2_name)
-		item := &agent.Information_User{
+		item := &protoagent.Information_User{
 			Name:   &name,
 			Groups: []string{},
 		}

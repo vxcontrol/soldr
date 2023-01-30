@@ -12,8 +12,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/app/agent"
 	obs "soldr/pkg/observability"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/system"
 	utilsErrors "soldr/pkg/utils/errors"
 	"soldr/pkg/vxproto/tunnel"
@@ -27,14 +27,14 @@ type AgentConnectionValidator interface {
 	OnInitConnect(
 		ctx context.Context,
 		socket SyncWS,
-		agentInfo *agent.Information,
+		agentInfo *protoagent.Information,
 	) error
 	OnConnect(
 		ctx context.Context,
 		socket IAgentSocket,
 		packEncryptor tunnel.PackEncryptor,
 		configurePingee func(p Pinger) error,
-		agentInfo *agent.Information,
+		agentInfo *protoagent.Information,
 	) error
 	ProcessError(err error) error
 }

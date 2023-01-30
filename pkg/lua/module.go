@@ -14,8 +14,8 @@ import (
 	"github.com/vxcontrol/luar"
 	"google.golang.org/protobuf/proto"
 
-	"soldr/pkg/app/agent"
 	"soldr/pkg/observability"
+	"soldr/pkg/protoagent"
 	"soldr/pkg/vxproto"
 )
 
@@ -229,13 +229,13 @@ func (m *Module) getArch() string {
 func (m *Module) copyAgent(a *vxproto.AgentInfo) vxproto.AgentInfo {
 	ca := *a
 	if a.Info != nil {
-		ca.Info = proto.Clone(a.Info).(*agent.Information)
+		ca.Info = proto.Clone(a.Info).(*protoagent.Information)
 		if a.Info.Os != nil {
-			ca.Info.Os = proto.Clone(a.Info.Os).(*agent.Information_OS)
+			ca.Info.Os = proto.Clone(a.Info.Os).(*protoagent.Information_OS)
 		}
-		ca.Info.Net = proto.Clone(a.Info.Net).(*agent.Information_Net)
+		ca.Info.Net = proto.Clone(a.Info.Net).(*protoagent.Information_Net)
 		for _, user := range a.Info.Users {
-			clone := proto.Clone(user).(*agent.Information_User)
+			clone := proto.Clone(user).(*protoagent.Information_User)
 			ca.Info.Users = append(ca.Info.Users, clone)
 		}
 	}
