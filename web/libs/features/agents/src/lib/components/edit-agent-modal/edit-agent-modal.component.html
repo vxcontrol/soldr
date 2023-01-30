@@ -20,13 +20,13 @@
                     formControlName="description"
                     e2e-id="txtEditAgentName"
                     [placeholder]="this.agent.description">
-                <mc-hint *ngIf="form.controls.description.errors?.entityNameExists">
+                <mc-hint *ngIf="form.controls.description.errors?.entityNameExists" [color]="themePalette.Error">
                     {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists') }}
                 </mc-hint>
-                <mc-hint *ngIf="form.controls.description.errors?.maxlength">
+                <mc-hint *ngIf="form.controls.description.errors?.maxlength" [color]="themePalette.Error">
                     {{ tShared('Shared.Pseudo.ValidationText.MaxLengthEntityName') }}
                 </mc-hint>
-                <mc-hint *ngIf="form.controls.description.errors?.required">
+                <mc-hint *ngIf="form.controls.description.errors?.required" [color]="themePalette.Error">
                     {{ tShared('Shared.Pseudo.ValidationText.Required') }}
                 </mc-hint>
             </mc-form-field>
@@ -51,7 +51,7 @@
             form="editAgentForm"
             e2e-id="btnSaveEditAgents"
             [color]="themePalette.Primary"
-            [class.mc-progress]="(isUpdatingAgent$ | async) === true"
+            [class.mc-progress]="isUpdatingAgent"
             [disabled]="form.pristine || form.invalid">
             {{ tCommon('Common.Pseudo.ButtonText.Save') }}
         </button>

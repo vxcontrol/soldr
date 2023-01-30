@@ -21,13 +21,13 @@
                         formControlName="name"
                         e2e-id="txtPolicyName"
                         [placeholder]="policy?.info.name[language$ | async] || ''">
-                    <mc-hint *ngIf="form.controls.name.errors?.entityNameExists">
+                    <mc-hint *ngIf="form.controls.name.errors?.entityNameExists" [color]="themePalette.Error">
                         {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists') }}
                     </mc-hint>
-                    <mc-hint *ngIf="form.controls.name.errors?.maxlength">
+                    <mc-hint *ngIf="form.controls.name.errors?.maxlength" [color]="themePalette.Error">
                         {{ tShared('Shared.Pseudo.ValidationText.MaxLengthEntityName') }}
                     </mc-hint>
-                    <mc-hint *ngIf="form.controls.name.errors?.required">
+                    <mc-hint *ngIf="form.controls.name.errors?.required" [color]="themePalette.Error">
                         {{ tShared('Shared.Pseudo.ValidationText.Required') }}
                     </mc-hint>
                 </mc-form-field>
