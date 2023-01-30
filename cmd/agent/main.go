@@ -80,7 +80,7 @@ func FinalizeReadinessCheckAndLogPotentialError(
 	finCtx, finSpan := observability.Observer.NewSpan(ctx, observability.SpanKindInternal, "rcheck_finalizer")
 	defer finSpan.End()
 
-	err := rc.Finalize(finCtx, protoagent.AgentReadinessReportStatus(status))
+	err := rc.Finalize(finCtx, status)
 	if err == nil {
 		return
 	}

@@ -5,7 +5,7 @@ import (
 
 	//nolint:staticcheck  // TODO: we should consider updating this import
 	"google.golang.org/protobuf/proto"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"soldr/pkg/errors"
 )

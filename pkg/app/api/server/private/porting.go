@@ -17,17 +17,18 @@ import (
 
 	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
+	"soldr/pkg/app/api/modules"
 	"soldr/pkg/app/api/server/response"
 	"soldr/pkg/app/api/useraction"
 	"soldr/pkg/app/api/utils"
 )
 
-func getModuleTemplates(zipArchive *multipart.FileHeader, moduleName, version string) ([]Template, error) {
-	templates := make(map[string]Template)
+func getModuleTemplates(zipArchive *multipart.FileHeader, moduleName, version string) ([]modules.Template, error) {
+	templates := make(map[string]modules.Template)
 	putFile := func(ver, tpath, fpath string, fdata []byte) {
 		template, ok := templates[ver]
 		if !ok {
-			template = make(Template)
+			template = make(modules.Template)
 			templates[ver] = template
 		}
 		tcont, ok := template[tpath]
@@ -83,7 +84,7 @@ func getModuleTemplates(zipArchive *multipart.FileHeader, moduleName, version st
 		putFile(ppath[1], ppath[2], strings.Join(ppath[3:], "/"), fileBytes)
 	}
 
-	result := make([]Template, 0, len(templates))
+	result := make([]modules.Template, 0, len(templates))
 	for _, template := range templates {
 		result = append(result, template)
 	}
@@ -119,7 +120,7 @@ func NewPortingService(
 func (s *PortingService) ExportModule(c *gin.Context) {
 	var (
 		err        error
-		modules    []models.ModuleS
+		moduleList []models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
 		version    = c.Param("version")
@@ -133,7 +134,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 	}
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -143,17 +144,17 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion(version), scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(modules.FilterModulesByVersion(version), scope).Find(&moduleList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		response.Error(c, response.ErrInternal, err)
 		return
 	} else {
-		if len(modules) == 0 {
+		if len(moduleList) == 0 {
 			logger.FromContext(c).Errorf("system module by name and version not found: %s : %s", moduleName, version)
 			response.Error(c, response.ErrPortingModuleNotFound, nil)
 			return
 		}
-		for _, module := range modules {
+		for _, module := range moduleList {
 			if err = module.Valid(); err != nil {
 				logger.FromContext(c).WithError(err).Errorf("error validating system module data '%s'", module.Info.Name)
 				response.Error(c, response.ErrExportInvalidModuleData, err)
@@ -161,21 +162,21 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 			}
 		}
 	}
-	uaf.ObjectDisplayName = modules[len(modules)-1].Locale.Module["en"].Title
+	uaf.ObjectDisplayName = moduleList[len(moduleList)-1].Locale.Module["en"].Title
 
 	zipBuffer := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(zipBuffer)
 	defer zipWriter.Close()
 
-	for _, module := range modules {
+	for _, module := range moduleList {
 		prefix := moduleName + "/" + module.Info.Version.String()
-		template, err := LoadModuleSFromGlobalS3(&module.Info)
+		template, err := modules.LoadModuleSFromGlobalS3(&module.Info)
 		if err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error loading system module files from S3")
 			response.Error(c, response.ErrExportLoadFilesFail, err)
 			return
 		}
-		config, err := BuildModuleSConfig(&module)
+		config, err := modules.BuildModuleSConfig(&module)
 		if err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error building system module config")
 			response.Error(c, response.ErrExportBuildConfigFail, err)
@@ -232,7 +233,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 func (s *PortingService) ImportModule(c *gin.Context) {
 	var (
 		err        error
-		modules    []models.ModuleS
+		moduleList []models.ModuleS
 		moduleName = c.Param("module_name")
 		nmodules   []*models.ModuleS
 		rewrite    = c.Query("rewrite") == "true"
@@ -249,7 +250,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 	}
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = getService(c); sv == nil {
+	if sv = modules.GetService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -259,13 +260,13 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
 
-	if err = s.db.Scopes(FilterModulesByVersion("all"), scope).Find(&modules).Error; err != nil {
+	if err = s.db.Scopes(modules.FilterModulesByVersion("all"), scope).Find(&moduleList).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding system module by name")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
 	getModule := func(version models.SemVersion) *models.ModuleS {
-		for _, module := range modules {
+		for _, module := range moduleList {
 			if module.Info.Version.String() == version.String() {
 				return &module
 			}
@@ -292,7 +293,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 		return
 	}
 	for _, template := range templates {
-		module, err := LoadModuleSConfig(template["config"])
+		module, err := modules.LoadModuleSConfig(template["config"])
 		if err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error parsing system module config from zip file")
 			response.Error(c, response.ErrImportParseConfigFail, err)
@@ -326,7 +327,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 	for idx, template := range templates {
 		module := nmodules[idx]
 		svModule := getModule(module.Info.Version)
-		if err = StoreCleanModuleSToGlobalS3(&module.Info, template); err != nil {
+		if err = modules.StoreCleanModuleSToGlobalS3(&module.Info, template); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error storing system module to S3")
 			response.Error(c, response.ErrImportStoreS3Fail, err)
 			return

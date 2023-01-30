@@ -1,4 +1,4 @@
-package private
+package modules
 
 import (
 	"encoding/base64"

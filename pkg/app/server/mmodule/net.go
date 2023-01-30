@@ -11,6 +11,7 @@ import (
 
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/server/mmodule/hardening/v1/storecryptor"
+	"soldr/pkg/controller"
 	"soldr/pkg/loader"
 	"soldr/pkg/protoagent"
 	"soldr/pkg/utils"
@@ -297,6 +298,14 @@ func (mm *MainModule) getModuleList(
 	var modules protoagent.ModuleList
 	mObjs := mm.cnt.GetModules(mIDs)
 
+	ids, err := mm.checkMismatchModuleChecksums(mObjs)
+	if err != nil {
+		return nil, fmt.Errorf("error comparing module files checksums: %w", err)
+	}
+	if len(ids) > 0 {
+		return nil, fmt.Errorf("module checksums in DB not match with data in local cache: %v", ids)
+	}
+
 	for _, mID := range mIDs {
 		var (
 			module *protoagent.Module
@@ -316,6 +325,69 @@ func (mm *MainModule) getModuleList(
 	}
 
 	return &modules, nil
+}
+
+func (mm *MainModule) checkMismatchModuleChecksums(inMemModules map[string]*controller.Module) ([]string, error) {
+	dbModulesInfo, err := mm.getModulesInfoFromDB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get modules info from DB: %w", err)
+	}
+
+	dbModulesInfoMap := make(map[string]moduleChecksumsInfo)
+	for _, m := range dbModulesInfo {
+		dbModulesInfoMap[m.GetID()] = m
+	}
+
+	var mismatchModuleIDs []string
+	for id, m := range inMemModules {
+		dbModule, ok := dbModulesInfoMap[id]
+		if !ok {
+			continue
+		}
+
+		if !m.IsValidByFileChecksums(dbModule.FilesChecksums) {
+			mismatchModuleIDs = append(mismatchModuleIDs, id)
+		}
+	}
+
+	return mismatchModuleIDs, nil
+}
+
+type moduleChecksumsInfo struct {
+	GroupID        string                   `json:"group_id"`
+	PolicyID       string                   `json:"policy_id"`
+	Name           string                   `json:"name"`
+	FilesChecksums models.FilesChecksumsMap `json:"files_checksums"`
+}
+
+func (mi *moduleChecksumsInfo) GetID() string {
+	mc := loader.ModuleConfig{
+		GroupID:  mi.GroupID,
+		PolicyID: mi.PolicyID,
+		Name:     mi.Name,
+	}
+	return mc.ID()
+}
+
+const queryGetModuleInfoWithChecksums = `select
+       		IFNULL(g.hash, '') AS group_id,
+       		IFNULL(p.hash, '') AS policy_id,
+       		name,
+       		files_checksums
+		FROM modules m
+		    LEFT JOIN (SELECT id, hash, deleted_at FROM policies) p ON m.policy_id = p.id AND p.deleted_at IS NULL
+		    LEFT JOIN groups_to_policies gp ON gp.policy_id = p.id
+		    LEFT JOIN (SELECT id, hash, deleted_at FROM groups) g ON gp.group_id = g.id AND g.deleted_at IS NULL
+		WHERE m.status = 'joined' AND NOT (ISNULL(g.hash) AND p.hash NOT LIKE '') AND m.deleted_at IS NULL;`
+
+func (mm *MainModule) getModulesInfoFromDB() ([]moduleChecksumsInfo, error) {
+	var scanResult []moduleChecksumsInfo
+	err := mm.gdbc.Raw(queryGetModuleInfoWithChecksums).Scan(&scanResult).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return scanResult, nil
 }
 
 // getInformation is API functions which execute remote logic

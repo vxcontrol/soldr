@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"soldr/pkg/app/api/models"
+	"soldr/pkg/app/api/modules"
 	"soldr/pkg/loader"
 	"soldr/pkg/lua"
 	"soldr/pkg/vxproto"
@@ -80,6 +82,34 @@ func (m *Module) GetConfig() *loader.ModuleConfig {
 // GetFiles is function that return module files object
 func (m *Module) GetFiles() *loader.ModuleFiles {
 	return m.files
+}
+
+func (m *Module) IsValidByFileChecksums(checksums models.FilesChecksumsMap) bool {
+	if len(checksums) == 0 {
+		return true
+	}
+
+	cmodule := m.GetFiles().GetCModule().GetFiles()
+	smodule := m.GetFiles().GetSModule().GetFiles()
+	files := make(map[string][]byte, len(cmodule)+len(smodule))
+	for path, data := range cmodule {
+		path = fmt.Sprintf("/cmodule/%s", path)
+		files[path] = data
+	}
+	for path, data := range smodule {
+		path = fmt.Sprintf("/smodule/%s", path)
+		files[path] = data
+	}
+	actualChsms := modules.CalcFilesChecksums(files)
+
+	for path, chsm := range checksums {
+		expected, ok := actualChsms[path]
+		if !ok || expected != chsm {
+			return false
+		}
+	}
+
+	return true
 }
 
 // NewController is function which constructed Controller object
@@ -450,7 +480,7 @@ func (s *sController) newModule(mc *loader.ModuleConfig, mf *loader.ModuleFiles)
 	}
 
 	return &Module{
-		id:     mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name,
+		id:     mc.ID(),
 		config: mc,
 		files:  mf,
 	}
@@ -550,7 +580,7 @@ func (s *sController) checkStartModules(config []*loader.ModuleConfig) {
 
 	for _, mc := range config {
 		var mct *loader.ModuleConfig
-		id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+		id := mc.ID()
 		for _, module := range s.modules {
 			if module.id == id {
 				mct = mc
@@ -576,13 +606,13 @@ func (s *sController) checkStartModules(config []*loader.ModuleConfig) {
 
 	mupdate := make(map[string]struct{})
 	for idx, mc := range wantStartModules {
-		id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+		id := mc.ID()
 		module := s.newModule(mc, files[idx])
 		if s.loader.Get(id) != nil {
 			continue
 		}
 
-		if err := s.startModule(module); err != nil {
+		if err = s.startModule(module); err != nil {
 			continue
 		}
 
@@ -603,7 +633,7 @@ func (s *sController) checkStopModules(config []*loader.ModuleConfig) {
 	for _, module := range s.modules {
 		var mct *loader.ModuleConfig
 		for _, mc := range config {
-			id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+			id := mc.ID()
 			if module.id == id {
 				mct = mc
 				break
@@ -620,7 +650,7 @@ func (s *sController) checkStopModules(config []*loader.ModuleConfig) {
 
 	mupdate := make(map[string]struct{})
 	for _, mc := range wantStopModules {
-		id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+		id := mc.ID()
 		for mdx, module := range s.modules {
 			if module.id == id {
 				if s.loader.Get(id) == nil {
@@ -664,7 +694,7 @@ func (s *sController) checkUpdateModules(config []*loader.ModuleConfig) {
 	}
 
 	for _, mc := range config {
-		id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+		id := mc.ID()
 		for _, module := range s.modules {
 			if module.id == id && !isEqualModuleVersion(module.config, mc) {
 				wantUpdateModules = append(wantUpdateModules, mc)
@@ -686,7 +716,7 @@ func (s *sController) checkUpdateModules(config []*loader.ModuleConfig) {
 	}
 
 	for idx, mc := range wantUpdateModules {
-		id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+		id := mc.ID()
 		for mdx, module := range s.modules {
 			if module.id == id {
 				s.modules[mdx] = s.newModule(mc, files[idx])
@@ -699,7 +729,7 @@ func (s *sController) checkUpdateModules(config []*loader.ModuleConfig) {
 	}
 
 	for _, mc := range wantUpdateConfigModules {
-		id := mc.GroupID + ":" + mc.PolicyID + ":" + mc.Name
+		id := mc.ID()
 		for mdx, module := range s.modules {
 			if module.id == id {
 				if err := s.updateModuleConfig(s.modules[mdx], mc); err == nil {
@@ -722,21 +752,25 @@ func (s *sController) updaterModules() {
 	defer func() { s.closed = true }()
 
 	for {
-		s.mutex.Lock()
-		config, err := s.config.load()
-		if err == nil {
-			s.checkUpdateModules(config)
-			s.checkStopModules(config)
-			s.checkStartModules(config)
-		}
-		s.mutex.Unlock()
-
 		select {
 		case <-time.NewTimer(syncModulesInterval).C:
-			continue
+			s.doSync()
 		case <-s.quit:
+			return
 		}
-
-		break
 	}
+}
+
+func (s *sController) doSync() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	config, err := s.config.load()
+	if err != nil {
+		return
+	}
+
+	s.checkUpdateModules(config)
+	s.checkStopModules(config)
+	s.checkStartModules(config)
 }
