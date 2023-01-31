@@ -136,16 +136,16 @@ func (p *AuthMiddleware) tryProtoCookieAuthentication(c *gin.Context) authResult
 
 	for _, attr := range []interface{}{uid, rid, sid, tid, prm, exp, gtm, uname} {
 		if attr == nil {
-			return authResultFail // response.Error(c, response.ErrNotPermitted, errors.New(msg))
+			return authResultFail
 		}
 	}
 
 	prms, ok := prm.([]string)
 	if !ok {
-		return authResultFail // response.Error(c, response.ErrNotPermitted, nil)
+		return authResultFail
 	}
 	if !lookupPerm(prms, privilegeInteractive) {
-		return authResultFail // response.Error(c, response.ErrNotPermitted, nil)
+		return authResultFail
 	}
 	c.Set("prm", prms)
 
@@ -171,11 +171,11 @@ func (p *AuthMiddleware) tryProtoCookieAuthentication(c *gin.Context) authResult
 func (p *AuthMiddleware) tryProtoTokenAuthentication(c *gin.Context) authResult {
 	authHeader := c.Request.Header.Get("Authorization")
 	if authHeader == "" {
-		return authResultSkip // "token required"
+		return authResultSkip
 	}
 
 	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return authResultSkip // "must be used bearer schema"
+		return authResultSkip
 	}
 	token := authHeader[7:]
 	if token == "" {
@@ -184,7 +184,7 @@ func (p *AuthMiddleware) tryProtoTokenAuthentication(c *gin.Context) authResult 
 
 	claims, err := private.ValidateToken(token)
 	if err != nil {
-		return authResultFail // "token invalid"
+		return authResultFail
 	}
 
 	c.Set("uid", claims.UID)
