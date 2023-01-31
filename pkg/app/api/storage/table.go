@@ -73,11 +73,18 @@ func (q *TableQuery) Init(table string, sqlMappers map[string]interface{}) error
 	q.sqlOrders = append(q.sqlOrders, func(db *gorm.DB) *gorm.DB {
 		return db.Order("id DESC")
 	})
+	isIntegerValue := func(field string) bool {
+		return strings.HasSuffix(field, "id") ||
+			strings.HasSuffix(field, "date") ||
+			strings.HasSuffix(field, "count") ||
+			strings.HasPrefix(field, "ver_") ||
+			strings.HasSuffix(field, "_port")
+	}
 	for k, v := range sqlMappers {
 		switch t := v.(type) {
 		case string:
 			t = q.DoConditionFormat(t)
-			if strings.HasSuffix(t, "id") || strings.HasSuffix(t, "date") {
+			if isIntegerValue(t) {
 				q.sqlMappers[k] = t
 			} else {
 				q.sqlMappers[k] = "LOWER(" + t + ")"
