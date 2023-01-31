@@ -13,12 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 
-	"soldr/pkg/app/api/logger"
 	"soldr/pkg/app/api/models"
 	"soldr/pkg/app/api/storage"
 	"soldr/pkg/app/api/utils"
@@ -963,7 +961,7 @@ func CheckModulesDuplicate(iDB *gorm.DB, ma *models.ModuleA) error {
 	return nil
 }
 
-func RemoveUnusedModuleVersion(c *gin.Context, iDB *gorm.DB, name, version string, sv *models.Service) error {
+func RemoveUnusedModuleVersion(iDB *gorm.DB, name, version string, sv *models.Service) error {
 	var count int64
 	err := iDB.
 		Model(&models.ModuleA{}).
@@ -989,7 +987,7 @@ func RemoveUnusedModuleVersion(c *gin.Context, iDB *gorm.DB, name, version strin
 	return nil
 }
 
-func UpdateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name string) error {
+func UpdateDependenciesWhenModuleRemove(iDB *gorm.DB, name string) error {
 	var (
 		err     error
 		modules []models.ModuleA
@@ -1032,7 +1030,7 @@ func UpdateDependenciesWhenModuleRemove(c *gin.Context, iDB *gorm.DB, name strin
 	return nil
 }
 
-func UpdatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *models.Service) error {
+func UpdatePolicyModulesByModuleS(moduleS *models.ModuleS, sv *models.Service, encryptor crypto.IDBConfigEncryptor) error {
 	iDB := storage.GetDB(sv.Info.DB.User, sv.Info.DB.Pass, sv.Info.DB.Host,
 		strconv.Itoa(int(sv.Info.DB.Port)), sv.Info.DB.Name)
 	if iDB == nil {
@@ -1041,30 +1039,21 @@ func UpdatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 	}
 	defer iDB.Close()
 
-	encryptor := GetDBEncryptor(c)
-	if encryptor == nil {
-		logrus.Errorf("encryptor not found")
-		return errors.New("encryptor not found")
-	}
-
 	var modules []models.ModuleA
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update NOT LIKE ?",
 			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
 	}
 	if err := iDB.Scopes(scope).Find(&modules).Error; err != nil {
-		logger.FromContext(c).WithError(err).
-			Errorf("error finding policy modules by name and version '%s' '%s'",
-				moduleS.Info.Name, moduleS.Info.Version.String())
-		return err
+		return fmt.Errorf("error finding policy modules by name and version '%s' '%s': %w",
+			moduleS.Info.Name, moduleS.Info.Version.String(), err)
 	} else if len(modules) == 0 {
 		return nil
 	}
 
 	checksums, err := CopyModuleAFilesToInstanceS3(&moduleS.Info, sv)
 	if err != nil {
-		logger.FromContext(c).WithError(err).Errorf("error copying module files to S3")
-		return err
+		return fmt.Errorf("error copying module files to S3: %w", err)
 	}
 
 	excl := []string{"policy_id", "status", "join_date", "last_update"}
@@ -1072,25 +1061,21 @@ func UpdatePolicyModulesByModuleS(c *gin.Context, moduleS *models.ModuleS, sv *m
 		var err error
 		moduleA, err = MergeModuleAConfigFromModuleS(&moduleA, moduleS, encryptor)
 		if err != nil {
-			logger.FromContext(c).WithError(err).Errorf("invalid module state")
-			return err
+			return fmt.Errorf("error merging agent module to system module config: %w", err)
 		}
 
 		moduleA.FilesChecksums = checksums
 
 		if err := moduleA.Valid(); err != nil {
-			logger.FromContext(c).WithError(err).Errorf("invalid module state")
-			return err
+			return fmt.Errorf("invalid agent module state: %w", err)
 		}
 
 		err = moduleA.EncryptSecureParameters(encryptor)
 		if err != nil {
-			logger.FromContext(c).WithError(err).Errorf("failed to encrypt module secure config")
 			return fmt.Errorf("failed to encrypt module secure config: %w", err)
 		}
 		if err := iDB.Omit(excl...).Save(&moduleA).Error; err != nil {
-			logger.FromContext(c).WithError(err).Errorf("error updating module")
-			return err
+			return fmt.Errorf("error updating module into DB: %w", err)
 		}
 	}
 
@@ -1137,13 +1122,7 @@ func FilterModulesByVersion(version string) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
-func GetModuleName(c *gin.Context, db *gorm.DB, name string, version string) (string, error) {
-	sv := GetService(c)
-	if sv == nil {
-		return "", errors.New("can't get service")
-	}
-
-	tid := c.GetUint64("tid")
+func GetModuleName(db *gorm.DB, sv *models.Service, tid uint64, name string, version string) (string, error) {
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", name, tid, sv.Type)
 	}
@@ -1190,27 +1169,4 @@ func CompareModulesChanges(moduleIn, moduleDB models.ModuleA, encryptor crypto.I
 		secDefConfigCompare,
 		secCurrentConfigCompare,
 	}, nil
-}
-
-func GetService(c *gin.Context) *models.Service {
-	var sv *models.Service
-
-	if val, ok := c.Get("SV"); !ok {
-		logger.FromContext(c).Errorf("error getting vxservice instance from context")
-	} else if sv = val.(*models.Service); sv == nil {
-		logger.FromContext(c).Errorf("got nil value vxservice instance from context")
-	}
-
-	return sv
-}
-
-func GetDBEncryptor(c *gin.Context) crypto.IDBConfigEncryptor {
-	var encryptor crypto.IDBConfigEncryptor
-
-	if cr, ok := c.Get("crp"); !ok {
-		logger.FromContext(c).Errorf("error getting secure config encryptor from context")
-	} else if encryptor = cr.(crypto.IDBConfigEncryptor); encryptor == nil {
-		logger.FromContext(c).Errorf("got nil value secure config encryptor from context")
-	}
-	return encryptor
 }

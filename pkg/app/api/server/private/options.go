@@ -176,7 +176,7 @@ func getOption(c *gin.Context, db *gorm.DB, option string, value interface{}) (u
 		return 0, response.ErrOptionsInvalidRequestData
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		return 0, response.ErrInternalServiceNotFound
 	}
 
