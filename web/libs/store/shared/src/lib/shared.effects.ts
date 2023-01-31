@@ -164,7 +164,7 @@ export class SharedEffects {
                     .getBinaries({
                         ...defaultListQuery({
                             sort: {
-                                prop: 'ver_build',
+                                prop: 'version',
                                 order: 'descending'
                             },
                             page: 1,

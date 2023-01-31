@@ -17,13 +17,15 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
+	"soldr/pkg/app/api/utils"
 	"soldr/pkg/mysql"
 )
 
 // TableFilter is auxiliary struct to contain method of filtering
 type TableFilter struct {
-	Value interface{} `form:"value" json:"value" binding:"required" swaggertype:"object"`
-	Field string      `form:"field" json:"field" binding:"required"`
+	Value    interface{} `form:"value" json:"value" binding:"required" swaggertype:"object"`
+	Field    string      `form:"field" json:"field" binding:"required"`
+	Operator string      `form:"operator" json:"operator" binding:"oneof=<,<=,>=,>,=,!=,like,not like,in,omitempty" default:"like" enums:"<,<=,>=,>,=,!=,like,not like,in"`
 }
 
 // TableSort is auxiliary struct to contain method of sorting
@@ -36,8 +38,8 @@ type TableSort struct {
 type TableQuery struct {
 	// Number of page (since 1)
 	Page int `form:"page" json:"page" binding:"min=1,required" default:"1" minimum:"1"`
-	// Amount items per page (min -1, max 100, -1 means unlimited)
-	Size int `form:"pageSize" json:"pageSize" binding:"min=-1,max=100,required" default:"5" minimum:"-1" maximum:"100"`
+	// Amount items per page (min -1, max 1000, -1 means unlimited)
+	Size int `form:"pageSize" json:"pageSize" binding:"min=-1,max=1000,required" default:"5" minimum:"-1" maximum:"1000"`
 	// Type of request
 	Type string `form:"type" json:"type" binding:"oneof=sort filter init page size,required" default:"init" enums:"sort,filter,init,page,size"`
 	// Language of result data
@@ -71,11 +73,18 @@ func (q *TableQuery) Init(table string, sqlMappers map[string]interface{}) error
 	q.sqlOrders = append(q.sqlOrders, func(db *gorm.DB) *gorm.DB {
 		return db.Order("id DESC")
 	})
+	isIntegerValue := func(field string) bool {
+		return strings.HasSuffix(field, "id") ||
+			strings.HasSuffix(field, "date") ||
+			strings.HasSuffix(field, "count") ||
+			strings.HasPrefix(field, "ver_") ||
+			strings.HasSuffix(field, "_port")
+	}
 	for k, v := range sqlMappers {
 		switch t := v.(type) {
 		case string:
 			t = q.DoConditionFormat(t)
-			if strings.HasSuffix(t, "id") {
+			if isIntegerValue(t) {
 				q.sqlMappers[k] = t
 			} else {
 				q.sqlMappers[k] = "LOWER(" + t + ")"
@@ -184,30 +193,48 @@ func (q *TableQuery) GroupBy(total *uint64, result interface{}) func(db *gorm.DB
 
 // DataFilter is function to build main data filter from filters input params
 func (q *TableQuery) DataFilter() func(db *gorm.DB) *gorm.DB {
-	fl := make(map[string][]interface{})
-	setFilter := func(field string, value interface{}) {
-		fvalue := []interface{}{}
+	type item struct {
+		op string
+		v  interface{}
+	}
+	fl := make(map[string][]item)
+	setFilter := func(field, operator string, value interface{}) {
+		if operator == "" {
+			operator = "like"
+		}
+		fvalue := []item{}
 		if fv, ok := fl[field]; ok {
 			fvalue = fv
 		}
 		switch tvalue := value.(type) {
 		case string, float64, bool:
-			fl[field] = append(fvalue, tvalue)
+			fl[field] = append(fvalue, item{operator, tvalue})
 		case []interface{}:
-			fl[field] = append(fvalue, tvalue)
+			fl[field] = append(fvalue, item{operator, tvalue})
 		}
 	}
-
+	patchOperator := func(f *TableFilter) {
+		switch f.Operator {
+		case "<", "<=", ">=", ">", "=", "!=", "like", "not like", "in":
+		default:
+			f.Operator = "like"
+		}
+	}
 	for _, f := range q.Filters {
+		patchOperator(&f)
 		if _, ok := q.sqlMappers[f.Field]; ok {
 			if v, ok := f.Value.(string); ok && v != "" {
-				setFilter(f.Field, "%"+strings.ToLower(v)+"%")
+				vs := v
+				if utils.StringInSlice(f.Operator, []string{"like", "not like"}) {
+					vs = "%" + strings.ToLower(vs) + "%"
+				}
+				setFilter(f.Field, f.Operator, vs)
 			}
 			if v, ok := f.Value.(float64); ok {
-				setFilter(f.Field, v)
+				setFilter(f.Field, f.Operator, v)
 			}
 			if v, ok := f.Value.(bool); ok {
-				setFilter(f.Field, v)
+				setFilter(f.Field, f.Operator, v)
 			}
 			if v, ok := f.Value.([]interface{}); ok && len(v) != 0 {
 				var vi []interface{}
@@ -223,7 +250,7 @@ func (q *TableQuery) DataFilter() func(db *gorm.DB) *gorm.DB {
 					}
 				}
 				if len(vi) != 0 {
-					setFilter(f.Field, vi)
+					setFilter(f.Field, "in", vi)
 				}
 			}
 		}
@@ -241,11 +268,11 @@ func (q *TableQuery) DataFilter() func(db *gorm.DB) *gorm.DB {
 			}
 		}
 		for k, f := range fl {
-			for _, v := range f {
-				if _, ok := v.([]interface{}); ok {
-					db = doFilter(db, k, " IN (?)", v)
+			for _, it := range f {
+				if _, ok := it.v.([]interface{}); ok {
+					db = doFilter(db, k, " "+it.op+" (?)", it.v)
 				} else {
-					db = doFilter(db, k, " LIKE ?", v)
+					db = doFilter(db, k, " "+it.op+" ?", it.v)
 				}
 			}
 		}
