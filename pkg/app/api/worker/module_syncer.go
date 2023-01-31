@@ -97,7 +97,7 @@ func checkIsModuleNeedUpdate(ctx context.Context, gDB *gorm.DB, moduleS *models.
 	)
 
 	scope := func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update != ?",
+		return db.Where("name LIKE ? AND version LIKE ? AND (last_module_update != ? OR files_checksums=JSON_OBJECT())",
 			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
 	}
 	if err := srv.iDB.Scopes(scope).Model(&mod).Count(&count).Error; err != nil {
@@ -116,7 +116,7 @@ func updateModuleInPolicies(ctx context.Context, encryptor crypto.IDBConfigEncry
 
 	var modulesA []models.ModuleA
 	scope := func(db *gorm.DB) *gorm.DB {
-		return db.Where("name LIKE ? AND version LIKE ? AND last_module_update != ?",
+		return db.Where("name LIKE ? AND version LIKE ? AND (last_module_update != ? OR files_checksums=JSON_OBJECT())",
 			moduleS.Info.Name, moduleS.Info.Version.String(), moduleS.LastUpdate)
 	}
 	if err := srv.iDB.Scopes(scope).Find(&modulesA).Error; err != nil {

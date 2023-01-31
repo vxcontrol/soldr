@@ -230,7 +230,7 @@ func (s *ModuleService) GetAgentModules(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -454,7 +454,7 @@ func (s *ModuleService) GetAgentBModule(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		return
 	}
 
@@ -543,7 +543,7 @@ func (s *ModuleService) GetGroupModules(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -767,7 +767,7 @@ func (s *ModuleService) GetGroupBModule(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		return
 	}
 
@@ -855,7 +855,7 @@ func (s *ModuleService) GetPolicyModules(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -1093,7 +1093,7 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		return
 	}
 
@@ -1135,6 +1135,7 @@ func (s *ModuleService) GetPolicyBModule(c *gin.Context) {
 // @Router /policies/{hash}/modules/{module_name} [put]
 func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 	var (
+		encryptor  crypto.IDBConfigEncryptor
 		form       policyModulePatch
 		hash       = c.Param("hash")
 		moduleA    models.ModuleA
@@ -1142,7 +1143,6 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		moduleS    models.ModuleS
 		policy     models.Policy
 		sv         *models.Service
-		encryptor  crypto.IDBConfigEncryptor
 	)
 
 	uaf := useraction.NewFields(c, "policy", "policy", "editing", hash, useraction.UnknownObjectDisplayName)
@@ -1171,11 +1171,6 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
-		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
-		return
-	}
-
 	if err = iDB.Take(&policy, "hash = ?", hash).Error; err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error finding policy by hash")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -1193,8 +1188,13 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, err)
+		return
+	}
+
+	if encryptor = getDBEncryptor(c); encryptor == nil {
+		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
 
@@ -1271,7 +1271,8 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			}
 
 			if moduleS.State == "draft" {
-				if err = modules.UpdatePolicyModulesByModuleS(c, &moduleS, sv); err != nil {
+				if err = modules.UpdatePolicyModulesByModuleS(&moduleS, sv, encryptor); err != nil {
+					logger.FromContext(c).WithError(err).Errorf("error updating modules in policies")
 					response.Error(c, response.ErrInternal, err)
 					return
 				}
@@ -1369,7 +1370,7 @@ func (s *ModuleService) PatchPolicyModule(c *gin.Context) {
 			return
 		}
 
-		if err = modules.RemoveUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
+		if err = modules.RemoveUnusedModuleVersion(iDB, moduleName, moduleVersion, sv); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return
@@ -1436,7 +1437,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = policy.Info.Name.En
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -1462,7 +1463,7 @@ func (s *ModuleService) DeletePolicyModule(c *gin.Context) {
 	}
 
 	moduleVersion := module.Info.Version.String()
-	if err = modules.RemoveUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
+	if err = modules.RemoveUnusedModuleVersion(iDB, moduleName, moduleVersion, sv); err != nil {
 		logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 		response.Error(c, response.ErrInternal, err)
 		return
@@ -1531,12 +1532,12 @@ func (s *ModuleService) SetPolicyModuleSecureConfigValue(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, err)
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
+	if encryptor = getDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -1665,12 +1666,12 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, err)
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
+	if encryptor = getDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -1750,11 +1751,11 @@ func (s *ModuleService) GetPolicyModuleSecureConfigValue(c *gin.Context) {
 // @Router /modules/ [get]
 func (s *ModuleService) GetModules(c *gin.Context) {
 	var (
-		query      storage.TableQuery
-		sv         *models.Service
-		resp       systemModules
-		useVersion bool
 		encryptor  crypto.IDBConfigEncryptor
+		resp       systemModules
+		sv         *models.Service
+		query      storage.TableQuery
+		useVersion bool
 	)
 
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -1763,12 +1764,12 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
+	if encryptor = getDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -1845,22 +1846,22 @@ func (s *ModuleService) GetModules(c *gin.Context) {
 func (s *ModuleService) CreateModule(c *gin.Context) {
 	var (
 		count     int64
+		encryptor crypto.IDBConfigEncryptor
 		info      models.ModuleInfo
 		module    *models.ModuleS
 		sv        *models.Service
 		template  modules.Template
-		encryptor crypto.IDBConfigEncryptor
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation", "", useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
+	if encryptor = getDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -1951,7 +1952,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "deletion", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -1983,7 +1984,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 			logger.FromContext(c).WithError(err).Errorf("error finding modules by name")
 			return err
 		} else if len(agentModules) == 0 {
-			return modules.UpdateDependenciesWhenModuleRemove(c, iDB, moduleName)
+			return modules.UpdateDependenciesWhenModuleRemove(iDB, moduleName)
 		} else if err = iDB.Where("name = ?", moduleName).Delete(&agentModules).Error; err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error deleting module by name '%s'", moduleName)
 			return err
@@ -2000,7 +2001,7 @@ func (s *ModuleService) DeleteModule(c *gin.Context) {
 			return err
 		}
 
-		if err = modules.UpdateDependenciesWhenModuleRemove(c, iDB, moduleName); err != nil {
+		if err = modules.UpdateDependenciesWhenModuleRemove(iDB, moduleName); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error updating module dependencies")
 			return err
 		}
@@ -2068,7 +2069,7 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2119,19 +2120,19 @@ func (s *ModuleService) GetModuleVersions(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version} [get]
 func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 	var (
+		encryptor  crypto.IDBConfigEncryptor
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
 		version    = c.Param("version")
-		encryptor  crypto.IDBConfigEncryptor
 	)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
+	if encryptor = getDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -2181,24 +2182,35 @@ func (s *ModuleService) GetModuleVersion(c *gin.Context) {
 func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	var (
 		cfiles     map[string][]byte
+		encryptor  crypto.IDBConfigEncryptor
+		form       moduleVersionPatch
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
-		form       moduleVersionPatch
 		sv         *models.Service
 		services   []models.Service
 		template   = make(modules.Template)
 		version    = c.Param("version")
-		encryptor  crypto.IDBConfigEncryptor
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "undefined action", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
+	tid := c.GetUint64("tid")
+	if sv = getService(c); sv == nil {
+		response.Error(c, response.ErrInternalServiceNotFound, nil)
+		return
+	}
+
+	if encryptor = getDBEncryptor(c); encryptor == nil {
+		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
+		return
+	}
+
 	if err := c.ShouldBindJSON(&form); err != nil || form.Module.Valid() != nil {
 		if err == nil {
 			err = form.Module.Valid()
 		}
-		name, nameErr := modules.GetModuleName(c, s.db, moduleName, version)
+		name, nameErr := modules.GetModuleName(s.db, sv, tid, moduleName, version)
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -2214,17 +2226,6 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = form.Module.Locale.Module["en"].Title
 
-	if sv = modules.GetService(c); sv == nil {
-		response.Error(c, response.ErrInternalServiceNotFound, nil)
-		return
-	}
-
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
-		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
-		return
-	}
-
-	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
@@ -2305,7 +2306,8 @@ func (s *ModuleService) PatchModuleVersion(c *gin.Context) {
 		}
 
 		for _, svc := range services {
-			if err = modules.UpdatePolicyModulesByModuleS(c, &module, &svc); err != nil {
+			if err = modules.UpdatePolicyModulesByModuleS(&module, &svc, encryptor); err != nil {
+				logger.FromContext(c).WithError(err).Errorf("error updating modules in policies")
 				response.Error(c, response.ErrInternal, err)
 				return
 			}
@@ -2334,23 +2336,24 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		cfiles     map[string][]byte
 		clver      models.ChangelogVersion
 		count      int64
+		encryptor  crypto.IDBConfigEncryptor
 		module     models.ModuleS
 		moduleName = c.Param("module_name")
 		sv         *models.Service
 		template   modules.Template
 		version    = c.Param("version")
-		encryptor  crypto.IDBConfigEncryptor
 	)
 
 	uaf := useraction.NewFields(c, "module", "module", "creation of the draft", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	tid := c.GetUint64("tid")
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
 
-	if encryptor = modules.GetDBEncryptor(c); encryptor == nil {
+	if encryptor = getDBEncryptor(c); encryptor == nil {
 		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
@@ -2359,7 +2362,7 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		if err == nil {
 			err = clver.Valid()
 		}
-		name, nameErr := modules.GetModuleName(c, s.db, moduleName, "latest")
+		name, nameErr := modules.GetModuleName(s.db, sv, tid, moduleName, "latest")
 		if nameErr == nil {
 			uaf.ObjectDisplayName = name
 		}
@@ -2368,7 +2371,6 @@ func (s *ModuleService) CreateModuleVersion(c *gin.Context) {
 		return
 	}
 
-	tid := c.GetUint64("tid")
 	scope := func(db *gorm.DB) *gorm.DB {
 		return db.Where("name = ? AND tenant_id = ? AND service_type = ?", moduleName, tid, sv.Type)
 	}
@@ -2491,7 +2493,7 @@ func (s *ModuleService) DeleteModuleVersion(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "deletion of the version", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2584,7 +2586,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2655,6 +2657,7 @@ func (s *ModuleService) GetModuleVersionUpdates(c *gin.Context) {
 // @Router /modules/{module_name}/versions/{version}/updates [post]
 func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	var (
+		encryptor  crypto.IDBConfigEncryptor
 		moduleName = c.Param("module_name")
 		module     models.ModuleS
 		svc        *models.Service
@@ -2664,8 +2667,13 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "version update in policies", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if svc = modules.GetService(c); svc == nil {
+	if svc = getService(c); svc == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
+		return
+	}
+
+	if encryptor = getDBEncryptor(c); encryptor == nil {
+		response.Error(c, response.ErrInternalDBEncryptorNotFound, nil)
 		return
 	}
 
@@ -2689,7 +2697,8 @@ func (s *ModuleService) CreateModuleVersionUpdates(c *gin.Context) {
 	}
 	uaf.ObjectDisplayName = module.Locale.Module["en"].Title
 
-	if err := modules.UpdatePolicyModulesByModuleS(c, &module, svc); err != nil {
+	if err := modules.UpdatePolicyModulesByModuleS(&module, svc, encryptor); err != nil {
+		logger.FromContext(c).WithError(err).Errorf("error updating modules in policies")
 		response.Error(c, response.ErrInternal, err)
 		return
 	}
@@ -2718,7 +2727,7 @@ func (s *ModuleService) GetModuleVersionFiles(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2782,7 +2791,7 @@ func (s *ModuleService) GetModuleVersionFile(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -2858,7 +2867,7 @@ func (s *ModuleService) PatchModuleVersionFile(c *gin.Context) {
 	uaf := useraction.NewFields(c, "module", "module", "module editing", moduleName, useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -3032,7 +3041,7 @@ func (s *ModuleService) GetModuleVersionOption(c *gin.Context) {
 		version    = c.Param("version")
 	)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}

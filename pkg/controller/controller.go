@@ -752,9 +752,12 @@ func (s *sController) updaterModules() {
 	defer func() { s.closed = true }()
 
 	for {
+		// check modules update before waiting the timer
+		s.doSync()
+
 		select {
 		case <-time.NewTimer(syncModulesInterval).C:
-			s.doSync()
+			continue
 		case <-s.quit:
 			return
 		}

@@ -83,7 +83,8 @@ IGNORE INTO \`users\` (
     \`tenant_id\`,
     \`mail\`,
     \`name\`,
-    \`password\`
+    \`password\`,
+    \`password_change_required\`
 ) VALUES (
     1,
     MD5(RAND()),
@@ -92,7 +93,8 @@ IGNORE INTO \`users\` (
     1,
     'admin@vxcontrol.com',
     'admin',
-    '\$2a\$10\$deVOk0o1nYRHpaVXjIcyCuRmaHvtoMN/2RUT7w5XbZTeiWKEbXx9q'
+    '\$2a\$10\$deVOk0o1nYRHpaVXjIcyCuRmaHvtoMN/2RUT7w5XbZTeiWKEbXx9q',
+    'true'
 );
 
 EOT

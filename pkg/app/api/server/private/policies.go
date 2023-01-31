@@ -227,7 +227,7 @@ func (s *PolicyService) GetPolicies(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -440,7 +440,7 @@ func (s *PolicyService) GetPolicy(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -845,7 +845,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 		return
 	}
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -900,7 +900,7 @@ func (s *PolicyService) DeletePolicy(c *gin.Context) {
 	for _, module := range moduleList {
 		moduleName := module.Info.Name
 		moduleVersion := module.Info.Version.String()
-		if err = modules.RemoveUnusedModuleVersion(c, iDB, moduleName, moduleVersion, sv); err != nil {
+		if err = modules.RemoveUnusedModuleVersion(iDB, moduleName, moduleVersion, sv); err != nil {
 			logger.FromContext(c).WithError(err).Errorf("error removing unused module data")
 			response.Error(c, response.ErrInternal, err)
 			return

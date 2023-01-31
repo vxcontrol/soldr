@@ -134,7 +134,7 @@ func (s *PortingService) ExportModule(c *gin.Context) {
 	}
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
@@ -250,7 +250,7 @@ func (s *PortingService) ImportModule(c *gin.Context) {
 	}
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	if sv = modules.GetService(c); sv == nil {
+	if sv = getService(c); sv == nil {
 		response.Error(c, response.ErrInternalServiceNotFound, nil)
 		return
 	}
