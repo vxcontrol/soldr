@@ -75,7 +75,7 @@ export const canUpgradeAgent = (agent: Agent, latestBinaryVersion: string) =>
     agent?.auth_status === 'authorized' &&
     latestBinaryVersion &&
     removeHashFromVersion(agent?.version) !== removeHashFromVersion(latestBinaryVersion) &&
-    !['new', 'running', 'ready'].includes(agent.details?.upgrade_task?.status);
+    !['new', 'running'].includes(agent.details?.upgrade_task?.status);
 
 export const isUpgradeAgentInProgress = (agent: Agent) =>
     ['new', 'running'].includes(agent?.details?.upgrade_task?.status);
