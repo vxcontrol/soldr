@@ -136,7 +136,6 @@ export class ModuleInteractivePartComponent implements OnInit {
             vxHostPort = `ws://${window.location.host}`;
         }
 
-        console.log("on init interactive view", this.viewMode, this.viewMode === ViewMode.Agents, this.viewMode === ViewMode.Groups);
         if (this.viewMode === ViewMode.Agents) {
             protoAPI = new VXAPI({
                 hash: this.entity.hash,
