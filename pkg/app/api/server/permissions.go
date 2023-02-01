@@ -3,7 +3,6 @@ package server
 import (
 	"fmt"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 
@@ -13,14 +12,9 @@ import (
 )
 
 func getPrms(c *gin.Context) ([]string, error) {
-	session := sessions.Default(c)
-	prm := session.Get("prm")
-	if prm == nil {
-		return nil, fmt.Errorf("privileges is not set")
-	}
-	prms, ok := prm.([]string)
-	if !ok {
-		return nil, fmt.Errorf("privileges is malformed")
+	prms := c.GetStringSlice("prm")
+	if len(prms) == 0 {
+		return nil, fmt.Errorf("privileges are not set")
 	}
 	return prms, nil
 }
