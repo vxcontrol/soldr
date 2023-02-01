@@ -61,7 +61,6 @@ func (p *AuthMiddleware) tryAuth(c *gin.Context, authMethods ...func(c *gin.Cont
 
 	if result != authResultOk {
 		response.Error(c, response.ErrAuthRequired, nil)
-		c.Abort()
 		return
 	}
 	c.Next()
