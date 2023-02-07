@@ -217,19 +217,13 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
                     this.processUnusedFields(unusedFields);
                 } else if (unusedRequiredFields?.length > 0) {
                     this.tabIndex = TabsIndexes.Fields;
-                    this.modalService.confirm(
-                        {
-                            mcClosable: true,
-                            mcContent: this.transloco.translate(
-                                'modules.Modules.ModuleEdit.Text.UnusedRequiredFields',
-                                {
-                                    fields: unusedRequiredFields
-                                }
-                            ),
-                            mcCancelText: this.transloco.translate('common.Common.Pseudo.ButtonText.Close')
-                        },
-                        'warn'
-                    );
+                    this.modalService.create({
+                        mcTitle: this.transloco.translate('modules.Modules.ModuleEdit.ModalTitle.FailedSaveModule'),
+                        mcContent: this.transloco.translate('modules.Modules.ModuleEdit.Text.UnusedRequiredFields', {
+                            fields: unusedRequiredFields
+                        }),
+                        mcCancelText: this.transloco.translate('common.Common.Pseudo.ButtonText.Close')
+                    });
                 } else {
                     this.doSave();
                 }
@@ -256,7 +250,7 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
 
     private processUnusedFields(fields: string[]) {
         const removeUnusedFieldsModal: McModalRef = this.modalService.create({
-            mcTitle: this.transloco.translate('modules.Modules.ModuleEdit.ModalTitle.RemoveUnusedFields'),
+            mcTitle: this.transloco.translate('modules.Modules.ModuleEdit.ModalTitle.FailedSaveModule'),
             mcContent: this.transloco.translate('modules.Modules.ModuleEdit.Text.RemoveUnusedFields', {
                 fields: fields.join(', ')
             }),

@@ -126,7 +126,7 @@
     "Modules.ModuleEdit.ModalTitle.NewDraft": "Новый черновик модуля {module}",
     "Modules.ModuleEdit.ModalTitle.Release": "Релиз модуля <strong>{module}</strong>",
     "Modules.ModuleEdit.ModalTitle.RemoveMsgTitle": "Удаление объекта",
-    "Modules.ModuleEdit.ModalTitle.RemoveUnusedFields": "Не удалось сохранить модуль",
+    "Modules.ModuleEdit.ModalTitle.FailedSaveModule": "Не удалось сохранить модуль",
     "Modules.ModuleEdit.ModalTitle.UploadMsgTitle": "Загрузка файла",
     "Modules.ModuleEdit.ModalTitle.ViewFile": "Просмотр файла {filename}",
     "Modules.ModuleEdit.NotificationText.ReleaseError": "Не удалось выпустить релиз модуля",

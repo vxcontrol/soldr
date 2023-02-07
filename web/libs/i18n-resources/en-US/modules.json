@@ -126,7 +126,7 @@
     "Modules.ModuleEdit.ModalTitle.NewDraft": "New draft of module {module}",
     "Modules.ModuleEdit.ModalTitle.Release": "Releasing module <strong>{module}</strong>",
     "Modules.ModuleEdit.ModalTitle.RemoveMsgTitle": "Deleting object",
-    "Modules.ModuleEdit.ModalTitle.RemoveUnusedFields": "Could not save module",
+    "Modules.ModuleEdit.ModalTitle.FailedSaveModule": "Could not save module",
     "Modules.ModuleEdit.ModalTitle.UploadMsgTitle": "Uploading file",
     "Modules.ModuleEdit.ModalTitle.ViewFile": "Viewing file {filename}",
     "Modules.ModuleEdit.NotificationText.ReleaseError": "Failed to release the module",
