@@ -164,7 +164,7 @@
     "Shared.ModuleConfig.LinkText.Variables": "Variables",
     "Shared.ModuleConfig.ListItemText.LogToDb": "Write to DB",
     "Shared.ModuleConfig.ListItemText.Logging": "System",
-    "Shared.ModuleConfig.ModalTitle.AssigningActionsMaster": "Action assignment wizard Step {step} of 2",
+    "Shared.ModuleConfig.ModalTitle.AssigningActionsMaster": "Action assignment wizard · Step {step} of 2",
     "Shared.ModuleConfig.ModalTitle.ChangeSecureParam": "Change the parameter",
     "Shared.ModuleConfig.ModalTitle.EventsForAction": "Trigger events for the \"{action}\" action",
     "Shared.ModuleConfig.ModalTitle.SelectAction": "Choose an action",
