@@ -92,20 +92,20 @@
 
                 <mc-divider [vertical]="true"></mc-divider>
 
-                <div mc-splitter-area class="flex">
+                <div mc-splitter-area class="flex layout-column">
                     <ng-container *ngIf="openedTabs.length > 0; else empty">
                         <mc-tab-group
-                            class="layout-fill"
+                            class="flex-none"
                             *ngrxLet="openedFiles$; let openedFiles"
                             [(selectedIndex)]="activeTabIndex">
                             <mc-tab *ngFor="let tab of openedTabs">
                                 <ng-template mc-tab-label>
                                     <div [mcTooltip]="tab.filepath">
                                         {{ t('Modules.ModuleEdit.TabTitle.FileTab', {
-                                                filename: tab.filename,
-                                                prefix: tab.prefix,
-                                                modified: openedFiles[tab.filepath]?.loaded && tab.content !== openedFiles[tab.filepath]?.content
-                                            })
+                                        filename: tab.filename,
+                                        prefix: tab.prefix,
+                                        modified: openedFiles[tab.filepath]?.loaded && tab.content !== openedFiles[tab.filepath]?.content
+                                    })
                                         }}
                                         <button
                                             mc-button
@@ -115,16 +115,20 @@
                                         </button>
                                     </div>
                                 </ng-template>
-                                <div class="layout-fill">
-                                    <mc-loader-overlay
-                                        *ngIf="!openedFiles[tab.filepath]?.loaded; else editor"></mc-loader-overlay>
-                                    <ng-template #editor>
-                                        <div class="edit-file-modal__editor layout-fill" [attr.filename]="tab.filename">
-                                        </div>
-                                    </ng-template>
-                                </div>
                             </mc-tab>
                         </mc-tab-group>
+                        <div class="flex-auto">
+                            <mc-loader-overlay
+                                *ngIf="!openedFiles[activeTab?.filepath]?.loaded">
+                            </mc-loader-overlay>
+                            <ng-container *ngFor="let tab of openedTabs">
+                                <div
+                                    [class.hidden]="!openedFiles[tab.filepath]?.loaded || activeTab?.filepath !== tab.filepath"
+                                    class="edit-file-modal__editor layout-fill"
+                                    [attr.filepath]="tab.filepath">
+                                </div>
+                            </ng-container>
+                        </div>
                     </ng-container>
                     <ng-template #empty>
                         <div *ngIf="openedTabs.length === 0" class="layout-fill layout-row layout-align-center-center">
