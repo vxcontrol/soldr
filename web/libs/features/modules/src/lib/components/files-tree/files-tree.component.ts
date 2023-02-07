@@ -167,6 +167,7 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
         const processedPath = folderPath.replace(/^code\/?/, '');
         const input = document.createElement('input');
         const { name, version } = module.info;
+      const transformedVersion = new ModuleVersionPipe().transform(version);
 
         input.type = 'file';
 
@@ -187,12 +188,15 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
                     path: `${this.root}/${path}`
                 };
 
-                return this.modulesService.patchFile(name, new ModuleVersionPipe().transform(version), params);
+                return this.modulesService.patchFile(name, transformedVersion, params);
             })
         );
 
         p.subscribe({
-            next: () => this.moduleEditFacade.fetchFiles(name, new ModuleVersionPipe().transform(version)),
+            next: () => {
+              this.moduleEditFacade.fetchFiles(name, transformedVersion);
+              this.moduleEditFacade.fetchUpdates(name, transformedVersion);
+            },
             error: () => this.showUploadError()
         });
 
@@ -202,6 +206,7 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
     deleteObject(module: ModelsModuleS, path: string) {
         const processedPath = `${this.root}/${path.replace(/^code\//, '')}`;
         const { name, version } = module.info;
+        const transformedVersion = new ModuleVersionPipe().transform(version);
 
         this.warnAboutDeleting(path)
             .pipe(
@@ -212,13 +217,14 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
                         path: processedPath
                     };
 
-                    return this.modulesService.patchFile(name, new ModuleVersionPipe().transform(version), params);
+                    return this.modulesService.patchFile(name, transformedVersion, params);
                 })
             )
             .subscribe({
                 next: (response: SuccessResponse<PrivateSystemModuleFile>) => {
                     if (response.status === StatusResponse.Success) {
-                        this.moduleEditFacade.fetchFiles(name, new ModuleVersionPipe().transform(version));
+                        this.moduleEditFacade.fetchFiles(name, transformedVersion);
+                        this.moduleEditFacade.fetchUpdates(name, transformedVersion);
                     } else {
                         this.showDeleteError();
                     }
@@ -231,6 +237,7 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
 
     createFile(module: ModelsModuleS, path: string) {
         const { name, version } = module.info;
+        const transformedVersion = new ModuleVersionPipe().transform(version);
 
         this.selectPathForCreate(this.root, `${path}/new_file.ext`)
             .pipe(
@@ -248,6 +255,7 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
                 next: (response: SuccessResponse<PrivateSystemModuleFile>) => {
                     if (response.status === StatusResponse.Success) {
                         this.moduleEditFacade.fetchFiles(name, new ModuleVersionPipe().transform(version));
+                        this.moduleEditFacade.fetchUpdates(name, transformedVersion);
                     } else {
                         this.showCreateError();
                     }
@@ -260,6 +268,7 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
 
     moveObject(module: ModelsModuleS, path: string) {
         const { name, version } = module.info;
+        const transformedVersion = new ModuleVersionPipe().transform(version);
 
         this.selectPathForMoving(this.root, path)
             .pipe(
@@ -270,13 +279,14 @@ export class FilesTreeComponent implements OnInit, OnChanges, OnDestroy {
                         newpath: `${this.root}/${this.restoreCodePath(newPath)}`
                     };
 
-                    return this.modulesService.patchFile(name, new ModuleVersionPipe().transform(version), params);
+                    return this.modulesService.patchFile(name, transformedVersion, params);
                 })
             )
             .subscribe({
                 next: (response: SuccessResponse<PrivateSystemModuleFile>) => {
                     if (response.status === StatusResponse.Success) {
-                        this.moduleEditFacade.fetchFiles(name, new ModuleVersionPipe().transform(version));
+                        this.moduleEditFacade.fetchFiles(name, transformedVersion);
+                        this.moduleEditFacade.fetchUpdates(name, transformedVersion);
                     } else {
                         this.showMoveError();
                     }
