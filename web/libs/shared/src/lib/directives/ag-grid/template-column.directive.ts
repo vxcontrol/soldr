@@ -20,7 +20,7 @@ export class TemplateColumnDirective implements OnInit {
 
     ngOnInit(): void {
         this.host.comparator = () => 0;
-        this.host.cellRendererFramework = TemplateCellComponent;
+        this.host.cellRenderer = TemplateCellComponent;
         this.host.cellRendererParams = {
             template: this.template,
             elements: {},

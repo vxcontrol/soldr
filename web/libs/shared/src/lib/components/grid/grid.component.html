@@ -29,9 +29,8 @@
                     <ag-grid-angular
                         class="layout-fill"
                         [domLayout]="domLayout"
-                        [frameworkComponents]="frameworkComponents"
+                        [components]="components"
                         [gridOptions]="gridOptions"
-                        [immutableData]="true"
                         [rowData]="data"
                         [rowSelection]="selectionType"
                         (columnMoved)="saveState()"
