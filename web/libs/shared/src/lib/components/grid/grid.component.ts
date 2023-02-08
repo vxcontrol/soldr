@@ -47,6 +47,7 @@ import { GridFooterDirective } from './footer/grid-footer.directive';
 import { GridColumnDef, GridsState, LocalizedData, Selection, Sorting, SortingDirection } from './grid.types';
 import { NoRowsOverlayComponent } from './no-rows-overlay/no-rows-overlay.component';
 import { TemplateCellComponent } from './template-cell/template-cell.component';
+import { GetRowIdParams } from 'ag-grid-community/dist/lib/entities/iCallbackParams';
 
 const AG_GRID_FOCUSED_CLASS = 'ag-grid-focused';
 
@@ -97,7 +98,7 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
     columnsSearch = new Subject<string>();
     columnsSearch$ = this.columnsSearch.asObservable().pipe(shareReplay({ bufferSize: 1, refCount: true }));
     foundColumns$: Observable<GridColumnDef[]>;
-    frameworkComponents = {
+    components = {
         cellRenderer: TemplateCellComponent,
         noRowsComponent: NoRowsOverlayComponent
     };
@@ -109,7 +110,7 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
             minWidth: 32,
             comparator: () => 0
         },
-        getRowNodeId: (node) => node[this.identityField],
+        getRowId: (params: GetRowIdParams) => params.data[this.identityField],
         noRowsOverlayComponent: 'noRowsComponent'
     };
     scrollableViewPort: CdkScrollable;
