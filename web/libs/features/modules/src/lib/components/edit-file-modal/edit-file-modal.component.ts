@@ -31,6 +31,7 @@ interface Tab {
     filepath: string;
     loaded?: boolean;
     prefix: string;
+    editor?: any;
 }
 
 @Component({
@@ -60,7 +61,6 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
     openedFiles: FilesContent;
     openedTabs: Tab[] = [];
     options: any = {};
-    supportedLanguages = supportedLanguages;
 
     private subscription = new Subscription();
 
@@ -131,9 +131,7 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
 
                 if (existedTab && !oldData[path]?.loaded && data[path].loaded) {
                     existedTab.content = data[path].content;
-                    setTimeout(() => {
-                        this.initEditor(existedTab);
-                    });
+                    existedTab.editor.getModel().setValue(existedTab.content);
                 }
             }
         });
@@ -205,7 +203,7 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
             },
             mcBodyStyle: {
                 height: '100vh',
-                'max-height': 'calc(100vh - var(--mc-modal-header-size-height))',
+                'max-height': 'calc(100vh - var(--mc-modal-header-size-height, 56px))',
                 padding: 0
             },
             mcWidth: '100vw',
@@ -287,6 +285,9 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
             this.moduleEditFacade.loadFiles([filepath]);
             this.openedTabs.push(this.initTab(filepath));
             this.activeTabIndex = this.openedTabs.length - 1;
+            setTimeout(() => {
+                this.initEditor(this.openedTabs[this.activeTabIndex]);
+            });
         }
     }
 
@@ -378,7 +379,7 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
     }
 
     private initEditor(tab: Tab) {
-        const editorContainer: HTMLElement = this.modal.getElement().querySelector(`.edit-file-modal__editor`);
+        const editorContainer: HTMLElement = this.modal.getElement().querySelector(`.edit-file-modal__editor[filepath="${tab.filepath}"]`);
         const editor = monaco.editor.create(editorContainer, {
             automaticLayout: true,
             readOnly: this.readOnly,
@@ -390,6 +391,9 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
         });
         editor.onDidChangeModelContent(() => {
             tab.content = editor.getValue();
+            this.cdr.detectChanges();
         });
+
+        this.openedTabs[this.activeTabIndex].editor = editor;
     }
 }
