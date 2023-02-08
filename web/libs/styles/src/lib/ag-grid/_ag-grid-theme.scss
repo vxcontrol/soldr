@@ -151,6 +151,7 @@
             .ag-grid-focused & {
                 .ag-row-focus {
                     border: 2px solid map-deep-get($mosaic-theme, states, focused-color) !important;
+                    overflow: hidden;
                 }
             }
         }
@@ -160,6 +161,7 @@
 
             &.ag-row-focus {
                 border: 2px solid map-deep-get($mosaic-theme, states, focused-color) !important;
+                overflow: hidden;
             }
 
             &:not(.ag-row-selected):hover {
