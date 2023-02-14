@@ -42,14 +42,14 @@ export class AutocompleteTagsComponent implements AfterViewInit, ControlValueAcc
     @ViewChild('tagInput', { static: false }) tagInput: ElementRef<HTMLInputElement>;
     @ViewChild('autocomplete', { static: false }) autocomplete: McAutocomplete;
 
-    @ViewChild('errorsTooltipTagName', { static: false }) errorsTooltipTagName: TemplateRef<any>;
-    @ViewChild('errorsTooltipMaxlength', { static: false }) errorsTooltipMaxlength: TemplateRef<any>;
+    @ViewChild('tagNameTooltipTemplate', { static: false }) tagNameTooltipTemplate: TemplateRef<any>;
+    @ViewChild('maxTagLengthTooltipTemplate', { static: false }) maxTagLengthTooltipTemplate: TemplateRef<any>;
 
     control = new FormControl<any>('', [this.maxLimitTagsValidator()]);
     filteredTags: any;
     filteredTagsByInput: string[] = [];
     selectedTags: string[] = [];
-    showErrorsTooltip$: Observable<boolean>;
+    showWarningTooltip$: Observable<boolean>;
     errorsTooltip: TemplateRef<any>;
     disabled: boolean;
     tags: string[];
@@ -98,15 +98,7 @@ export class AutocompleteTagsComponent implements AfterViewInit, ControlValueAcc
     onInput(event: any) {
         const value = event.target.value;
 
-        if (value && !value.match(this.tagMask || REGEX_TAG_NAME)) {
-            const newValue = value.replace(this.tagMaskForReplace || REGEX_REPLACE_TAG_NAME, '') as string;
-            this.processingWarnValidation(newValue, this.errorsTooltipTagName);
-        }
-
-        if (value?.length > TAG_MAX_LENGTH) {
-            const newValue = value.slice(0, TAG_MAX_LENGTH) as string;
-            this.processingWarnValidation(newValue, this.errorsTooltipMaxlength);
-        }
+        this.processValidationOnInput(value as string);
     }
 
     addOnBlurFunc(event: FocusEvent) {
@@ -129,12 +121,7 @@ export class AutocompleteTagsComponent implements AfterViewInit, ControlValueAcc
         const value = event.value;
         const trimmedValue = (value || '').trim();
 
-        if (trimmedValue) {
-            const isOptionSelected = this.autocomplete.options.some((option) => option.selected);
-            if (!isOptionSelected) {
-                this.selectedTags = [...this.selectedTags, trimmedValue];
-            }
-        }
+        this.processValidationOnCreate(trimmedValue);
 
         if (input) {
             input.value = '';
@@ -171,13 +158,46 @@ export class AutocompleteTagsComponent implements AfterViewInit, ControlValueAcc
         this.selectedTags = [];
     }
 
-    private processingWarnValidation(newInputValue: string, tooltipTemplate: TemplateRef<any>) {
-        this.control.setValue(newInputValue);
-        this.tagInput.nativeElement.value = newInputValue;
+    private getValidValue(value: string): string {
+        if (value && !value.match(this.tagMask || REGEX_TAG_NAME)) {
+            const newValue = value.replace(this.tagMaskForReplace || REGEX_REPLACE_TAG_NAME, '');
+            this.showWarningTooltip(this.tagNameTooltipTemplate);
 
+            return newValue;
+        }
+
+        if (value?.length > TAG_MAX_LENGTH) {
+            const newValue = value.slice(0, TAG_MAX_LENGTH);
+            this.showWarningTooltip(this.maxTagLengthTooltipTemplate);
+
+            return newValue;
+        }
+
+        return value;
+    }
+
+    private processValidationOnInput(value: string) {
+        const validValue = this.getValidValue(value);
+        if (validValue !== value) {
+            this.control.setValue(validValue);
+            this.tagInput.nativeElement.value = validValue;
+        }
+    }
+
+    private processValidationOnCreate(value: string) {
+        const validValue = this.getValidValue(value);
+        if (validValue) {
+            const isOptionSelected = this.autocomplete.options.some((option) => option.selected);
+            if (!isOptionSelected) {
+                this.selectedTags = [...this.selectedTags, validValue];
+            }
+        }
+    }
+
+    private showWarningTooltip(tooltipTemplate: TemplateRef<any>) {
         this.errorsTooltip = tooltipTemplate;
         // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-        this.showErrorsTooltip$ = concat(of(true), timer(DELAY_HIDE_TOOLTIP).pipe(mapTo(false)));
+        this.showWarningTooltip$ = concat(of(true), timer(DELAY_HIDE_TOOLTIP).pipe(mapTo(false)));
     }
 
     private filter(value: string): string[] {
