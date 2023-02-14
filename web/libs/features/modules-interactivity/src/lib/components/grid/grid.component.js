@@ -5,175 +5,179 @@ import { DraggableSelect } from '../draggable-select/draggable-select.components
 // noinspection HtmlUnknownAttribute
 const template = `
 <!--suppress AngularInvalidAnimationTriggerAssignment -->
-<div class="vue-grid__wrapper layout-column" ref="wrapper">
-        <div class="flex-none layout-margin-bottom-xl" ref="filter">
-            <div class="layout-row">
-                <div class="flex-auto layout-row layout-align-start-center">
+</template>
+        <div class="vue-grid__wrapper layout-column" ref="wrapper">
+            <div class="flex-none layout-margin-bottom-xl" ref="filter">
+                <div class="layout-row">
+                    <div class="flex-auto layout-row layout-align-start-center">
 
-                    <div class="vue-grid__rows-selector" v-if="canSelect && multiple">
-                        <el-checkbox
-                            v-model="isSelectedAll"
-                            :indeterminate="selected.length > 0 && !isSelectedAll"
-                            @change="toggleAllSelection()">
-                        </el-checkbox>
-
-                        <el-dropdown trigger="click" placement="bottom-start" @command="onSelectionCommand">
-                            <span class="el-dropdown-link">
-                                <i class="el-icon-arrow-down el-icon--right"></i>
-                            </span>
-                            <el-dropdown-menu slot="dropdown">
-                                <el-dropdown-item command="selectAll">
-                                    {{ $t('ModulesInteractivity.Grid.DropdownItemText.SelectAll') }}
-                                </el-dropdown-item>
-                                <el-dropdown-item command="selectAllOnPage">
-                                    {{ $t('ModulesInteractivity.Grid.DropdownItemText.SelectPage') }}
-                                </el-dropdown-item>
-                                <el-dropdown-item command="clearSelection">
-                                    {{ $t('ModulesInteractivity.Grid.DropdownItemText.ClearSelection') }}
-                                </el-dropdown-item>
-                            </el-dropdown-menu>
-                        </el-dropdown>
+                        <div class="vue-grid__rows-selector" v-if="canSelect && multiple && showSelectionMenu">
+                            <el-checkbox
+                                v-model="isSelectedAll"
+                                :indeterminate="selected.length > 0 && !isSelectedAll"
+                                @change="toggleAllSelection()">
+                                </el-checkbox>
+    
+                                <el-dropdown trigger="click" placement="bottom-start" @command="onSelectionCommand">
+                                    <span class="el-dropdown-link">
+                                        <i class="el-icon-arrow-down el-icon--right"></i>
+                                    </span>
+                                    <el-dropdown-menu slot="dropdown">
+                                        <el-dropdown-item command="selectAll">
+                                            {{ $t('ModulesInteractivity.Grid.DropdownItemText.SelectAll') }}
+                                        </el-dropdown-item>
+                                        <el-dropdown-item command="selectAllOnPage">
+                                            {{ $t('ModulesInteractivity.Grid.DropdownItemText.SelectPage') }}
+                                        </el-dropdown-item>
+                                        <el-dropdown-item command="clearSelection">
+                                            {{ $t('ModulesInteractivity.Grid.DropdownItemText.ClearSelection') }}
+                                        </el-dropdown-item>
+                                    </el-dropdown-menu>
+                                </el-dropdown>
+                            </div>
+    
+                            <div class="flex-auto layout-row layout-align-space-between"
+                                 :class="{ 'vue-grid__search-container_has-searchable-fields': hasSelectSearchableFields }">
+                                <el-select
+                                    v-if="hasSelectSearchableFields"
+                                    class="vue-grid__search-fields flex-none"
+                                    v-model="selectedSearchField"
+                                    value-key="prop"
+                                    slot="prepend"
+                                    @change="onSelectColumn()">
+                                    <el-option
+                                        v-for="column in searchableColumns"
+                                        :key="column.value"
+                                        :label="column.label"
+                                        :value="column">
+                                    </el-option>
+                                </el-select>
+    
+                                <el-input
+                                    v-if="isSearchByText"
+                                    class="vue-grid__search-input flex-auto"
+                                    v-model="searchValue"
+                                    :placeholder="currentSearchPlaceholder"
+                                    @change="search()">
+                                </el-input>
+    
+                                <el-select
+                                    ref="searchValuesSelect"
+                                    v-if="isSearchBySelect"
+                                    v-model="searchValue"
+                                    class="vue-grid__search-select flex-auto"
+                                    :multiple="selectedSearchField.search.multiple"
+                                    :placeholder="currentSearchPlaceholder"
+                                    @clear="search()">
+                                    <el-option
+                                        v-for="item in selectedSearchField.search.items"
+                                        :key="item.value"
+                                        :label="item.label"
+                                        :value="item.value"
+                                        @change="search()">
+                                    </el-option>
+                                </el-select>
+    
+                                <el-button
+                                    class="vue-grid__search-button flex-none"
+                                    size="medium"
+                                    icon="el-icon-search"
+                                    @click="search()">
+                                </el-button>
+                            </div>
+                        </div>
+    
+                        <div class="flex-none" v-bind:class="{'layout-margin-left-xl': $slots.toolbar }">
+                            <slot name="toolbar" v-bind:selected="selected" v-bind:isSelectedAll="isSelectedAll"></slot>
+                        </div>
+    
+                        <div v-if="hasSettings" class="flex-none layout-margin-left-xl">
+                            <el-tooltip :content="$t('ModulesInteractivity.Grid.TooltipText.ColumnsSettings')">
+                                <el-button icon="el-icon-setting" v-popover:columnsSelectorPopover></el-button>
+                            </el-tooltip>
+                        </div>
                     </div>
-
-                    <div class="flex-auto layout-row layout-align-space-between"
-                         :class="{ 'vue-grid__search-container_has-searchable-fields': hasSelectSearchableFields }">
-                        <el-select
-                            v-if="hasSelectSearchableFields"
-                            class="vue-grid__search-fields flex-none"
-                            v-model="selectedSearchField"
+                </div>
+    
+                <div
+                    class="vue-grid__container flex-auto"
+                    :class="{ 'vue-grid_no-selectable': noSelectionText }">
+    
+                    <data-tables-server
+                        ref="table"
+                        :loading="isLoading"
+                    :data="data"
+                    :page-size="parseInt(query.pageSize || 50)"
+                    :current-page="parseInt(query.page || 1)"
+                    :table-props="tableProps"
+                    :row-class-name="calcTableRowClassName"
+                    :pagination-props="{
+                        layout: 'slot, prev, pager, next, jumper, sizes',
+                        pageSizes: [10, 30, 50],
+                        total: this.total
+                    }"
+                    @query-change="loadData"
+                    @row-click="onRowClick"
+                    @selection-change="onSelectionChange"
+                    @header-dragend="saveSettings">
+    
+                    <template v-slot:empty>
+                        <template v-if="$slots['custom-no-rows']">
+                            <slot name="custom-no-rows"></slot>
+                        </template>
+                        <template v-else>
+                            {{ searchValue ? $t('Common.Pseudo.Text.NotFound') : emptyText || $t('Common.Pseudo.Text.NoData') }}
+                        </template>
+                    </template>
+    
+                    <template v-if="renderComponent">
+                        <slot v-for="column in visibleColumns" :name="'column-' + column.prop"></slot>
+                    </template>
+    
+                    <template v-slot:pagination v-if="canSelect">
+                        <span class="layout-row">
+                            <div class="el-pagination__selected">
+                                {{
+                                    $t('ModulesInteractivity.Grid.Text.RowsSummary', {
+                                        selected: isSelectedAll ? 'all' : selected.length,
+                                        total: total
+                                    })
+                                }}
+                            </div>
+                        </span>
+                    </template>
+                </data-tables-server>
+    
+                <el-popover
+                    ref="columnsSelectorPopover"
+                    placement="bottom-end"
+                    width="640"
+                    trigger="click"
+                    :visible-arrow="false">
+                    <div class="layout-padding-l">
+                        <draggable-select
+                            class="layout-fill_horizontal"
+                            v-model="visibleColumns"
+                            multiple
                             value-key="prop"
-                            slot="prepend"
-                            @change="onSelectColumn()">
+                            :placeholder="$t('ModulesInteractivity.Grid.SelectPlaceholder.SelectColumns')"
+                            @change="saveSettings">
                             <el-option
-                                v-for="column in searchableColumns"
-                                :key="column.value"
-                                :label="column.label"
-                                :value="column">
-                            </el-option>
-                        </el-select>
-
-                        <el-input
-                            v-if="isSearchByText"
-                            class="vue-grid__search-input uk-flex-auto"
-                            v-model="searchValue"
-                            clearable
-                            :placeholder="currentSearchPlaceholder"
-                            @change="search()">
-                        </el-input>
-
-                        <el-select
-                            ref="searchValuesSelect"
-                            v-if="isSearchBySelect"
-                            v-model="searchValue"
-                            class="vue-grid__search-select flex-auto"
-                            clearable
-                            :multiple="selectedSearchField.search.multiple"
-                            :placeholder="currentSearchPlaceholder"
-                            @clear="search()">
-                            <el-option
-                                v-for="item in selectedSearchField.search.items"
-                                :key="item.value"
+                                v-for="item in availableColumns"
+                                :key="item.prop"
                                 :label="item.label"
-                                :value="item.value"
-                                @change="search()">
+                                :value="item">
                             </el-option>
-                        </el-select>
-
-                        <el-button
-                            class="vue-grid__search-button flex-none"
-                            size="medium"
-                            icon="el-icon-search"
-                            @click="search()">
-                        </el-button>
+                        </draggable-select>
                     </div>
-                </div>
-
-                <div class="flex-none" v-bind:class="{'layout-margin-left-xl': $slots.toolbar }">
-                    <slot name="toolbar" v-bind:selected="selected" v-bind:isSelectedAll="isSelectedAll"></slot>
-                </div>
-
-                <div class="flex-none layout-margin-left-xl">
-                    <el-tooltip :content="$t('ModulesInteractivity.Grid.TooltipText.ColumnsSettings')">
-                        <el-button icon="el-icon-setting" v-popover:columnsSelectorPopover></el-button>
-                    </el-tooltip>
-                </div>
+                </el-popover>
+            </div>
+    
+            <div class="flex-none" ref="footerText">
+                {{ footerText }}
             </div>
         </div>
-
-        <div
-            class="vue-grid__container flex-auto"
-            :class="{ 'vue-grid_no-selectable': noSelectionText }">
-
-            <data-tables-server
-                ref="table"
-                :loading="isLoading"
-                :data="data"
-                :page-size="parseInt(query.pageSize || 50)"
-                :current-page="parseInt(query.page || 1)"
-                :table-props="tableProps"
-                :row-class-name="calcTableRowClassName"
-                :pagination-props="{
-                    layout: 'slot, prev, pager, next, jumper, sizes',
-                    pageSizes: [10, 30, 50],
-                    total: this.total
-                }"
-                @query-change="loadData"
-                @row-click="onRowClick"
-                @selection-change="onSelectionChange"
-                @header-dragend="saveSettings">
-
-                <template v-slot:empty>
-                    <el-empty :description="emptyText || $t('Common.Pseudo.Text.NoData')"></el-empty>
-                </template>
-
-                <template v-if="renderComponent">
-                    <slot v-for="column in visibleColumns" :name="'column-' + column.prop"></slot>
-                </template>
-
-                <template v-slot:pagination v-if="canSelect">
-                    <span class="layout-row">
-                        <div class="el-pagination__selected">
-                            {{
-                                $t('ModulesInteractivity.Grid.Text.RowsSummary', {
-                                    selected: isSelectedAll ? 'all' : selected.length,
-                                    total: total
-                                })
-                            }}
-                        </div>
-                    </span>
-                </template>
-            </data-tables-server>
-
-            <el-popover
-                ref="columnsSelectorPopover"
-                placement="bottom-end"
-                width="640"
-                trigger="click"
-                :visible-arrow="false">
-                <div class="layout-padding-l">
-                    <draggable-select
-                        class="layout-fill_horizontal"
-                        v-model="visibleColumns"
-                        multiple
-                        value-key="prop"
-                        :placeholder="$t('ModulesInteractivity.Grid.SelectPlaceholder.SelectColumns')"
-                        @change="saveSettings">
-                        <el-option
-                            v-for="item in availableColumns"
-                            :key="item.prop"
-                            :label="item.label"
-                            :value="item">
-                        </el-option>
-                    </draggable-select>
-                </div>
-            </el-popover>
-        </div>
-
-        <div class="flex-none uk-text-right" ref="footerText">
-            {{ footerText }}
-        </div>
-    </div>
-</template>
+    </template>
 `;
 
 export const GridComponent = Vue.extend({
@@ -197,7 +201,8 @@ export const GridComponent = Vue.extend({
         footerText: { type: String },
         fullTextSearch: { type: Boolean, default: true },
         noSelectionText: { type: Boolean, default: true },
-        defaultSort: { type: Object }
+        defaultSort: { type: Object },
+        hasSettings: { type: Boolean, default: true }
     },
 
     data() {
@@ -271,9 +276,7 @@ export const GridComponent = Vue.extend({
         tableProps() {
             return {
                 rowClassName: this.calcTableRowClassName,
-
                 height: this.tableHeight,
-                border: true,
                 defaultSort: this.defaultSort
             };
         },
@@ -301,11 +304,9 @@ export const GridComponent = Vue.extend({
         availableColumns() {
             return Object.keys(this.$slots)
                 .filter((key) => key.startsWith('column'))
-
                 .filter((key) => !!this.columnsConfig[this.$slots[key][0].componentOptions.propsData.prop])
                 .sort((a, b) => {
                     const propA = this.$slots[a][0].componentOptions.propsData.prop;
-
                     const propB = this.$slots[b][0].componentOptions.propsData.prop;
 
                     return this.columnsConfig[propA] && this.columnsConfig[propB]
@@ -314,13 +315,11 @@ export const GridComponent = Vue.extend({
                 })
                 .map((key) => {
                     const slot = this.$slots[key];
-
                     const prop = slot[0].componentOptions.propsData.prop;
                     const config = this.columnsConfig[prop];
 
                     return {
                         prop,
-
                         label: slot[0].componentOptions.propsData.label,
                         search: (config && config.search) || false,
                         default: config ? config.default === true : false
@@ -379,7 +378,6 @@ export const GridComponent = Vue.extend({
             processedQuery.lang = this.$i18n.locale;
             this.$emit('query-change', processedQuery);
         },
-
         calcTableRowClassName({ row }) {
             return this.selected.find((item) => item.id === row.id) ? 'el-table__row_selected' : undefined;
         },
@@ -448,8 +446,6 @@ export const GridComponent = Vue.extend({
             }
 
             this.isSelectedAll = this.multiple && this.selected.length === this.total;
-
-            return true;
         },
         onSelectionCommand(command) {
             if (!this.$refs.table) {
@@ -490,7 +486,6 @@ export const GridComponent = Vue.extend({
             this.search();
 
             // сброс выбранного значения в случае выбираемых полей при переходе между одиночным значением и множественным
-
             if (this.$refs.searchValuesSelect) {
                 this.$refs.searchValuesSelect.selectedLabel = '';
             }
@@ -501,8 +496,7 @@ export const GridComponent = Vue.extend({
 
                 return;
             }
-            const key = this.componentStorageKey;
-            const storedSettings = window.localStorage.getItem(key);
+            const storedSettings = window.localStorage.getItem(this.componentStorageKey);
             const parsedSettings = (storedSettings ? JSON.parse(storedSettings) : {})[this.storageKey] || {};
 
             // visibility
@@ -513,7 +507,6 @@ export const GridComponent = Vue.extend({
             this.$refs.table.$refs.elTable.doLayout();
 
             // columns sizes
-
             if (this.$refs.table) {
                 const elTable = this.$refs.table.$children.find(
                     (item) => item.$vnode.componentOptions.tag === 'el-table'
@@ -526,7 +519,6 @@ export const GridComponent = Vue.extend({
                     this.$nextTick(() => {
                         if (!parsedSettings.columnsParams) {
                             this.canSaveSettings = true;
-
                             return;
                         }
 
