@@ -24,7 +24,7 @@ import {
 } from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { convertVersion } from '@soldr/features/modules';
-import { ListItem, ModelsFormControl, moduleOsList, ProxyPermission } from '@soldr/shared';
+import { ENTITY_NAME_MAX_LENGTH, ListItem, ModelsFormControl, moduleOsList, ProxyPermission } from '@soldr/shared';
 import { ModuleListFacade } from '@soldr/store/modules';
 import { SharedFacade } from '@soldr/store/shared';
 
@@ -135,7 +135,12 @@ export class CreateModuleModalComponent implements OnInit, OnDestroy {
         this.form = new FormGroup({
             name: new FormControl<string>(
                 '',
-                [Validators.required, Validators.minLength(MIN_LENGTH), Validators.pattern('^[0-9a-z_]+$')],
+                [
+                    Validators.required,
+                    Validators.minLength(MIN_LENGTH),
+                    Validators.maxLength(ENTITY_NAME_MAX_LENGTH),
+                    Validators.pattern('^[0-9a-z_]+$')
+                ],
                 [this.existNameValidator()]
             ),
             template: new FormControl<string>(ModuleTemplate.Generic),
