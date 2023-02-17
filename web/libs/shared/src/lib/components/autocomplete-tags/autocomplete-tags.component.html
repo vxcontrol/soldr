@@ -2,7 +2,7 @@
     <mc-form-field
         [mcWarningTooltip]="errorsTooltip"
         [mcTrigger]="'manual'"
-        [mcVisible]="(showErrorsTooltip$ | async) === true"
+        [mcVisible]="(showWarningTooltip$ | async) === true"
         [mcTooltipClass]="'warning'"
         [ngClass]="{'form-field-error': control.errors}">
         <mc-tag-list #tagList [disabled]="disabled" [(ngModel)]="tags">
@@ -40,10 +40,10 @@
             {{ tShared('Shared.Pseudo.ValidationText.MaxLimitTags') }}
         </mc-hint>
     </mc-form-field>
-    <ng-template #errorsTooltipTagName>
+    <ng-template #tagNameTooltipTemplate>
         <span>{{ tagMaskTooltipText || tShared('Shared.Pseudo.ValidationText.OnlyLettersDigitsAndSymbols') }}</span>
     </ng-template>
-    <ng-template #errorsTooltipMaxlength>
+    <ng-template #maxTagLengthTooltipTemplate>
         <span>{{ tShared('Shared.Pseudo.ValidationText.MaxLengthTag') }}</span>
     </ng-template>
 </ng-container>

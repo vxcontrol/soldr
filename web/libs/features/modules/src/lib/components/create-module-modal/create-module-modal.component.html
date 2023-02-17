@@ -28,19 +28,19 @@
                         <div class="mc-form__row mc-form-row_margin">
                             <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Name') }}</label>
 
-                            <div class="display-flex layout-column flex-80">
-                                <mc-form-field class="mc-form__control">
-                                    <input mcInput formControlName="name">
-                                    <mc-hint>{{ tShared('Shared.Pseudo.ValidationText.OnlyLatinLettersAndDash') }}</mc-hint>
-                                    <mc-hint *ngIf="form.get('name').errors?.minlength" [color]="themePalette.Error">
-                                        {{ tShared('Shared.Pseudo.ValidationText.MinLength', {minLength: 3}) }}
-                                    </mc-hint>
-                                    <mc-hint *ngIf="form.get('name').errors?.entityNameExists" [color]="themePalette.Error">
-                                        {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists')}}
-                                    </mc-hint>
-                                    <mc-cleaner></mc-cleaner>
-                                </mc-form-field>
-                            </div>
+                            <mc-form-field class="mc-form__control flex-80">
+                                <input mcInput formControlName="name">
+                                <mc-hint>{{ tShared('Shared.Pseudo.ValidationText.OnlyLatinLettersAndDash') }}</mc-hint>
+                                <mc-hint *ngIf="form.get('name').errors?.minlength" [color]="themePalette.Error">
+                                    {{ tShared('Shared.Pseudo.ValidationText.MinLength', {minLength: 3}) }}
+                                </mc-hint>
+                                <mc-hint *ngIf="form.get('name').errors?.entityNameExists" [color]="themePalette.Error">
+                                    {{ tShared('Shared.Pseudo.ValidationText.NameAlreadyExists')}}
+                                </mc-hint>
+                                <mc-hint *ngIf="form.get('name').errors?.maxlength" [color]="themePalette.Error">
+                                    {{ tShared('Shared.Pseudo.ValidationText.MaxLengthEntityName') }}
+                                </mc-hint>
+                            </mc-form-field>
                         </div>
                         <div class="mc-form__row mc-form-row_margin">
                             <label class="mc-form__label flex-20 create-module-modal__label">{{ t('Modules.CreateModule.Label.Template') }}</label>
@@ -58,8 +58,9 @@
                                 <input class="flex-30" mcInput formControlName="version">
 
                                 <mc-hint>{{ t('Modules.CreateModule.Hint.Version') }}</mc-hint>
-                                <mc-hint *ngIf="form.get('version').errors?.pattern">{{ tShared('Shared.Pseudo.ValidationText.InvalidFormat') }}</mc-hint>
-                                <mc-cleaner></mc-cleaner>
+                                <mc-hint *ngIf="form.get('version').errors?.pattern" [color]="themePalette.Error">
+                                    {{ tShared('Shared.Pseudo.ValidationText.InvalidFormat') }}
+                                </mc-hint>
                             </mc-form-field>
                         </div>
                         <div class="mc-form__row mc-form-row_margin">
