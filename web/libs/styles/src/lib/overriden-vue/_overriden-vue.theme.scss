@@ -15,4 +15,8 @@
         color: mc-color(map-get($theme, error), 400) !important;
         border-color: mc-color(map-get($theme, error), 400) !important;
     }
+
+    .vue_error-text {
+        color: mc-color(map-get($theme, error), 400) !important;
+    }
 }
