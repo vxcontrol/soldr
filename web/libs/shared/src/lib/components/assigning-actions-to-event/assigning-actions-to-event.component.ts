@@ -16,7 +16,7 @@ import { LANGUAGES } from '@soldr/i18n';
 import { SharedFacade } from '@soldr/store/shared';
 
 import { LanguageService } from '../../services';
-import { EntityModule, LOG_TO_DB, LOG_TO_DB_ACTION } from '../../types';
+import { EntityModule, LOG_TO_DB, LOG_TO_DB_ACTION, THIS_MODULE_NAME } from '../../types';
 import { clone, difference } from '../../utils';
 
 interface ModuleListItem {
@@ -270,7 +270,8 @@ export class AssigningActionsToEventComponent implements OnInit {
 
         module.dynamic_dependencies = module.dynamic_dependencies.filter(
             (dep) =>
-                dep.type !== DependencyType.ToMakeAction || (dep.module_name !== 'this' && lookupDepInEventAction(dep))
+                dep.type !== DependencyType.ToMakeAction ||
+                (dep.module_name !== THIS_MODULE_NAME && lookupDepInEventAction(dep))
         );
     }
 
