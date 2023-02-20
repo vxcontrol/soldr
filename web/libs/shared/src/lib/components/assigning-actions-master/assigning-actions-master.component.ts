@@ -29,7 +29,7 @@ import { LANGUAGES } from '@soldr/i18n';
 import { SharedFacade } from '@soldr/store/shared';
 
 import { LanguageService } from '../../services';
-import { EntityModule, LOG_TO_DB, LOG_TO_DB_ACTION } from '../../types';
+import { EntityModule, LOG_TO_DB, LOG_TO_DB_ACTION, THIS_MODULE_NAME } from '../../types';
 import { clone, difference } from '../../utils';
 
 const LAST_STEP = 2;
@@ -393,7 +393,8 @@ export class AssigningActionsMasterComponent implements OnInit, OnDestroy {
             map((modules) => {
                 const action: ModelsOptionsActions = {
                     config: {
-                        priority: LOG_TO_DB_ACTION.priority
+                        priority: LOG_TO_DB_ACTION.priority,
+                        fields: []
                     },
                     locale: {
                         [LANGUAGES.ru]: {
@@ -405,7 +406,7 @@ export class AssigningActionsMasterComponent implements OnInit, OnDestroy {
                             description: this.transloco.translate('shared.Shared.ModuleConfig.ListItemText.LogToDb')
                         }
                     },
-                    module_name: 'System',
+                    module_name: THIS_MODULE_NAME,
                     module_os: {},
                     name: LOG_TO_DB_ACTION.name
                 };
@@ -606,7 +607,7 @@ export class AssigningActionsMasterComponent implements OnInit, OnDestroy {
                     ...action,
                     action: actions.find(({ name }) => name === action.name),
                     module:
-                        action.module_name === 'this'
+                        action.module_name === THIS_MODULE_NAME
                             ? this.module
                             : modules.find((module) => module.info.name === action.module_name)
                 }))
@@ -630,7 +631,8 @@ export class AssigningActionsMasterComponent implements OnInit, OnDestroy {
 
         module.dynamic_dependencies = module.dynamic_dependencies.filter(
             (dep) =>
-                dep.type !== DependencyType.ToMakeAction || (dep.module_name !== 'this' && lookupDepInEventAction(dep))
+                dep.type !== DependencyType.ToMakeAction ||
+                (dep.module_name !== THIS_MODULE_NAME && lookupDepInEventAction(dep))
         );
     }
 }
