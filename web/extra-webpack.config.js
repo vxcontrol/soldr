@@ -14,5 +14,15 @@ module.exports = (config) => {
 
     config.plugins.push(new MonacoWebpackPlugin());
 
+    config.optimization.minimize = true;
+
+    config.optimization.minimizer = [
+      new TerserPlugin({
+        minify: TerserPlugin.terserMinify,
+        test: /\.js$/i
+      }),
+      ...(config.optimization.minimizer || [])
+    ];
+
     return config;
 };
