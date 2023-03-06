@@ -101,7 +101,7 @@
 
     "Agents.Pseudo.ButtonText.Repeat": "Повторить",
     "Agents.Pseudo.ButtonText.Upgrade": "Обновить",
-    "Agents.Pseudo.Text.AvailableUpgrade": "Доступно обновление до версии {version}",
+    "Agents.Pseudo.Text.AvailableUpgrade": "Доступна версия {version}",
     "Agents.Pseudo.Text.AvailableUpgradeToLatest": "Доступно обновление до последней версии",
     "Agents.Pseudo.Text.UpgradeInProcess": "Обновление до версии {version}",
     "Agents.Pseudo.Text.UpgradeIsFailed": "Не удалось обновить агент",
