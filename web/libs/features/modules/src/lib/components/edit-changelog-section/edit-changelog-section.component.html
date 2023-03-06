@@ -8,7 +8,7 @@
                 e2e-id="tiChangelogRecord"
                 *ngFor="let record of records.controls; let index = index; let first = first"
                 [isExpanded]="first"
-                [title]="record.get('version').value + (currentVersion === record.get('version').value ? ' - ' + t('Modules.ModuleEdit.Text.CurrentVersion'): '')"
+                [title]="currentVersion === record.get('version').value ? t('Modules.ModuleEdit.Text.CurrentVersion', { version: record.get('version').value }): record.get('version').value"
                 [canDelete]="!first"
                 (delete)="deleteRecord(record.get('version').value)">
 

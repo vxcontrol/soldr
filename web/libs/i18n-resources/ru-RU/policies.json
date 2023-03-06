@@ -35,7 +35,7 @@
     "Policies.ModuleView.LinkText.Policies": "Политики",
     "Policies.ModuleView.Text.LinkUpdate": "Обновить",
     "Policies.ModuleView.Text.LinkWhatIsNew": "Что изменилось?",
-    "Policies.ModuleView.Text.NewVersion": "Доступно обновление до версии {version}",
+    "Policies.ModuleView.Text.NewVersion": "Доступна версия {version}",
 
     "Policies.PageTitle.Text.Policies": "Политики",
     "Policies.PageTitle.Text.Modules": "Модули",
