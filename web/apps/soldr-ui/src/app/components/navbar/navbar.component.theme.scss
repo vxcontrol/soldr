@@ -49,7 +49,7 @@
     }
 
     .navbar__system-dropdown {
-        width: 180px;
+        min-width: 160px !important;
 
         .mc-dropdown-item-wrapper {
             padding: 8px 16px;

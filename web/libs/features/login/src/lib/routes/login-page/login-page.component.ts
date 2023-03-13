@@ -4,7 +4,7 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
-import { combineLatest, map, Subscription } from 'rxjs';
+import { combineLatest, filter, first, map, Subscription } from 'rxjs';
 
 import { ErrorResponse, PublicService } from '@soldr/api';
 import { PASSWORD_CHANGE_PAGE } from '@soldr/core';
@@ -23,7 +23,6 @@ interface LoginForm {
 })
 export class LoginPageComponent implements OnInit, OnDestroy {
     isSignInProcess = false;
-    isPasswordChangeRequired = false;
     form!: ModelsFormGroup<LoginForm>;
     themePalette = ThemePalette;
     subscription = new Subscription();
@@ -44,11 +43,6 @@ export class LoginPageComponent implements OnInit, OnDestroy {
             mail: new FormControl('', []),
             password: new FormControl('', [])
         });
-
-        const passwordChangeSubscription = this.sharedFacade.isPasswordChangeRequired$.subscribe(
-            (v) => (this.isPasswordChangeRequired = v)
-        );
-        this.subscription.add(passwordChangeSubscription);
     }
 
     ngOnDestroy(): void {
@@ -63,13 +57,7 @@ export class LoginPageComponent implements OnInit, OnDestroy {
         this.publicService.login(data).subscribe({
             next: () => {
                 this.isSignInProcess = false;
-                if (this.isPasswordChangeRequired && this.nextUrl) {
-                    this.router.navigate([PASSWORD_CHANGE_PAGE], { queryParams: { nextUrl: this.nextUrl } });
-                } else {
-                    this.router.navigateByUrl(
-                        this.isPasswordChangeRequired ? PASSWORD_CHANGE_PAGE : this.urlAfterLogin
-                    );
-                }
+                this.redirect();
             },
             error: (response: unknown) => {
                 if (response instanceof HttpErrorResponse) {
@@ -101,6 +89,21 @@ export class LoginPageComponent implements OnInit, OnDestroy {
 
     get nextUrl() {
         return this.activatedRoute.snapshot.queryParams.nextUrl as string;
+    }
+
+    private redirect() {
+        this.sharedFacade.fetchInfo();
+        this.sharedFacade
+            .selectInfo()
+            .pipe(
+                filter((info) => info?.type === 'user'),
+                first()
+            )
+            .subscribe(({ user }) =>
+                this.router.navigate([user.password_change_required ? PASSWORD_CHANGE_PAGE : this.urlAfterLogin], {
+                    queryParams: user.password_change_required && this.nextUrl ? { nextUrl: this.nextUrl } : {}
+                })
+            );
     }
 
     private defineTitle() {
