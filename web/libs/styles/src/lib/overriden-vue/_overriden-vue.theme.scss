@@ -1,7 +1,7 @@
 @use '@ptsecurity/mosaic/theming';
 @use '../utils/map-deep-get';
 
-@mixin overriden-vue-theme($theme) {
+@mixin overriden-vue-theme($theme, $elementTheme) {
     div.__object-form-item > legend,
     div.__array-tabs-form-item > legend,
     div.__array-form-item > legend {
@@ -17,6 +17,10 @@
     .form-item_error * {
         color: theming.mc-color(map-get($theme, error), 400) !important;
         border-color: theming.mc-color(map-get($theme, error), 400) !important;
+    }
+
+    .header {
+        color: map-get($elementTheme, color-text-primary);
     }
 
     .vue_error-text {

@@ -1,7 +1,10 @@
 <ng-container *transloco="let t; read 'modules'">
     <ng-container *transloco="let tCommon; read 'common'">
         <form #formElement class="layout-fill" [formGroup]="form" (ngSubmit)="onSubmitForm()">
-            <mc-tab-group e2e-id="tbsModuleLocalization" vertical class="layout-fill">
+            <mc-tab-group
+                e2e-id="tbsModuleLocalization"
+                class="layout-fill edit-localization__tab-group"
+                vertical>
                 <mc-tab class="scrollable-y" [label]="t('Modules.ModuleEdit.TabTitle.ModuleLocalization')">
                     <div class="layout-fill scrollable-y">
                         <div class="layout-margin-l">
@@ -96,6 +99,13 @@
                     </div>
                 </mc-tab>
 
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.ConfigAdditionalLocalization')">
+                    <ng-container
+                        [ngTemplateOutlet]="additionalKeysTabContent"
+                        [ngTemplateOutletContext]="{ translationKeys: configAdditional$ | async, controlName: 'config_additional_args' }">
+                    </ng-container>
+                </mc-tab>
+
                 <mc-tab class="scrollable-y" [label]="t('Modules.ModuleEdit.TabTitle.SecureConfigLocalization')">
                     <div class="layout-fill scrollable-y">
                         <div class="layout-margin-l" *ngrxLet="secureConfigParams$; let secureConfigParams">
@@ -151,6 +161,13 @@
                     </div>
                 </mc-tab>
 
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.SecureConfigAdditionalLocalization')">
+                    <ng-container
+                        [ngTemplateOutlet]="additionalKeysTabContent"
+                        [ngTemplateOutletContext]="{ translationKeys: secureConfigAdditional$ | async, controlName: 'secure_config_additional_args' }">
+                    </ng-container>
+                </mc-tab>
+
                 <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.EventsLocalization')">
                     <div class="layout-fill scrollable-y">
                         <div class="layout-margin-l" *ngrxLet="events$; let events">
@@ -204,6 +221,13 @@
                             </ng-container>
                         </div>
                     </div>
+                </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.EventsAdditionalLocalization')">
+                    <ng-container
+                        [ngTemplateOutlet]="additionalKeysTabContent"
+                        [ngTemplateOutletContext]="{ translationKeys: eventsAdditional$ | async, controlName: 'events_additional_args' }">
+                    </ng-container>
                 </mc-tab>
 
                 <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.EventsConfigLocalization')">
@@ -327,6 +351,13 @@
                     </div>
                 </mc-tab>
 
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.ActionsAdditionalLocalization')">
+                    <ng-container
+                        [ngTemplateOutlet]="additionalKeysTabContent"
+                        [ngTemplateOutletContext]="{ translationKeys: actionsAdditional$ | async, controlName: 'actions_additional_args' }">
+                    </ng-container>
+                </mc-tab>
+
                 <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.ActionsConfigLocalization')">
                     <div class="layout-fill scrollable-y">
                         <div class="layout-margin-l" *ngrxLet="actionConfig$; let actionConfig">
@@ -448,6 +479,13 @@
                     </div>
                 </mc-tab>
 
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.FieldsAdditionalLocalization')">
+                    <ng-container
+                        [ngTemplateOutlet]="additionalKeysTabContent"
+                        [ngTemplateOutletContext]="{ translationKeys: fieldsAdditional$ | async, controlName: 'fields_additional_args' }">
+                    </ng-container>
+                </mc-tab>
+
                 <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.TagsLocalization')">
                     <div class="layout-fill scrollable-y">
                         <div class="layout-margin-l" *ngrxLet="tags$; let tags">
@@ -502,7 +540,58 @@
                         </div>
                     </div>
                 </mc-tab>
+
+                <mc-tab [label]="t('Modules.ModuleEdit.TabTitle.Interactive')">
+                    <ng-container
+                        [ngTemplateOutlet]="additionalKeysTabContent"
+                        [ngTemplateOutletContext]="{ translationKeys: interactive$ | async, controlName: 'ui' }">
+                    </ng-container>
+                </mc-tab>
             </mc-tab-group>
         </form>
     </ng-container>
 </ng-container>
+
+<ng-template #additionalKeysTabContent let-keys="translationKeys" let-control="controlName">
+    <div class="layout-fill scrollable-y">
+        <div class="layout-margin-l" *transloco="let t; read 'modules'">
+            <soldr-toggle-list>
+                <soldr-toggle-item
+                    *ngFor="let key of keys"
+                    [title]="key"
+                    [isExpanded]="true">
+                    <ng-container [formGroup]="$any(form.controls[control]).controls[key]">
+                        <div class="layout-column">
+                            <ng-container *ngFor="let lang of languages">
+                                <div class="mc-form-horizontal layout-margin-s">
+                                    <div class="layout-margin-bottom-s">
+                                        <ng-container *ngIf="lang === languagesEnum.ru">
+                                            {{ t('Modules.ModuleEdit.Label.Russian') }}
+                                        </ng-container>
+                                        <ng-container *ngIf="lang === languagesEnum.en">
+                                            {{ t('Modules.ModuleEdit.Label.English') }}
+                                        </ng-container>
+                                    </div>
+
+                                    <div class="mc-form__row mc-form-row_margin">
+                                        <mc-form-field class="mc-form__control">
+                                            <input mcInput [formControlName]="lang">
+                                        </mc-form-field>
+                                    </div>
+                                </div>
+                            </ng-container>
+                            <button
+                                mc-button
+                                class="mc-button mc-icon-button layout-margin-right-s edit-localization__delete-button"
+                                e2e-id="btnDeleteInteractiveLocalizationKey"
+                                (click)="deleteLocalizationKey(key, control)">
+                                <i mc-icon="soldr-icons-delete_16" class="soldr-icons"></i>
+                                <span>{{ t('Modules.ModuleEdit.ButtonText.DeleteLocalizationKey') }}</span>
+                            </button>
+                        </div>
+                    </ng-container>
+                </soldr-toggle-item>
+            </soldr-toggle-list>
+        </div>
+    </div>
+</ng-template>

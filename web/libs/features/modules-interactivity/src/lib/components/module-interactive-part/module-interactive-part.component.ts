@@ -1,13 +1,23 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { HttpClient } from '@angular/common/http';
-import { Component, ElementRef, HostBinding, Input, OnInit, ViewEncapsulation } from '@angular/core';
+import {
+    Component,
+    ElementRef,
+    HostBinding,
+    Input,
+    OnChanges,
+    OnDestroy,
+    OnInit,
+    SimpleChanges,
+    ViewEncapsulation
+} from '@angular/core';
 import ElementUI from 'element-ui';
 // @ts-ignore
 import element_ui_locale_en from 'element-ui/lib/locale/lang/en';
 // @ts-ignore
 import element_ui_locale_ru from 'element-ui/lib/locale/lang/ru-RU';
 import * as pb from 'protobufjs';
-import { concat, forkJoin, Observable, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, concat, forkJoin, Observable, of, Subject, takeUntil } from 'rxjs';
 // @ts-ignore
 import Vue from 'vue';
 // @ts-ignore
@@ -19,7 +29,7 @@ import { LANGUAGES } from '@soldr/i18n';
 import { Entity, EntityModule, LanguageService, ViewMode, VueMessageFormatter } from '@soldr/shared';
 
 // @ts-ignore
-import { ModulesApiService, ModuleEventsApiService, NotificationsService } from '../../services';
+import { ModuleEventsApiService, ModulesApiService, NotificationsService } from '../../services';
 // @ts-ignore
 import { VXAPI } from '../../utils/proto.js';
 
@@ -38,22 +48,21 @@ type LocaleSet = [VueI18n.LocaleMessageObject, VueI18n.LocaleMessageObject];
     styleUrls: ['./module-interactive-part.component.scss'],
     encapsulation: ViewEncapsulation.None
 })
-export class ModuleInteractivePartComponent implements OnInit {
+export class ModuleInteractivePartComponent implements OnInit, OnChanges, OnDestroy {
     @Input() viewMode: ViewMode;
     @Input() module: EntityModule;
     @Input() entity: Entity;
 
     @HostBinding('class.module-interactivity-part') class = true;
 
+    private interactiveModule$ = new BehaviorSubject<any>({});
+    private readonly destroyed$: Subject<void> = new Subject();
     private elementUiLocale = {
         [LANGUAGES.en]: element_ui_locale_en as VueI18n.LocaleMessageObject,
         [LANGUAGES.ru]: element_ui_locale_ru as VueI18n.LocaleMessageObject
     };
     private locales$ = concat(
-        of([
-            [{}, {}],
-            [{}, {}]
-        ] as LocaleSet[]),
+        of([[{}, {}]] as LocaleSet[]),
         forkJoin([
             forkJoin([
                 this.httpClient.get(`/assets/i18n/ru-RU/${COMMON_LOCALE_SCOPE}.json`),
@@ -88,7 +97,41 @@ export class ModuleInteractivePartComponent implements OnInit {
             }
         );
 
-        this.locales$.subscribe((value) => this.setAppLocale(value));
+        combineLatest([this.locales$, this.interactiveModule$])
+            .pipe(takeUntil(this.destroyed$))
+            .subscribe(([appLocalization, module]) => {
+                const moduleLocalization = this.getModuleLocalization(module);
+                const interactiveLocalization = [...appLocalization, ...moduleLocalization];
+                this.setAppLocale(interactiveLocalization);
+            });
+    }
+
+    ngOnChanges({ module }: SimpleChanges) {
+        if (module?.currentValue && this.viewMode !== ViewMode.Policies) {
+            this.interactiveModule$.next(this.module);
+        }
+    }
+
+    ngOnDestroy() {
+        this.destroyed$.next();
+        this.destroyed$.complete();
+    }
+
+    private getModuleLocalization(module: any): LocaleSet[] {
+        const ui = module?.locale?.ui as Record<string, Record<string, string>>;
+
+        return [
+            Object.keys(ui || {}).reduce(
+                (array, key) => {
+                    Object.keys(ui[key]).forEach(
+                        (lang, index) => (array[index] = { ...array[index], [key]: ui[key][lang] })
+                    );
+
+                    return array;
+                },
+                [{}, {}]
+            )
+        ];
     }
 
     private initVueApp(agentProto: any, protocolProto: any) {

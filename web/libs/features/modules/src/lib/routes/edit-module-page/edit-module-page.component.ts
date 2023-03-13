@@ -18,9 +18,17 @@ import {
     take
 } from 'rxjs';
 
-import { ModelsModuleS, ModelsSemVersion, ModuleState } from '@soldr/api';
+import { ModelsLocale, ModelsModuleS, ModelsSemVersion, ModuleState } from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
-import { CanLeavePage, LanguageService, ModuleVersionPipe, PageTitleService, ProxyPermission } from '@soldr/shared';
+import {
+    CanLeavePage,
+    LanguageService,
+    ModuleVersionPipe,
+    PageTitleService,
+    ProxyPermission,
+    REGEX_PARSE_SCHEMA_LOCALIZATION,
+    sortKeys
+} from '@soldr/shared';
 import { ModuleEditFacade } from '@soldr/store/modules';
 import { SharedFacade } from '@soldr/store/shared';
 
@@ -62,7 +70,6 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
     availableVersions$ = this.moduleEditFacade.moduleVersions$.pipe(
         map((versions) => versions.map((item) => new ModuleVersionPipe().transform(item.info.version)))
     );
-    canLeavePage = true;
     canRelease$ = this.moduleEditFacade.module$.pipe(map((module) => module?.state === ModuleState.Draft));
     canCreateDraft$ = combineLatest([this.moduleEditFacade.module$, this.moduleEditFacade.moduleVersions$]).pipe(
         map(
@@ -119,7 +126,11 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
     isValidChangelog$ = this.moduleEditFacade.isValidChangelog$;
     language$ = this.languageService.current$;
     module$: Observable<ModelsModuleS> = this.moduleEditFacade.module$;
+    versions$ = this.moduleEditFacade.moduleVersions$;
+
+    canLeavePage = true;
     ModuleState = ModuleState;
+    module: ModelsModuleS;
     popUpPlacements = PopUpPlacements;
     readOnly$ = this.moduleEditFacade.module$.pipe(map((module) => module?.state === ModuleState.Release));
     tabsMap = [
@@ -137,7 +148,6 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
     TabsIndexes = TabsIndexes;
     tabIndex = 0;
     themePalette = ThemePalette;
-    versions$ = this.moduleEditFacade.moduleVersions$;
 
     private subscription = new Subscription();
 
@@ -186,6 +196,9 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
             this.canLeavePage = !v;
         });
         this.subscription.add(dirtySubscription);
+
+        const moduleSubscription = this.module$.subscribe((module) => (this.module = module));
+        this.subscription.add(moduleSubscription);
 
         window.addEventListener('beforeunload', this.onBeforeUnload, { capture: true });
     }
@@ -274,9 +287,32 @@ export class EditModulePageComponent implements OnInit, CanLeavePage, OnDestroy 
     private doSave() {
         this.validateSections().subscribe((isOk) => {
             if (isOk) {
+                this.parseSchema();
                 this.moduleEditFacade.saveModule();
             }
         });
+    }
+
+    private parseSchema() {
+        this.saveSchemaKeys('actions_additional_args', 'action_config_schema');
+        this.saveSchemaKeys('config_additional_args', 'config_schema');
+        this.saveSchemaKeys('events_additional_args', 'event_config_schema');
+        this.saveSchemaKeys('fields_additional_args', 'fields_schema');
+        this.saveSchemaKeys('secure_config_additional_args', 'secure_config_schema');
+    }
+
+    private saveSchemaKeys(section: keyof ModelsLocale, schema: keyof ModelsModuleS) {
+        const plainSchema = JSON.stringify(this.module[schema]);
+        const localizationKeys = new Set<string>();
+        let match;
+        while ((match = REGEX_PARSE_SCHEMA_LOCALIZATION.exec(plainSchema))) {
+            localizationKeys.add(String(match[1]));
+        }
+        const newLocalizationKeys = [...localizationKeys]
+            .filter((key) => !Object.keys(this.module.locale[section]).includes(key))
+            .reduce((obj, curr): Record<string, string> => ({ ...obj, [curr]: { ru: '', en: '' } }), {});
+        const sortedKeys = sortKeys({ ...newLocalizationKeys, ...this.module.locale[section] });
+        this.moduleEditFacade.updateLocalizationModel({ [section]: sortedKeys });
     }
 
     private validateSections() {

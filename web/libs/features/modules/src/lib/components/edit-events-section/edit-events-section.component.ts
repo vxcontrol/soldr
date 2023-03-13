@@ -29,13 +29,14 @@ import {
     withLatestFrom
 } from 'rxjs';
 
-import { OptionsService } from '@soldr/api';
+import { ModelsModuleS, OptionsService } from '@soldr/api';
 import { getModelFromSchema, getSchemaFromModel } from '@soldr/features/modules';
 import {
     clone,
     getChangesArrays,
     getEmptySchema,
     ListItem,
+    localizeSchemaAdditionalKeys,
     NcFormProperty,
     NcFormReference,
     NcformSchema,
@@ -64,6 +65,7 @@ const MAX_LENGTH_EVENT_NAME = 100;
     styleUrls: ['./edit-events-section.component.scss']
 })
 export class EditEventsSectionComponent implements OnInit, ModuleSection, OnDestroy {
+    @Input() module: ModelsModuleS;
     @Input() readOnly: boolean;
 
     @ViewChild('formElement') formElement: ElementRef<HTMLFormElement>;
@@ -114,12 +116,16 @@ export class EditEventsSectionComponent implements OnInit, ModuleSection, OnDest
                 const names = Object.keys(schema.properties as object);
                 const diff = getChangesArrays(namesOld, names);
 
-                this.defaultSchema = unwrapFormItems(
+                const defaultSchema = unwrapFormItems(
                     {
                         ...clone(schema),
                         definitions: this.definitions.getDefinitions(names)
                     } as NcformSchema,
                     changes
+                );
+                this.defaultSchema = localizeSchemaAdditionalKeys(
+                    defaultSchema,
+                    this.module?.locale.events_additional_args
                 );
 
                 applyDiff(

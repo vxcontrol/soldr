@@ -7,6 +7,7 @@ import {
     clone,
     getChangesArrays,
     getEmptySchema,
+    localizeSchemaAdditionalKeys,
     NcformSchema,
     NcformWrapperApi,
     usedPropertyTypes
@@ -100,7 +101,11 @@ export class EditSecureConfigSectionComponent implements OnInit, ModuleSection {
         const defaultSubscription = this.moduleEditFacade.module$
             .pipe(withLatestFrom(this.moduleEditFacade.changedSecureParams$))
             .subscribe(([module, changes]) => {
-                this.defaultSchema = unwrapFormItems(clone(module.secure_config_schema) as NcformSchema, changes);
+                const defaultSchema = unwrapFormItems(clone(module.secure_config_schema) as NcformSchema, changes);
+                this.defaultSchema = localizeSchemaAdditionalKeys(
+                    defaultSchema,
+                    module.locale.secure_config_additional_args
+                );
                 this.defaultModel = module.secure_default_config;
             });
         this.subscription.add(defaultSubscription);

@@ -27,12 +27,13 @@ import {
     withLatestFrom
 } from 'rxjs';
 
-import { OptionsService } from '@soldr/api';
+import { ModelsModuleS, OptionsService } from '@soldr/api';
 import { getModelFromSchema, getSchemaFromModel } from '@soldr/features/modules';
 import {
     clone,
     getChangesArrays,
     getEmptySchema,
+    localizeSchemaAdditionalKeys,
     NcFormProperty,
     NcFormReference,
     NcformSchema,
@@ -61,6 +62,7 @@ const MAX_LENGTH_ACTION_NAME = 100;
     styleUrls: ['./edit-actions-section.component.scss']
 })
 export class EditActionsSectionComponent implements OnInit, OnDestroy, ModuleSection {
+    @Input() module: ModelsModuleS;
     @Input() readOnly: boolean;
 
     @ViewChild('formElement') formElement: ElementRef<HTMLFormElement>;
@@ -104,12 +106,16 @@ export class EditActionsSectionComponent implements OnInit, OnDestroy, ModuleSec
                 const names = Object.keys(schema.properties as object);
                 const diff = getChangesArrays(namesOld, names);
 
-                this.defaultSchema = unwrapFormItems(
+                const defaultSchema = unwrapFormItems(
                     {
                         ...clone(schema),
                         definitions: this.definitions.getDefinitions(names)
                     } as NcformSchema,
                     changes
+                );
+                this.defaultSchema = localizeSchemaAdditionalKeys(
+                    defaultSchema,
+                    this.module?.locale.actions_additional_args
                 );
 
                 applyDiff(

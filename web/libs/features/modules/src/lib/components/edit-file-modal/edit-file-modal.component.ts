@@ -17,7 +17,7 @@ import { combineLatestWith, map, of, pairwise, Subject, Subscription, switchMap,
 
 import { ModelsModuleS } from '@soldr/api';
 import { FilesContent } from '@soldr/models';
-import { LanguageService, ModuleVersionPipe, OsDetectorService } from '@soldr/shared';
+import { LanguageService, ModuleVersionPipe, OsDetectorService, sortKeys } from '@soldr/shared';
 import { ModuleEditFacade } from '@soldr/store/modules';
 
 import { ModuleFolderSection } from '../../types';
@@ -33,6 +33,8 @@ interface Tab {
     prefix: string;
     editor?: any;
 }
+
+const REGEX_PARSE_CODE_LOCALIZATION = /\$t\(\'([a-zA-Z.]+)\'\)/gm;
 
 @Component({
     selector: 'soldr-edit-file-modal',
@@ -308,6 +310,21 @@ export class EditFileModalComponent implements OnInit, OnDestroy {
     }
 
     saveFileInTab(tab: Tab) {
+        const localizationKeys = new Set<string>();
+        let match;
+        while ((match = REGEX_PARSE_CODE_LOCALIZATION.exec(tab.content))) {
+            localizationKeys.add(String(match[1]));
+        }
+        const newLocalizationKeys = [...localizationKeys]
+            .filter((key) => !Object.keys(this.module.locale.ui).includes(key))
+            .reduce((obj, curr): Record<string, string> => ({ ...obj, [curr]: { ru: '', en: '' } }), {});
+        if (Object.keys(newLocalizationKeys).length) {
+            const sortedKeys = sortKeys({ ...newLocalizationKeys, ...this.module.locale.ui }) as Record<
+                string,
+                Record<string, string>
+            >;
+            this.moduleEditFacade.updateLocalizationModel({ ui: sortedKeys });
+        }
         this.moduleEditFacade.saveFiles([{ path: tab.filepath, content: tab.content }]);
     }
 

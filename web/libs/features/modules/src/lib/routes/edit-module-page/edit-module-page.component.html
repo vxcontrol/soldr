@@ -271,6 +271,7 @@
 
                         <soldr-edit-actions-section
                             #actionsSection
+                            [module]="module"
                             [readOnly]="readOnly"
                             [class]="{ 'layout-fill': tabIndex === TabsIndexes.Actions, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Actions }">
                         </soldr-edit-actions-section>
@@ -290,6 +291,7 @@
                         <soldr-edit-localization-section
                             #localizationSection
                             [readOnly]="readOnly"
+                            [module]="module"
                             [class]="{ 'layout-fill': tabIndex === TabsIndexes.Localization, 'edit-module-page-section_hidden': tabIndex !== TabsIndexes.Localization }">
                         </soldr-edit-localization-section>
 

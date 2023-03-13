@@ -6,7 +6,7 @@ import { take } from 'rxjs';
 
 import { LanguageService } from '../../services';
 import { EntityModule } from '../../types';
-import { clone, getActionParamsSchema, localizeSchemaParams } from '../../utils';
+import { clone, getActionParamsSchema, localizeSchemaAdditionalKeys, localizeSchemaParams } from '../../utils';
 import { NcformWrapperApi } from '../ncform-wrapper/ncform-wrapper.component';
 
 @Component({
@@ -80,7 +80,7 @@ export class ActionDetailsPanelComponent {
                     localizedDescription: fieldLocale.description
                 };
             }),
-            paramsSchema,
+            paramsSchema: localizeSchemaAdditionalKeys(paramsSchema, this.module.locale.actions_additional_args),
             paramsModel,
             paramsCount: Object.keys(paramsSchema.properties || {}).length
         };

@@ -20,7 +20,7 @@ import { SharedFacade } from '@soldr/store/shared';
 
 import { LanguageService, LocalizeActionService } from '../../services';
 import { EntityModule, EventDetailsItem, EventItem, LocalizedAction, LocalizedField } from '../../types';
-import { clone } from '../../utils';
+import { clone, localizeSchemaAdditionalKeys } from '../../utils';
 import { AssigningActionsToEventComponent } from '../assigning-actions-to-event/assigning-actions-to-event.component';
 import { NcformWrapperApi } from '../ncform-wrapper/ncform-wrapper.component';
 
@@ -101,7 +101,11 @@ export class EventDetailsPanelComponent implements OnChanges, OnDestroy {
                 fields,
                 localizedDescription: eventLocale?.[this.languageService.lang]?.description,
                 model: event,
-                type: event.type
+                type: event.type,
+                schema: localizeSchemaAdditionalKeys(
+                    this.selectedEvent.schema,
+                    this.module.locale.events_additional_args
+                )
             } as EventDetailsItem;
         }
     }

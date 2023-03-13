@@ -18,6 +18,7 @@ export * from './get-locale-description-by-value';
 export * from './get-name-for-new-item';
 export * from './http';
 export * from './localize-config-schema';
+export * from './localize-schema';
 export * from './merge-deep';
 export * from './message-format';
 export * from './parse-error-code';
