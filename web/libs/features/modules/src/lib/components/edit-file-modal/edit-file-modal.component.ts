@@ -34,7 +34,7 @@ interface Tab {
     editor?: any;
 }
 
-const REGEX_PARSE_CODE_LOCALIZATION = /\$t\(\'([a-zA-Z.]+)\'\)/gm;
+const REGEX_PARSE_CODE_LOCALIZATION = /\$t\(\'(([a-zA-Z\d]+\.){3}[a-zA-Z\d]+)\'\)/gm;
 
 @Component({
     selector: 'soldr-edit-file-modal',

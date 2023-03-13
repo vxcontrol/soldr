@@ -48,8 +48,8 @@ export class ModuleConfigComponent implements OnChanges {
     processSchema(schema: any) {
         schema.properties = this.localizeProperties(
             schema.properties as Record<string, any>,
-            this.module?.locale.config as Record<string, any>,
-            this.module?.locale.config_additional_args
+            this.module.locale.config as Record<string, any>,
+            this.module.locale?.config_additional_args
         );
 
         return schema;

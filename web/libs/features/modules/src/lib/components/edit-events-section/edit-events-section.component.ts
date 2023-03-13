@@ -125,7 +125,7 @@ export class EditEventsSectionComponent implements OnInit, ModuleSection, OnDest
                 );
                 this.defaultSchema = localizeSchemaAdditionalKeys(
                     defaultSchema,
-                    this.module?.locale.events_additional_args
+                    this.module.locale?.events_additional_args
                 );
 
                 applyDiff(

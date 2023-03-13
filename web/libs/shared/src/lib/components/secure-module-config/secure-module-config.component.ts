@@ -110,7 +110,7 @@ export class SecureModuleConfigComponent implements OnChanges {
                     localizedTitle,
                     isComplexType: [PropertyType.ARRAY, PropertyType.OBJECT].includes(type),
                     isFetchValueForView: false,
-                    schema: localizeSchemaAdditionalKeys(schema, this.module.locale.secure_config_additional_args),
+                    schema: localizeSchemaAdditionalKeys(schema, this.module.locale?.secure_config_additional_args),
                     type,
                     required: this.module.secure_config_schema.required.includes(name)
                 } as SecureParam;
@@ -291,7 +291,7 @@ export class SecureModuleConfigComponent implements OnChanges {
             param.model = { value };
         }
 
-        param.schema = localizeSchemaAdditionalKeys(param.schema, this.module.locale.secure_config_additional_args);
+        param.schema = localizeSchemaAdditionalKeys(param.schema, this.module.locale?.secure_config_additional_args);
         this.currentParam = clone(param);
     }
 

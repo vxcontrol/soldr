@@ -104,7 +104,7 @@ export class EditSecureConfigSectionComponent implements OnInit, ModuleSection {
                 const defaultSchema = unwrapFormItems(clone(module.secure_config_schema) as NcformSchema, changes);
                 this.defaultSchema = localizeSchemaAdditionalKeys(
                     defaultSchema,
-                    module.locale.secure_config_additional_args
+                    module.locale?.secure_config_additional_args
                 );
                 this.defaultModel = module.secure_default_config;
             });

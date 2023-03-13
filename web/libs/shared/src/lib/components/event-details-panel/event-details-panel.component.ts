@@ -104,7 +104,7 @@ export class EventDetailsPanelComponent implements OnChanges, OnDestroy {
                 type: event.type,
                 schema: localizeSchemaAdditionalKeys(
                     this.selectedEvent.schema,
-                    this.module.locale.events_additional_args
+                    this.module.locale?.events_additional_args
                 )
             } as EventDetailsItem;
         }

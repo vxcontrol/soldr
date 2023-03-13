@@ -106,16 +106,14 @@ export class EditActionsSectionComponent implements OnInit, OnDestroy, ModuleSec
                 const names = Object.keys(schema.properties as object);
                 const diff = getChangesArrays(namesOld, names);
 
-                const defaultSchema = unwrapFormItems(
+                const defaultSchema = localizeSchemaAdditionalKeys(schema, this.module.locale?.actions_additional_args);
+
+                this.defaultSchema = unwrapFormItems(
                     {
-                        ...clone(schema),
+                        ...clone(defaultSchema),
                         definitions: this.definitions.getDefinitions(names)
                     } as NcformSchema,
                     changes
-                );
-                this.defaultSchema = localizeSchemaAdditionalKeys(
-                    defaultSchema,
-                    this.module?.locale.actions_additional_args
                 );
 
                 applyDiff(

@@ -80,7 +80,7 @@ export class ActionDetailsPanelComponent {
                     localizedDescription: fieldLocale.description
                 };
             }),
-            paramsSchema: localizeSchemaAdditionalKeys(paramsSchema, this.module.locale.actions_additional_args),
+            paramsSchema: localizeSchemaAdditionalKeys(paramsSchema, this.module.locale?.actions_additional_args),
             paramsModel,
             paramsCount: Object.keys(paramsSchema.properties || {}).length
         };

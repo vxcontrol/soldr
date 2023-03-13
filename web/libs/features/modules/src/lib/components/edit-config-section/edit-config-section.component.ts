@@ -103,7 +103,7 @@ export class EditConfigSectionComponent implements OnInit, OnDestroy, ModuleSect
         const defaultSubscription = this.moduleEditFacade.module$.subscribe((module) => {
             this.defaultSchema = localizeSchemaAdditionalKeys(
                 module.config_schema,
-                module.locale.config_additional_args
+                module.locale?.config_additional_args
             );
             this.defaultModel = module.default_config;
         });
