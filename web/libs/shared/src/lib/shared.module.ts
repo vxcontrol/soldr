@@ -73,7 +73,8 @@ import {
     TextOverflowDirective,
     TreePopoverComponent,
     UpgradeStatusMessageComponent,
-    EmptyGridContentComponent
+    EmptyGridContentComponent,
+    PasswordFormComponent
 } from './components';
 import {
     SoldrGridScrollToBodyEndDirective,
@@ -169,6 +170,7 @@ const components = [
     NcformWrapperComponent,
     NoRowsOverlayComponent,
     OsComponent,
+    PasswordFormComponent,
     PoliciesGridComponent,
     PolicyInfoComponent,
     ProgressContainerComponent,

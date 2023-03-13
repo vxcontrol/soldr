@@ -27,10 +27,12 @@
 @import '../../../shared/src/lib/components/tree-popover/tree-popover.component.theme';
 
 @import '../../../../apps/soldr-ui/src/app/components/navbar/navbar.component.theme';
+
 @import '../../../features/distributions/src/lib/routes/distributions-page/distributions-page.component.theme';
 @import '../../../features/login/src/lib/routes/login-page/login-page.component.theme';
 @import '../../../features/modules/src/lib/components/import-module-modal/import-module-modal.component.theme';
 @import '../../../features/modules/src/lib/components/toggle-item/toggle-item.component.theme';
+@import '../../../features/password/src/lib/routes/password-change/password-change.component.theme';
 
 @import 'ag-grid/ag-grid-theme';
 @import 'mc-tabs/mc-tabs.theme';
@@ -66,6 +68,7 @@
     @include navbar-theme($mosaic-theme);
     @include os-theme($mosaic-theme);
     @include page-layout-theme($mosaic-theme);
+    @include password-change-theme($mosaic-theme);
     @include progress-container-theme($mosaic-theme);
     @include ag-grid-theme($mosaic-theme);
     @include related-list-theme($mosaic-theme);

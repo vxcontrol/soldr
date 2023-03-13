@@ -444,6 +444,29 @@
             },
             "tags": []
         },
+        "features-password": {
+            "projectType": "library",
+            "root": "libs/features/password",
+            "sourceRoot": "libs/features/password/src",
+            "prefix": "soldr",
+            "architect": {
+                "test": {
+                    "builder": "@nrwl/jest:jest",
+                    "outputs": ["coverage/libs/features/password"],
+                    "options": {
+                        "jestConfig": "libs/features/password/jest.config.ts",
+                        "passWithNoTests": true
+                    }
+                },
+                "lint": {
+                    "builder": "@nrwl/linter:eslint",
+                    "options": {
+                        "lintFilePatterns": ["libs/features/password/**/*.ts", "libs/features/password/**/*.html"]
+                    }
+                }
+            },
+            "tags": []
+        },
         "features-policies": {
             "$schema": "../../../node_modules/nx/schemas/project-schema.json",
             "projectType": "library",

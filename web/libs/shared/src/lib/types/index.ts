@@ -8,6 +8,7 @@ export * from './grid-options';
 export * from './list-item';
 export * from './locale-item';
 export * from './localized-value';
+export * from './login';
 export * from './module-config';
 export * from './ncform';
 export * from './operation-systems';

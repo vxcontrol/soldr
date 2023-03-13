@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { filter, map, Observable } from 'rxjs';
 
-import { ModelsBinary, PublicInfo } from '@soldr/api';
+import { ModelsBinary, ModelsPassword, PublicInfo } from '@soldr/api';
 import { Architecture, OperationSystem } from '@soldr/shared';
 
 import * as SharedActions from './shared.actions';
@@ -26,9 +26,11 @@ export class SharedFacade {
     allTotalAgents$ = this.store.select(SharedSelectors.selectAllTotalAgents);
     allTotalModules$ = this.store.select(SharedSelectors.selectAllTotalModules);
     allTotalPolicies$ = this.store.select(selectAllTotalPolicies);
+    isChangingPassword$ = this.store.select(SharedSelectors.selectIsChangingPassword);
     isExportingBinaryFile$ = this.store.select(SharedSelectors.selectIsExportingBinaryFile);
     exportError$ = this.store.select(SharedSelectors.selectExportError);
     initializedGroups$ = this.store.select(SharedSelectors.selectInitializedGroups);
+    isPasswordChangeRequired$ = this.store.select(SharedSelectors.selectIsPasswordChangeRequired);
     isLoadingActions$ = this.store.select(SharedSelectors.selectIsLoadingActions);
     isLoadingAgentBinaries$ = this.store.select(SharedSelectors.selectIsLoadingBinaries);
     isLoadingAllGroups$ = this.store.select(SharedSelectors.selectIsLoadingAllGroups);
@@ -41,6 +43,7 @@ export class SharedFacade {
     isLoadingTags$ = this.store.select(SharedSelectors.selectIsLoadingTags);
     latestAgentBinary$ = this.store.select(SharedSelectors.selectLatestBinary);
     latestAgentBinaryVersion$ = this.latestAgentBinary$.pipe(map((agentBinary: ModelsBinary) => agentBinary?.version));
+    passwordChangeError$ = this.store.select(SharedSelectors.selectPasswordChangeError);
     selectedServiceName$ = this.selectInfo().pipe(map((info) => info?.service?.name || ''));
     selectedServiceUrl$ = this.selectInfo().pipe(
         filter((info) => !!info?.service),
@@ -55,6 +58,10 @@ export class SharedFacade {
     searchValue$ = this.store.select(SharedSelectors.selectSearchValue);
 
     constructor(private store: Store<State>) {}
+
+    changePassword(data: ModelsPassword) {
+        this.store.dispatch(SharedActions.changePassword({ data }));
+    }
 
     exportBinary(os: OperationSystem, arch: Architecture, version: string): void {
         this.store.dispatch(SharedActions.exportBinaryFile({ os, arch, version }));

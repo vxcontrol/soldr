@@ -3,7 +3,6 @@ export * from './apply-changes-to-object';
 export * from './capitalize';
 export * from './clone';
 export * from './compare-objects';
-export * from './constants';
 export * from './difference';
 export * from './disable-ncform-widgets';
 export * from './feature-path';

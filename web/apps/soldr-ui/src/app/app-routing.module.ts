@@ -85,6 +85,13 @@ const routes: Routes = [
                 canActivateChild: [ErrorsGuard],
                 data: { scope: ['errors'] },
                 loadChildren: () => import('@soldr/features/errors').then((m) => m.FeaturesErrorsModule)
+            },
+            {
+                path: '',
+                canActivate: [LazyLoadTranslationsGuard],
+                canActivateChild: [],
+                data: { scope: ['password'] },
+                loadChildren: () => import('@soldr/features/password').then((m) => m.FeaturesPasswordModule)
             }
         ]
     },

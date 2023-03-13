@@ -95,14 +95,18 @@
                 <mc-dropdown
                     #profileDropdown="mcDropdown"
                     [overlapTriggerY]="false"
-                    [overlapTriggerX]="true">
+                    [overlapTriggerX]="true"
+                    [class]="'navbar__system-dropdown'">
+
+                    <button mc-dropdown-item>
+                        {{ data.info.user.mail }}
+                        <div class="mc-dropdown-item__caption"> {{ data.info.role.name }}</div>
+                    </button>
+
+                    <div class="mc-dropdown__divider"></div>
 
                     <button mc-dropdown-item [mcDropdownTriggerFor]="localesDropdown">
-                        <i mc-icon="soldr-icons-globe_16" class="soldr-icons"></i>
                         <span>{{ t('Shared.NavBar.ItemText.Language') }}</span>
-                        <div class="mc-dropdown-item__caption">
-                            {{ t(currentLocale === locales.en_US ? 'Shared.NavBar.ItemText.English' : 'Shared.NavBar.ItemText.Russian') }}
-                        </div>
                     </button>
 
                     <mc-dropdown #localesDropdown="mcDropdown" class="mc-dropdown-item_with-icon">
@@ -116,10 +120,38 @@
                         </button>
                     </mc-dropdown>
 
+                    <a
+                            *ngIf="data.info.user.type === userType.Local"
+                            mc-dropdown-item
+                            class="navbar__dropdown-item"
+                            (click)="openPasswordModal()">
+                        {{ t('Shared.NavBar.ItemText.PasswordChange') }}
+                    </a>
+
+                    <ng-template #passwordModalContent>
+                        <soldr-password-form #passwordFormComponent></soldr-password-form>
+                    </ng-template>
+
+                    <ng-template #passwordModalFooter>
+                        <ng-container *transloco="let tCommon; read 'common'">
+                            <button
+                                    mc-button
+                                    type="submit"
+                                    [color]="themePalette.Primary"
+                                    [disabled]="passwordFormComponent?.isSaveDisabled"
+                                    [class.mc-progress]="isChangingPassword$ | async"
+                                    (click)="passwordFormComponent?.passForm.ngSubmit.emit()">
+                                {{ tCommon('Common.Pseudo.ButtonText.Save') }}
+                            </button>
+                            <button mc-button (click)="closePasswordModal()">
+                                {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
+                            </button>
+                        </ng-container>
+                    </ng-template>
+
                     <div class="mc-dropdown__divider"></div>
 
                     <button mc-dropdown-item (click)="logout()">
-                        <i mc-icon="soldr-icons-export_16" class="soldr-icons"></i>
                         {{ t('Shared.NavBar.ItemText.Logout') }}
                     </button>
                 </mc-dropdown>

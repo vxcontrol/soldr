@@ -5,6 +5,7 @@ import { combineLatest, filter, first, map, Observable } from 'rxjs';
 import { SharedFacade } from '@soldr/store/shared';
 
 import { PermissionsService } from '../services';
+import { PASSWORD_CHANGE_PAGE } from '../types';
 
 @Injectable({
     providedIn: 'root'
@@ -24,11 +25,14 @@ export class AuthorizedGuard implements CanActivateChild {
             first(),
             map(([info]) => {
                 if (info?.type !== 'user') {
-                    const nextUrl = window.location.href.replace(window.location.origin, '');
+                    const nextUrl = window.location.href
+                        .replace(window.location.origin, '')
+                        .replace(PASSWORD_CHANGE_PAGE, '');
                     const firstAvailablePage = this.permissionsService.getFirstAvailablePage();
-                    this.router.navigate(['/login'], { queryParams: { nextUrl: nextUrl || firstAvailablePage } });
 
-                    return false;
+                    return this.router.createUrlTree(['/login'], {
+                        queryParams: { nextUrl: nextUrl || firstAvailablePage }
+                    });
                 }
 
                 return true;

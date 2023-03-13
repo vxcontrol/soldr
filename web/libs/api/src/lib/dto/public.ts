@@ -6,7 +6,7 @@ import { ModelsUser } from './users';
 export interface ModelsSignIn {
     mail: string;
     password: string;
-    token?: string;
+    service?: string;
 }
 
 export enum Themes {

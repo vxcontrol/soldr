@@ -19,8 +19,9 @@
             <mc-form-field class="mc-form__control flex-100">
                 <i mcPrefix mc-icon="soldr-icons-user_16" class="soldr-icons"></i>
                 <input
-                    name="login"
                     mcInput
+                    name="login"
+                    autocomplete="email"
                     formControlName="mail"
                     [placeholder]="t('Login.LoginForm.InputPlaceholder.Login')">
             </mc-form-field>
@@ -30,9 +31,10 @@
             <mc-form-field class="mc-form__control flex-100">
                 <i mcPrefix mc-icon="soldr-icons-lock-locked_16" class="soldr-icons"></i>
                 <input
+                    mcInput
                     name="password"
                     type="password"
-                    mcInput
+                    autocomplete="current-password"
                     formControlName="password"
                     [placeholder]="t('Login.LoginForm.InputPlaceholder.Password')">
             </mc-form-field>
