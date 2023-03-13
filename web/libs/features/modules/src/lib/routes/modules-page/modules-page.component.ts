@@ -39,7 +39,6 @@ export class ModulesPageComponent implements OnInit, OnDestroy {
     selectedModuleVersions$ = this.selected$.pipe(map((module) => Object.keys(module?.changelog || {})));
     sorting$ = this.moduleListFacade.sorting$;
     total$ = this.moduleListFacade.total$;
-    info$ = this.sharedFacade.selectInfo();
 
     sortTags = sortTags;
     gridColumnsFilters: { [field: string]: GridColumnFilterItem[] } = { os: [...osList], tags: [] };

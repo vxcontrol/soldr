@@ -15,11 +15,11 @@ import {
     SuccessResponse,
     TagsService
 } from '@soldr/api';
+import { DEBOUNCING_DURATION_FOR_REQUESTS } from '@soldr/shared';
 
 import * as ModuleListActions from './module-list.actions';
 import { State } from './module-list.reducer';
 import { selectInitialListQuery } from './module-list.selectors';
-import { DEBOUNCING_DURATION_FOR_REQUESTS } from '@soldr/shared';
 
 @Injectable()
 export class ModuleListEffects {
