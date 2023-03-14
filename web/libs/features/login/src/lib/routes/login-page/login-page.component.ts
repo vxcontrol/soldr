@@ -4,20 +4,16 @@ import { FormControl, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoService } from '@ngneat/transloco';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
-import { combineLatest, map, Subscription } from 'rxjs';
+import { combineLatest, filter, first, map, Subscription } from 'rxjs';
 
 import { ErrorResponse, PublicService } from '@soldr/api';
-import { ModelsFormControl, ModelsFormGroup, PageTitleService } from '@soldr/shared';
+import { PASSWORD_CHANGE_PAGE } from '@soldr/core';
+import { LoginErrorCode, ModelsFormControl, ModelsFormGroup, PageTitleService } from '@soldr/shared';
 import { SharedFacade } from '@soldr/store/shared';
 
 interface LoginForm {
     mail: string;
     password: string;
-}
-
-enum LoginErrorCode {
-    InvalidCredentials = 'Auth.InvalidCredentials',
-    InactiveUser = 'Auth.InactiveUser'
 }
 
 @Component({
@@ -61,7 +57,7 @@ export class LoginPageComponent implements OnInit, OnDestroy {
         this.publicService.login(data).subscribe({
             next: () => {
                 this.isSignInProcess = false;
-                this.router.navigateByUrl(this.urlAfterLogin);
+                this.redirect();
             },
             error: (response: unknown) => {
                 if (response instanceof HttpErrorResponse) {
@@ -88,7 +84,26 @@ export class LoginPageComponent implements OnInit, OnDestroy {
     }
 
     get urlAfterLogin() {
-        return (this.activatedRoute.snapshot.queryParams.nextUrl as string) || window.document.location.origin;
+        return this.nextUrl || window.document.location.origin;
+    }
+
+    get nextUrl() {
+        return this.activatedRoute.snapshot.queryParams.nextUrl as string;
+    }
+
+    private redirect() {
+        this.sharedFacade.fetchInfo();
+        this.sharedFacade
+            .selectInfo()
+            .pipe(
+                filter((info) => info?.type === 'user'),
+                first()
+            )
+            .subscribe(({ user }) =>
+                this.router.navigate([user.password_change_required ? PASSWORD_CHANGE_PAGE : this.urlAfterLogin], {
+                    queryParams: user.password_change_required && this.nextUrl ? { nextUrl: this.nextUrl } : {}
+                })
+            );
     }
 
     private defineTitle() {

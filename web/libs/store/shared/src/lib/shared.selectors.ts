@@ -76,3 +76,10 @@ export const selectShortServices = createSelector(selectInfo, (info) =>
               .sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0))
         : []
 );
+
+export const selectIsPasswordChangeRequired = createSelector(
+    selectSharedState,
+    (state) => state.info?.user?.password_change_required
+);
+export const selectIsChangingPassword = createSelector(selectSharedState, (state) => state.isChangingPassword);
+export const selectPasswordChangeError = createSelector(selectSharedState, (state) => state.passwordChangeError);

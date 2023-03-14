@@ -43,6 +43,7 @@ export interface State {
     fields: ModelsOptionsFields[];
     info?: PublicInfo;
     initializedGroups: boolean;
+    isChangingPassword: boolean;
     isExportingBinaryFile: boolean;
     isInfoLoaded: boolean;
     isInfoLoading: boolean;
@@ -58,6 +59,7 @@ export interface State {
     isLoadingOptionsFields: boolean;
     isLoadingOptionsTags: boolean;
     latestAgentBinary: ModelsBinary;
+    passwordChangeError: ErrorResponse;
     searchValue: string;
     selectedTags: string[];
     tags: ModelsOptionsTags[];
@@ -81,6 +83,7 @@ export const initialState: State = {
     fields: [],
     info: undefined,
     initializedGroups: false,
+    isChangingPassword: false,
     isExportingBinaryFile: false,
     isInfoLoaded: false,
     isInfoLoading: false,
@@ -96,6 +99,7 @@ export const initialState: State = {
     isLoadingOptionsFields: false,
     isLoadingOptionsTags: false,
     latestAgentBinary: undefined,
+    passwordChangeError: undefined,
     searchValue: '',
     selectedTags: [],
     tags: []
@@ -103,6 +107,18 @@ export const initialState: State = {
 
 export const reducer = createReducer(
     initialState,
+
+    on(SharedActions.changePassword, (state) => ({
+        ...state,
+        isChangingPassword: true,
+        passwordChangeError: undefined
+    })),
+    on(SharedActions.changePasswordSuccess, (state) => ({ ...state, isChangingPassword: false })),
+    on(SharedActions.changePasswordFailure, (state, { error }) => ({
+        ...state,
+        isChangingPassword: false,
+        passwordChangeError: error
+    })),
 
     on(SharedActions.fetchAllAgents, (state) => ({ ...state, isLoadingAllAgents: true })),
     on(SharedActions.fetchAllAgentsSuccess, (state, { data }) => ({

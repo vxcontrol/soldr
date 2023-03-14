@@ -1,8 +1,10 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
+import { McToastService } from '@ptsecurity/mosaic/toast';
 import { catchError, debounceTime, from, map, of, switchMap } from 'rxjs';
 
 import {
@@ -28,8 +30,10 @@ import {
     ServicesService,
     SuccessResponse,
     PrivateSystemModules,
-    ModulesService
+    ModulesService,
+    UserService
 } from '@soldr/api';
+import { PASSWORD_CHANGE_PAGE } from '@soldr/core';
 import { DEBOUNCING_DURATION_FOR_REQUESTS, ModalInfoService, saveFile } from '@soldr/shared';
 
 import * as SharedActions from './shared.actions';
@@ -37,6 +41,25 @@ import { State } from './shared.reducer';
 
 @Injectable()
 export class SharedEffects {
+    changePassword$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(SharedActions.changePassword),
+            switchMap(({ data }) =>
+                this.userService.changePassword(data).pipe(
+                    map(() => {
+                        this.toastService.show({
+                            style: 'success',
+                            title: this.transloco.translate('shared.Shared.Pseudo.ToastText.SuccessPasswordChange')
+                        });
+
+                        return SharedActions.changePasswordSuccess();
+                    }),
+                    catchError(({ error }: HttpErrorResponse) => of(SharedActions.changePasswordFailure({ error })))
+                )
+            )
+        )
+    );
+
     fetchAllGroups$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.fetchAllGroups),
@@ -216,7 +239,11 @@ export class SharedEffects {
             ofType(SharedActions.logout),
             switchMap(() => this.publicService.logout().pipe(catchError(() => of(SharedActions.logoutFailure())))),
             switchMap(() =>
-                from(this.router.navigate(['/login'], { queryParams: { nextUrl: window.location.pathname } })).pipe(
+                from(
+                    this.router.navigate(['/login'], {
+                        queryParams: { nextUrl: window.location.pathname.replace(PASSWORD_CHANGE_PAGE, '') }
+                    })
+                ).pipe(
                     map(() => SharedActions.logoutSuccess()),
                     catchError(() => of(SharedActions.logoutFailure()))
                 )
@@ -296,6 +323,9 @@ export class SharedEffects {
         private publicService: PublicService,
         private router: Router,
         private servicesService: ServicesService,
-        private store: Store<State>
+        private store: Store<State>,
+        private toastService: McToastService,
+        private transloco: TranslocoService,
+        private userService: UserService
     ) {}
 }

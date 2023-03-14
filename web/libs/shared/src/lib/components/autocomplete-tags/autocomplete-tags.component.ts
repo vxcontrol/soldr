@@ -13,7 +13,7 @@ import { McAutocomplete, McAutocompleteSelectedEvent } from '@ptsecurity/mosaic/
 import { McTagInputEvent, McTagList } from '@ptsecurity/mosaic/tags';
 import { concat, map, mapTo, merge, Observable, of, timer } from 'rxjs';
 
-import { DELAY_HIDE_TOOLTIP } from '../../utils';
+import { DELAY_HIDE_TOOLTIP } from '../../constants';
 
 const TAG_MAX_LENGTH = 30;
 const MAX_LIMIT_TAGS = 20;

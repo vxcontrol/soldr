@@ -18,9 +18,7 @@ export class UnauthorizedGuard implements CanActivateChild {
             first(),
             map(([info]) => {
                 if (info?.type === 'user') {
-                    this.router.navigateByUrl('/');
-
-                    return false;
+                    return this.router.parseUrl('/');
                 }
 
                 return true;

@@ -9,4 +9,5 @@ export * from './public.service';
 export * from './services.service';
 export * from './tags.service';
 export * from './upgrades.service';
+export * from './user.service';
 export * from './versions.service';

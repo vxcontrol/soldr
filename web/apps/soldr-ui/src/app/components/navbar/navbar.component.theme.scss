@@ -47,4 +47,12 @@
             padding: 8px 16px;
         }
     }
+
+    .navbar__system-dropdown {
+        min-width: 160px !important;
+
+        .mc-dropdown-item-wrapper {
+            padding: 8px 16px;
+        }
+    }
 }

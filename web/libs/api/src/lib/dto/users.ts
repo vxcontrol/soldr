@@ -7,9 +7,11 @@ export interface ModelsUser {
     id?: number;
     mail: string;
     name: string;
+    password_change_required?: boolean;
     role_id?: number;
     status: string;
     tenant_id?: number;
+    type: UserType;
 }
 
 export interface ModelsPassword {
@@ -44,4 +46,9 @@ export interface ModelsUserRoleTenant {
 export interface PrivateUsers {
     total?: number;
     users?: ModelsUserRoleTenant[];
+}
+
+export enum UserType {
+    Local = 'local',
+    OAuth = 'oauth'
 }

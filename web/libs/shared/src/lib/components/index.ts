@@ -51,6 +51,7 @@ export * from './modules-config/modules-config.component';
 export * from './multiple-selection-panel/multiple-selection-panel.component';
 export * from './ncform-wrapper/ncform-wrapper.component';
 export * from './os/os.component';
+export * from './password-form/password-form.component';
 export * from './policies-grid/policies-grid.component';
 export * from './policy-info/policy-info.component';
 export * from './progress-container/progress-container.component';

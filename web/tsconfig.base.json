@@ -27,6 +27,7 @@
             "@soldr/features/login": ["libs/features/login/src/index.ts"],
             "@soldr/features/modules": ["libs/features/modules/src/index.ts"],
             "@soldr/features/modules-interactivity": ["libs/features/modules-interactivity/src/index.ts"],
+            "@soldr/features/password": ["libs/features/password/src/index.ts"],
             "@soldr/features/policies": ["libs/features/policies/src/index.ts"],
             "@soldr/i18n": ["libs/i18n/src/index.ts"],
             "@soldr/models": ["libs/models/src/index.ts"],

@@ -15,7 +15,7 @@ $second: map-get($light, second);
 $custom-light: (
     default-warning: mc-color(map-get($light, warning), 560),
     default-success: mc-color(map-get($light, success), 560),
-    login-background: white,
+    default-background: white,
     navbar-dropdown: mc-color(map-get($light, primary), 600),
     navbar-dropdown-hover: mc-color(map-get($light, primary), 560),
     row-gradient: #f2f2f2,

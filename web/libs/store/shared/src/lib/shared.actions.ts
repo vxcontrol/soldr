@@ -2,6 +2,7 @@ import { createAction, props } from '@ngrx/store';
 
 import {
     ErrorResponse,
+    ModelsPassword,
     PrivateAgents,
     PrivateBinaries,
     PrivateGroups,
@@ -17,6 +18,10 @@ import {
 import { Architecture, OperationSystem } from '@soldr/shared';
 
 export enum ActionType {
+    ChangePassword = '[shared] Change password',
+    ChangePasswordSuccess = '[shared] Change password - Success',
+    ChangePasswordFailure = '[shared] Change password - Failure',
+
     FetchAllAgents = '[shared] Fetch all agents',
     FetchAllAgentsSuccess = '[shared] Fetch all agents - Success',
     FetchAllAgentsFailure = '[shared] Fetch all agents - Failure',
@@ -77,6 +82,10 @@ export enum ActionType {
     ResetFilterByTags = '[shared] Reset filter by tags',
     SetFilterBySearchValue = '[shared] Set filter by search value'
 }
+
+export const changePassword = createAction(ActionType.ChangePassword, props<{ data: ModelsPassword }>());
+export const changePasswordSuccess = createAction(ActionType.ChangePasswordSuccess);
+export const changePasswordFailure = createAction(ActionType.ChangePasswordFailure, props<{ error: ErrorResponse }>());
 
 export const fetchAllAgents = createAction(ActionType.FetchAllAgents);
 export const fetchAllAgentsSuccess = createAction(ActionType.FetchAllAgentsSuccess, props<{ data: PrivateAgents }>());

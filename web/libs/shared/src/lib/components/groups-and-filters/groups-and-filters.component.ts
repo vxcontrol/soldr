@@ -28,8 +28,8 @@ import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { Group } from '@soldr/models';
 import { SharedFacade } from '@soldr/store/shared';
 
+import { DEBOUNCING_DURATION } from '../../constants';
 import { Filter, FilterByGroup, LocaleItem, ProxyPermission, ViewMode } from '../../types';
-import { DEBOUNCING_DURATION } from '../../utils';
 
 @Component({
     selector: 'soldr-groups-and-filters',
