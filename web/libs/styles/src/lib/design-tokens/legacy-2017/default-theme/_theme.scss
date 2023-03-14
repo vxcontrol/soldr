@@ -1,15 +1,11 @@
+@use 'sass:meta';
+@use 'tokens';
+
 @import '@ptsecurity/mosaic/theming';
 @import 'tokens';
 
-$light-primary: mc-palette($light-color-scheme-primary-palette, $light-color-scheme-primary-default);
-$light-second: mc-palette($light-color-scheme-second-palette, $light-color-scheme-second-default);
-$light-error: mc-palette($light-color-scheme-error-palette, $light-color-scheme-error-default);
-
-$light-info: mc-palette($light-color-scheme-info-palette, $light-color-scheme-info-default);
-$light-success: mc-palette($light-color-scheme-success-palette, $light-color-scheme-success-default);
-$light-warning: mc-palette($light-color-scheme-warning-palette, $light-color-scheme-warning-default);
-
-$light: mc-light-theme($light-primary, $light-second, $light-error, $light-info, $light-success, $light-warning);
+$tokens: meta.module-variables(tokens);
+$light: mc-light-theme($tokens);
 
 $second: map-get($light, second);
 $custom-light: (
