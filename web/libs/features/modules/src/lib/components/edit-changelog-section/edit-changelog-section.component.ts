@@ -1,6 +1,17 @@
 import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { combineLatestWith, debounceTime, first, map, pairwise, startWith, Subject, Subscription, take } from 'rxjs';
+import {
+    combineLatestWith,
+    debounceTime,
+    distinctUntilChanged,
+    first,
+    map,
+    pairwise,
+    startWith,
+    Subject,
+    Subscription,
+    take
+} from 'rxjs';
 import * as semver from 'semver';
 
 import { ModelsChangelog, ModelsModuleSShort, ModuleState } from '@soldr/api';
@@ -77,7 +88,15 @@ export class EditChangelogSectionComponent implements OnInit, OnDestroy, ModuleS
 
     private watchStore() {
         const changelogSubscription = this.moduleEditFacade.changelog$
-            .pipe(startWith(undefined), pairwise(), combineLatestWith(this.moduleEditFacade.moduleVersions$))
+            .pipe(
+                startWith(undefined),
+                pairwise(),
+                combineLatestWith(this.moduleEditFacade.moduleVersions$),
+                distinctUntilChanged(
+                    ([[, prevChangelog]], [[, currChangelog]]) =>
+                        JSON.stringify(prevChangelog) === JSON.stringify(currChangelog)
+                )
+            )
             .subscribe(([[oldChangelog, changelog], versions]) => {
                 const oldModel = this.getFormModel(oldChangelog || {}).sort((b, a) =>
                     semver.compare(a.version, b.version)
