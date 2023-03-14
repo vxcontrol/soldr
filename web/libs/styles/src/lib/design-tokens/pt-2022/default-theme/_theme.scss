@@ -1,7 +1,12 @@
+@use 'sass:meta';
+@use 'tokens';
+
 @import '@ptsecurity/mosaic/theming';
 @import 'tokens';
 
-$dark: mc-dark-theme();
+$tokens: meta.module-variables(tokens);
+$dark: mc-dark-theme($tokens);
+
 $second: map-get($dark, second);
 $custom-dark: (
     default-warning: mc-color(map-get($dark, warning), 400),
