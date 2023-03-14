@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { TranslocoService } from '@ngneat/transloco';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store } from '@ngrx/store';
+import { McToastService } from '@ptsecurity/mosaic/toast';
 import { catchError, forkJoin, map, of, switchMap, withLatestFrom } from 'rxjs';
 
 import {
@@ -219,7 +221,17 @@ export class ModulesInstancesEffects {
             ofType(ModulesInstancesActions.saveModuleConfig),
             switchMap(({ module, policyHash }) =>
                 this.policiesService.storeModule(policyHash, module).pipe(
-                    map(() => ModulesInstancesActions.saveModuleConfigSuccess()),
+                    map(() => {
+                        this.toastService.show({
+                            style: 'success',
+                            title: this.transloco.translate(
+                                'shared.Shared.ModulesConfig.ToastText.SuccessfullySaveModuleConfig'
+                            ),
+                            hasDismiss: false
+                        });
+
+                        return ModulesInstancesActions.saveModuleConfigSuccess();
+                    }),
                     catchError(({ error }) => of(ModulesInstancesActions.saveModuleConfigFailure({ error })))
                 )
             )
@@ -227,13 +239,15 @@ export class ModulesInstancesEffects {
     );
 
     constructor(
+        private actions$: Actions,
         private agentsService: AgentsService,
-        private groupsService: GroupsService,
-        private policiesService: PoliciesService,
         private eventsService: EventsService,
+        private groupsService: GroupsService,
         private modulesService: ModulesService,
         private policiesFacade: PoliciesFacade,
-        private actions$: Actions,
+        private policiesService: PoliciesService,
+        private toastService: McToastService,
+        private transloco: TranslocoService,
         private store: Store<State>
     ) {}
 

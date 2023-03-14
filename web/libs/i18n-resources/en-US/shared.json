@@ -213,6 +213,7 @@
     "Shared.ModulesConfig.Text.StatusEnabled": "Enabled",
     "Shared.ModulesConfig.Text.StatusNotInstalled": "Not installed",
     "Shared.ModulesConfig.Text.Version": "Version: {version}",
+    "Shared.ModulesConfig.ToastText.SuccessfullySaveModuleConfig": "The module configuration is saved successfully",
     "Shared.ModulesConfig.TooltipText.DuplicatedModuleInGroup": "The module is already running on some agents with this policy (included in another policy)",
 
     "Shared.NavBar.DropdownItem.Distributions": "Agent distributions",

@@ -213,6 +213,7 @@
     "Shared.ModulesConfig.Text.StatusEnabled": "Включен",
     "Shared.ModulesConfig.Text.StatusNotInstalled": "Не установлен",
     "Shared.ModulesConfig.Text.Version": "Версия: {version}",
+    "Shared.ModulesConfig.ToastText.SuccessfullySaveModuleConfig": "Конфигурация модуля сохранена",
     "Shared.ModulesConfig.TooltipText.DuplicatedModuleInGroup": "На некоторых агентах с этой политикой модуль уже работает (входит в другую политику)",
 
     "Shared.NavBar.DropdownItem.Distributions": "Дистрибутивы агентов",

@@ -191,10 +191,6 @@ export class ModulesConfigComponent implements OnInit, OnChanges, OnDestroy {
         this.modulesInstancesFacade.saveModuleConfig(this.policy.hash, updatedModule);
     }
 
-    get isDirtyConfig() {
-        return this.moduleConfig?.isDirty;
-    }
-
     private defineObservables() {
         this.defineListsObservables();
         this.defineSelectionObservables();
