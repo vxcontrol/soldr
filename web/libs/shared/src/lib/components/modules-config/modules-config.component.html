@@ -242,14 +242,14 @@
                                                 mc-button
                                                 [class.mc-progress]="data.isSavingModule"
                                                 [color]="themePalette.Primary"
-                                                [disabled]="!isDirtyConfig"
+                                                [disabled]="!moduleConfig.canSaveModuleConfig"
                                                 (click)="save(data.selectedModule)">
                                                 {{ tCommon('Common.Pseudo.ButtonText.Save') }}
                                             </button>
                                             <button
                                                 mc-button
                                                 [color]="themePalette.Second"
-                                                [disabled]="!isDirtyConfig"
+                                                [disabled]="!moduleConfig.canSaveModuleConfig"
                                                 (click)="cancel()">
                                                 {{ tCommon('Common.Pseudo.ButtonText.Cancel') }}
                                             </button>

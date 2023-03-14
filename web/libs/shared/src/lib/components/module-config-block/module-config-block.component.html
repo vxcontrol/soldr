@@ -27,7 +27,8 @@
             </soldr-secure-module-config>
             <soldr-module-config
                 [isReadOnly]="isReadOnly"
-                [module]="module">
+                [module]="module"
+                (changeConfig)="changeConfig($event)">
             </soldr-module-config>
         </soldr-accordion>
 

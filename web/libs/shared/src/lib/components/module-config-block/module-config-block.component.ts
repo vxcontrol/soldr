@@ -1,9 +1,20 @@
-import { Component, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import {
+    Component,
+    EventEmitter,
+    Input,
+    OnChanges,
+    OnDestroy,
+    OnInit,
+    Output,
+    SimpleChanges,
+    ViewChild
+} from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, combineLatest, filter, map, Observable } from 'rxjs';
+import { BehaviorSubject, combineLatest, filter, map, Observable, ReplaySubject, Subject, takeUntil } from 'rxjs';
 
 import { LanguageService } from '../../services';
 import { EntityModule, ReadOnlyModule, ViewMode } from '../../types';
+import { compareObjects } from '../../utils';
 import { ModuleConfigComponent } from '../module-config/module-config.component';
 
 @Component({
@@ -11,7 +22,7 @@ import { ModuleConfigComponent } from '../module-config/module-config.component'
     templateUrl: './module-config-block.component.html',
     styleUrls: ['./module-config-block.component.scss']
 })
-export class ModuleConfigBlockComponent implements OnInit, OnChanges {
+export class ModuleConfigBlockComponent implements OnInit, OnChanges, OnDestroy {
     @Input() isReadOnly: boolean;
     @Input() module: EntityModule;
     @Input() policyHash: string;
@@ -23,10 +34,15 @@ export class ModuleConfigBlockComponent implements OnInit, OnChanges {
 
     canShowActions$: Observable<boolean>;
     canShowConfig$: Observable<boolean>;
-    policyLink$: Observable<string>;
-    module$ = new BehaviorSubject<EntityModule>(undefined);
     isReadOnly$ = new BehaviorSubject<boolean>(true);
+    module$ = new BehaviorSubject<EntityModule>(undefined);
+    moduleConfig$ = new ReplaySubject(1);
+    policyLink$: Observable<string>;
+
+    canSaveModuleConfig = false;
     viewModeEnum = ViewMode;
+
+    private readonly destroyed$: Subject<void> = new Subject();
 
     constructor(private languageService: LanguageService, private router: Router) {}
 
@@ -61,6 +77,13 @@ export class ModuleConfigBlockComponent implements OnInit, OnChanges {
                         </a>`;
             })
         );
+
+        combineLatest([this.moduleConfig$, this.module$])
+            .pipe(takeUntil(this.destroyed$))
+            .subscribe(
+                ([currentConfig, module]) =>
+                    (this.canSaveModuleConfig = !compareObjects(currentConfig, module.current_config))
+            );
     }
 
     save(module: EntityModule) {
@@ -79,6 +102,10 @@ export class ModuleConfigBlockComponent implements OnInit, OnChanges {
         return this.moduleConfig?.getModel();
     }
 
+    changeConfig(config: any) {
+        this.moduleConfig$.next(config);
+    }
+
     ngOnChanges({ module, isReadOnly }: SimpleChanges): void {
         if (module?.currentValue) {
             this.module$.next(this.module);
@@ -87,6 +114,11 @@ export class ModuleConfigBlockComponent implements OnInit, OnChanges {
         if (isReadOnly) {
             this.isReadOnly$.next(this.isReadOnly);
         }
+    }
+
+    ngOnDestroy() {
+        this.destroyed$.next();
+        this.destroyed$.complete();
     }
 
     get isDirty() {
