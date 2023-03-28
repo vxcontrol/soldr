@@ -1,11 +1,14 @@
+@use '@ptsecurity/mosaic/theming';
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
 @mixin navbar-theme($mosaic-theme) {
-    $white: map-deep-get($mosaic-theme, background, background);
+    $white: map-deep-get.map-deep-get($mosaic-theme, background, background);
 
     .mc-navbar {
-        min-height: $size-5xl;
+        min-height: theming.$size-5xl;
 
         .mc-navbar-brand {
-            padding-left: $size-xl;
+            padding-left: theming.$size-xl;
 
             &.mc-horizontal .mc-navbar-title {
                 padding-left: 0;
@@ -22,8 +25,8 @@
         }
 
         &:hover {
-            background: map-deep-get($mosaic-theme, custom, navbar-dropdown-hover);
-            border-color: map-deep-get($mosaic-theme, custom, navbar-dropdown-hover);
+            background: map-deep-get.map-deep-get($mosaic-theme, custom, navbar-dropdown-hover);
+            border-color: map-deep-get.map-deep-get($mosaic-theme, custom, navbar-dropdown-hover);
         }
 
         .navbar__service-dropdown_selected,

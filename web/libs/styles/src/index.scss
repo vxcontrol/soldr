@@ -1,18 +1,18 @@
-@import '@ptsecurity/mosaic-icons/dist/styles/mc-icons';
-@import 'lib/soldr-icons/soldr-icons';
-@import 'monaco-editor/min/vs/editor/editor.main.css';
+@use '@ptsecurity/mosaic-icons/dist/styles/mc-icons';
+@use 'lib/soldr-icons/soldr-icons';
+@use 'monaco-editor/min/vs/editor/editor.main.css';
 
-@import 'lib/main';
+@use 'lib/main';
 
-@import 'ag-grid-community/dist/styles/ag-grid.css';
-@import 'lib/base/base';
-@import 'lib/font';
-@import 'lib/mc-tabs/mc-tabs';
-@import 'lib/overridden-mosaic';
-@import 'lib/overriden-ngx-loader';
-@import 'lib/overriden-vue/overriden-vue';
-@import 'lib/page-layout/page-layout';
-@import 'lib/sidebar/sidebar';
-@import 'lib/utils';
-@import 'element-ui/lib/theme-chalk/index.css';
-@import 'lib/uikit';
+@use 'ag-grid-community/dist/styles/ag-grid.css';
+@use 'lib/base/base';
+@use 'lib/font';
+@use 'lib/mc-tabs/mc-tabs';
+@use 'lib/overridden-mosaic';
+@use 'lib/overriden-ngx-loader';
+@use 'lib/overriden-vue/overriden-vue';
+@use 'lib/page-layout/page-layout';
+@use 'lib/sidebar/sidebar';
+@use 'lib/utils';
+@use 'element-ui/lib/theme-chalk/index.css';
+@use 'lib/uikit';

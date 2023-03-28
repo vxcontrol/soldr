@@ -1,4 +1,4 @@
 @use 'sass:meta';
 @use 'element-variables';
 
-$light-element-ui: meta.module-variables(element-variables);
+$light: meta.module-variables(element-variables);

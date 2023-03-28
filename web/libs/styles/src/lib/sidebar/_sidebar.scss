@@ -1,3 +1,5 @@
+@use '../mixins';
+
 .sidebar-header {
     display: flex;
     flex-direction: row;
@@ -20,7 +22,7 @@
             justify-content: space-between;
 
             .mc-link__text {
-                @include ellipsis();
+                @include mixins.ellipsis();
             }
         }
     }
@@ -67,5 +69,5 @@
 
 .sidebar-content {
     padding: 16px;
-    @extend .scrollable;
+    @extend .scrollable !optional;
 }

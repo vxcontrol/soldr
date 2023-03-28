@@ -1,7 +1,7 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin popper($tokens) {
-    @include b(popper) {
+    @include mixins.b(popper) {
         &[x-placement^='top'] .popper__arrow {
             border-top-color: map-get($tokens, popover-border-color);
 

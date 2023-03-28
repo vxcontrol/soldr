@@ -1,6 +1,6 @@
 @mixin ag-grid-custom-icons() {
     .ag-icon {
-        @extend .mc;
+        @extend .mc !optional;
 
         display: flex;
         flex-direction: column;
@@ -8,19 +8,19 @@
     }
 
     .ag-icon-asc {
-        @extend .mc-angle-up-S_16;
+        @extend .mc-angle-up-S_16 !optional;
 
         background-image: none !important;
     }
 
     .ag-icon-desc {
-        @extend .mc-angle-down-S_16;
+        @extend .mc-angle-down-S_16 !optional;
 
         background-image: none !important;
     }
 
     .ag-icon-menu {
-        @extend .mc-gear_16;
+        @extend .mc-gear_16 !optional;
 
         background-image: none !important;
     }

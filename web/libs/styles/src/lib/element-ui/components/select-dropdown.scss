@@ -1,11 +1,11 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin select-dropdown($tokens) {
-    @include b(select-dropdown) {
+    @include mixins.b(select-dropdown) {
         border: map-get($tokens, select-dropdown-border);
         background-color: map-get($tokens, select-dropdown-background);
 
-        @include when(multiple) {
+        @include mixins.when(multiple) {
             & .el-select-dropdown__item.selected {
                 color: map-get($tokens, select-option-selected-font-color);
                 background-color: map-get($tokens, select-dropdown-background);
@@ -17,7 +17,7 @@
         }
     }
 
-    @include b(select-dropdown__empty) {
+    @include mixins.b(select-dropdown__empty) {
         font-size: map-get($tokens, select-font-size);
     }
 }

@@ -1,49 +1,49 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin tree($tokens) {
-    @include b(tree) {
+    @include mixins.b(tree) {
         background: map-get($tokens, color-white);
         color: map-get($tokens, tree-font-color);
 
-        @include e(empty-text) {
+        @include mixins.e(empty-text) {
             transform: translate(-50%, -50%);
             color: map-get($tokens, color-text-secondary);
             font-size: map-get($tokens, font-size-base);
         }
 
-        @include e(drop-indicator) {
+        @include mixins.e(drop-indicator) {
             background-color: map-get($tokens, color-primary);
         }
     }
 
-    @include b(tree-node) {
+    @include mixins.b(tree-node) {
         &:focus { /* focus */
             > .el-tree-node__content {
                 background-color: map-get($tokens, tree-node-hover-background-color);
             }
         }
 
-        @include when(drop-inner) {
+        @include mixins.when(drop-inner) {
             > .el-tree-node__content .el-tree-node__label {
                 background-color: map-get($tokens, color-primary);
             }
         }
 
-        @include e(content) {
+        @include mixins.e(content) {
             &:hover {
                 background-color: map-get($tokens, tree-node-hover-background-color);
             }
         }
 
-        @include e(expand-icon) {
+        @include mixins.e(expand-icon) {
             color: map-get($tokens, tree-expand-icon-color);
         }
 
-        @include e(label) {
+        @include mixins.e(label) {
             font-size: map-get($tokens, font-size-base);
         }
 
-        @include e(loading-icon) {
+        @include mixins.e(loading-icon) {
             font-size: map-get($tokens, font-size-base);
             color: map-get($tokens, tree-expand-icon-color);
         }

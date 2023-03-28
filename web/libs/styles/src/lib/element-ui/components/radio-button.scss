@@ -1,15 +1,15 @@
-@import '../mixins/mixins';
-@import '../mixins/button';
+@use '../mixins/mixins';
+@use '../mixins/button';
 
 @mixin radio-button($tokens) {
-    @include b(radio-button) {
-        @include e(inner) {
+    @include mixins.b(radio-button) {
+        @include mixins.e(inner) {
             background: map-get($tokens, button-default-background-color);
             border: map-get($tokens, border-base);
             font-weight: map-get($tokens, button-font-weight);
             color: map-get($tokens, button-default-font-color);
 
-            @include button-size(map-get($tokens, button-padding-vertical), map-get($tokens, button-padding-horizontal), map-get($tokens, button-font-size), 0);
+            @include button.button-size(map-get($tokens, button-padding-vertical), map-get($tokens, button-padding-horizontal), map-get($tokens, button-font-size), 0);
 
             &:hover {
                 color: map-get($tokens, color-primary-text);
@@ -22,7 +22,7 @@
             }
         }
 
-        @include e(orig-radio) {
+        @include mixins.e(orig-radio) {
             &:checked {
                 & + .el-radio-button__inner {
                     color: map-get($tokens, radio-button-checked-font-color);
@@ -45,19 +45,19 @@
             }
         }
 
-        @include m(medium) {
+        @include mixins.m(medium) {
             & .el-radio-button__inner {
-                @include button-size(map-get($tokens, button-medium-padding-vertical), map-get($tokens, button-medium-padding-horizontal), map-get($tokens, button-medium-font-size), 0);
+                @include button.button-size(map-get($tokens, button-medium-padding-vertical), map-get($tokens, button-medium-padding-horizontal), map-get($tokens, button-medium-font-size), 0);
             }
         }
-        @include m(small) {
+        @include mixins.m(small) {
             & .el-radio-button__inner {
-                @include button-size(map-get($tokens, button-small-padding-vertical), map-get($tokens, button-small-padding-horizontal), map-get($tokens, button-small-font-size), 0);
+                @include button.button-size(map-get($tokens, button-small-padding-vertical), map-get($tokens, button-small-padding-horizontal), map-get($tokens, button-small-font-size), 0);
             }
         }
-        @include m(mini) {
+        @include mixins.m(mini) {
             & .el-radio-button__inner {
-                @include button-size(map-get($tokens, button-mini-padding-vertical), map-get($tokens, button-mini-padding-horizontal), map-get($tokens, button-mini-font-size), 0);
+                @include button.button-size(map-get($tokens, button-mini-padding-vertical), map-get($tokens, button-mini-padding-horizontal), map-get($tokens, button-mini-font-size), 0);
             }
         }
 

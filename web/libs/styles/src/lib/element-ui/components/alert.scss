@@ -1,18 +1,18 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin alert($tokens) {
-    @include b(alert) {
+    @include mixins.b(alert) {
         padding: map-get($tokens, alert-padding);
         border-radius: map-get($tokens, alert-border-radius);
         background-color: map-get($tokens, color-white);
 
-        @include when(light) {
+        @include mixins.when(light) {
             .el-alert__closebtn {
                 color: map-get($tokens, color-text-primary);
             }
         }
 
-        @include when(dark) {
+        @include mixins.when(dark) {
             .el-alert__closebtn {
                 color: map-get($tokens, color-white);
             }
@@ -21,7 +21,7 @@
             }
         }
 
-        @include m(success) {
+        @include mixins.m(success) {
             &.is-light {
                 background-color: map-get($tokens, alert-success-color);
                 color: map-get($tokens, color-success);
@@ -37,7 +37,7 @@
             }
         }
 
-        @include m(info) {
+        @include mixins.m(info) {
             &.is-light {
                 background-color: map-get($tokens, alert-info-color);
                 color: map-get($tokens, color-info-text);
@@ -53,7 +53,7 @@
             }
         }
 
-        @include m(warning) {
+        @include mixins.m(warning) {
             &.is-light {
                 background-color: map-get($tokens, alert-warning-color);
                 color: map-get($tokens, color-warning-text);
@@ -69,7 +69,7 @@
             }
         }
 
-        @include m(error) {
+        @include mixins.m(error) {
             &.is-light {
                 background-color: map-get($tokens, alert-danger-color);
                 color: map-get($tokens, color-danger-text);

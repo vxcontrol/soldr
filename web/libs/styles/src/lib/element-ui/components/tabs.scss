@@ -1,24 +1,24 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin tabs($tokens) {
-    @include b(tabs) {
-        @include e(active-bar) {
+    @include mixins.b(tabs) {
+        @include mixins.e(active-bar) {
             background-color: map-get($tokens, color-primary);
         }
-        @include e(new-tab) {
+        @include mixins.e(new-tab) {
             &:hover {
                 color: map-get($tokens, color-primary-text);
             }
         }
-        @include e(nav-wrap) {
+        @include mixins.e(nav-wrap) {
             &::after {
                 background-color: map-get($tokens, border-color-light);
             }
         }
-        @include e((nav-next, nav-prev)) {
+        @include mixins.e((nav-next, nav-prev)) {
             color: map-get($tokens, color-text-secondary);
         }
-        @include e(item) {
+        @include mixins.e(item) {
             color: map-get($tokens, color-text-primary);
 
             &:focus.is-active.is-focus:not(:active) {
@@ -32,7 +32,7 @@
                 }
             }
 
-            @include when(active) {
+            @include mixins.when(active) {
                 color: map-get($tokens, color-primary-text);
             }
 
@@ -40,11 +40,11 @@
                 color: map-get($tokens, color-primary-text);
             }
 
-            @include when(disabled) {
+            @include mixins.when(disabled) {
                 color: map-get($tokens, disabled-color-base);
             }
         }
-        @include m(card) {
+        @include mixins.m(card) {
             > .el-tabs__header {
                 border-bottom: 1px solid map-get($tokens, border-color-light);
             }
@@ -59,7 +59,7 @@
                 }
             }
         }
-        @include m(border-card) {
+        @include mixins.m(border-card) {
             background: map-get($tokens, color-white);
             border: 1px solid map-get($tokens, border-color-base);
 
@@ -86,14 +86,14 @@
                 }
             }
         }
-        @include m(bottom) {
+        @include mixins.m(bottom) {
             &.el-tabs--border-card {
                 .el-tabs__header.is-bottom {
                     border-top: 1px solid map-get($tokens, border-color-base);
                 }
             }
         }
-        @include m(left) {
+        @include mixins.m(left) {
             &.el-tabs--card {
                 .el-tabs__item.is-left {
                     border-right: 1px solid map-get($tokens, border-color-light);
@@ -114,7 +114,7 @@
             }
         }
     }
-    @include m(right) {
+    @include mixins.m(right) {
         &.el-tabs--card {
             .el-tabs__item.is-right {
                 border-top: 1px solid map-get($tokens, border-color-light);

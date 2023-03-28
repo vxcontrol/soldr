@@ -1,5 +1,5 @@
-@import '@ptsecurity/mosaic/theming';
+@use '@ptsecurity/mosaic/theming';
 
 .ngx-bar {
-    z-index: $overlay-z-index - 1; // переопределение для перекрытия soldr-progress-container
+    z-index: theming.$overlay-z-index - 1; // переопределение для перекрытия soldr-progress-container
 }

@@ -1,17 +1,17 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin message($tokens) {
-    @include b(message) {
+    @include mixins.b(message) {
         border-color: map-get($tokens, border-color-lighter);
         background-color: map-get($tokens, message-background-color);
 
-        @include m(info) {
+        @include mixins.m(info) {
             .el-message__content {
                 color: map-get($tokens, message-info-font-color);
             }
         }
 
-        @include m(success) {
+        @include mixins.m(success) {
             background-color: map-get($tokens, color-success-lighter);
             border-color: map-get($tokens, color-success-light);
 
@@ -20,7 +20,7 @@
             }
         }
 
-        @include m(warning) {
+        @include mixins.m(warning) {
             background-color: map-get($tokens, color-warning-lighter);
             border-color: map-get($tokens, color-warning-light);
 
@@ -29,7 +29,7 @@
             }
         }
 
-        @include m(error) {
+        @include mixins.m(error) {
             background-color: map-get($tokens, color-danger-lighter);
             border-color: map-get($tokens, color-danger-light);
 
@@ -38,7 +38,7 @@
             }
         }
 
-        @include e(closeBtn) {
+        @include mixins.e(closeBtn) {
             color: map-get($tokens, message-close-icon-color);
 
             &:hover {

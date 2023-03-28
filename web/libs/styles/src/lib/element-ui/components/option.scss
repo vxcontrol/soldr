@@ -1,14 +1,14 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin option($tokens) {
-    @include b(select-dropdown) {
-        @include e(item) {
+    @include mixins.b(select-dropdown) {
+        @include mixins.e(item) {
             font-size: map-get($tokens, select-font-size);
             color: map-get($tokens, select-option-color);
             height: map-get($tokens, select-option-height);
             line-height: map-get($tokens, select-option-height);
 
-            @include when(disabled) {
+            @include mixins.when(disabled) {
                 color: map-get($tokens, select-option-disabled-color);
 
                 &:hover {

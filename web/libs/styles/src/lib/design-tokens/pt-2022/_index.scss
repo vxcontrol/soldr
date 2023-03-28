@@ -1,0 +1,4 @@
+@forward 'default-theme/theme' as theme-*;
+@forward 'default-theme/tokens' as tokens-*;
+
+@forward 'element-ui/theme' as element-ui-theme-*;

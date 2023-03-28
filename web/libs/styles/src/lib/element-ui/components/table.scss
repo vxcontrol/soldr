@@ -1,15 +1,15 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin table($tokens) {
-    @include b(table) {
+    @include mixins.b(table) {
         background-color: map-get($tokens, color-white);
         color: map-get($tokens, table-font-color);
 
-        @include e(empty-text) {
+        @include mixins.e(empty-text) {
             color: map-get($tokens, color-text-secondary);
         }
 
-        @include e(expanded-cell) {
+        @include mixins.e(expanded-cell) {
             background-color: map-get($tokens, color-white);
         }
 
@@ -42,24 +42,18 @@
             }
         }
 
-        @include m((group, border)) {
-            border: map-get($tokens, table-border);
-
-            @include share-rule(border-pseudo) {
+        @include mixins.m((group, border)) {
+            @include mixins.share-rule(border-pseudo) {
                 background-color: map-get($tokens, table-border-color);
-            }
-
-            &::after {
-                @include extend-rule(border-pseudo);
             }
         }
 
         &::before {
-            @include extend-rule(border-pseudo);
+            @include mixins.extend-rule(border-pseudo);
         }
 
         // table--border
-        @include m(border) {
+        @include mixins.m(border) {
             .el-table__cell {
                 border-right: map-get($tokens, table-border);
             }
@@ -73,18 +67,18 @@
             }
         }
 
-        @include e((fixed, fixed-right)) {
+        @include mixins.e((fixed, fixed-right)) {
             &::before {
                 background-color: map-get($tokens, border-color-lighter);
             }
         }
 
-        @include e(fixed-right-patch) {
+        @include mixins.e(fixed-right-patch) {
             background-color: map-get($tokens, color-white);
             border-bottom: map-get($tokens, table-border);
         }
 
-        @include e(fixed-footer-wrapper) {
+        @include mixins.e(fixed-footer-wrapper) {
             & tbody td.el-table__cell {
                 border-top: map-get($tokens, table-border);
                 background-color: map-get($tokens, table-row-hover-background-color);
@@ -92,28 +86,28 @@
             }
         }
 
-        @include e(footer-wrapper) {
+        @include mixins.e(footer-wrapper) {
             td.el-table__cell {
                 border-top: map-get($tokens, table-border);
             }
         }
 
-        @include e((header-wrapper, footer-wrapper)) {
+        @include mixins.e((header-wrapper, footer-wrapper)) {
             & tbody td.el-table__cell {
                 background-color: map-get($tokens, table-row-hover-background-color);
                 color: map-get($tokens, table-font-color);
             }
         }
 
-        @include e(body-wrapper) {
+        @include mixins.e(body-wrapper) {
             .el-table--border {
-                @include when(scrolling-right) {
+                @include mixins.when(scrolling-right) {
                     ~ .el-table__fixed-right {
                         border-left: map-get($tokens, table-border);
                     }
                 }
 
-                @include when(scrolling-left) {
+                @include mixins.when(scrolling-left) {
                     ~ .el-table__fixed {
                         border-right: map-get($tokens, table-border);
                     }
@@ -139,7 +133,7 @@
             border-top-color: map-get($tokens, color-primary);
         }
 
-        @include m(striped) {
+        @include mixins.m(striped) {
             & .el-table__body {
                 & tr.el-table__row--striped {
                     &.current-row td.el-table__cell {
@@ -149,7 +143,7 @@
             }
         }
 
-        @include e(body) {
+        @include mixins.e(body) {
             tr.hover-row {
                 &, &.el-table__row--striped {
                     &, &.current-row {
@@ -165,17 +159,17 @@
             }
         }
 
-        @include e(column-resize-proxy) {
+        @include mixins.e(column-resize-proxy) {
             border-left: map-get($tokens, table-border);
         }
 
-        @include e(column-filter-trigger) {
+        @include mixins.e(column-filter-trigger) {
             & i {
                 color: map-get($tokens, color-info-text);
             }
         }
 
-        @include m(enable-row-hover) {
+        @include mixins.m(enable-row-hover) {
             .el-table__body tr:hover > td.el-table__cell {
                 background-color: map-get($tokens, table-row-hover-background-color);
             }

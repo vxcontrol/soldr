@@ -1,6 +1,8 @@
+@use 'libs/styles/src/lib/mixins';
+
 @mixin text-overflow-theme($mosaic-theme) {
     .soldr-text-overflow .mc-link {
-        @include ellipsis();
+        @include mixins.ellipsis();
 
         display: block !important;
     }

@@ -1,0 +1,15 @@
+@use '@ptsecurity/mosaic/theming';
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
+@mixin toggle-item-theme($mosaic-theme) {
+    .toggle-item__header {
+        background-color: map-deep-get.map-deep-get($mosaic-theme, background, background-less-contrast);
+        border-left-color: map-deep-get.map-deep-get($mosaic-theme, foreground, border) !important;
+    }
+}
+
+@mixin toggle-item-typography($typography) {
+    .toggle-item__title {
+        @include theming.mc-typography-level-to-styles($typography, body);
+    }
+}

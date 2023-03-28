@@ -1,10 +1,10 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin dialog($tokens) {
-    @include b(dialog) {
+    @include mixins.b(dialog) {
         background: map-get($tokens, dialog-background-color);
 
-        @include e(headerbtn) {
+        @include mixins.e(headerbtn) {
             .el-dialog__close {
                 color: map-get($tokens, color-info-text);
             }
@@ -16,12 +16,12 @@
             }
         }
 
-        @include e(title) {
+        @include mixins.e(title) {
             line-height: map-get($tokens, dialog-font-line-height);
             color: map-get($tokens, color-text-primary);
         }
 
-        @include e(body) {
+        @include mixins.e(body) {
             color: map-get($tokens, color-text-regular);
         }
     }

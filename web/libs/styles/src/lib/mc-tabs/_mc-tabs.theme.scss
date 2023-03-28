@@ -1,5 +1,7 @@
+@use '../utils/map-deep-get';
+
 @mixin mc-tabs($theme) {
     .mc-tab-list__content::after {
-        background-color: map-deep-get($theme, foreground, divider);
+        background-color: map-deep-get.map-deep-get($theme, foreground, divider);
     }
 }

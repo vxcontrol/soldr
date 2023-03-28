@@ -1,11 +1,11 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin genTheme($tokens, $backgroundColorWeight, $borderColorWeight, $fontColorWeight, $hoverColorWeight) {
     background-color: mix(map-get($tokens, tag-primary-color), map-get($tokens, color-white), $backgroundColorWeight);
     border-color: mix(map-get($tokens, tag-primary-color), map-get($tokens, color-white), $borderColorWeight);
     color: mix(map-get($tokens, tag-primary-color), map-get($tokens, color-white), $fontColorWeight);
 
-    @include when(hit) {
+    @include mixins.when(hit) {
         border-color: map-get($tokens, tag-primary-color);
     }
 
@@ -23,7 +23,7 @@
         border-color: mix(map-get($tokens, tag-info-color), map-get($tokens, color-white), $borderColorWeight);
         color: mix(map-get($tokens, tag-info-color), map-get($tokens, color-white), $fontColorWeight);
 
-        @include when(hit) {
+        @include mixins.when(hit) {
             border-color: map-get($tokens, tag-info-color);
         }
 
@@ -42,7 +42,7 @@
         border-color: mix(map-get($tokens, tag-success-color), map-get($tokens, color-white), $borderColorWeight);
         color: mix(map-get($tokens, tag-success-color), map-get($tokens, color-white), $fontColorWeight);
 
-        @include when(hit) {
+        @include mixins.when(hit) {
             border-color: map-get($tokens, tag-success-color);
         }
 
@@ -61,7 +61,7 @@
         border-color: mix(map-get($tokens, tag-warning-color), map-get($tokens, color-white), $borderColorWeight);
         color: mix(map-get($tokens, tag-warning-color), map-get($tokens, color-white), $fontColorWeight);
 
-        @include when(hit) {
+        @include mixins.when(hit) {
             border-color: map-get($tokens, tag-warning-color);
         }
 
@@ -80,7 +80,7 @@
         border-color: mix(map-get($tokens, tag-danger-color), map-get($tokens, color-white), $borderColorWeight);
         color: mix(map-get($tokens, tag-danger-color), map-get($tokens, color-white), $fontColorWeight);
 
-        @include when(hit) {
+        @include mixins.when(hit) {
             border-color: map-get($tokens, tag-danger-color);
         }
 
@@ -96,15 +96,15 @@
 }
 
 @mixin tag($tokens) {
-    @include b(tag) {
+    @include mixins.b(tag) {
         @include genTheme($tokens, 10%, 20%, 100%, 100%);
         color: map-get($tokens, tag-primary-color);
 
-        @include m(dark) {
+        @include mixins.m(dark) {
             @include genTheme($tokens, 100%, 100%, 0%, 80%);
         }
 
-        @include m(plain) {
+        @include mixins.m(plain) {
             @include genTheme($tokens, 0%, 40%, 100%, 100%);
         }
     }

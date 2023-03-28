@@ -1,10 +1,10 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin input($tokens) {
-    @include b(textarea) {
+    @include mixins.b(textarea) {
         font-size: map-get($tokens, font-size-base);
 
-        @include e(inner) {
+        @include mixins.e(inner) {
             color: map-get($tokens, input-font-color);
             background-color: map-get($tokens, input-background-color);
             border: map-get($tokens, input-border);
@@ -28,7 +28,7 @@
             background: map-get($tokens, color-white);
         }
 
-        @include when(disabled) {
+        @include mixins.when(disabled) {
             .el-textarea__inner {
                 background-color: map-get($tokens, input-disabled-fill);
                 border-color: map-get($tokens, input-disabled-border);
@@ -40,7 +40,7 @@
             }
         }
 
-        @include when(exceed) {
+        @include mixins.when(exceed) {
             .el-textarea__inner {
                 border-color: map-get($tokens, color-danger);
             }
@@ -51,7 +51,7 @@
         }
     }
 
-    @include b(input) {
+    @include mixins.b(input) {
         font-size: map-get($tokens, font-size-base);
 
         & .el-input__clear {
@@ -71,7 +71,7 @@
             }
         }
 
-        @include e(inner) {
+        @include mixins.e(inner) {
             background-color: map-get($tokens, input-background-color);
             border: map-get($tokens, input-border);
             color: map-get($tokens, input-font-color);
@@ -89,21 +89,21 @@
             }
         }
 
-        @include e(suffix) {
+        @include mixins.e(suffix) {
             color: map-get($tokens, input-icon-color);
         }
 
-        @include e(prefix) {
+        @include mixins.e(prefix) {
             color: map-get($tokens, input-icon-color);
         }
 
-        @include when(active) {
+        @include mixins.when(active) {
             .el-input__inner {
                 border-color: map-get($tokens, input-focus-border);
             }
         }
 
-        @include when(disabled) {
+        @include mixins.when(disabled) {
             .el-input__inner {
                 background-color: map-get($tokens, input-disabled-fill);
                 border-color: map-get($tokens, input-disabled-border);
@@ -115,7 +115,7 @@
             }
         }
 
-        @include when(exceed) {
+        @include mixins.when(exceed) {
             .el-input__inner {
                 border-color: map-get($tokens, color-danger);
             }
@@ -128,8 +128,8 @@
         }
     }
 
-    @include b(input-group) {
-        @include e((append, prepend)) {
+    @include mixins.b(input-group) {
+        @include mixins.e((append, prepend)) {
             background-color: map-get($tokens, background-color-base);
             color: map-get($tokens, color-info-text);
             border: map-get($tokens, border-base);

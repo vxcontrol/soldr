@@ -1,0 +1,7 @@
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
+@mixin login-page-theme($theme) {
+    .login-page {
+        background-color: map-deep-get.map-deep-get($theme, custom, default-background);
+    }
+}

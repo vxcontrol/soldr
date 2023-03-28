@@ -1,0 +1,7 @@
+@use '@ptsecurity/mosaic/theming';
+
+@mixin import-module-modal-theme($mosaic-theme) {
+    .import-modal__error-text {
+        color: theming.mc-color(map-get($mosaic-theme, error));
+    }
+}

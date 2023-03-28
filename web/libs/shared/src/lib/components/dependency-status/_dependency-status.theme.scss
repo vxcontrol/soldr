@@ -1,3 +1,5 @@
+@use '@ptsecurity/mosaic/theming';
+
 @mixin dependency-status-theme($mosaic-theme) {
     $success: map-get($mosaic-theme, success);
     $warning: map-get($mosaic-theme, warning);
@@ -7,6 +9,6 @@
     }
 
     .soldr-icons.dependency-status__icon_policies {
-        color: mc-color($warning, 400);
+        color: theming.mc-color($warning, 400);
     }
 }

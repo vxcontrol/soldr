@@ -1,14 +1,13 @@
-@import '../mixins/mixins';
-@import './popper';
+@use '../mixins/mixins';
 
 @mixin popover($tokens) {
-    @include b(popover) {
+    @include mixins.b(popover) {
         background: map-get($tokens, popover-background-color);
         border: 1px solid map-get($tokens, popover-border-color);
         color: map-get($tokens, color-text-regular);
         font-size: map-get($tokens, popover-font-size);
 
-        @include e(title) {
+        @include mixins.e(title) {
             color: map-get($tokens, popover-title-font-color);
         }
     }

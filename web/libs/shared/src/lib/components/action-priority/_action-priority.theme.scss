@@ -1,3 +1,5 @@
+@use '@ptsecurity/mosaic/theming';
+
 @mixin action-priority-theme($mosaic-theme) {
     $error: map-get($mosaic-theme, error);
     $foreground: map-get($mosaic-theme, foreground);
@@ -5,22 +7,22 @@
     $warning: map-get($mosaic-theme, warning);
 
     .action-priority_high {
-        color: mc-color($error, 400);
+        color: theming.mc-color($error, 400);
 
         .action-priority__box {
-            color: mc-color($error, 600);
-            background-color: mc-color($error, 60);
-            border-color: mc-color($error, 200);
+            color: theming.mc-color($error, 600);
+            background-color: theming.mc-color($error, 60);
+            border-color: theming.mc-color($error, 200);
         }
     }
 
     .action-priority_medium {
-        color: mc-color($warning, 400);
+        color: theming.mc-color($warning, 400);
 
         .action-priority__box {
-            color: mc-color($warning, 600);
-            background-color: mc-color($warning, 60);
-            border-color: mc-color($warning, 200);
+            color: theming.mc-color($warning, 600);
+            background-color: theming.mc-color($warning, 60);
+            border-color: theming.mc-color($warning, 200);
         }
     }
 
@@ -29,8 +31,8 @@
 
         .action-priority__box {
             color: map-get($second, 600);
-            background-color: mc-color($second, 60);
-            border-color: mc-color($second, 200);
+            background-color: theming.mc-color($second, 60);
+            border-color: theming.mc-color($second, 200);
         }
     }
 

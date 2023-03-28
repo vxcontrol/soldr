@@ -1,41 +1,41 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin timeline-item($tokens) {
-    @include b(timeline-item) {
-        @include e(tail) {
+    @include mixins.b(timeline-item) {
+        @include mixins.e(tail) {
             border-left: 2px solid map-get($tokens, timeline-node-color);
         }
 
-        @include e(icon) {
+        @include mixins.e(icon) {
             color: map-get($tokens, color-white);
             font-size: map-get($tokens, font-size-small);
         }
 
-        @include e(node) {
+        @include mixins.e(node) {
             background-color: map-get($tokens, timeline-node-color);
 
-            @include m(primary) {
+            @include mixins.m(primary) {
                 background-color: map-get($tokens, color-primary);
             }
-            @include m(success) {
+            @include mixins.m(success) {
                 background-color: map-get($tokens, color-success);
             }
-            @include m(warning) {
+            @include mixins.m(warning) {
                 background-color: map-get($tokens, color-warning);
             }
-            @include m(danger) {
+            @include mixins.m(danger) {
                 background-color: map-get($tokens, color-danger);
             }
-            @include m(info) {
+            @include mixins.m(info) {
                 background-color: map-get($tokens, color-info);
             }
         }
 
-        @include e(content) {
+        @include mixins.e(content) {
             color: map-get($tokens, color-text-primary);
         }
 
-        @include e(timestamp) {
+        @include mixins.e(timestamp) {
             color: map-get($tokens, color-text-secondary);
             font-size: map-get($tokens, font-size-small);
         }

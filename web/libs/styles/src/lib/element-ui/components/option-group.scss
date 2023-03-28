@@ -1,8 +1,8 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin select-group($tokens) {
-    @include b(select-group) {
-        @include e(wrap) {
+    @include mixins.b(select-group) {
+        @include mixins.e(wrap) {
             &:not(:last-of-type) {
                 &::after {
                     background: map-get($tokens, border-color-light);
@@ -10,7 +10,7 @@
             }
         }
 
-        @include e(title) {
+        @include mixins.e(title) {
             color: map-get($tokens, select-group-color);
         }
     }

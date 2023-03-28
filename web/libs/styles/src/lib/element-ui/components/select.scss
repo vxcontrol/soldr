@@ -1,7 +1,7 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin select($tokens) {
-    @include b(select) {
+    @include mixins.b(select) {
         &:hover {
             .el-input__inner {
                 border-color: map-get($tokens, select-border-color-hover);
@@ -18,7 +18,7 @@
             & .el-select__caret {
                 color: map-get($tokens, select-input-color);
 
-                @include when(show-close) {
+                @include mixins.when(show-close) {
                     font-size: map-get($tokens, select-font-size);
                     color: map-get($tokens, select-input-color);
 
@@ -41,11 +41,11 @@
             }
         }
 
-        @include e(input) {
+        @include mixins.e(input) {
             font-size: map-get($tokens, select-font-size);
         }
 
-        @include e(close) {
+        @include mixins.e(close) {
             color: map-get($tokens, select-input-color);
 
             &:hover {

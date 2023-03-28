@@ -1,13 +1,12 @@
-@import '../mixins/mixins';
-@import '../mixins/button';
+@use '../mixins/mixins';
 
 @mixin radio($tokens) {
-    @include b(radio) {
+    @include mixins.b(radio) {
         color: map-get($tokens, radio-font-color);
         font-weight: map-get($tokens, radio-font-weight);
         font-size: map-get($tokens, font-size-base);
 
-        @include when(bordered) {
+        @include mixins.when(bordered) {
             border: map-get($tokens, border-base);
 
             &.is-checked {
@@ -19,7 +18,7 @@
             }
         }
 
-        @include m(medium) {
+        @include mixins.m(medium) {
             &.is-bordered {
                 .el-radio__label {
                     font-size: map-get($tokens, button-medium-font-size);
@@ -27,8 +26,8 @@
             }
         }
 
-        @include e(input) {
-            @include when(disabled) {
+        @include mixins.e(input) {
+            @include mixins.when(disabled) {
                 .el-radio__inner {
                     background-color: map-get($tokens, radio-disabled-input-fill);
                     border-color: map-get($tokens, radio-disabled-input-border-color);
@@ -52,7 +51,7 @@
                 }
             }
 
-            @include when(checked) {
+            @include mixins.when(checked) {
                 .el-radio__inner {
                     border-color: map-get($tokens, radio-checked-input-border-color);
                     background: map-get($tokens, radio-checked-icon-color);
@@ -63,13 +62,13 @@
                 }
             }
 
-            @include when(focus) {
+            @include mixins.when(focus) {
                 .el-radio__inner {
                     border-color: map-get($tokens, radio-input-border-color-hover);
                 }
             }
         }
-        @include e(inner) {
+        @include mixins.e(inner) {
             border: map-get($tokens, radio-input-border);
             background-color: map-get($tokens, radio-input-background-color);
 
@@ -88,7 +87,7 @@
             }
         }
 
-        @include e(label) {
+        @include mixins.e(label) {
             font-size: map-get($tokens, radio-font-size);
         }
     }

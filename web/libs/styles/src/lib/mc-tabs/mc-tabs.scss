@@ -1,3 +1,5 @@
+@use '@ptsecurity/mosaic/theming';
+
 // TODO: remove after https://youtrack.ptsecurity.com/issue/UIM-856
 .mc-tab-list__content::after {
     position: absolute;

@@ -1,16 +1,16 @@
 @charset "UTF-8";
 @use 'sass:map';
-@import '../mixins/button';
-@import '../mixins/mixins';
+@use '../mixins/button';
+@use '../mixins/mixins';
 
 @mixin button($tokens) {
-    @include b(button) {
+    @include mixins.b(button) {
         background: map-get($tokens, button-default-background-color);
         border: map-get($tokens, border-base);
         border-color: map-get($tokens, button-default-border-color);
         color: map-get($tokens, button-default-font-color);
 
-        @include button-size(map-get($tokens, button-padding-vertical), map-get($tokens, button-padding-horizontal), map-get($tokens, button-font-size), map-get($tokens, button-border-radius));
+        @include button.button-size(map-get($tokens, button-padding-vertical), map-get($tokens, button-padding-horizontal), map-get($tokens, button-font-size), map-get($tokens, button-border-radius));
 
         &:hover,
         &:focus {
@@ -24,7 +24,7 @@
             border-color: mix(map-get($tokens, color-black), map-get($tokens, color-primary), map-get($tokens, button-active-shade-percent));
         }
 
-        @include when(plain) {
+        @include mixins.when(plain) {
             &:hover,
             &:focus {
                 background: map-get($tokens, color-white);
@@ -39,12 +39,12 @@
             }
         }
 
-        @include when(active) {
+        @include mixins.when(active) {
             color: mix(map-get($tokens, color-black), map-get($tokens, color-primary), map-get($tokens, button-active-shade-percent));
             border-color: mix(map-get($tokens, color-black), map-get($tokens, color-primary), map-get($tokens, button-active-shade-percent));
         }
 
-        @include when(disabled) {
+        @include mixins.when(disabled) {
             &,
             &:hover,
             &:focus {
@@ -64,31 +64,31 @@
             }
         }
 
-        @include m(primary) {
-            @include button-variant($tokens, map-get($tokens, button-primary-font-color), map-get($tokens, button-primary-background-color), map-get($tokens, button-primary-border-color));
+        @include mixins.m(primary) {
+            @include button.button-variant($tokens, map-get($tokens, button-primary-font-color), map-get($tokens, button-primary-background-color), map-get($tokens, button-primary-border-color));
         }
-        @include m(success) {
-            @include button-variant($tokens, map-get($tokens, button-success-font-color), map-get($tokens, button-success-background-color), map-get($tokens, button-success-border-color));
+        @include mixins.m(success) {
+            @include button.button-variant($tokens, map-get($tokens, button-success-font-color), map-get($tokens, button-success-background-color), map-get($tokens, button-success-border-color));
         }
-        @include m(warning) {
-            @include button-variant($tokens, map-get($tokens, button-warning-font-color), map-get($tokens, button-warning-background-color), map-get($tokens, button-warning-border-color));
+        @include mixins.m(warning) {
+            @include button.button-variant($tokens, map-get($tokens, button-warning-font-color), map-get($tokens, button-warning-background-color), map-get($tokens, button-warning-border-color));
         }
-        @include m(danger) {
-            @include button-variant($tokens, map-get($tokens, button-danger-font-color), map-get($tokens, button-danger-background-color), map-get($tokens, button-danger-border-color));
+        @include mixins.m(danger) {
+            @include button.button-variant($tokens, map-get($tokens, button-danger-font-color), map-get($tokens, button-danger-background-color), map-get($tokens, button-danger-border-color));
         }
-        @include m(info) {
-            @include button-variant($tokens, map-get($tokens, button-info-font-color), map-get($tokens, button-info-background-color), map-get($tokens, button-info-border-color));
+        @include mixins.m(info) {
+            @include button.button-variant($tokens, map-get($tokens, button-info-font-color), map-get($tokens, button-info-background-color), map-get($tokens, button-info-border-color));
         }
-        @include m(medium) {
-            @include button-size(map-get($tokens, button-medium-padding-vertical), map-get($tokens, button-medium-padding-horizontal), map-get($tokens, button-medium-font-size), map-get($tokens, button-medium-border-radius));
+        @include mixins.m(medium) {
+            @include button.button-size(map-get($tokens, button-medium-padding-vertical), map-get($tokens, button-medium-padding-horizontal), map-get($tokens, button-medium-font-size), map-get($tokens, button-medium-border-radius));
         }
-        @include m(small) {
-            @include button-size(map-get($tokens, button-small-padding-vertical), map-get($tokens, button-small-padding-horizontal), map-get($tokens, button-small-font-size), map-get($tokens, button-small-border-radius));
+        @include mixins.m(small) {
+            @include button.button-size(map-get($tokens, button-small-padding-vertical), map-get($tokens, button-small-padding-horizontal), map-get($tokens, button-small-font-size), map-get($tokens, button-small-border-radius));
         }
-        @include m(mini) {
-            @include button-size(map-get($tokens, button-mini-padding-vertical), map-get($tokens, button-mini-padding-horizontal), map-get($tokens, button-mini-font-size), map-get($tokens, button-mini-border-radius));
+        @include mixins.m(mini) {
+            @include button.button-size(map-get($tokens, button-mini-padding-vertical), map-get($tokens, button-mini-padding-horizontal), map-get($tokens, button-mini-font-size), map-get($tokens, button-mini-border-radius));
         }
-        @include m(text) {
+        @include mixins.m(text) {
             color: map-get($tokens, color-primary-text);
 
             &:hover,
@@ -101,7 +101,7 @@
         }
     }
 
-    @include b(button-group) {
+    @include mixins.b(button-group) {
         & > .el-dropdown {
             & > .el-button {
                 border-left-color: rgba(map-get($tokens, color-white), 0.5);

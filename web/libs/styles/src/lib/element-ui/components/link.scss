@@ -1,4 +1,4 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin link($tokens) {
     $typeMap: (
@@ -9,10 +9,10 @@
         info: map-get($tokens, link-info-font-color)
     );
 
-    @include b(link) {
+    @include mixins.b(link) {
         font-size: map-get($tokens, link-font-size);
 
-        @include when(underline) {
+        @include mixins.when(underline) {
             &:hover:after {
                 border-bottom: 1px solid map-get($tokens, link-default-active-color)
             }
@@ -29,7 +29,7 @@
                 border-color: map-get($tokens, link-default-active-color)
             }
 
-            @include when(disabled) {
+            @include mixins.when(disabled) {
                 color: map-get($tokens, link-disabled-font-color)
             }
         }
@@ -46,10 +46,10 @@
                     border-color: $primaryColor
                 }
 
-                @include when(disabled) {
+                @include mixins.when(disabled) {
                     color: mix($primaryColor, map-get($tokens, color-white), 50%)
                 }
-                @include when(underline) {
+                @include mixins.when(underline) {
                     &:hover:after {
                         border-color: $primaryColor
                     }

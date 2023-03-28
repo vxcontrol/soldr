@@ -1,17 +1,17 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin message-box($tokens) {
-    @include b(message-box) {
+    @include mixins.b(message-box) {
         background-color: map-get($tokens, color-white);
         border: 1px solid map-get($tokens, border-color-lighter);
         font-size: map-get($tokens, messagebox-font-size);
 
-        @include e(title) {
+        @include mixins.e(title) {
             font-size: map-get($tokens, messagebox-font-size);
             color: map-get($tokens, messagebox-title-color);
         }
 
-        @include e(headerbtn) {
+        @include mixins.e(headerbtn) {
             .el-message-box__close {
                 color: map-get($tokens, color-info-text);
             }
@@ -23,12 +23,12 @@
             }
         }
 
-        @include e(content) {
+        @include mixins.e(content) {
             color: map-get($tokens, messagebox-content-color);
             font-size: map-get($tokens, messagebox-content-font-size);
         }
 
-        @include e(input) {
+        @include mixins.e(input) {
             & input.invalid {
                 border-color: map-get($tokens, color-danger);
 
@@ -38,7 +38,7 @@
             }
         }
 
-        @include e(status) {
+        @include mixins.e(status) {
             &.el-icon-success {
                 color: map-get($tokens, messagebox-success-color);
             }
@@ -56,7 +56,7 @@
             }
         }
 
-        @include e(errormsg) {
+        @include mixins.e(errormsg) {
             color: map-get($tokens, color-danger-text);
         }
     }

@@ -1,6 +1,6 @@
 /* Element Dark Variables */
 @use 'sass:map';
-@import '../default-theme/tokens';
+@use '../default-theme/tokens';
 
 // Special comment for theme configurator
 // type|skipAutoTranslation|Category|Order
@@ -19,10 +19,10 @@ $color-transition-base: color .2s cubic-bezier(.645,.045,.355,1) !default;
 -------------------------- */
 /// color|1|Brand Color|0
 // $color-primary: #409EFF !default;
-$color-primary: $dark-color-scheme-primary-default;
+$color-primary: tokens.$dark-color-scheme-primary-default;
 
 /// color|1|Background Color|4
-$color-white: $dark-color-scheme-background-background;
+$color-white: tokens.$dark-color-scheme-background-background;
 /// color|1|Background Color|4
 $color-black: white;
 $color-primary-light-1: mix($color-white, $color-primary, 10%) !default; /* 53a8ff */
@@ -35,19 +35,19 @@ $color-primary-light-7: mix($color-white, $color-primary, 70%) !default; /* c6e2
 $color-primary-light-8: mix($color-white, $color-primary, 80%) !default; /* d9ecff */
 $color-primary-light-9: mix($color-white, $color-primary, 90%) !default; /* ecf5ff */
 /// color|1|Functional Color|1
-$color-success: $dark-color-scheme-success-default;
+$color-success: tokens.$dark-color-scheme-success-default;
 /// color|1|Functional Color|1
-$color-warning: $dark-color-scheme-warning-default;
+$color-warning: tokens.$dark-color-scheme-warning-default;
 /// color|1|Functional Color|1
-$color-danger: $dark-color-scheme-error-default;
+$color-danger: tokens.$dark-color-scheme-error-default;
 /// color|1|Functional Color|1
-$color-info: $dark-color-scheme-info-default;
+$color-info: tokens.$dark-color-scheme-info-default;
 
-$color-primary-text: map.get($dark-color-scheme-primary-palette, 400);
-$color-danger-text: map.get($dark-color-scheme-error-palette, 400);
-$color-info-text: map.get($dark-color-scheme-info-palette, 400);
-$color-success-text: map.get($dark-color-scheme-success-palette, 400);
-$color-warning-text: map.get($dark-color-scheme-warning-palette, 400);
+$color-primary-text: map.get(tokens.$dark-color-scheme-primary-palette, 400);
+$color-danger-text: map.get(tokens.$dark-color-scheme-error-palette, 400);
+$color-info-text: map.get(tokens.$dark-color-scheme-info-palette, 400);
+$color-success-text: map.get(tokens.$dark-color-scheme-success-palette, 400);
+$color-warning-text: map.get(tokens.$dark-color-scheme-warning-palette, 400);
 
 $color-success-light: mix($color-white, $color-success, 40%) !default;
 $color-warning-light: mix($color-white, $color-warning, 40%) !default;
@@ -61,23 +61,23 @@ $color-info-lighter: mix($color-white, $color-info, 60%) !default;
 /// color|1|Font Color|2
 $color-text-primary: white;
 /// color|1|Font Color|2
-$color-text-regular: $dark-color-scheme-foreground-text;
+$color-text-regular: tokens.$dark-color-scheme-foreground-text;
 /// color|1|Font Color|2
-$color-text-secondary: $dark-color-scheme-foreground-text-less-contrast;
+$color-text-secondary: tokens.$dark-color-scheme-foreground-text-less-contrast;
 /// color|1|Font Color|2
-$color-text-placeholder: $dark-color-scheme-foreground-text-disabled;
+$color-text-placeholder: tokens.$dark-color-scheme-foreground-text-disabled;
 /// color|1|Border Color|3
-$border-color-base: $dark-color-scheme-foreground-border;
+$border-color-base: tokens.$dark-color-scheme-foreground-border;
 /// color|1|Border Color|3
-$border-color-light: $dark-color-scheme-foreground-divider;
+$border-color-light: tokens.$dark-color-scheme-foreground-divider;
 /// color|1|Border Color|3
-$border-color-lighter: $dark-color-scheme-foreground-divider;
+$border-color-lighter: tokens.$dark-color-scheme-foreground-divider;
 /// color|1|Border Color|3
-$border-color-extra-light: $dark-color-scheme-foreground-divider;
+$border-color-extra-light: tokens.$dark-color-scheme-foreground-divider;
 
 // Background
 /// color|1|Background Color|4
-$background-color-base: $dark-color-scheme-background-background-disabled;
+$background-color-base: tokens.$dark-color-scheme-background-background-disabled;
 
 /* Link
 -------------------------- */
@@ -122,19 +122,19 @@ $font-size-large: 18px !default;
 /// fontSize|1|Font Size|0
 $font-size-medium: 16px !default;
 /// fontSize|1|Font Size|0
-$font-size-base: $typography-body-font-size;
+$font-size-base: tokens.$typography-body-font-size;
 /// fontSize|1|Font Size|0
-$font-size-small: $typography-caption-font-size;
+$font-size-small: tokens.$typography-caption-font-size;
 /// fontSize|1|Font Size|0
-$font-size-extra-small: $typography-small-text-font-size;
+$font-size-extra-small: tokens.$typography-small-text-font-size;
 /// fontWeight|1|Font Weight|1
 $font-weight-primary: 400 !default;
 /// fontWeight|1|Font Weight|1
 $font-weight-secondary: 100 !default;
 /// fontLineHeight|1|Line Height|2
-$font-line-height-primary: $typography-body-line-height;
+$font-line-height-primary: tokens.$typography-body-line-height;
 /// fontLineHeight|1|Line Height|2
-$font-line-height-secondary: $typography-caption-line-height;
+$font-line-height-secondary: tokens.$typography-caption-line-height;
 $font-color-disabled-base: #bbb !default;
 /* Size
 -------------------------- */
@@ -568,11 +568,11 @@ $button-disabled-background-color: $color-white !default;
 $button-disabled-border-color: $border-color-lighter !default;
 
 /// color||Color|0
-$button-primary-border-color: $button-dark-color-scheme-primary-border;
+$button-primary-border-color: tokens.$button-dark-color-scheme-primary-border;
 /// color||Color|0
 $button-primary-font-color: $color-black;
 /// color||Color|0
-$button-primary-background-color: $button-dark-color-scheme-primary-background;
+$button-primary-background-color: tokens.$button-dark-color-scheme-primary-background;
 /// color||Color|0
 $button-success-border-color: $color-success !default;
 /// color||Color|0
@@ -835,7 +835,7 @@ $loading-spinner-size: 42px !default;
 /// height||Other|4
 $loading-fullscreen-spinner-size: 50px !default;
 
-$loader-overlay: $loader-overlay-dark-color-scheme-background;
+$loader-overlay: tokens.$loader-overlay-dark-color-scheme-background;
 
 /* Scrollbar
 --------------------------*/
