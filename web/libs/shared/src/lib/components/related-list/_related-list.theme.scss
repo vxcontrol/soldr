@@ -1,0 +1,11 @@
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
+@mixin related-list-theme($mosaic-theme) {
+    .related-list__separator {
+        color: map-deep-get.map-deep-get($mosaic-theme, components, link, text);
+    }
+
+    .related-list__mask {
+        color: map-deep-get.map-deep-get($mosaic-theme, components, link, text);
+    }
+}

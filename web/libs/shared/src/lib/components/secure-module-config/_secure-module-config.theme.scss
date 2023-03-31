@@ -1,6 +1,8 @@
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
 @mixin secure-module-config-theme($mosaic-theme) {
     .mc-icon.icon_secure {
-        color: map-deep-get($mosaic-theme, components, alert, success, icon);
+        color: map-deep-get.map-deep-get($mosaic-theme, components, alert, success, icon);
     }
 }
 

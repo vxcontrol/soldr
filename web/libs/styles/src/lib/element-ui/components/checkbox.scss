@@ -1,12 +1,12 @@
-@import '../mixins/mixins';
-@import '../mixins/_button';
+@use '../mixins/mixins';
+@use '../mixins/button';
 
 @mixin checkbox($tokens) {
-    @include b(checkbox) {
+    @include mixins.b(checkbox) {
         color: map-get($tokens, checkbox-font-color);
         font-size: map-get($tokens, font-size-base);
 
-        @include when(bordered) {
+        @include mixins.when(bordered) {
             border: map-get($tokens, border-base);
 
             &.is-checked {
@@ -24,13 +24,13 @@
             }
         }
 
-        @include e(input) {
+        @include mixins.e(input) {
             .el-checkbox__inner::after {
                 border-left: 0;
                 border-top: 0;
             }
 
-            @include when(disabled) {
+            @include mixins.when(disabled) {
                 .el-checkbox__inner {
                     border-color: map-get($tokens, checkbox-disabled-border-color);
 
@@ -67,7 +67,7 @@
                 }
             }
 
-            @include when(checked) {
+            @include mixins.when(checked) {
                 .el-checkbox__inner {
                     background-color: map-get($tokens, checkbox-checked-background-color);
                     border-color: map-get($tokens, checkbox-checked-input-border-color);
@@ -77,12 +77,12 @@
                     color: map-get($tokens, checkbox-checked-font-color);
                 }
             }
-            @include when(focus) { /*focus时 视觉上区分*/
+            @include mixins.when(focus) { /*focus时 视觉上区分*/
                 .el-checkbox__inner {
                     border-color: map-get($tokens, checkbox-input-border-color-hover);
                 }
             }
-            @include when(indeterminate) {
+            @include mixins.when(indeterminate) {
                 .el-checkbox__inner {
                     background-color: map-get($tokens, checkbox-checked-background-color);
                     border-color: map-get($tokens, checkbox-checked-input-border-color);
@@ -93,7 +93,7 @@
                 }
             }
         }
-        @include e(inner) {
+        @include mixins.e(inner) {
             border: map-get($tokens, checkbox-input-border);
             background-color: map-get($tokens, checkbox-background-color);
 
@@ -107,14 +107,14 @@
         }
     }
 
-    @include b(checkbox-button) {
-        @include e(inner) {
+    @include mixins.b(checkbox-button) {
+        @include mixins.e(inner) {
             font-weight: map-get($tokens, checkbox-font-weight);
             background: map-get($tokens, button-default-background-color);
             border: map-get($tokens, border-base);
             color: map-get($tokens, button-default-font-color);
 
-            @include button-size(map-get($tokens, button-padding-vertical), map-get($tokens, button-padding-horizontal), map-get($tokens, button-font-size), 0);
+            @include button.button-size(map-get($tokens, button-padding-vertical), map-get($tokens, button-padding-horizontal), map-get($tokens, button-font-size), 0);
 
             &:hover {
                 color: map-get($tokens, color-primary-text);
@@ -158,19 +158,19 @@
             }
         }
 
-        @include m(medium) {
+        @include mixins.m(medium) {
             .el-checkbox-button__inner {
-                @include button-size(map-get($tokens, button-medium-padding-vertical), map-get($tokens, button-medium-padding-horizontal), map-get($tokens, button-medium-font-size), 0);
+                @include button.button-size(map-get($tokens, button-medium-padding-vertical), map-get($tokens, button-medium-padding-horizontal), map-get($tokens, button-medium-font-size), 0);
             }
         }
-        @include m(small) {
+        @include mixins.m(small) {
             .el-checkbox-button__inner {
-                @include button-size(map-get($tokens, button-small-padding-vertical), map-get($tokens, button-small-padding-horizontal), map-get($tokens, button-small-font-size), 0);
+                @include button.button-size(map-get($tokens, button-small-padding-vertical), map-get($tokens, button-small-padding-horizontal), map-get($tokens, button-small-font-size), 0);
             }
         }
-        @include m(mini) {
+        @include mixins.m(mini) {
             .el-checkbox-button__inner {
-                @include button-size(map-get($tokens, button-mini-padding-vertical), map-get($tokens, button-mini-padding-horizontal), map-get($tokens, button-mini-font-size), 0);
+                @include button.button-size(map-get($tokens, button-mini-padding-vertical), map-get($tokens, button-mini-padding-horizontal), map-get($tokens, button-mini-font-size), 0);
             }
         }
     }

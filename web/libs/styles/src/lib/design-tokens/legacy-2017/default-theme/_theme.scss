@@ -1,29 +1,30 @@
 @use 'sass:meta';
 @use 'tokens';
 
-@import '@ptsecurity/mosaic/theming';
-@import 'tokens';
+@use '@ptsecurity/mosaic/theming';
 
 $tokens: meta.module-variables(tokens);
-$light: mc-light-theme($tokens);
+$light: theming.mc-light-theme($tokens);
 
 $second: map-get($light, second);
 $custom-light: (
-    default-warning: mc-color(map-get($light, warning), 560),
-    default-success: mc-color(map-get($light, success), 560),
+    default-warning: theming.mc-color(map-get($light, warning), 560),
+    default-success: theming.mc-color(map-get($light, success), 560),
     default-background: white,
-    navbar-dropdown: mc-color(map-get($light, primary), 600),
-    navbar-dropdown-hover: mc-color(map-get($light, primary), 560),
+    navbar-dropdown: theming.mc-color(map-get($light, primary), 600),
+    navbar-dropdown-hover: theming.mc-color(map-get($light, primary), 560),
     row-gradient: #f2f2f2,
     selected-server-text: white,
-    card_default-vertical-line: mc-color($second, 300),
-    card_default-shadow: mc-color($second, 100),
-    card_default-background: mc-color($second, 60),
-    license-message_expiring: mc-color(map-get($light, warning), 100),
-    license-message_expired: mc-color(map-get($light, error), 100),
-    distribution-buttons-background: mc-color(map-get($light, primary), 60),
-    distribution-buttons-text-color: $link-light-color-scheme-text,
+    card_default-vertical-line: theming.mc-color($second, 300),
+    card_default-shadow: theming.mc-color($second, 100),
+    card_default-background: theming.mc-color($second, 60),
+    license-message_expiring: theming.mc-color(map-get($light, warning), 100),
+    license-message_expired: theming.mc-color(map-get($light, error), 100),
+    distribution-buttons-background: theming.mc-color(map-get($light, primary), 60),
+    distribution-buttons-text-color: tokens.$link-light-color-scheme-text,
     macos-img-filter: invert(0)
 );
 
-$legacy-2017-typography: mc-typography-config();
+@import '@ptsecurity/mosaic/theming';
+@import 'tokens';
+$typography: mc-typography-config();

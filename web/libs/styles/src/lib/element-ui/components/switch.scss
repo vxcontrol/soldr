@@ -1,14 +1,14 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin switch($tokens) {
-    @include b(switch) {
+    @include mixins.b(switch) {
         font-size: map-get($tokens, switch-font-size);
 
-        @include e(label) {
+        @include mixins.e(label) {
             font-size: map-get($tokens, switch-font-size);
             color: map-get($tokens, color-text-primary);
 
-            @include when(active) {
+            @include mixins.when(active) {
                 color: map-get($tokens, color-primary-text);
             }
 
@@ -17,7 +17,7 @@
             }
         }
 
-        @include e(core) {
+        @include mixins.e(core) {
             border: 1px solid map-get($tokens, switch-off-color) !important;
             background: map-get($tokens, switch-off-color) !important;
 
@@ -28,7 +28,7 @@
             }
         }
 
-        @include when(checked) {
+        @include mixins.when(checked) {
             .el-switch__core {
                 border-color: map-get($tokens, switch-on-color) !important;
                 background-color: map-get($tokens, switch-on-color) !important;

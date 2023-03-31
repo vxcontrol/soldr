@@ -1,8 +1,8 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin empty($tokens) {
-    @include b(empty) {
-        @include e(description) {
+    @include mixins.b(empty) {
+        @include mixins.e(description) {
             p {
                 font-size: map-get($tokens, font-size-base);
                 color: map-get($tokens, color-text-secondary);

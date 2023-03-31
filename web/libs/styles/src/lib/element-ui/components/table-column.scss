@@ -1,11 +1,11 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin table-column($tokens) {
-    @include b(table-filter) {
+    @include mixins.b(table-filter) {
         border: solid 1px map-get($tokens, border-color-lighter);
         background-color: map-get($tokens, color-white);
 
-        @include e(list-item) {
+        @include mixins.e(list-item) {
             font-size: map-get($tokens, font-size-base);
 
             &:hover {
@@ -13,13 +13,13 @@
                 color: map-get($tokens, dropdown-menuItem-hover-color);
             }
 
-            @include when(active) {
+            @include mixins.when(active) {
                 background-color: map-get($tokens, color-primary);
                 color: map-get($tokens, color-white);
             }
         }
 
-        @include e(bottom) {
+        @include mixins.e(bottom) {
             border-top: 1px solid map-get($tokens, border-color-lighter);
 
             button {

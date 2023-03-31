@@ -1,3 +1,6 @@
+@use '@ptsecurity/mosaic/theming';
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
 @mixin distributions-page-theme($mosaic-theme) {
     $foreground: map-get($mosaic-theme, foreground);
     $background: map-get($mosaic-theme, background);
@@ -13,14 +16,14 @@
 
         .distributions-page__os {
             background-color: map-get($background, background);
-            border-color: mc-color($second, 60);
+            border-color: theming.mc-color($second, 60);
 
             .os-title {
                 color: map-get($foreground, text);
             }
 
             .distributions-page__os-card .os-img-macos {
-                filter: map-deep-get($mosaic-theme, custom, macos-img-filter);
+                filter: map-deep-get.map-deep-get($mosaic-theme, custom, macos-img-filter);
             }
         }
 
@@ -30,14 +33,14 @@
 
         .distributions-page__os-action {
             .os-action-button {
-                background: map-deep-get($mosaic-theme, custom, distribution-buttons-background);
+                background: map-deep-get.map-deep-get($mosaic-theme, custom, distribution-buttons-background);
 
                 &:focus {
-                    outline-color: map-deep-get($mosaic-theme, components, link, state-focused-outline);
+                    outline-color: map-deep-get.map-deep-get($mosaic-theme, components, link, state-focused-outline);
                 }
 
                 .os-action-text {
-                    color: map-deep-get($mosaic-theme, custom, distribution-buttons-text-color);
+                    color: map-deep-get.map-deep-get($mosaic-theme, custom, distribution-buttons-text-color);
                 }
             }
         }
@@ -51,12 +54,12 @@
 @mixin distributions-page-typography($typography) {
     .distributions-page__os-action {
         .os-action-text {
-            font-size: mc-font-size($typography, title);
-            line-height: mc-line-height($typography, title);
+            font-size: theming.mc-font-size($typography, title);
+            line-height: theming.mc-line-height($typography, title);
         }
     }
 
     .distributions-page__versions {
-        line-height: mc-line-height($typography, subheading);
+        line-height: theming.mc-line-height($typography, subheading);
     }
 }

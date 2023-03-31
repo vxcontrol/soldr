@@ -1,21 +1,17 @@
-@import '@ptsecurity/mosaic/theming';
+@use '@ptsecurity/mosaic/theming';
 
-@import 'design-tokens/legacy-2017/default-theme/theme';
-@import 'design-tokens/pt-2022/default-theme/theme';
-@import 'themes/theme';
+@use 'design-tokens/legacy-2017';
+@use 'design-tokens/pt-2022';
 
-@import 'element-ui/element-ui-components.theme';
-@import 'design-tokens/legacy-2017/element-ui/theme';
-@import 'design-tokens/pt-2022/element-ui/theme';
+@use 'themes/theme' as *;
+@use 'element-ui/element-ui-components.theme' as *;
 
 .light-theme {
-    @include soldr-typography($legacy-2017-typography);
-    @include soldr-theme($light, $custom-light);
-    @include element-ui-components($light-element-ui);
+    @include soldr-typography(legacy-2017.$theme-typography);
+    @include soldr-theme(legacy-2017.$theme-light, legacy-2017.$theme-custom-light, legacy-2017.$element-ui-theme-light);
 }
 
 .dark-theme {
-    @include soldr-typography($pt-2022-typography);
-    @include soldr-theme($dark, $custom-dark);
-    @include element-ui-components($dark-element-ui);
+    @include soldr-typography(pt-2022.$theme-typography);
+    @include soldr-theme(pt-2022.$theme-dark, pt-2022.$theme-custom-dark, pt-2022.$element-ui-theme-dark);
 }

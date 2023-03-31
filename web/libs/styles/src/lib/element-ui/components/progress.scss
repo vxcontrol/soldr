@@ -1,12 +1,12 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin progress($tokens) {
-    @include b(progress) {
-        @include e(text) {
+    @include mixins.b(progress) {
+        @include mixins.e(text) {
             color: map-get($tokens, color-text-regular);
         }
 
-        @include when(success) {
+        @include mixins.when(success) {
             .el-progress-bar__inner {
                 background-color: map-get($tokens, color-success);
             }
@@ -16,7 +16,7 @@
             }
         }
 
-        @include when(warning) {
+        @include mixins.when(warning) {
             .el-progress-bar__inner {
                 background-color: map-get($tokens, color-warning);
             }
@@ -26,7 +26,7 @@
             }
         }
 
-        @include when(exception) {
+        @include mixins.when(exception) {
             .el-progress-bar__inner {
                 background-color: map-get($tokens, color-danger);
             }
@@ -37,15 +37,15 @@
         }
     }
 
-    @include b(progress-bar) {
-        @include e(outer) {
+    @include mixins.b(progress-bar) {
+        @include mixins.e(outer) {
             background-color: map-get($tokens, border-color-lighter);
         }
-        @include e(inner) {
+        @include mixins.e(inner) {
             background-color: map-get($tokens, color-primary);
         }
 
-        @include e(innerText) {
+        @include mixins.e(innerText) {
             color: map-get($tokens, color-white);
         }
     }

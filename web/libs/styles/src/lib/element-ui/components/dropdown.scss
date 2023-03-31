@@ -1,7 +1,7 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin dropdown($tokens) {
-    @include b(dropdown) {
+    @include mixins.b(dropdown) {
         color: map-get($tokens, color-text-regular);
         font-size: map-get($tokens, font-size-base);
 
@@ -12,11 +12,11 @@
         }
     }
 
-    @include b(dropdown-menu) {
+    @include mixins.b(dropdown-menu) {
         background-color: map-get($tokens, color-white);
         border: 1px solid map-get($tokens, border-color-lighter);
 
-        @include e(item) {
+        @include mixins.e(item) {
             font-size: map-get($tokens, font-size-base);
             color: map-get($tokens, color-text-regular);
             &:not(.is-disabled):hover, &:focus {
@@ -24,7 +24,7 @@
                 color: map-get($tokens, dropdown-menuItem-hover-color);
             }
 
-            @include m(divided) {
+            @include mixins.m(divided) {
                 border-top: 1px solid map-get($tokens, border-color-lighter);
 
                 &:before {

@@ -1,0 +1,11 @@
+@use '@ptsecurity/mosaic/theming';
+
+@mixin divider-theme($mosaic-theme) {
+    $second: map-get($mosaic-theme, second);
+
+    .soldr-divider {
+        &::after {
+            background-color: theming.mc-color($second, A200);
+        }
+    }
+}

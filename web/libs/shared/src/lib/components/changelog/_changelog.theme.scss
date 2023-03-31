@@ -1,0 +1,29 @@
+@use '@ptsecurity/mosaic/theming';
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
+@mixin changelog-theme($mosaic-theme) {
+    .changelog__item:hover {
+        background-color: map-deep-get.map-deep-get($mosaic-theme, background, overlay-hover);
+    }
+
+    .changelog__left-part {
+        &::after {
+            background-color: map-deep-get.map-deep-get($mosaic-theme, components, link, text);
+
+            .changelog__table_read-only &,
+            .changelog__item_current & {
+                background-color: map-deep-get.map-deep-get($mosaic-theme, foreground, text);
+            }
+        }
+
+        &::before {
+            background-color: map-deep-get.map-deep-get($mosaic-theme, foreground, divider);
+        }
+    }
+}
+
+@mixin changelog-typography($typography) {
+    .changelog__title {
+        @include theming.mc-typography-level-to-styles($typography, subheading);
+    }
+}

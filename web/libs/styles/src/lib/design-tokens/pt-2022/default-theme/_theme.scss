@@ -1,29 +1,30 @@
 @use 'sass:meta';
 @use 'tokens';
 
-@import '@ptsecurity/mosaic/theming';
-@import 'tokens';
+@use '@ptsecurity/mosaic/theming';
 
 $tokens: meta.module-variables(tokens);
-$dark: mc-dark-theme($tokens);
+$dark: theming.mc-dark-theme($tokens);
 
 $second: map-get($dark, second);
 $custom-dark: (
-    default-warning: mc-color(map-get($dark, warning), 400),
-    default-success: mc-color(map-get($dark, success), 400),
+    default-warning: theming.mc-color(map-get($dark, warning), 400),
+    default-success: theming.mc-color(map-get($dark, success), 400),
     default-background: map-get(map-get($dark, background), background-under),
-    navbar-dropdown: mc-color(map-get($dark, second), 600),
-    navbar-dropdown-hover: mc-color(map-get($dark, second), 560),
+    navbar-dropdown: theming.mc-color(map-get($dark, second), 600),
+    navbar-dropdown-hover: theming.mc-color(map-get($dark, second), 560),
     row-gradient: #28303A,
-    selected-server-text: mc-color(map-get($dark, second), 60),
-    card_default-vertical-line: mc-color($second, 600),
-    card_default-shadow: mc-color($second, 700),
-    card_default-background: mc-color($second, 800),
-    license-message_expiring: mc-color(map-get($dark, warning), 700),
-    license-message_expired: mc-color(map-get($dark, error), 800),
-    distribution-buttons-background: mc-color(map-get($dark, second), 800),
+    selected-server-text: theming.mc-color(map-get($dark, second), 60),
+    card_default-vertical-line: theming.mc-color($second, 600),
+    card_default-shadow: theming.mc-color($second, 700),
+    card_default-background: theming.mc-color($second, 800),
+    license-message_expiring: theming.mc-color(map-get($dark, warning), 700),
+    license-message_expired: theming.mc-color(map-get($dark, error), 800),
+    distribution-buttons-background: theming.mc-color(map-get($dark, second), 800),
     distribution-buttons-text-color: map-get(map-get($dark, foreground), text),
     macos-img-filter: invert(1)
 );
 
-$pt-2022-typography: mc-typography-config();
+@import '@ptsecurity/mosaic/theming';
+@import 'tokens';
+$typography: theming.mc-typography-config();

@@ -1,8 +1,8 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin input-number($tokens) {
-    @include b(input-number) {
-        @include e((increase, decrease)) {
+    @include mixins.b(input-number) {
+        @include mixins.e((increase, decrease)) {
             background: map-get($tokens, background-color-base);
             color: map-get($tokens, color-text-regular);
 
@@ -19,16 +19,16 @@
             }
         }
 
-        @include e(increase) {
+        @include mixins.e(increase) {
             border-left: map-get($tokens, border-base);
         }
 
-        @include e(decrease) {
+        @include mixins.e(decrease) {
             border-right: map-get($tokens, border-base);
         }
 
-        @include when(disabled) {
-            @include e((increase, decrease)) {
+        @include mixins.when(disabled) {
+            @include mixins.e((increase, decrease)) {
                 border-color: map-get($tokens, disabled-border-base);
                 color: map-get($tokens, disabled-border-base);
 
@@ -38,12 +38,12 @@
             }
         }
 
-        @include when(controls-right) {
-            @include e(increase) {
+        @include mixins.when(controls-right) {
+            @include mixins.e(increase) {
                 border-bottom: map-get($tokens, border-base);
             }
 
-            @include e(decrease) {
+            @include mixins.e(decrease) {
                 border-left: map-get($tokens, border-base);
             }
         }

@@ -1,7 +1,7 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin pagination($tokens) {
-    @include b(pagination) {
+    @include mixins.b(pagination) {
         color: map-get($tokens, pagination-font-color);
 
         button {
@@ -25,7 +25,7 @@
             color: map-get($tokens, color-text-placeholder);
         }
 
-        @include e(sizes) {
+        @include mixins.e(sizes) {
             color: map-get($tokens, color-text-regular);
 
             .el-input .el-input__inner {
@@ -35,15 +35,15 @@
             }
         }
 
-        @include e(total) {
+        @include mixins.e(total) {
             color: map-get($tokens, color-text-regular);
         }
 
-        @include e(jump) {
+        @include mixins.e(jump) {
             color: map-get($tokens, color-text-regular);
         }
 
-        @include when(background) {
+        @include mixins.when(background) {
             .btn-prev,
             .btn-next,
             .el-pager li {
@@ -74,7 +74,7 @@
         }
     }
 
-    @include b(pager) {
+    @include mixins.b(pager) {
         li {
             background: map-get($tokens, pagination-background-color);
 

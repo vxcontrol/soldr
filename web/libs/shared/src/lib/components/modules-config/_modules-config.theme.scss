@@ -1,7 +1,9 @@
+@use '@ptsecurity/mosaic/theming';
+
 @mixin modules-config-theme($mosaic-theme) {
     $warning: map-get($mosaic-theme, warning);
 
     .modules-config__status_warning {
-        color: mc-color($warning, 560);
+        color: theming.mc-color($warning, 560);
     }
 }

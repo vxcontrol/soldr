@@ -1,16 +1,5 @@
-@import 'function';
-
-/* Break-points
- -------------------------- */
-@mixin res($key, $map: $--breakpoints) {
-    @if map-has-key($map, $key) {
-        @media only screen and #{inspect(map-get($map, $key))} {
-            @content;
-        }
-    } @else {
-        @warn 'Undefeined points: `#{$map}`';
-    }
-}
+@use 'function';
+@use 'config';
 
 /* Placeholder
  -------------------------- */
@@ -31,7 +20,7 @@
 /* BEM
  -------------------------- */
 @mixin b($block) {
-    $B: $namespace+'-'+$block !global;
+    $B: config.$namespace+'-'+$block !global;
 
     .#{$B} {
         @content;
@@ -43,10 +32,10 @@
     $selector: &;
     $currentSelector: '';
     @each $unit in $element {
-        $currentSelector: #{$currentSelector + '.' + $B + $element-separator + $unit + ','};
+        $currentSelector: #{$currentSelector + '.' + $B + config.$element-separator + $unit + ','};
     }
 
-    @if hitAllSpecialNestRule($selector) {
+    @if function.hitAllSpecialNestRule($selector) {
         #{$selector} {
             #{$currentSelector} {
                 @content;
@@ -63,7 +52,7 @@
     $selector: &;
     $currentSelector: '';
     @each $unit in $modifier {
-        $currentSelector: #{$currentSelector + & + $modifier-separator + $unit + ','};
+        $currentSelector: #{$currentSelector + & + config.$modifier-separator + $unit + ','};
     }
 
     @at-root {
@@ -78,12 +67,12 @@
     $interpolation: '';
 
     @if $E-flag {
-        $interpolation: $element-separator + $E-flag;
+        $interpolation: config.$element-separator + $E-flag;
     }
 
     @at-root {
         #{$selector} {
-            .#{$B+$interpolation+$modifier-separator+$modifier} {
+            .#{$B+$interpolation+config.$modifier-separator+$modifier} {
                 @content;
             }
         }
@@ -94,11 +83,11 @@
     $modifierCombo: '';
 
     @if $modifier {
-        $modifierCombo: $modifier-separator + $modifier;
+        $modifierCombo: config.$modifier-separator + $modifier;
     }
 
     @at-root {
-        #{&}#{$specSelector}.#{$block+$element-separator+$element+$modifierCombo} {
+        #{&}#{$specSelector}.#{$block+config.$element-separator+$element+$modifierCombo} {
             @content
         }
     }
@@ -109,12 +98,12 @@
     $modifierCombo: '';
 
     @if $modifier {
-        $modifierCombo: $modifier-separator + $modifier;
+        $modifierCombo: config.$modifier-separator + $modifier;
     }
 
     @at-root {
         #{$selector} {
-            .#{$block+$element-separator+$element+$modifierCombo} {
+            .#{$block+config.$element-separator+$element+$modifierCombo} {
                 @content
             }
         }
@@ -123,7 +112,7 @@
 
 @mixin when($state) {
     @at-root {
-        &.#{$state-prefix + $state} {
+        &.#{config.$state-prefix + $state} {
             @content;
         }
     }

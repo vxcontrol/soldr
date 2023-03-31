@@ -1,7 +1,7 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin timeline($tokens) {
-    @include b(timeline) {
+    @include mixins.b(timeline) {
         font-size: map-get($tokens, font-size-base);
     }
 }

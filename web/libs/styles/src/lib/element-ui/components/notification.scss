@@ -1,20 +1,20 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin notification($tokens) {
-    @include b(notification) {
+    @include mixins.b(notification) {
         border: 1px solid map-get($tokens, notification-border-color);
         background-color: map-get($tokens, color-white);
 
-        @include e(title) {
+        @include mixins.e(title) {
             color: map-get($tokens, notification-title-color);
         }
 
-        @include e(content) {
+        @include mixins.e(content) {
             font-size: map-get($tokens, notification-content-font-size);
             color: map-get($tokens, notification-content-color);
         }
 
-        @include e(closeBtn) {
+        @include mixins.e(closeBtn) {
             color: map-get($tokens, notification-close-color);
 
             &:hover {

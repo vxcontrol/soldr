@@ -1,12 +1,12 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin card($tokens) {
-    @include b(card) {
+    @include mixins.b(card) {
         border: 1px solid map-get($tokens, card-border-color);
         background-color: map-get($tokens, color-white);
         color: map-get($tokens, color-text-primary);
 
-        @include e(header) {
+        @include mixins.e(header) {
             border-bottom: 1px solid map-get($tokens, card-border-color);
         }
     }

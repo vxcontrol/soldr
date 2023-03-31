@@ -1,7 +1,7 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin autocomplete($tokens) {
-    @include b(autocomplete-suggestion) {
+    @include mixins.b(autocomplete-suggestion) {
         border: 1px solid map-get($tokens, border-color-light);
         background-color: map-get($tokens, color-white);
 
@@ -22,7 +22,7 @@
             }
         }
 
-        @include when(loading) {
+        @include mixins.when(loading) {
             li {
                 &:hover {
                     background-color: map-get($tokens, color-white);

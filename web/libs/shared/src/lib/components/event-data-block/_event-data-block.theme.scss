@@ -1,6 +1,8 @@
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
 @mixin event-data-block-theme($mosaic-theme) {
     .event-data-block__editor_bordered.event-data-block__editor {
-        border-color: map-deep-get($mosaic-theme, foreground, divider);
+        border-color: map-deep-get.map-deep-get($mosaic-theme, foreground, divider);
     }
 
     .editor-container {

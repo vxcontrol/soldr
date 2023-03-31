@@ -1,7 +1,9 @@
+@use '@ptsecurity/mosaic/theming';
+
 @mixin consistency-icon-theme($mosaic-theme) {
     $warning: map-get($mosaic-theme, warning);
 
     .soldr-icons.consistency-icon_policies {
-        color: mc-color($warning, 400);
+        color: theming.mc-color($warning, 400);
     }
 }

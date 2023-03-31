@@ -1,0 +1,21 @@
+@use '@ptsecurity/mosaic/theming';
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
+@mixin breadcrumbs-theme($mosaic-theme) {
+    .breadcrumbs__divider {
+        color: map-deep-get.map-deep-get($mosaic-theme, components, link, text);
+    }
+
+    .breadcrumbs__appendix {
+        color: map-deep-get.map-deep-get($mosaic-theme, foreground, text);
+    }
+}
+
+@mixin breadcrumbs-typography($typography) {
+    .breadcrumbs__link,
+    .breadcrumbs__divider,
+    .breadcrumbs__appendix {
+        font-weight: 500;
+        font-size: theming.mc-font-size($typography, subheading);
+    }
+}

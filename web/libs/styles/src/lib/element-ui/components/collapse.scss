@@ -1,13 +1,13 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin collapse($tokens) {
-    @include b(collapse) {
+    @include mixins.b(collapse) {
         border-top: 1px solid map-get($tokens, collapse-border-color);
         border-bottom: 1px solid map-get($tokens, collapse-border-color);
     }
 
-    @include b(collapse-item) {
-        @include e(header) {
+    @include mixins.b(collapse-item) {
+        @include mixins.e(header) {
             background-color: map-get($tokens, collapse-header-background-color);
             color: map-get($tokens, collapse-header-font-color);
             border-bottom: 1px solid map-get($tokens, collapse-border-color);
@@ -16,12 +16,12 @@
             }
         }
 
-        @include e(wrap) {
+        @include mixins.e(wrap) {
             background-color: map-get($tokens, collapse-content-background-color);
             border-bottom: 1px solid map-get($tokens, collapse-border-color);
         }
 
-        @include e(content) {
+        @include mixins.e(content) {
             color: map-get($tokens, collapse-content-font-color);
         }
     }

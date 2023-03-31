@@ -1,7 +1,9 @@
+@use 'libs/styles/src/lib/utils/map-deep-get';
+
 @mixin agent-version-theme($mosaic-theme) {
     $warning: map-get($mosaic-theme, warning);
 
     .agent-version_has-new-version .agent-version__current-version {
-        color: map-deep-get($mosaic-theme, custom, default-warning);
+        color: map-deep-get.map-deep-get($mosaic-theme, custom, default-warning);
     }
 }

@@ -1,3 +1,5 @@
+@use '@ptsecurity/mosaic/theming';
+
 @mixin progress-container-theme($mosaic-theme) {
     $background: map-get($mosaic-theme, background);
 
@@ -6,6 +8,6 @@
     }
 
     .page-bg {
-        background-color: mc-color(map-get($mosaic-theme, second), 60);
+        background-color: theming.mc-color(map-get($mosaic-theme, second), 60);
     }
 }

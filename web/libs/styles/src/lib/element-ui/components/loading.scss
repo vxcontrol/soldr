@@ -1,11 +1,11 @@
-@import '../mixins/mixins';
+@use '../mixins/mixins';
 
 @mixin loading($tokens) {
     .el-loading-mask {
         background-color: map-get($tokens, loader-overlay);
     }
 
-    @include b(loading-spinner) {
+    @include mixins.b(loading-spinner) {
         .el-loading-text {
             color: map-get($tokens, color-primary-text);
         }

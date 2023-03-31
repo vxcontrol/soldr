@@ -1,3 +1,5 @@
+@use '@ptsecurity/mosaic/theming';
+
 @mixin page-layout-theme($theme) {
     $second: map-get($theme, second);
     $gray: map-get($theme, gray);
@@ -7,22 +9,22 @@
 
         .mc-gutter {
             &:hover {
-                background-color: mc-color($second, A60);
+                background-color: theming.mc-color($second, A60);
             }
 
             &.mc-gutter_dragged {
-                background-color: mc-color($second, A200);
+                background-color: theming.mc-color($second, A200);
             }
         }
 
         .page-layout__panel {
             background-color: map-get(map-get($theme, background), background);
-            border-color: mc-color($second, 60);
+            border-color: theming.mc-color($second, 60);
             box-shadow: none;
 
             &:hover {
-                border-color: mc-color($second, 100);
-                box-shadow: 0 0 4px mc-color($second, A100);
+                border-color: theming.mc-color($second, 100);
+                box-shadow: 0 0 4px theming.mc-color($second, A100);
             }
         }
     }
