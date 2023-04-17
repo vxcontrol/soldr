@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -220,8 +221,12 @@ func configureServiceAutorestart(svc daemon.Daemon) error {
 		}
 		return fmt.Errorf("failed to check if the directory %s exists: %w", systemdDir, err)
 	}
+
+	executable, _ := os.Executable()
+	workingDir := path.Dir(executable)
+
 	logrus.Info("configuring autorestart")
-	const tmpl = `[Unit]
+	tmpl := `[Unit]
 Description={{.Description}}
 Requires={{.Dependencies}}
 After={{.Dependencies}}
@@ -230,6 +235,7 @@ After={{.Dependencies}}
 PIDFile=/var/run/{{.Name}}.pid
 ExecStartPre=/bin/rm -f /var/run/{{.Name}}.pid
 ExecStart={{.Path}} {{.Args}}
+WorkingDirectory=` + workingDir + `
 Restart=always
 
 [Install]
