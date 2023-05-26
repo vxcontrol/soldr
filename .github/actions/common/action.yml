@@ -7,4 +7,5 @@ runs:
         mkdir -p .go
         find . -type f -name "*.sh" -print0 |xargs -0 chmod 755
         mkdir -v -p build/package/agent/hardening/
+        mkdir -v -p build/package/agent/_tmp/deps
         mkdir -v -p build/package/agent/_tmp/{linux/386/,linux/amd64,windows/386,windows/amd64,darwin/amd64}

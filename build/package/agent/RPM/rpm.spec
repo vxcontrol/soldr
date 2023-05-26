@@ -5,6 +5,7 @@ Summary:        This service for work XDR agent
 License:        -
 
 Source0:        vxagent
+Source1:        libraries.tar.gz
 Requires:       bash, systemd, initscripts, libstdc++, libgcc, glibc, gettext
 
 BuildRoot:      %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
@@ -19,10 +20,14 @@ VX agent
 
 %install
 export DONT_STRIP=1
-mkdir -p %{buildroot}/opt/vxcontrol/vxagent/{bin,logs,data}
-mkdir -p %{buildroot}/etc/systemd/system/
+mkdir -p %{buildroot}/opt/vxcontrol/vxagent/bin
+mkdir -p %{buildroot}/opt/vxcontrol/vxagent/logs
+mkdir -p %{buildroot}/opt/vxcontrol/vxagent/data
+mkdir -p %{buildroot}/etc/systemd/system
 install -D -pm 755 %{SOURCE0}/bin/vxagent %{buildroot}/opt/vxcontrol/vxagent/bin/vxagent
 install -D -pm 755 %{SOURCE0}/unit/vxagent.service %{buildroot}/etc/systemd/system/vxagent.service
+mkdir -p %{buildroot}/usr/lib/%{name}
+tar -xzf %{SOURCE1} -C %{buildroot}/usr/lib/%{name}/
 
 
 %post -p /bin/bash
@@ -50,11 +55,13 @@ if ! [ -d /opt/ ]; then
   mkdir "/opt" || true
 fi
 rm -rf /opt/vxcontrol/vxagent || true
+rm -rf /usr/lib/vxagent || true
 rmdir /opt/vxcontrol/ || true
 
 %files
 /opt/vxcontrol/vxagent/*
 /etc/systemd/system/*
+/usr/lib/vxagent/*
 
 %clean
 rm -rf $RPM_BUILD_ROOT

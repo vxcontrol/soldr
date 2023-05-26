@@ -14,6 +14,7 @@ COPY build/package/agent/_tmp/version /opt/vxbinaries/
 COPY build/package/agent/_tmp/windows /opt/vxbinaries/windows
 COPY build/package/agent/_tmp/linux   /opt/vxbinaries/linux
 COPY build/package/agent/_tmp/darwin  /opt/vxbinaries/darwin
+COPY build/package/agent/_tmp/deps    /opt/vxbinaries/deps
 
 WORKDIR /opt/vxbinaries
 

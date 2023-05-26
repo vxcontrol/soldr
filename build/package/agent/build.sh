@@ -63,7 +63,7 @@ CGO_ENABLED=1 go build "${DEBUG_FLAGS[@]}" -ldflags "\
     -X soldr/pkg/hardening/luavm/certs/provider.iacDecodeKey=$IAC_DECODE_KEY \
     -X soldr/pkg/hardening/luavm/certs/provider.iacKeyDecodeKey=$IAC_KEY_DECODE_KEY \
     -X soldr/pkg/hardening/luavm/certs/provider.vxcaDecodeKey=$VXCA_DECODE_KEY \
-    -L $ROOT_DIR/assets/lib/$P -extldflags '$LF $ROOT_DIR/assets/lib/$P/libluab.a $LD'" -o "$OUT_BIN" "$ROOT_DIR"/cmd/agent
+    -extldflags '-L $ROOT_DIR/assets/lib/$P $LF $ROOT_DIR/assets/lib/$P/libluab.a $LD'" -o "$OUT_BIN" "$ROOT_DIR"/cmd/agent
 
 [[ -z "${PACKAGE_REV}" && "${GOOS}" != "darwin" ]] && $STRIP "$OUT_BIN"
 

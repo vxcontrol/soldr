@@ -34,4 +34,4 @@ CGO_ENABLED=1 go build "${DEBUG_FLAGS[@]}" -ldflags "
     -X soldr/main.PackageRev=$PACKAGE_REV \
     -X soldr/pkg/app/server/config.latestAPIVersion=$LATEST_API_VERSION \
     -X soldr/pkg/app/server/mmodule/hardening/v1/crypto.DBEncryptKey=$DB_ENCRYPT_KEY \
-    -L $BASE_PREFIX/$P -extldflags '$LF $BASE_PREFIX/$P/libluab.a $LD'" -o "$DIR/../../bin/$T" $DIR/../../../cmd/server
+    -extldflags '-L $BASE_PREFIX/$P $LF $BASE_PREFIX/$P/libluab.a $LD'" -o "$DIR/../../bin/$T" $DIR/../../../cmd/server

@@ -28,10 +28,13 @@ cat vxagent/DEBIAN/changelog || exit 1
 
 cp DEBIAN/* vxagent/DEBIAN
 
+echo; echo "Extracting libraries to vxagent/usr/lib/vxagent..."
+mkdir -p vxagent/usr/lib/vxagent && tar -xzf _tmp/deps/libraries_386.tar.gz -C vxagent/usr/lib/vxagent/
+
 md5deep -r vxagent/opt/vxcontrol/vxagent > vxagent/DEBIAN/md5sums
 chmod -R 755 vxagent/DEBIAN
 
-fakeroot dpkg-deb --build vxagent vxagent-${VERSION}_${arch}.deb || exit 1
+fakeroot dpkg-deb -Zxz --build vxagent vxagent-${VERSION}_${arch}.deb || exit 1
 
 echo "Done create deb $arch"
 
@@ -55,10 +58,13 @@ cat vxagent/DEBIAN/changelog || exit 1
 
 cp DEBIAN/* vxagent/DEBIAN
 
+echo; echo "Extracting libraries to vxagent/usr/lib/vxagent..."
+mkdir -p vxagent/usr/lib/vxagent && tar -xzf _tmp/deps/libraries_amd64.tar.gz -C vxagent/usr/lib/vxagent/
+
 md5deep -r vxagent/opt/vxcontrol/vxagent > vxagent/DEBIAN/md5sums
 chmod -R 755 vxagent/DEBIAN
 
-fakeroot dpkg-deb --build vxagent vxagent-${VERSION}_${arch}.deb || exit 1
+fakeroot dpkg-deb -Zxz --build vxagent vxagent-${VERSION}_${arch}.deb || exit 1
 
 echo "Done create deb $arch"
 
@@ -69,6 +75,7 @@ mkdir -p ~/rpmbuild/SOURCES/vxagent/{bin,unit}
 
 arch="386"
 eval "echo \"$(cat RPM/rpm.spec)\"" > rpm_$arch.spec
+cp _tmp/deps/libraries_386.tar.gz ~/rpmbuild/SOURCES/libraries.tar.gz
 cp _tmp/linux/386/vxagent ~/rpmbuild/SOURCES/vxagent/bin/
 cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 
@@ -78,6 +85,7 @@ cp ~/rpmbuild/RPMS/i386/* install_linux/vxagent-${VERSION}_i386.rpm
 arch="amd64"
 rm -rf ~/rpmbuild/SOURCES/* || true
 mkdir -p ~/rpmbuild/SOURCES/vxagent/{bin,unit}
+cp _tmp/deps/libraries_amd64.tar.gz ~/rpmbuild/SOURCES/libraries.tar.gz
 cp _tmp/linux/amd64/vxagent ~/rpmbuild/SOURCES/vxagent/bin/
 cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 
