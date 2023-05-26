@@ -325,7 +325,7 @@ func getServiceHash(c *gin.Context) (string, error) {
 	if tid == 0 {
 		return "", fmt.Errorf("could not get tenant ID from context")
 	}
-	sid := c.GetUint64("tid")
+	sid := c.GetUint64("sid")
 	if sid == 0 {
 		return "", fmt.Errorf("could not get service ID from context")
 	}
@@ -387,7 +387,7 @@ func (s *ProtoService) AggregateWSConnect(c *gin.Context) {
 
 	uaf := useraction.Fields{
 		Domain:            "agent",
-		ObjectType:        "agent",
+		ObjectType:        "group",
 		ObjectID:          sockID,
 		ActionCode:        "interactive interaction",
 		ObjectDisplayName: useraction.UnknownObjectDisplayName,
