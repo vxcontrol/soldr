@@ -106,6 +106,7 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
         headerHeight: 32,
         rowHeight: 40,
         suppressMultiSort: true,
+        suppressFocusAfterRefresh: true,
         defaultColDef: {
             minWidth: 32,
             comparator: () => 0
@@ -348,7 +349,11 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
 
     rowDataChanged() {
         for (const node of this.gridApi?.getSelectedNodes() || []) {
-            this.gridApi?.getRowNode(node.id).selectThisNode(true);
+            const colId = this.gridApi.getFocusedCell().column.getColId();
+            const row = this.gridApi?.getRowNode(node.id);
+
+            row.selectThisNode(true);
+            this.gridApi?.setFocusedCell(row.rowIndex, colId);
         }
 
         const selectedNodes = this.gridApi?.getSelectedNodes();
@@ -360,6 +365,7 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
 
             if (defaultSelectedNode) {
                 defaultSelectedNode.setSelected(true, true);
+                this.gridApi.setFocusedCell(0, (this.gridApi.getColumnDefs()[0] as ColDef).colId);
             }
         }
     }
