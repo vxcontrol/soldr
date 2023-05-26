@@ -11,15 +11,27 @@ import (
 	"soldr/pkg/hardening/luavm/vm"
 )
 
+var abhCurrentBinary vm.ABH
+
 type abhCalculator struct {
 	abh    vm.ABH
 	abhMux *sync.RWMutex
 }
 
 func newABHCalculator() (*abhCalculator, error) {
+	if abhCurrentBinary != nil {
+		return &abhCalculator{
+			abh:    abhCurrentBinary,
+			abhMux: &sync.RWMutex{},
+		}, nil
+	}
+
 	abh, err := calculateABH()
 	if err != nil {
 		return nil, err
+	} else {
+		abhCurrentBinary = make([]byte, len(abh))
+		copy(abhCurrentBinary, abh)
 	}
 
 	return &abhCalculator{
