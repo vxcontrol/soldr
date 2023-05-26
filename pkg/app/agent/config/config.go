@@ -21,6 +21,7 @@ type Config struct {
 	Connect             string
 	AgentID             string
 	Command             string
+	BaseDir             string
 	LogDir              string
 	Debug               bool
 	Service             bool
@@ -96,6 +97,7 @@ upgrader - upgrader mode, used for the agent upgrade`)
 	if os.Getenv("DEBUG") != "" {
 		c.Debug = true
 	}
+	c.BaseDir = getBaseDir()
 	if err := checkConfig(c); err != nil {
 		return nil, err
 	}
@@ -170,15 +172,28 @@ func checkRunningMode(c *Config) error {
 	return nil
 }
 
+func getBaseDir() string {
+	execPath, err := os.Executable()
+	if err != nil {
+		return "./"
+	}
+	baseDir := filepath.Dir(execPath)
+	if filepath.Base(baseDir) == "bin" {
+		baseDir = filepath.Dir(baseDir)
+	}
+	return baseDir
+}
+
 func checkOrSetLogDir(c *Config) error {
 	if c.LogDir == "" {
 		switch c.Mode {
 		case RunningModeAgent:
-			execPath, err := os.Executable()
-			if err != nil {
-				return fmt.Errorf("failed to get the current executable path: %w", err)
+			logDir := filepath.Join(c.BaseDir, "logs")
+			if err := os.MkdirAll(logDir, 0o755); err != nil {
+				logDir = c.BaseDir
 			}
-			c.LogDir = filepath.Dir(execPath)
+			c.LogDir = logDir
+
 		case RunningModeUpgrader:
 			c.LogDir = filepath.Dir(c.AgentExecutablePath)
 		default:
@@ -191,10 +206,6 @@ func checkOrSetLogDir(c *Config) error {
 		return fmt.Errorf("invalid value of 'logdir' argument: %s", c.LogDir)
 	}
 	return nil
-}
-
-func GetDefaultLogDir(agentPath string) string {
-	return filepath.Dir(agentPath)
 }
 
 func checkArgsForUpgraderMode(c *Config) error {

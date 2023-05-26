@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -187,7 +186,7 @@ func (a *Agent) Manage() (string, error) {
 		if a.cfg.Debug {
 			opts = append(opts, "-debug")
 		}
-		if err := configureServiceAutorestart(a.svc); err != nil {
+		if err := configureServiceAutorestart(a.svc, a.cfg); err != nil {
 			return "", err
 		}
 		return a.svc.Install(opts...)
@@ -209,7 +208,7 @@ func (a *Agent) Manage() (string, error) {
 	return "vxagent exited normally", nil
 }
 
-func configureServiceAutorestart(svc daemon.Daemon) error {
+func configureServiceAutorestart(svc daemon.Daemon, cfg *config.Config) error {
 	logrus.Info("in configure service autorestart")
 	if runtime.GOOS != "linux" {
 		return nil
@@ -222,25 +221,28 @@ func configureServiceAutorestart(svc daemon.Daemon) error {
 		return fmt.Errorf("failed to check if the directory %s exists: %w", systemdDir, err)
 	}
 
-	executable, _ := os.Executable()
-	workingDir := path.Dir(executable)
+	workDir := filepath.Join(cfg.BaseDir, "data")
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		workDir = cfg.BaseDir
+	}
 
 	logrus.Info("configuring autorestart")
-	tmpl := `[Unit]
+	tmpl := fmt.Sprintf(`[Unit]
 Description={{.Description}}
 Requires={{.Dependencies}}
 After={{.Dependencies}}
 
 [Service]
+WorkingDirectory=%s
 PIDFile=/var/run/{{.Name}}.pid
 ExecStartPre=/bin/rm -f /var/run/{{.Name}}.pid
 ExecStart={{.Path}} {{.Args}}
-WorkingDirectory=` + workingDir + `
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
-`
+`, workDir)
+
 	if err := svc.SetTemplate(tmpl); err != nil {
 		return fmt.Errorf("failed to configure the linux service autorestart")
 	}
