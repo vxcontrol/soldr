@@ -27,10 +27,12 @@ jobs:
           # Linux
           mkdir -p /usr/lib/vxagent
           tar -xzf ../../../assets/deps/libraries_386.tar.gz -C /usr/lib/vxagent/
-          bash -x ./build-linux-386.sh && mv -v ../../bin/vxagent  _tmp/linux/386/
+          bash -x ./build-linux-386.sh && mv -v ../../bin/vxagent _tmp/linux/386/
+          BUNDLE=true bash -x ./build-linux-386.sh && mv -v ../../bin/vxbundle _tmp/linux/386/
           rm -rf /usr/lib/vxagent/*
           tar -xzf ../../../assets/deps/libraries_amd64.tar.gz -C /usr/lib/vxagent/
-          bash -x ./build-linux-amd64.sh && mv -v ../../bin/vxagent  _tmp/linux/amd64/
+          bash -x ./build-linux-amd64.sh && mv -v ../../bin/vxagent _tmp/linux/amd64/
+          BUNDLE=true bash -x ./build-linux-amd64.sh && mv -v ../../bin/vxbundle _tmp/linux/amd64/
           # Common components
           cp -v startup.sh _tmp/
           cp -v ../../artifacts/agent/version _tmp/

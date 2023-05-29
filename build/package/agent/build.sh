@@ -21,6 +21,7 @@ echo $VERSION_STRING > "$BUILD_ARTIFACTS_DIR/version"
 PROTOCOL_VERSION="${API_VERSION:-v1}"
 [ "$DEBUG" = "true" ] && DEBUG_FLAGS=(-gcflags=all="-N -l")
 OUT_BIN="${OUT_BIN:-"$ROOT_DIR/build/bin/$T"}"
+AGENT_REVISION=$(echo $T | awk -F. '{ print $1 }')
 
 IAC_CERT=$(cat $ROOT_DIR/security/certs/agent/iac.cert | eval "$BASE64" )
 IAC_KEY=$(cat $ROOT_DIR/security/certs/agent/iac.key | eval "$BASE64" )
@@ -54,9 +55,10 @@ XOREncryptCerts(){
 XOREncryptCerts
 
 CGO_ENABLED=1 go build "${DEBUG_FLAGS[@]}" -ldflags "\
-    -X soldr/pkg/app/agent/config.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
     -X soldr/pkg/app/agent/mmodule.protocolVersion=$PROTOCOL_VERSION \
+    -X soldr/pkg/app/agent/config.PackageVer=$PACKAGE_VER.$BUILD_VERSION \
     -X soldr/pkg/app/agent/config.PackageRev=$PACKAGE_REV \
+    -X soldr/pkg/system.revision=$AGENT_REVISION \
     -X soldr/pkg/hardening/luavm/certs/provider.iac=$IAC_CERT \
     -X soldr/pkg/hardening/luavm/certs/provider.iacKey=$IAC_KEY \
     -X soldr/pkg/hardening/luavm/certs/provider.vxca=$VXCA_CERT \

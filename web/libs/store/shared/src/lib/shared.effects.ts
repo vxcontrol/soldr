@@ -138,8 +138,8 @@ export class SharedEffects {
     exportBinaryFile$ = createEffect(() =>
         this.actions$.pipe(
             ofType(SharedActions.exportBinaryFile),
-            switchMap(({ os, arch, version }) =>
-                this.binariesService.getBinaryFile(os, arch, version).pipe(
+            switchMap(({ os, arch, pack, version }) =>
+                this.binariesService.getBinaryFile(os, arch, pack, version).pipe(
                     map((response) => {
                         saveFile(response);
 

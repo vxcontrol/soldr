@@ -2,9 +2,9 @@
 
 set -e
 
-if [ "$#" -ne 1 ]; then
-    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps debian:buster bash -c "/tmp/deps/build_deps.sh libraries_amd64.tar.gz"
-    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps i386/debian:buster bash -c "/tmp/deps/build_deps.sh libraries_386.tar.gz"
+if [ "$#" -ne 2 ]; then
+    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps vxcontrol/vxbuild-cross bash -c "/tmp/deps/build_deps.sh libraries_amd64.tar.gz x86_64"
+    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps vxcontrol/vxbuild-cross bash -c "/tmp/deps/build_deps.sh libraries_386.tar.gz '\(i386\|lib32\)'"
     echo ">>> dependency libraries was updated successful"
     ls -lah libraries_*
     md5sum libraries_*
@@ -12,6 +12,7 @@ if [ "$#" -ne 1 ]; then
     exit 0
 fi
 
+GREP_PATTERN=$2
 ARCHIVE_NAME=$1
 ARCHIVE_PATH="$(pwd)/$1"
 LIBRARIES_PATH=/usr/lib/vxagent/
@@ -30,6 +31,7 @@ LIBRARIES_NAMES=(
     'libnss_nisplus.so.2'
     'libnss_nis.so.2'
     'libnss_sss.so.2'
+    'libnss_systemd.so.2'
     'libpthread.so.0'
     'libresolv.so.2'
     'librt.so.1'
@@ -38,6 +40,7 @@ LIBRARIES_NAMES=(
 )
 LIBRARIES_SYM_LINKS=(
     'ld-linux:ld-2.28.so'
+    'libcrypto.so.1.1:libcrypto.so'
     'libc.so.6:libc-2.28.so'
     'libc.so.6:libc.so'
     'libdl.so.2:libdl-2.28.so'
@@ -53,14 +56,21 @@ LIBRARIES_SYM_LINKS=(
     'libnss_nisplus.so.2:libnss_nisplus.so'
     'libnss_nis.so.2:libnss_nis.so'
     'libnss_sss.so.2:libnss_sss.so'
+    'libnss_systemd.so.2:libnss_systemd.so'
     'libpthread.so.0:libpthread.so'
     'libresolv.so.2:libresolv-2.28.so'
     'libresolv.so.2:libresolv.so'
     'librt.so.1:librt-2.28.so'
     'librt.so.1:librt.so'
+    'libssl.so.1.1:libssl.so'
+    'libstdc++.so.6:libstdc++.so'
 )
 LIBRARIES_APT_PACKAGES=(
+    'libnss-sss:i386'
+    'libnss-systemd:i386'
+    'libssl1.1:i386'
     'libnss-sss'
+    'libnss-systemd'
     'libssl1.1'
 )
 echo ">>> started building"
@@ -68,6 +78,7 @@ uname -a
 echo ">>> libraries archive name: $ARCHIVE_NAME"
 
 function prepare_env {
+    dpkg --add-architecture i386
     apt update >/dev/null 2>&1
     apt install -y --no-install-recommends ${LIBRARIES_APT_PACKAGES[@]} >/dev/null 2>&1
     mkdir -p $LIBRARIES_PATH
@@ -91,7 +102,7 @@ function update_sym_links {
 }
 
 function copy_library {
-    local lib_path=$(ldconfig -p | grep $1 | head -n 1 | awk -F' => ' '{ print $2 }')
+    local lib_path=$(ldconfig -p | grep $1 | grep $GREP_PATTERN | head -n 1 | awk -F' => ' '{ print $2 }')
     echo "    library: '$1' => '$lib_path'"
     cp $lib_path $LIBRARIES_PATH
     local lib_name=$(basename ${lib_path})

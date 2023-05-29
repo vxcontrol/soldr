@@ -59,6 +59,7 @@ web/typings
 web/npm-debug.log
 web/yarn-error.log
 web/testem.log
+web/yarn.lock
 .env
 __debug_bin*
 *.log

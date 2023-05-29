@@ -3,7 +3,7 @@ import { Store } from '@ngrx/store';
 import { filter, map, Observable } from 'rxjs';
 
 import { ModelsBinary, ModelsPassword, PublicInfo } from '@soldr/api';
-import { Architecture, OperationSystem } from '@soldr/shared';
+import { Architecture, Package, OperationSystem } from '@soldr/shared';
 
 import * as SharedActions from './shared.actions';
 import { State } from './shared.reducer';
@@ -63,8 +63,8 @@ export class SharedFacade {
         this.store.dispatch(SharedActions.changePassword({ data }));
     }
 
-    exportBinary(os: OperationSystem, arch: Architecture, version: string): void {
-        this.store.dispatch(SharedActions.exportBinaryFile({ os, arch, version }));
+    exportBinary(os: OperationSystem, arch: Architecture, pack: Package, version: string): void {
+        this.store.dispatch(SharedActions.exportBinaryFile({ os, arch, pack, version }));
     }
 
     fetchAllAgents() {

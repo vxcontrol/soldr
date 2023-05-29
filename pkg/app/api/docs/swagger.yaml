@@ -451,6 +451,15 @@ definitions:
     - name
     - uniq
     type: object
+  models.FileChecksum:
+    properties:
+      sha256:
+        type: string
+    type: object
+  models.FilesChecksumsMap:
+    additionalProperties:
+      $ref: '#/definitions/models.FileChecksum'
+    type: object
   models.Group:
     properties:
       created_date:
@@ -630,6 +639,8 @@ definitions:
         type: object
       fields_schema:
         type: object
+      files_checksums:
+        $ref: '#/definitions/models.FilesChecksumsMap'
       id:
         minimum: 0
         type: integer
@@ -2004,6 +2015,19 @@ definitions:
     properties:
       field:
         type: string
+      operator:
+        default: like
+        enum:
+        - <
+        - <=
+        - '>='
+        - '>'
+        - =
+        - '!='
+        - like
+        - not like
+        - in
+        type: string
       value:
         type: object
     required:
@@ -2056,9 +2080,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -2340,9 +2364,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -2623,9 +2647,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -2732,6 +2756,72 @@ paths:
       summary: Retrieve agent binary file by OS and arch
       tags:
       - Binaries
+  /binaries/vxagent/{os}/{arch}/{version}/{package}:
+    get:
+      parameters:
+      - default: linux
+        description: agent info OS
+        enum:
+        - windows
+        - linux
+        - darwin
+        in: path
+        name: os
+        required: true
+        type: string
+      - default: amd64
+        description: agent info arch
+        enum:
+        - "386"
+        - amd64
+        in: path
+        name: arch
+        required: true
+        type: string
+      - default: latest
+        description: agent version string according semantic version format
+        in: path
+        name: version
+        required: true
+        type: string
+      - default: bin
+        description: agent package type
+        enum:
+        - bin
+        - msi
+        - deb
+        - rpm
+        in: path
+        name: package
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      - application/json
+      responses:
+        "200":
+          description: agent package or binary as a file
+          schema:
+            type: file
+        "400":
+          description: invalid agent info
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: getting agent package or binary file not permitted
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: agent package or binary file not found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: internal error on getting agent package or binary file
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Retrieve agent package or binary file by OS, arch and package type
+      tags:
+      - Binaries
   /events/:
     get:
       parameters:
@@ -2765,9 +2855,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -2891,9 +2981,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -3142,9 +3232,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -3447,9 +3537,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -3606,9 +3696,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4183,9 +4273,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4271,9 +4361,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4359,9 +4449,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4447,9 +4537,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4535,9 +4625,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4623,9 +4713,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -4919,9 +5009,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -5290,9 +5380,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -5377,9 +5467,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -5615,9 +5705,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -5749,9 +5839,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -5979,9 +6069,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -6266,9 +6356,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true
@@ -6504,9 +6594,9 @@ paths:
         required: true
         type: integer
       - default: 5
-        description: Amount items per page (min -1, max 100, -1 means unlimited)
+        description: Amount items per page (min -1, max 1000, -1 means unlimited)
         in: query
-        maximum: 100
+        maximum: 1000
         minimum: -1
         name: pageSize
         required: true

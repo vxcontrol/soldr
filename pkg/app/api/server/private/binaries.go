@@ -151,6 +151,28 @@ func (s *BinariesService) GetAgentBinaries(c *gin.Context) {
 // @Failure 500 {object} response.errorResp "internal error on getting agent binary file"
 // @Router /binaries/vxagent/{os}/{arch}/{version} [get]
 func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
+	s.getAgentBinaryFile(c, "bin")
+}
+
+// GetAgentBinaryFilePackage is a function to return agent package or binary file
+// @Summary Retrieve agent package or binary file by OS, arch and package type
+// @Tags Binaries
+// @Produce octet-stream,json
+// @Param os path string true "agent info OS" default(linux) Enums(windows, linux, darwin)
+// @Param arch path string true "agent info arch" default(amd64) Enums(386, amd64)
+// @Param version path string true "agent version string according semantic version format" default(latest)
+// @Param package path string true "agent package type" default(bin) Enums(bin, msi, deb, rpm)
+// @Success 200 {file} file "agent package or binary as a file"
+// @Failure 400 {object} response.errorResp "invalid agent info"
+// @Failure 403 {object} response.errorResp "getting agent package or binary file not permitted"
+// @Failure 404 {object} response.errorResp "agent package or binary file not found"
+// @Failure 500 {object} response.errorResp "internal error on getting agent package or binary file"
+// @Router /binaries/vxagent/{os}/{arch}/{version}/{package} [get]
+func (s *BinariesService) GetAgentPackageFile(c *gin.Context) {
+	s.getAgentBinaryFile(c, c.Param("package"))
+}
+
+func (s *BinariesService) getAgentBinaryFile(c *gin.Context, packageType string) {
 	var (
 		agentOS      = c.Param("os")
 		agentArch    = c.Param("arch")
@@ -160,18 +182,39 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		chksums      models.BinaryChksum
 		data         []byte
 		ok           bool
-		resultName   string
+		extension    string
 		validate     = validator.New()
 	)
 	uaf := useraction.NewFields(c, "agent", "distribution", "downloading", "", useraction.UnknownObjectDisplayName)
 	defer s.userActionWriter.WriteUserAction(c, uaf)
 
-	resultName = fmt.Sprintf("%s_%s_%s", agentName, agentOS, agentArch)
-	if agentOS == "windows" {
-		agentName += ".exe"
-		resultName += ".exe"
+	unsupportedOS := fmt.Errorf("unsupported OS '%s' for package type '%s'", agentOS, packageType)
+	switch packageType {
+	case "msi":
+		if agentOS == "windows" {
+			extension = fmt.Sprintf(".%s", packageType)
+		} else {
+			response.Error(c, response.ErrAgentBinaryFileInvalidPackageType, unsupportedOS)
+			return
+		}
+	case "deb", "rpm":
+		if agentOS == "linux" {
+			extension = fmt.Sprintf(".%s", packageType)
+		} else {
+			response.Error(c, response.ErrAgentBinaryFileInvalidPackageType, unsupportedOS)
+			return
+		}
+	case "bin":
+		if agentOS == "windows" {
+			extension = ".exe"
+		}
+	default:
+		unsupportedPackageType := fmt.Errorf("unsupported package type '%s'", packageType)
+		response.Error(c, response.ErrAgentBinaryFileInvalidPackageType, unsupportedPackageType)
+		return
 	}
-	uaf.ObjectDisplayName = resultName
+	agentName = fmt.Sprintf("%s%s", agentName, extension)
+	uaf.ObjectDisplayName = fmt.Sprintf("%s_%s_%s_%s", agentName, agentOS, agentArch, packageType)
 
 	if err := validate.Var(agentOS, "oneof=windows linux darwin,required"); err != nil {
 		response.Error(c, response.ErrAgentBinaryFileInvalidOS, err)
@@ -182,7 +225,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 		return
 	}
 	if err := validate.Var(agentVersion, "max=25,required"); err != nil {
-		response.Error(c, response.ErrAgentBinaryFileInvalidArch, err)
+		response.Error(c, response.ErrAgentBinaryFileInvalidVersion, err)
 		return
 	}
 
@@ -237,6 +280,13 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 
 	uaf.Success = true
 	c.Set("uaf", []useraction.Fields{uaf})
-	c.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%q", resultName))
+	agentVersion = fmt.Sprintf("%d.%d.%d.%d",
+		binary.Info.Version.Major,
+		binary.Info.Version.Minor,
+		binary.Info.Version.Patch,
+		binary.Info.Version.Build,
+	)
+	resultFileName := fmt.Sprintf("%s_%s_%s_%s%s", agentName, agentVersion, agentOS, agentArch, extension)
+	c.Writer.Header().Add("Content-Disposition", fmt.Sprintf("attachment; filename=%q", resultFileName))
 	c.Data(http.StatusOK, "application/octet-stream", data)
 }

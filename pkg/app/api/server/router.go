@@ -257,6 +257,7 @@ func setBinariesGroup(parent *gin.RouterGroup, svc *private.BinariesService) {
 	{
 		binariesGroup.GET("/vxagent", svc.GetAgentBinaries)
 		binariesGroup.GET("/vxagent/:os/:arch/:version", svc.GetAgentBinaryFile)
+		binariesGroup.GET("/vxagent/:os/:arch/:version/:package", svc.GetAgentPackageFile)
 	}
 }
 

@@ -73,11 +73,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -545,11 +545,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -936,11 +936,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -1088,6 +1088,99 @@ const docTemplate = `{
                 }
             }
         },
+        "/binaries/vxagent/{os}/{arch}/{version}/{package}": {
+            "get": {
+                "produces": [
+                    "application/octet-stream",
+                    "application/json"
+                ],
+                "tags": [
+                    "Binaries"
+                ],
+                "summary": "Retrieve agent package or binary file by OS, arch and package type",
+                "parameters": [
+                    {
+                        "enum": [
+                            "windows",
+                            "linux",
+                            "darwin"
+                        ],
+                        "type": "string",
+                        "default": "linux",
+                        "description": "agent info OS",
+                        "name": "os",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "386",
+                            "amd64"
+                        ],
+                        "type": "string",
+                        "default": "amd64",
+                        "description": "agent info arch",
+                        "name": "arch",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "latest",
+                        "description": "agent version string according semantic version format",
+                        "name": "version",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "bin",
+                            "msi",
+                            "deb",
+                            "rpm"
+                        ],
+                        "type": "string",
+                        "default": "bin",
+                        "description": "agent package type",
+                        "name": "package",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "agent package or binary as a file",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "invalid agent info",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "getting agent package or binary file not permitted",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "agent package or binary file not found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "internal error on getting agent package or binary file",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/events/": {
             "get": {
                 "produces": [
@@ -1136,11 +1229,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -1313,11 +1406,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -1693,11 +1786,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -2144,11 +2237,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -2379,11 +2472,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -3236,11 +3329,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -3358,11 +3451,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -3480,11 +3573,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -3602,11 +3695,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -3724,11 +3817,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -3845,11 +3938,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -4329,11 +4422,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -4837,11 +4930,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -4958,11 +5051,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -5319,11 +5412,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -5515,11 +5608,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -5867,11 +5960,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -6306,11 +6399,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -6667,11 +6760,11 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maximum": 100,
+                        "maximum": 1000,
                         "minimum": -1,
                         "type": "integer",
                         "default": 5,
-                        "description": "Amount items per page (min -1, max 100, -1 means unlimited)",
+                        "description": "Amount items per page (min -1, max 1000, -1 means unlimited)",
                         "name": "pageSize",
                         "in": "query",
                         "required": true
@@ -7378,6 +7471,20 @@ const docTemplate = `{
                 }
             }
         },
+        "models.FileChecksum": {
+            "type": "object",
+            "properties": {
+                "sha256": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FilesChecksumsMap": {
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/models.FileChecksum"
+            }
+        },
         "models.Group": {
             "type": "object",
             "required": [
@@ -7655,6 +7762,9 @@ const docTemplate = `{
                 },
                 "fields_schema": {
                     "type": "object"
+                },
+                "files_checksums": {
+                    "$ref": "#/definitions/models.FilesChecksumsMap"
                 },
                 "id": {
                     "type": "integer",
@@ -9622,6 +9732,21 @@ const docTemplate = `{
             "properties": {
                 "field": {
                     "type": "string"
+                },
+                "operator": {
+                    "type": "string",
+                    "default": "like",
+                    "enum": [
+                        "\u003c",
+                        "\u003c=",
+                        "\u003e=",
+                        "\u003e",
+                        "=",
+                        "!=",
+                        "like",
+                        "not like",
+                        "in"
+                    ]
                 },
                 "value": {
                     "type": "object"

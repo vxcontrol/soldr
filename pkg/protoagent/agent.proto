@@ -91,6 +91,7 @@ message Information {
   required OS os = 1;
   required Net net = 2;
   repeated User users = 3;
+  optional string revision = 4;
 }
 
 // Struct of authentication request for handshake

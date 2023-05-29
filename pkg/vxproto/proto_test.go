@@ -137,6 +137,7 @@ func makeAgentSocket(vxp *vxProto) *agentSocket {
 			Users: []*protoagent.Information_User{
 				user,
 			},
+			Revision: utils.GetRef("vxagent"),
 		},
 		packEncrypter:    packEncrypter,
 		IConnection:      &FakeSocket{},

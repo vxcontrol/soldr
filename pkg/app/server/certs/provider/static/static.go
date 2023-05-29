@@ -218,10 +218,11 @@ func getCerts(certsDir string, vxcas, scas map[string]*x509Cert) (map[string]*tl
 		if !ok {
 			return nil, fmt.Errorf("SCA %s not found", name)
 		}
-		result[name], err = composeCert(ck, vxca.CertPEM, sca.CertPEM)
-		if err != nil {
-			return nil, fmt.Errorf("failed to compose a certificate %s: %w", name, err)
+		// skip untrusted or invalid certificates chain without raise of exception
+		if cert, err := composeCert(ck, vxca.CertPEM, sca.CertPEM); err == nil {
+			result[name] = cert
 		}
+
 	}
 	return result, nil
 }

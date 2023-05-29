@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 
-import { Architecture, OperationSystem, toHttpParams } from '@soldr/shared';
+import { Architecture, Package, OperationSystem, toHttpParams } from '@soldr/shared';
 
 import { BASE_URL } from '../base-urls';
 import { ListQuery, PrivateBinaries, SuccessResponse } from '../dto';
@@ -19,9 +19,9 @@ export class BinariesService {
         >;
     }
 
-    getBinaryFile(os: OperationSystem, arch: Architecture, version = 'latest') {
+    getBinaryFile(os: OperationSystem, arch: Architecture, pack: Package = Package.Bin, version = 'latest') {
         return this.http
-            .get(`${BASE_URL}/binaries/vxagent/${os}/${arch}/${version}`, {
+            .get(`${BASE_URL}/binaries/vxagent/${os}/${arch}/${version}/${pack}`, {
                 observe: 'response',
                 responseType: 'arraybuffer'
             })

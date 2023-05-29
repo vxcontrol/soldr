@@ -9,6 +9,12 @@ export enum Architecture {
     Amd64 = 'amd64',
     I386 = '386'
 }
+export enum Package {
+    Bin = 'bin',
+    Deb = 'deb',
+    Rpm = 'rpm',
+    Msi = 'msi'
+}
 export type OperationSystemsList = Record<OperationSystem, Architecture[]>;
 
 export const osList: readonly ListItem[] = [

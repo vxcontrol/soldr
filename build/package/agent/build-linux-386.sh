@@ -1,4 +1,5 @@
 #!/bin/bash
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-LD_BUNDLE="-Wl,-rpath -Wl,/usr/lib/vxagent -Wl,--dynamic-linker=/usr/lib/vxagent/ld-2.28.so -lresolv -lnsl -lnss_files -lnss_dns -lcrypto -lssl"
-GOOS=linux GOARCH=386 P=linux32 LF="-Wl,--wrap=fcntl64 -Wl,--wrap=fcntl -Wl,--whole-archive" LD="-Wl,--no-whole-archive -lcompat -pthread -lluajit -lm -ldl -lstdc++ $LD_BUNDLE" T="vxagent" "${DIR}"/build.sh
+[ "x$BUNDLE" = "xtrue" ] && LD_BUNDLE="-Wl,-rpath -Wl,/usr/lib/vxagent -Wl,--dynamic-linker=/usr/lib/vxagent/ld-2.28.so -lssp_nonshared -lc_nonshared -L/usr/lib/vxagent -lrt -lresolv -lnsl -lnss_files -lnss_dns -lnss_systemd -lcrypto -lssl"
+[ "x$BUNDLE" = "xtrue" ] && T="vxbundle" || T="vxagent"
+GOOS=linux GOARCH=386 P=linux32 LF="-Wl,--wrap=fcntl64 -Wl,--wrap=fcntl -Wl,--whole-archive" LD="-Wl,--no-whole-archive -lcompat -pthread -lluajit -lm -ldl -lstdc++ $LD_BUNDLE" T=$T "${DIR}"/build.sh

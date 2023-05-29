@@ -233,6 +233,10 @@
     "Shared.Os.Text.Linux": "Linux",
     "Shared.Os.Text.Macos": "macOS",
     "Shared.Os.Text.Windows": "Windows",
+    "Shared.Os.Text.Package.Bin": "BIN",
+    "Shared.Os.Text.Package.Deb": "DEB",
+    "Shared.Os.Text.Package.Rpm": "RPM",
+    "Shared.Os.Text.Package.Msi": "MSI",
 
     "Shared.PasswordForm.Hint.Digit": "Цифра",
     "Shared.PasswordForm.Hint.LatinAndSpecialSymbols": "Только латинские буквы, цифры, спецсимволы и пробел",

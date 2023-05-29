@@ -11,6 +11,8 @@ import (
 	"soldr/pkg/utils"
 )
 
+var revision string
+
 type AgentInfoGetter interface {
 	Get(ctx context.Context) (*protoagent.Information, error)
 }
@@ -80,7 +82,8 @@ func getAgentInformation() *protoagent.Information {
 			Hostname: utils.GetRef(getHostname()),
 			Ips:      getIPs(),
 		},
-		Users: getUsersInformation(),
+		Users:    getUsersInformation(),
+		Revision: utils.GetRef(revision),
 	}
 
 	return infoMessage

@@ -50,6 +50,8 @@ var ErrAgentBinariesInvalidRequest = NewHttpError(400, "Binaries.AgentBinaries.I
 var ErrAgentBinariesInvalidData = NewHttpError(500, "Binaries.AgentBinaries.InvalidData", "invalid agent binaries data")
 var ErrAgentBinaryFileInvalidOS = NewHttpError(400, "Binaries.AgentBinaryFile.InvalidOS", "failed to valid agent os")
 var ErrAgentBinaryFileInvalidArch = NewHttpError(400, "Binaries.AgentBinaryFile.InvalidArch", "failed to valid agent arch")
+var ErrAgentBinaryFileInvalidVersion = NewHttpError(400, "Binaries.AgentBinaryFile.InvalidVersion", "failed to valid agent version")
+var ErrAgentBinaryFileInvalidPackageType = NewHttpError(400, "Binaries.AgentBinaryFile.InvalidPackageType", "failed to valid agent package type")
 var ErrAgentBinaryFileNotFound = NewHttpError(404, "Binaries.AgentBinaryFile.NotFound", "agent binary record not found")
 var ErrAgentBinaryFileCorrupted = NewHttpError(404, "Binaries.AgentBinaryFile.Corrupted", "agent binary file was corrupted")
 

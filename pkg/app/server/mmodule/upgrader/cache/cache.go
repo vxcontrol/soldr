@@ -15,20 +15,27 @@ type Key struct {
 	version string
 	os      string
 	arch    string
+	rev     string
 }
 
 func NewKey(version string, agentInfo *vxproto.AgentInfo) *Key {
-	os := agentInfo.Info.GetOs()
+	info := agentInfo.Info
+	os := info.GetOs()
+
 	return &Key{
 		version: version,
 		os:      os.GetType(),
 		arch:    os.GetArch(),
+		rev:     info.GetRevision(),
 	}
 }
 
 func (k *Key) GetS3UpgraderPath() string {
 	const upgraderDir = "vxagent"
 	upgraderFileName := "vxagent"
+	if k.rev != "" {
+		upgraderFileName = k.rev
+	}
 	if k.os == "windows" {
 		upgraderFileName += ".exe"
 	}

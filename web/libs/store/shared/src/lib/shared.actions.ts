@@ -15,7 +15,7 @@ import {
     PrivateSystemModules,
     PublicInfo
 } from '@soldr/api';
-import { Architecture, OperationSystem } from '@soldr/shared';
+import { Architecture, Package, OperationSystem } from '@soldr/shared';
 
 export enum ActionType {
     ChangePassword = '[shared] Change password',
@@ -121,7 +121,7 @@ export const fetchAllServicesFailure = createAction(
 
 export const exportBinaryFile = createAction(
     ActionType.ExportBinaryFile,
-    props<{ os: OperationSystem; arch: Architecture; version: string }>()
+    props<{ os: OperationSystem; arch: Architecture; pack: Package, version: string }>()
 );
 export const exportBinaryFileSuccess = createAction(ActionType.ExportBinaryFileSuccess);
 export const exportBinaryFileFailure = createAction(

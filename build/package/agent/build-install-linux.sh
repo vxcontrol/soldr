@@ -12,7 +12,7 @@ mv DEBIAN/control TMP_control
 mv DEBIAN/changelog TMP_changelog
 mkdir -p vxagent/opt/vxcontrol/vxagent/{bin,logs,data} && \
 	mkdir vxagent/DEBIAN && \
-	cp _tmp/linux/386/vxagent vxagent/opt/vxcontrol/vxagent/bin && \
+	cp _tmp/linux/386/vxbundle vxagent/opt/vxcontrol/vxagent/bin/vxagent && \
 	mkdir -p vxagent/etc/systemd/system/ && \
 	cp vxagent.service vxagent/etc/systemd/system/vxagent.service
 
@@ -35,6 +35,7 @@ md5deep -r vxagent/opt/vxcontrol/vxagent > vxagent/DEBIAN/md5sums
 chmod -R 755 vxagent/DEBIAN
 
 fakeroot dpkg-deb -Zxz --build vxagent vxagent-${VERSION}_${arch}.deb || exit 1
+cp vxagent-${VERSION}_${arch}.deb _tmp/linux/386/vxagent.deb
 
 echo "Done create deb $arch"
 
@@ -42,7 +43,7 @@ rm -rf vxagent
 
 mkdir -p vxagent/opt/vxcontrol/vxagent/{bin,logs,data} && \
 	mkdir vxagent/DEBIAN && \
-	cp _tmp/linux/amd64/vxagent vxagent/opt/vxcontrol/vxagent/bin && \
+	cp _tmp/linux/amd64/vxbundle vxagent/opt/vxcontrol/vxagent/bin/vxagent && \
 	mkdir -p vxagent/etc/systemd/system/ && \
 	cp vxagent.service vxagent/etc/systemd/system/vxagent.service
 
@@ -65,6 +66,7 @@ md5deep -r vxagent/opt/vxcontrol/vxagent > vxagent/DEBIAN/md5sums
 chmod -R 755 vxagent/DEBIAN
 
 fakeroot dpkg-deb -Zxz --build vxagent vxagent-${VERSION}_${arch}.deb || exit 1
+cp vxagent-${VERSION}_${arch}.deb _tmp/linux/amd64/vxagent.deb
 
 echo "Done create deb $arch"
 
@@ -76,19 +78,21 @@ mkdir -p ~/rpmbuild/SOURCES/vxagent/{bin,unit}
 arch="386"
 eval "echo \"$(cat RPM/rpm.spec)\"" > rpm_$arch.spec
 cp _tmp/deps/libraries_386.tar.gz ~/rpmbuild/SOURCES/libraries.tar.gz
-cp _tmp/linux/386/vxagent ~/rpmbuild/SOURCES/vxagent/bin/
+cp _tmp/linux/386/vxbundle ~/rpmbuild/SOURCES/vxagent/bin/vxagent
 cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 
 rpmbuild -bb ./rpm_$arch.spec --target i386
 cp ~/rpmbuild/RPMS/i386/* install_linux/vxagent-${VERSION}_i386.rpm
+cp install_linux/vxagent-${VERSION}_i386.rpm _tmp/linux/386/vxagent.rpm
 
 arch="amd64"
 rm -rf ~/rpmbuild/SOURCES/* || true
 mkdir -p ~/rpmbuild/SOURCES/vxagent/{bin,unit}
 cp _tmp/deps/libraries_amd64.tar.gz ~/rpmbuild/SOURCES/libraries.tar.gz
-cp _tmp/linux/amd64/vxagent ~/rpmbuild/SOURCES/vxagent/bin/
+cp _tmp/linux/amd64/vxbundle ~/rpmbuild/SOURCES/vxagent/bin/vxagent
 cp vxagent.service ~/rpmbuild/SOURCES/vxagent/unit/
 
 eval "echo \"$(cat RPM/rpm.spec)\"" > rpm_$arch.spec
 rpmbuild -bb ./rpm_$arch.spec --target amd64
 cp ~/rpmbuild/RPMS/amd64/* install_linux/vxagent-${VERSION}_amd64.rpm
+cp install_linux/vxagent-${VERSION}_amd64.rpm _tmp/linux/amd64/vxagent.rpm

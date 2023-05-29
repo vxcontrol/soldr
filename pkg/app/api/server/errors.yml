@@ -211,6 +211,14 @@ errors:
       http_code: 400
       description: "failed to valid agent arch"
     -
+      code: "Binaries.AgentBinaryFile.InvalidVersion"
+      http_code: 400
+      description: "failed to valid agent version"
+    -
+      code: "Binaries.AgentBinaryFile.InvalidPackageType"
+      http_code: 400
+      description: "failed to valid agent package type"
+    -
       code: "Binaries.AgentBinaryFile.NotFound"
       http_code: 404
       description: "agent binary record not found"

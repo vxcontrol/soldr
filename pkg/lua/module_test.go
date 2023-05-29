@@ -120,6 +120,7 @@ func (acv *agentConnectionValidator) OnConnect(
 		Users: []*protoagent.Information_User{
 			user,
 		},
+		Revision: utils.GetRef("vxagent"),
 	})
 	return nil
 }

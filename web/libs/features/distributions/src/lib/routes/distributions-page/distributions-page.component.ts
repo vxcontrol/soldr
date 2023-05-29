@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { TranslocoService } from '@ngneat/transloco';
 import { combineLatest, combineLatestWith, map, pairwise, Subscription } from 'rxjs';
 
-import { Architecture, LanguageService, ModalInfoService, OperationSystem, PageTitleService } from '@soldr/shared';
+import { Architecture, Package, LanguageService, ModalInfoService, OperationSystem, PageTitleService } from '@soldr/shared';
 import { SharedFacade } from '@soldr/store/shared';
 
 @Component({
@@ -14,13 +14,14 @@ export class DistributionsPageComponent implements OnInit, OnDestroy {
     @ViewChild('firstButtonGroup') firstButtonGroup: ElementRef;
 
     agentBinaryVersions$ = this.sharedFacade.agentBinaryVersions$.pipe(
-        map((binaryVersions) => binaryVersions?.reverse())
+        map((binaryVersions) => binaryVersions)
     );
     isLoadingBinaries$ = this.sharedFacade.isLoadingAgentBinaries$;
     language$ = this.languageServe.current$;
     latestAgentBinary$ = this.sharedFacade.latestAgentBinary$;
 
     arch = Architecture;
+    pack = Package;
     operationSystem = OperationSystem;
     subscription = new Subscription();
 
@@ -59,8 +60,8 @@ export class DistributionsPageComponent implements OnInit, OnDestroy {
         this.subscription.unsubscribe();
     }
 
-    exportFile(os: OperationSystem, arch: Architecture, version?: string) {
-        this.sharedFacade.exportBinary(os, arch, version);
+    exportFile(os: OperationSystem, arch: Architecture, pack?: Package, version?: string) {
+        this.sharedFacade.exportBinary(os, arch, pack, version);
     }
 
     private defineTitle() {
