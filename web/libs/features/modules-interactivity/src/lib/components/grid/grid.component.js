@@ -6,10 +6,10 @@ import { DraggableSelect } from '../draggable-select/draggable-select.components
 const template = `
 <!--suppress AngularInvalidAnimationTriggerAssignment -->
 </template>
-        <div class="vue-grid__wrapper layout-column" ref="wrapper">
-            <div class="flex-none layout-margin-bottom-xl" ref="filter">
-                <div class="layout-row">
-                    <div class="flex-auto layout-row layout-align-start-center">
+    <div class="vue-grid__wrapper layout-column" ref="wrapper">
+        <div class="flex-none layout-margin-bottom-xl" ref="filter">
+            <div class="layout-row">
+                <div v-if="hasSearch" class="flex-auto layout-row layout-align-start-center">
 
                         <div class="vue-grid__rows-selector" v-if="canSelect && multiple && showSelectionMenu">
                             <el-checkbox
@@ -87,7 +87,7 @@ const template = `
                             </div>
                         </div>
 
-                        <div class="flex-none" v-bind:class="{'layout-margin-left-xl': $slots.toolbar }">
+                        <div v-bind:class="{'layout-margin-left-xl': $slots.toolbar, 'flex-auto': !hasSearch, 'flex-none': hasSearch }">
                             <slot name="toolbar" v-bind:selected="selected" v-bind:isSelectedAll="isSelectedAll"></slot>
                         </div>
 
@@ -106,20 +106,20 @@ const template = `
                     <data-tables-server
                         ref="table"
                         :loading="isLoading"
-                        :data="data"
-                        :page-size="parseInt(query.pageSize || 50)"
-                        :current-page="parseInt(query.page || 1)"
-                        :table-props="tableProps"
-                        :row-class-name="calcTableRowClassName"
-                        :pagination-props="{
-                            layout: 'slot, prev, pager, next, jumper, sizes',
-                            pageSizes: [10, 30, 50],
-                            total: this.total
-                        }"
-                        @query-change="loadData"
-                        @row-click="onRowClick"
-                        @selection-change="onSelectionChange"
-                        @header-dragend="saveSettings">
+                    :data="data"
+                    :page-size="parseInt(query.pageSize || 50)"
+                    :current-page="parseInt(query.page || 1)"
+                    :table-props="tableProps"
+                    :row-class-name="calcTableRowClassName"
+                    :pagination-props="{
+                        layout: 'slot, prev, pager, next, jumper, sizes',
+                        pageSizes: [10, 30, 50],
+                        total: this.total
+                    }"
+                    @query-change="loadData"
+                    @row-click="onRowClick"
+                    @selection-change="onSelectionChange"
+                    @header-dragend="saveSettings">
 
                     <template v-slot:empty>
                         <template v-if="$slots['custom-no-rows']">
@@ -204,7 +204,8 @@ export const GridComponent = Vue.extend({
         noSelectionText: { type: Boolean, default: true },
         defaultSort: { type: Object },
         hasSettings: { type: Boolean, default: true },
-        resizeColumns: { type: Boolean, default: false }
+        resizeColumns: { type: Boolean, default: false },
+        hasSearch: { type: Boolean, default: true }
     },
 
     data() {
