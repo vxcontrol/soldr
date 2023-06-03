@@ -25,14 +25,44 @@ jobs:
           name: agent_windows
       - uses: actions/download-artifact@v3
         with:
+          name: agent_deb
+          path: agent_deb
+      - uses: actions/download-artifact@v3
+        with:
+          name: agent_rpm
+          path: agent_rpm
+      - uses: actions/download-artifact@v3
+        with:
+          name: agent_pkg
+          path: agent_pkg
+      - uses: actions/download-artifact@v3
+        with:
+          name: agent_msi
+          path: agent_msi
+      - uses: actions/download-artifact@v3
+        with:
           name: decode_environment
       - name: prepare files
         run: |
           mv build/package/agent/Dockerfile_cross build/package/agent/Dockerfile
           mkdir build/package/agent/_tmp
+          # restore agent binaries
           cp -r agent/_tmp/* build/package/agent/_tmp
+          # restore agent deb and rpm packages
+          cp agent_rpm/vxagent-*_i386.rpm build/package/agent/_tmp/linux/386/vxagent.rpm
+          cp agent_rpm/vxagent-*_amd64.rpm build/package/agent/_tmp/linux/amd64/vxagent.rpm
+          cp agent_deb/vxagent-*_i386.deb build/package/agent/_tmp/linux/386/vxagent.deb
+          cp agent_deb/vxagent-*_amd64.deb build/package/agent/_tmp/linux/amd64/vxagent.deb
+          # restore agent pkg package
+          cp agent_pkg/vxagent-*_amd64.pkg build/package/agent/_tmp/darwin/amd64/vxagent.pkg
+          # restore agent msi packages
+          cp agent_msi/vxagent-*_x86.msi build/package/agent/_tmp/windows/386/vxagent.msi
+          cp agent_msi/vxagent-*_x64.msi build/package/agent/_tmp/windows/amd64/vxagent.msi
+          # set executable flag for linux and macOS binaries
+          chmod +x build/package/agent/_tmp/linux/*/vxbundle
           chmod +x build/package/agent/_tmp/linux/*/vxagent
           chmod +x build/package/agent/_tmp/darwin/*/vxagent
+          # enumerate restored files
           ls -R build/package/agent/_tmp
       - name: Docker build vxres
         uses: ./.github/actions/docker_build

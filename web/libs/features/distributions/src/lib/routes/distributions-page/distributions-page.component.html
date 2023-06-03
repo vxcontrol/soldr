@@ -127,9 +127,21 @@
                                 <button
                                     class="flex os-action-button"
                                     mc-button
-                                    (click)="exportFile(operationSystem.Darwin, arch.Amd64)">
+                                    [mcDropdownTriggerFor]="amd64DarwinDistDropdown"
+                                    [openByArrowDown]="true">
                                     <span class="os-action-text">{{tShared('Shared.Os.Text.Amd64')}}</span>
+                                    <i mc-icon="mc-angle-down-S_16"></i>
                                 </button>
+                                <mc-dropdown #amd64DarwinDistDropdown="mcDropdown" [class]="'max-width'">
+                                    <button mc-dropdown-item
+                                        (click)="exportFile(operationSystem.Darwin, arch.Amd64, pack.Bin)">
+                                        {{tShared('Shared.Os.Text.Package.Bin')}}
+                                    </button>
+                                    <button mc-dropdown-item
+                                        (click)="exportFile(operationSystem.Darwin, arch.Amd64, pack.Pkg)">
+                                        {{tShared('Shared.Os.Text.Package.Pkg')}}
+                                    </button>
+                                </mc-dropdown>
                             </div>
                         </div>
                     </div>

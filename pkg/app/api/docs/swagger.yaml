@@ -2791,6 +2791,7 @@ paths:
         - msi
         - deb
         - rpm
+        - pkg
         in: path
         name: package
         required: true

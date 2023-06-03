@@ -3,11 +3,11 @@ name: VXAgent installer build
 on: workflow_call
 
 jobs:
-  build_installer_linux:
+  build_installer_osx:
     name: Installer build
     environment:
       name: production
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
         with:
-          name: agent_linux
+          name: agent_osx
       - uses: actions/download-artifact@v3
         with:
           name: decode_environment
@@ -25,21 +25,17 @@ jobs:
           mkdir build/package/agent/_tmp
           cp -r agent/_tmp/* build/package/agent/_tmp
           ls -R build/package/agent/_tmp
-      - name: Build Linux installer
+        shell: bash
+      - name: Build macOS installer
         run: |
           cd build/package/agent
-          chmod +x build-install-linux.sh
-          ./build-install-linux.sh
+          chmod +x build-install-osx.sh
+          VERSION=$(cat _tmp/version) ./build-install-osx.sh
+          cp install_osx/vxagent-*_amd64.pkg _tmp/darwin/amd64/vxagent.pkg
 
-      - name: Upload result for deb installer
+      - name: Upload result for pkg installer
         uses: actions/upload-artifact@v3
         with:
-          name: agent_deb
+          name: agent_pkg
           path: |
-            build/package/agent/install_linux/*.deb
-      - name: Upload result for rpm installer
-        uses: actions/upload-artifact@v3
-        with:
-          name: agent_rpm
-          path: |
-            build/package/agent/install_linux/*.rpm
+            build/package/agent/install_osx/*.pkg

@@ -1,0 +1,8 @@
+{
+    "WIXFile": "vxagent.wxs",
+    "OutDir": "dist",
+    "AgentArch": {
+        "x86": "..\\_tmp\\windows\\386\\vxagent.exe",
+        "x64": "..\\_tmp\\windows\\amd64\\vxagent.exe"
+    }
+}

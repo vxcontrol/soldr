@@ -161,7 +161,7 @@ func (s *BinariesService) GetAgentBinaryFile(c *gin.Context) {
 // @Param os path string true "agent info OS" default(linux) Enums(windows, linux, darwin)
 // @Param arch path string true "agent info arch" default(amd64) Enums(386, amd64)
 // @Param version path string true "agent version string according semantic version format" default(latest)
-// @Param package path string true "agent package type" default(bin) Enums(bin, msi, deb, rpm)
+// @Param package path string true "agent package type" default(bin) Enums(bin, msi, deb, rpm, pkg)
 // @Success 200 {file} file "agent package or binary as a file"
 // @Failure 400 {object} response.errorResp "invalid agent info"
 // @Failure 403 {object} response.errorResp "getting agent package or binary file not permitted"
@@ -197,6 +197,13 @@ func (s *BinariesService) getAgentBinaryFile(c *gin.Context, packageType string)
 			response.Error(c, response.ErrAgentBinaryFileInvalidPackageType, unsupportedOS)
 			return
 		}
+	case "pkg":
+		if agentOS == "darwin" {
+			extension = fmt.Sprintf(".%s", packageType)
+		} else {
+			response.Error(c, response.ErrAgentBinaryFileInvalidPackageType, unsupportedOS)
+			return
+		}
 	case "deb", "rpm":
 		if agentOS == "linux" {
 			extension = fmt.Sprintf(".%s", packageType)
@@ -213,7 +220,7 @@ func (s *BinariesService) getAgentBinaryFile(c *gin.Context, packageType string)
 		response.Error(c, response.ErrAgentBinaryFileInvalidPackageType, unsupportedPackageType)
 		return
 	}
-	agentName = fmt.Sprintf("%s%s", agentName, extension)
+	agentNameExt := fmt.Sprintf("%s%s", agentName, extension)
 	uaf.ObjectDisplayName = fmt.Sprintf("%s_%s_%s_%s", agentName, agentOS, agentArch, packageType)
 
 	if err := validate.Var(agentOS, "oneof=windows linux darwin,required"); err != nil {
@@ -251,7 +258,7 @@ func (s *BinariesService) getAgentBinaryFile(c *gin.Context, packageType string)
 	}
 	uaf.ObjectID = binary.Hash
 
-	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentName)
+	path := filepath.Join("vxagent", binary.Version, agentOS, agentArch, agentNameExt)
 	if chksums, ok = binary.Info.Chksums[path]; !ok {
 		logger.FromContext(c).Errorf("error getting agent binary file check sums: '%s' not found", path)
 		response.Error(c, response.ErrAgentBinaryFileNotFound, nil)

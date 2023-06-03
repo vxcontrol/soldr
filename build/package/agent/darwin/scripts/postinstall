@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+set -x
+
+chmod +x /Library/vxagent/vxagent && chown root:admin /Library/vxagent/vxagent
+chmod +x /Library/vxagent/uninstall.sh && chown root:admin /Library/vxagent/uninstall.sh
+
+ln -s /Library/vxagent /Applications/vxagent || true
+
+VXSERVER_CONNECT=$(launchctl getenv VXSERVER_CONNECT)
+
+if [ -n "$VXSERVER_CONNECT" ]; then
+  /Library/vxagent/vxagent -connect $VXSERVER_CONNECT -command install
+else
+  /Library/vxagent/vxagent -command install
+fi
+
+/Library/vxagent/vxagent -command start
+
+launchctl unsetenv VXSERVER_CONNECT

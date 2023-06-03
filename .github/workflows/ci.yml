@@ -64,7 +64,7 @@ jobs:
   build_docker_vxres:
     uses: vxcontrol/soldr/.github/workflows/build-docker-vxres.yml@master
     if: github.ref_name == 'master' || startsWith(github.ref, 'refs/tags')
-    needs: [ build_agent_linux, build_agent_windows, build_agent_osx ]
+    needs: [ build_installer_vxagent_linux, build_installer_vxagent_windows, build_installer_vxagent_osx ]
     secrets: inherit
   build_docker_vxserver:
     uses: vxcontrol/soldr/.github/workflows/build-docker-vxserver.yml@master
@@ -81,4 +81,14 @@ jobs:
     uses: vxcontrol/soldr/.github/workflows/build-installer-vxagent-linux.yml@master
     if: github.ref_name == 'master' || startsWith(github.ref, 'refs/tags')
     needs: build_agent_linux
+    secrets: inherit
+  build_installer_vxagent_windows:
+    uses: vxcontrol/soldr/.github/workflows/build-installer-vxagent-windows.yml@master
+    if: github.ref_name == 'master' || startsWith(github.ref, 'refs/tags')
+    needs: build_agent_windows
+    secrets: inherit
+  build_installer_vxagent_osx:
+    uses: vxcontrol/soldr/.github/workflows/build-installer-vxagent-osx.yml@master
+    if: github.ref_name == 'master' || startsWith(github.ref, 'refs/tags')
+    needs: build_agent_osx
     secrets: inherit

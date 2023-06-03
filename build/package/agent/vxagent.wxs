@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	Mandatory flags:
+		Candle:
+			-arch (x86 or x64)
+			-ext WixUtilExtension
+		Light:
+			-ext WixUtilExtension
+
+	Mandatory pre-processor variables:
+		- AgentSourceExecutable - path to the local agent binary.
+
+	Optional pre-processor variables:
+		- ProductVersion     - if not set, the value is taken from the agent binary VersionInfo.
+
+	MSI parameters (all parameters are optional):
+		VXSERVER_CONNECT  - address of vxserver in {proto}://{address}:{port} format.
+
+	Pre-processor variables can be used to override default MSI parameters:
+		VXServerConnect
+
+ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+<Wix
+		xmlns="http://schemas.microsoft.com/wix/2006/wi"
+		xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+	<!-- Product versioning
+		Use -dProductVersion candle flag to specify the package version.
+		Use -dProductUpgradeCode candle flag to override default product code (required for multi-instance setup).
+	-->
+
+	<?ifndef ProductVersion ?>
+		<?define ProductVersion="!(bind.FileVersion.AgentExe)"?>
+	<?endif?>
+
+	<?ifndef ProductUpgradeCode ?>
+		<?define ProductUpgradeCode="9df6d570-7985-4df0-98c6-6fdfbe4471dc"?>
+	<?endif?>
+
+	<?define ManufacturerName="VXControl"?>
+	<?define AgentName="SOLDR Agent"?>
+	<?define AgentServiceName="vxagent"?>
+	<?define AgentServiceDisplayName="SOLDR Agent"?>
+	<?define AgentServiceDescription="SOLDR Agent service to manage host security"?>
+	<?define AgentFullName="$(var.ManufacturerName) $(var.AgentName)"?>
+
+	<!-- Multi-arch
+		Use -arch candle flag (BUILDARCH) to specify architecture the MSI is compiled for - one of x86, x64 is allowed.
+		Any arch-dependent vars must be defined in this section.
+	-->
+
+	<?if $(sys.BUILDARCH)="x86"?>
+		<?define Minimum_Version="100"?>
+		<?define ArchProgramFiles="ProgramFilesFolder"?>
+		<?define QuietExec="CAQuietExec"?>
+	<?elseif $(sys.BUILDARCH)="x64"?>
+		<?define Minimum_Version="100"?>
+		<?define ArchProgramFiles="ProgramFiles64Folder"?>
+		<?define QuietExec="CAQuietExec64"?>
+	<?else?>
+		<?error Unsupported value of sys.BUILDARCH=$(sys.BUILDARCH)?>
+	<?endif?>
+
+	<!-- Default MSI parameters -->
+
+	<Product Id="$(var.ProductUpgradeCode)"
+			 Name="$(var.AgentFullName)"
+			 Language="1033"
+			 Version="$(var.ProductVersion)"
+			 UpgradeCode="$(var.ProductUpgradeCode)"
+			 Manufacturer="$(var.ManufacturerName)" >
+
+		<Package
+				Compressed="yes"
+				InstallScope="perMachine"
+				Manufacturer="$(var.ManufacturerName)"
+				Description="$(var.AgentFullName)"/>
+
+		<Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
+
+		<Condition Message="You need to be an administrator to install this product.">
+			Privileged
+		</Condition>
+
+		<!-- Set properties for add/remove programs -->
+		<Property Id="ARPNOREPAIR" Value="yes" Secure="yes"/> <!-- Remove repair -->
+		<Property Id="ARPNOMODIFY" Value="yes" Secure="yes"/> <!-- Remove modify -->
+		<Property Id="ARPPRODUCTICON" Value="Icon.exe"/>
+
+		<!-- Define icons (ID should not be longer than 18 chars and must end with ".exe") -->
+		<Icon Id="Icon.exe" SourceFile="images\app.ico"/>
+
+		<MajorUpgrade
+				AllowDowngrades="no"
+				AllowSameVersionUpgrades="yes"
+				DowngradeErrorMessage="A later version of [ProductName] is already installed."/>
+
+		<!-- Parameters and configuration -->
+
+		<?ifndef VXServerConnect ?>
+			<Property Id="VXSERVER_CONNECT" Admin="yes"/>
+		<?endif?>
+
+		<CustomAction
+				Id="RemoveAgentDirExec"
+				Property="RemoveAgentDir"
+				Value="&quot;cmd.exe&quot; /C RD &quot;[INSTALLDIR]&quot; /s /q"
+				Execute="immediate"/>
+		<CustomAction
+				Id="RemoveAgentDir"
+				BinaryKey="WixCA"
+				DllEntry="$(var.QuietExec)"
+				Execute="deferred"
+				Return="check"
+				Impersonate="no"/>
+		<InstallExecuteSequence>
+			<Custom Action="RemoveAgentDirExec" After="CostFinalize"/>
+			<Custom Action="RemoveAgentDir" After="RemoveFiles">
+				(REMOVE="ALL") AND (NOT UPGRADINGPRODUCTCODE)
+			</Custom>
+		</InstallExecuteSequence>
+
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="$(var.ArchProgramFiles)">
+				<Directory Id="ManufacturerDir" Name="$(var.ManufacturerName)">
+					<Directory Id="INSTALLDIR" Name="$(var.AgentName)"/>
+				</Directory>
+			</Directory>
+		</Directory>
+
+		<DirectoryRef Id="INSTALLDIR">
+			<Component Id="Agent" Guid="*">
+				<!-- Created folder will be accessible for Local System and built-in Administrators only -->
+				<CreateFolder>
+					<PermissionEx
+						Id="AgentDirPermissions"
+						Sddl="O:SYG:SYD:(A;OICINP;FA;;;SY)(A;OICI;FA;;;BA)"/>
+				</CreateFolder>
+				<File
+						Id="AgentExe"
+						Source="$(var.AgentSourceExecutable)"
+						Vital="yes"
+						KeyPath="yes"/>
+				<ServiceInstall
+						Id="AgentService"
+						Type="ownProcess"
+						Name="$(var.AgentServiceName)"
+						Arguments="-service -connect [VXSERVER_CONNECT] -logdir &quot;[ManufacturerDir]$(var.AgentName)\logs&quot;"
+						DisplayName="$(var.AgentServiceDisplayName)"
+						Description="$(var.AgentServiceDescription)"
+						Start="auto"
+						ErrorControl="normal"
+						Vital="yes">
+					<ServiceConfig DelayedAutoStart="yes" OnInstall="yes" OnReinstall ="yes" />
+					<util:ServiceConfig
+							FirstFailureActionType='restart'
+							SecondFailureActionType='restart'
+							ThirdFailureActionType='restart'
+							RestartServiceDelayInSeconds='60'
+							ResetPeriodInDays='0'/>
+					<ServiceDependency Id="tcpip"/>
+				</ServiceInstall>
+				<ServiceControl
+						Id="AgentServiceControl"
+						Name="$(var.AgentServiceName)"
+						Start="install"
+						Stop="both"
+						Remove="uninstall"
+						Wait="yes"/>
+			</Component>
+		</DirectoryRef>
+
+		<Feature Id="Complete" Level="1">
+			<ComponentRef Id="Agent"/>
+		</Feature>
+
+	</Product>
+</Wix>

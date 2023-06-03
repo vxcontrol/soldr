@@ -13,7 +13,8 @@ export enum Package {
     Bin = 'bin',
     Deb = 'deb',
     Rpm = 'rpm',
-    Msi = 'msi'
+    Msi = 'msi',
+    Pkg = 'pkg'
 }
 export type OperationSystemsList = Record<OperationSystem, Architecture[]>;
 

@@ -10,7 +10,7 @@ RUN mkdir -p /opt/vxagent/bin && \
 
 COPY build/package/agent/preparing.sh                      /opt/vxagent/bin/
 COPY build/package/agent/_tmp/version                      /opt/vxagent/bin/
-COPY build/package/agent/_tmp/linux/amd64/vxagent          /opt/vxagent/bin/
+COPY build/package/agent/_tmp/linux/amd64/vxbundle         /opt/vxagent/bin/vxagent
 COPY build/package/agent/_tmp/deps/libraries_amd64.tar.gz  /opt/vxagent/deps/
 
 RUN mkdir -p /usr/lib/vxagent && \

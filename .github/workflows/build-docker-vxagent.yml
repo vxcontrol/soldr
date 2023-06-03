@@ -24,6 +24,7 @@ jobs:
         run: |
           mkdir build/package/agent/_tmp
           cp -r agent/_tmp/* build/package/agent/_tmp
+          chmod +x build/package/agent/_tmp/linux/*/vxbundle
           chmod +x build/package/agent/_tmp/linux/*/vxagent
           ls -R build/package/agent/_tmp
       - name: Docker build vxagent

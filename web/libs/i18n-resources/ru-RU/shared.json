@@ -237,6 +237,7 @@
     "Shared.Os.Text.Package.Deb": "DEB",
     "Shared.Os.Text.Package.Rpm": "RPM",
     "Shared.Os.Text.Package.Msi": "MSI",
+    "Shared.Os.Text.Package.Pkg": "PKG",
 
     "Shared.PasswordForm.Hint.Digit": "Цифра",
     "Shared.PasswordForm.Hint.LatinAndSpecialSymbols": "Только латинские буквы, цифры, спецсимволы и пробел",

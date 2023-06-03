@@ -3,11 +3,11 @@ name: VXAgent installer build
 on: workflow_call
 
 jobs:
-  build_installer_linux:
+  build_installer_windows:
     name: Installer build
     environment:
       name: production
-    runs-on: ubuntu-latest
+    runs-on: windows-2019
 
     steps:
       - name: Checkout
@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v3
         with:
-          name: agent_linux
+          name: agent_windows
       - uses: actions/download-artifact@v3
         with:
           name: decode_environment
@@ -25,21 +25,20 @@ jobs:
           mkdir build/package/agent/_tmp
           cp -r agent/_tmp/* build/package/agent/_tmp
           ls -R build/package/agent/_tmp
-      - name: Build Linux installer
+        shell: bash
+      - name: Set path for heat.exe and light.exe
+        run: echo "$WIX\\bin" >>$GITHUB_PATH
+        shell: bash
+      - name: Build Windows installer
         run: |
           cd build/package/agent
-          chmod +x build-install-linux.sh
-          ./build-install-linux.sh
+          pwsh -ExecutionPolicy Bypass -File build.ps1 packages.json vxagent
+          mkdir install_windows
+          cp dist/*.msi install_windows/
 
-      - name: Upload result for deb installer
+      - name: Upload result for msi installer
         uses: actions/upload-artifact@v3
         with:
-          name: agent_deb
+          name: agent_msi
           path: |
-            build/package/agent/install_linux/*.deb
-      - name: Upload result for rpm installer
-        uses: actions/upload-artifact@v3
-        with:
-          name: agent_rpm
-          path: |
-            build/package/agent/install_linux/*.rpm
+            build/package/agent/install_windows/*.msi

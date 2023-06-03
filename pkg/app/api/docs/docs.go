@@ -1137,7 +1137,8 @@ const docTemplate = `{
                             "bin",
                             "msi",
                             "deb",
-                            "rpm"
+                            "rpm",
+                            "pkg"
                         ],
                         "type": "string",
                         "default": "bin",
