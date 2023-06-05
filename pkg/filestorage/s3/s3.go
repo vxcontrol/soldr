@@ -117,7 +117,7 @@ func (c *Client) ListDir(path string) (map[string]os.FileInfo, error) {
 		if object.Err != nil {
 			return nil, filestorage.ErrListFailed
 		}
-		shortPath := strings.TrimPrefix(object.Key, path)
+		shortPath := strings.TrimPrefix(object.Key, path+"/")
 		if !strings.HasPrefix(shortPath, "/") {
 			shortPath = "/" + shortPath
 		}
