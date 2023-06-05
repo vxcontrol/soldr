@@ -94,8 +94,7 @@ export class ModuleInteractivePartComponent implements OnInit, OnChanges, OnDest
                 const lang = this.languageService.lang;
                 const moduleLocalization = this.getModuleLocalization(module, lang);
 
-                this.setAppLocale(moduleLocalization, lang);
-                this.setAppLocale(appLocalization, lang);
+                this.setAppLocale({ ...appLocalization, ...moduleLocalization }, lang);
             });
     }
 
