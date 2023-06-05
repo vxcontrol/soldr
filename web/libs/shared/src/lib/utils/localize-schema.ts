@@ -19,7 +19,10 @@ export const localizeSchemaAdditionalKeys = (
             schemaKeys.add(String(match[1]));
         }
 
-        schemaKeys.forEach((key) => (plainSchema = plainSchema.replace(key, additionalKeys[key]?.[lang] || '')));
+        schemaKeys.forEach(
+            (key) =>
+                (plainSchema = plainSchema.replace(REGEX_PARSE_SCHEMA_LOCALIZATION, additionalKeys[key]?.[lang] || ''))
+        );
 
         return JSON.parse(plainSchema);
     }
