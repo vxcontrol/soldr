@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/acobaugh/osrelease v0.0.0-20181218015638-a93a0a55a249
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/digitalocean/go-smbios v0.0.0-20180907143718-390a4f403a8e
 	github.com/gin-contrib/sessions v0.0.4
 	github.com/gin-gonic/gin v1.7.7
 	github.com/go-ole/go-ole v1.2.6
