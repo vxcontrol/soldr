@@ -1,7 +1,6 @@
 package vxproto
 
 import (
-	"encoding/json"
 	"sync/atomic"
 )
 
@@ -17,45 +16,38 @@ const (
 )
 
 type ProtoStats struct {
-	RecvNumPackets   int64 `json:"proto_recv_num_packets"`
-	SendNumPackets   int64 `json:"proto_send_num_packets"`
-	RecvNetBytes     int64 `json:"proto_recv_net_bytes"`
-	SendNetBytes     int64 `json:"proto_send_net_bytes"`
-	RecvPayloadBytes int64 `json:"proto_recv_payload_bytes"`
-	SendPayloadBytes int64 `json:"proto_send_payload_bytes"`
+	RecvNumPackets   atomic.Int64
+	SendNumPackets   atomic.Int64
+	RecvNetBytes     atomic.Int64
+	SendNetBytes     atomic.Int64
+	RecvPayloadBytes atomic.Int64
+	SendPayloadBytes atomic.Int64
 }
 
 func (s *ProtoStats) incStats(m metricType, val int64) {
 	switch m {
 	case recvNumPackets:
-		atomic.AddInt64(&s.RecvNumPackets, val)
+		s.RecvNumPackets.Add(val)
 	case sendNumPackets:
-		atomic.AddInt64(&s.SendNumPackets, val)
+		s.SendNumPackets.Add(val)
 	case recvNetBytes:
-		atomic.AddInt64(&s.RecvNetBytes, val)
+		s.RecvNetBytes.Add(val)
 	case sendNetBytes:
-		atomic.AddInt64(&s.SendNetBytes, val)
+		s.SendNetBytes.Add(val)
 	case recvPayloadBytes:
-		atomic.AddInt64(&s.RecvPayloadBytes, val)
+		s.RecvPayloadBytes.Add(val)
 	case sendPayloadBytes:
-		atomic.AddInt64(&s.SendPayloadBytes, val)
+		s.SendPayloadBytes.Add(val)
 	}
 }
 
 func (s *ProtoStats) DumpStats() (map[string]float64, error) {
-	var (
-		statsMap    = make(map[string]float64)
-		statsStruct ProtoStats
-	)
-	if s != nil {
-		statsStruct = *s
-	}
-	statsData, err := json.Marshal(&statsStruct)
-	if err != nil {
-		return statsMap, err
-	}
-	if err = json.Unmarshal(statsData, &statsMap); err != nil {
-		return statsMap, err
-	}
+	statsMap := make(map[string]float64, 6)
+	statsMap["proto_recv_num_packets"] = float64(s.RecvNumPackets.Load())
+	statsMap["proto_send_num_packets"] = float64(s.SendNumPackets.Load())
+	statsMap["proto_recv_net_bytes"] = float64(s.RecvNetBytes.Load())
+	statsMap["proto_send_net_bytes"] = float64(s.SendNetBytes.Load())
+	statsMap["proto_recv_payload_bytes"] = float64(s.RecvPayloadBytes.Load())
+	statsMap["proto_send_payload_bytes"] = float64(s.SendPayloadBytes.Load())
 	return statsMap, nil
 }
