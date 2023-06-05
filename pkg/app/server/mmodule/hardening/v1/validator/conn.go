@@ -132,7 +132,7 @@ func (v *ConnectionValidator) checkConnectionChallengeResponse(
 	if err := protoagent.UnpackProtoMessage(&resp, respData, protoagent.Message_CONNECTION_CHALLENGE_REQUEST); err != nil {
 		return fmt.Errorf("failed to unpack the message: %w", err)
 	}
-	abh, err := v.abher.GetABHWithSocket(agentType, socket)
+	abhs, err := v.abher.GetABHWithSocket(agentType, socket)
 	if err != nil {
 		return fmt.Errorf("failed to get the ABH: %w", err)
 	}
@@ -140,7 +140,7 @@ func (v *ConnectionValidator) checkConnectionChallengeResponse(
 		resp.Ct,
 		expectedChallenge,
 		socket.GetAgentID(),
-		abh,
+		abhs,
 	); err != nil {
 		return fmt.Errorf("connection challenge check has failed: %w", err)
 	}

@@ -43,17 +43,24 @@ func (c *Challenger) CheckConnectionChallenge(
 	challengeCT []byte,
 	expectedChallenge []byte,
 	agentID string,
-	abh []byte,
+	abhs [][]byte,
 ) error {
-	key := GetChallengeKey(agentID, abh)
-	actualChallenge, err := aesDescrypt(key, challengeCT)
-	if err != nil {
-		return fmt.Errorf("failed to decrypt the received challenge response: %w", err)
+	actualChallenges := make([][]byte, 0, len(abhs))
+	for _, abh := range abhs {
+		key := GetChallengeKey(agentID, abh)
+		actualChallenge, err := aesDescrypt(key, challengeCT)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt the received challenge response: %w", err)
+		}
+		actualChallenges = append(actualChallenges, actualChallenge)
 	}
-	if !bytes.Equal(expectedChallenge, actualChallenge) {
-		return fmt.Errorf("an unexpected challenge response received")
+	for _, actualChallenge := range actualChallenges {
+		if bytes.Equal(actualChallenge, expectedChallenge) {
+			return nil
+		}
 	}
-	return err
+	return fmt.Errorf("an unexpected challenge response received")
+
 }
 
 type AESKey []byte

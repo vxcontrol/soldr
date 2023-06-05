@@ -18,48 +18,48 @@ import (
 )
 
 type ABHList struct {
-	Agents     map[string][]byte
-	Aggregates map[string][]byte
-	Browsers   map[string][]byte
-	Externals  map[string][]byte
+	Agents     map[string][][]byte
+	Aggregates map[string][][]byte
+	Browsers   map[string][][]byte
+	Externals  map[string][][]byte
 	mux        *sync.RWMutex
 }
 
 func NewABHList() *ABHList {
 	return &ABHList{
-		Agents:     make(map[string][]byte),
-		Aggregates: make(map[string][]byte),
-		Browsers:   make(map[string][]byte),
-		Externals:  make(map[string][]byte),
+		Agents:     make(map[string][][]byte),
+		Aggregates: make(map[string][][]byte),
+		Browsers:   make(map[string][][]byte),
+		Externals:  make(map[string][][]byte),
 		mux:        &sync.RWMutex{},
 	}
 }
 
 var ErrABHNotFound = fmt.Errorf("ABH not found")
 
-func (a *ABHList) Get(t vxproto.AgentType, abi string) ([]byte, error) {
+func (a *ABHList) Get(t vxproto.AgentType, abi string) ([][]byte, error) {
 	a.mux.RLock()
 	defer a.mux.RUnlock()
 
-	var abh []byte
+	var abhs [][]byte
 	var ok bool
 	switch t {
 	case vxproto.VXAgent:
-		abh, ok = a.Agents[abi]
+		abhs, ok = a.Agents[abi]
 	case vxproto.Aggregate:
-		abh, ok = a.Aggregates[abi]
+		abhs, ok = a.Aggregates[abi]
 	case vxproto.Browser:
-		abh, ok = a.Browsers[abi]
+		abhs, ok = a.Browsers[abi]
 	case vxproto.External:
-		abh, ok = a.Externals[abi]
+		abhs, ok = a.Externals[abi]
 	default:
 		return nil, fmt.Errorf("unknown type %d passed", t)
 	}
 	if !ok {
 		return nil, fmt.Errorf("%w for ABI %s", ErrABHNotFound, abi)
 	}
-	abhCopy := make([]byte, len(abh))
-	copy(abhCopy, abh)
+	abhCopy := make([][]byte, len(abhs))
+	copy(abhCopy, abhs)
 	return abhCopy, nil
 }
 
@@ -86,13 +86,13 @@ func (l *ABHList) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(versionData, &dst); err != nil {
 		return err
 	}
-	copyMap := func(dst map[string][]byte, src map[string]string) error {
+	copyMap := func(dst map[string][][]byte, src map[string]string) error {
 		for abi, abhVal := range src {
 			abh, err := hex.DecodeString(abhVal)
 			if err != nil {
 				return fmt.Errorf("failed to decode the ABH hex value %s: %w", abhVal, err)
 			}
-			dst[abi] = abh
+			dst[abi] = append(dst[abi], abh)
 		}
 		return nil
 	}
@@ -202,13 +202,13 @@ func newABHListFromDBResult(results []*fetchABHListFromDBResult) (*ABHList, erro
 			}
 			switch r.T {
 			case vxproto.VXAgent:
-				abhList.Agents[abi] = abh
+				abhList.Agents[abi] = append(abhList.Agents[abi], abh)
 			case vxproto.Aggregate:
-				abhList.Aggregates[abi] = abh
+				abhList.Aggregates[abi] = append(abhList.Aggregates[abi], abh)
 			case vxproto.Browser:
-				abhList.Browsers[abi] = abh
+				abhList.Browsers[abi] = append(abhList.Browsers[abi], abh)
 			case vxproto.External:
-				abhList.Externals[abi] = abh
+				abhList.Externals[abi] = append(abhList.Externals[abi], abh)
 			default:
 				return nil, fmt.Errorf("unknown connection type %d passed", r.T)
 			}

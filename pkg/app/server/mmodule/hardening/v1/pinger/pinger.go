@@ -35,7 +35,7 @@ type Pinger struct {
 }
 
 type ABHer interface {
-	GetABH(vxproto.AgentType, *abherTypes.AgentBinaryID) ([]byte, error)
+	GetABH(vxproto.AgentType, *abherTypes.AgentBinaryID) ([][]byte, error)
 }
 
 func NewPinger(ctx context.Context, socket vxproto.IAgentSocket, agentType vxproto.AgentType, abh ABHer) *Pinger {
@@ -140,11 +140,11 @@ func (p *Pinger) Process(ctx context.Context, packetData []byte) error {
 		Arch:    info.Info.GetOs().GetArch(),
 		Version: info.Ver,
 	}
-	abh, err := p.abher.GetABH(p.agentType, agentBinaryID)
+	abhs, err := p.abher.GetABH(p.agentType, agentBinaryID)
 	if err != nil {
 		return fmt.Errorf("failed to get an ABH for the agent binary id \"%s\": %w", agentBinaryID.String(), err)
 	}
-	actualNonce, err := p.getActualNonce(ctx, packetData, agentID, abh)
+	actualNonce, err := p.getActualNonce(ctx, packetData, agentID, abhs)
 	if err != nil {
 		return fmt.Errorf("failed to decrypt the ping nonce: %w", err)
 	}
@@ -155,7 +155,7 @@ func (p *Pinger) Process(ctx context.Context, packetData []byte) error {
 	return nil
 }
 
-func (p *Pinger) getActualNonce(ctx context.Context, packetData []byte, agentID string, abh []byte) ([]byte, error) {
+func (p *Pinger) getActualNonce(ctx context.Context, packetData []byte, agentID string, abhs [][]byte) ([]byte, error) {
 	return packetData, nil
 }
 

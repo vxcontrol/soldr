@@ -7,27 +7,27 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	cache2 "soldr/pkg/app/server/mmodule/hardening/cache"
+	"soldr/pkg/app/server/mmodule/hardening/cache"
 	"soldr/pkg/app/server/mmodule/hardening/v1/abher/types"
 	"soldr/pkg/vxproto"
 )
 
 type ABH struct {
-	cache *cache2.Cache
+	cache *cache.Cache
 }
 
 const abhRefreshInterval = time.Second * 60
 
 func NewABH(ctx context.Context, store interface{}, basePath string) (*ABH, error) {
-	cacheInitParams := cache2.ConnectorParams{
+	cacheInitParams := cache.ConnectorParams{
 		FileFetcher: getABHListFromFile(basePath, NewABHList()),
 		DBFetcher:   getFnABHListFromDB,
 	}
 	return NewABHWithCacheParams(ctx, store, &cacheInitParams)
 }
 
-func NewABHWithCacheParams(ctx context.Context, store interface{}, cacheParams *cache2.ConnectorParams) (*ABH, error) {
-	c, err := cache2.NewCache(ctx, store, cacheParams, &cache2.Config{
+func NewABHWithCacheParams(ctx context.Context, store interface{}, cacheParams *cache.ConnectorParams) (*ABH, error) {
+	c, err := cache.NewCache(ctx, store, cacheParams, &cache.Config{
 		RefreshInterval: abhRefreshInterval,
 		Logger: logrus.WithFields(logrus.Fields{
 			"component": "abh_cache",
@@ -42,7 +42,7 @@ func NewABHWithCacheParams(ctx context.Context, store interface{}, cacheParams *
 	}, nil
 }
 
-func (a *ABH) GetABH(t vxproto.AgentType, id *types.AgentBinaryID) ([]byte, error) {
+func (a *ABH) GetABH(t vxproto.AgentType, id *types.AgentBinaryID) ([][]byte, error) {
 	abhList, ok := a.cache.Dump().(*ABHList)
 	if !ok {
 		return nil, fmt.Errorf("failed to get the ABH list from cache: the stored object is not of the type *abhList")
@@ -56,23 +56,23 @@ func (a *ABH) GetABH(t vxproto.AgentType, id *types.AgentBinaryID) ([]byte, erro
 	default:
 		return nil, fmt.Errorf("unknown connection type: %d", t)
 	}
-	abh, err := abhList.Get(t, abi)
+	abhs, err := abhList.Get(t, abi)
 	if err != nil {
 		return nil, err
 	}
-	return abh, nil
+	return abhs, nil
 }
 
-func (a *ABH) GetABHWithSocket(t vxproto.AgentType, socket vxproto.IAgentSocket) ([]byte, error) {
+func (a *ABH) GetABHWithSocket(t vxproto.AgentType, socket vxproto.IAgentSocket) ([][]byte, error) {
 	aid, err := getAgentBinaryIDFromSocket(socket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the agent binary ID from socket: %w", err)
 	}
-	abh, err := a.GetABH(t, aid)
+	abhs, err := a.GetABH(t, aid)
 	if err != nil {
 		return nil, err
 	}
-	return abh, nil
+	return abhs, nil
 }
 
 func getAgentBinaryIDFromSocket(socket vxproto.IAgentSocket) (*types.AgentBinaryID, error) {

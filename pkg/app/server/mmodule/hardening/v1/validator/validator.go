@@ -23,8 +23,8 @@ import (
 )
 
 type ABHer interface {
-	GetABH(t vxproto.AgentType, id *types.AgentBinaryID) ([]byte, error)
-	GetABHWithSocket(t vxproto.AgentType, socket vxproto.IAgentSocket) ([]byte, error)
+	GetABH(t vxproto.AgentType, id *types.AgentBinaryID) ([][]byte, error)
+	GetABHWithSocket(t vxproto.AgentType, socket vxproto.IAgentSocket) ([][]byte, error)
 }
 
 type SBHer interface {
@@ -37,7 +37,7 @@ type SSAGenerator interface {
 
 type Challenger interface {
 	GetConnectionChallenge() ([]byte, error)
-	CheckConnectionChallenge(challengeCT []byte, expectedChallenge []byte, agentID string, abh []byte) error
+	CheckConnectionChallenge(challengeCT []byte, expectedChallenge []byte, agentID string, abh [][]byte) error
 }
 
 type TunnelConfigurer interface {

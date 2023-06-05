@@ -194,18 +194,25 @@ func (v *ConnectionValidator) validateABH(
 	agentID *types.AgentBinaryID,
 	actualABH []byte,
 ) error {
-	expectedABH, err := v.abher.GetABH(agentType, agentID)
+	expectedABHs, err := v.abher.GetABH(agentType, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to get the ABH for the agent's binary %s: %w", agentID.String(), err)
 	}
-	if !bytes.Equal(expectedABH, actualABH) {
-		return fmt.Errorf(
-			"passed ABH (%s) and expected ABH (%s) are different",
-			base64.StdEncoding.EncodeToString(actualABH),
-			base64.StdEncoding.EncodeToString(expectedABH),
-		)
+	for _, expectedABH := range expectedABHs {
+		if bytes.Equal(expectedABH, actualABH) {
+			return nil
+		}
 	}
-	return nil
+	var expectedABHsBase64 []string
+	for _, expectedABH := range expectedABHs {
+		expectedABHsBase64 = append(expectedABHsBase64, base64.StdEncoding.EncodeToString(expectedABH))
+	}
+	return fmt.Errorf(
+		"passed ABH (%s) and expected ABH (%s) are different",
+		base64.StdEncoding.EncodeToString(actualABH),
+		strings.Join(expectedABHsBase64, ", "),
+	)
+
 }
 
 func sendInitConnectResponse(ctx context.Context, ws vxproto.SyncWS, resp *protoagent.InitConnectionResponse) error {
