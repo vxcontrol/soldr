@@ -166,6 +166,8 @@ export class PoliciesEffects {
                     PoliciesActions.selectGroup,
                     PoliciesActions.setGridFiltration,
                     PoliciesActions.setGridFiltrationByTag,
+                    PoliciesActions.setAgentsGridFiltrationByTag,
+                    PoliciesActions.setGroupsGridFiltrationByTag,
                     PoliciesActions.setGridSearch,
                     PoliciesActions.setGridSorting,
                     PoliciesActions.resetFiltration

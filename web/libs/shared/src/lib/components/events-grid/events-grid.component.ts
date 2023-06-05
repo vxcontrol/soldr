@@ -20,7 +20,7 @@ import { Event } from '@soldr/models';
 
 import { STATE_STORAGE_TOKEN, StateStorage, WidthChangeEvent } from '../../directives';
 import { LanguageService } from '../../services';
-import { Filtration, ListItem, ProxyPermission, ViewMode } from '../../types';
+import { Filtration, ProxyPermission, ViewMode } from '../../types';
 import { GridColumnFilterItem, Sorting } from '../grid/grid.types';
 
 interface EventsGridState {

@@ -236,17 +236,11 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     onSetAgentsTag(tag: string) {
-        this.groupsFacade.setAgentsGridFiltration({
-            field: 'tags',
-            value: [tag]
-        });
+        this.groupsFacade.setAgentsGridFiltrationByTag(tag);
     }
 
     onSetPolicyTag(tag: string) {
-        this.groupsFacade.setPoliciesGridFiltration({
-            field: 'tags',
-            value: [tag]
-        });
+        this.groupsFacade.setPoliciesGridFiltrationByTag(tag);
     }
 
     onSelectTab() {

@@ -21,8 +21,7 @@
             class="mc-button_transparent grid__filter-button"
             [mcDropdownTriggerFor]="statusDropdown">
             <span>{{ title }}</span>
-            <span *ngIf="data.labels?.length > 0">: {{ data.labels[0] }}
-        </span>
+            <span *ngIf="data.labels?.length > 0">: {{ data.labels[0] }}</span>
             <i mc-icon="soldr-icons-angle-down-S_16" class="soldr-icons"></i>
         </button>
 

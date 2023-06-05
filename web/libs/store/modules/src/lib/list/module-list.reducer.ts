@@ -2,7 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 
 import { ErrorResponse, ModelsModuleS, ModelsModuleSShort } from '@soldr/api';
 import { manyModulesToModels } from '@soldr/models';
-import { Filtration, Sorting } from '@soldr/shared';
+import { Filtration, getGridFiltration, getGridFiltrationByTag, Sorting } from '@soldr/shared';
 
 import * as ModulesActions from './module-list.actions';
 
@@ -117,18 +117,14 @@ export const reducer = createReducer(
     on(ModulesActions.selectModules, (state, { modules }) => ({ ...state, selectedIds: modules.map(({ id }) => id) })),
     on(ModulesActions.selectModulesByIds, (state, { ids }) => ({ ...state, selectedIds: ids })),
 
-    on(ModulesActions.setGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.gridFiltration.filter((item: Filtration) => item.field !== filtration.field);
-
-        return { ...state, gridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])] };
-    }),
-    on(ModulesActions.setGridFiltrationByTag, (state, { tag }) => {
-        const updatedFiltration = state.gridFiltration.filter((item: Filtration) => item.field !== 'tags');
-
-        return { ...state, gridFiltration: [...updatedFiltration, { field: 'tags', value: [tag] }] };
-    }),
+    on(ModulesActions.setGridFiltration, (state, { filtration }) => ({
+        ...state,
+        gridFiltration: getGridFiltration(filtration, state.gridFiltration)
+    })),
+    on(ModulesActions.setGridFiltrationByTag, (state, { tag }) => ({
+        ...state,
+        gridFiltration: getGridFiltrationByTag(state.gridFiltration, tag)
+    })),
     on(ModulesActions.setGridSearch, (state, { value }) => ({ ...state, gridSearch: value })),
     on(ModulesActions.resetFiltration, (state) => ({ ...state, gridFiltration: [] })),
     on(ModulesActions.setGridSorting, (state, { sorting }) => ({ ...state, sorting })),

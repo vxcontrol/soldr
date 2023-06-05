@@ -377,6 +377,14 @@ export class PoliciesFacade {
         this.store.dispatch(PoliciesActions.setGridFiltrationByTag({ tag }));
     }
 
+    setAgentsGridFiltrationByTag(tag: string): void {
+        this.store.dispatch(PoliciesActions.setAgentsGridFiltrationByTag({ tag }));
+    }
+
+    setGroupsGridFiltrationByTag(tag: string): void {
+        this.store.dispatch(PoliciesActions.setGroupsGridFiltrationByTag({ tag }));
+    }
+
     setGridSearch(value: string): void {
         this.store.dispatch(PoliciesActions.setGridSearch({ value }));
     }

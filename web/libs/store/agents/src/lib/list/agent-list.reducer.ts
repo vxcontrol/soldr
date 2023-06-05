@@ -2,7 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 
 import { ErrorResponse, PrivateAgentCountResponse } from '@soldr/api';
 import { Agent, manyAgentsToModels, oneAgentToModel, AgentModule, privateAgentModulesToModels } from '@soldr/models';
-import { Filter, Filtration, Sorting } from '@soldr/shared';
+import { Filter, Filtration, getGridFiltration, getGridFiltrationByTag, Sorting } from '@soldr/shared';
 
 import * as AgentListActions from './agent-list.actions';
 
@@ -181,18 +181,14 @@ export const reducer = createReducer(
         gridFiltration: [],
         gridSearch: ''
     })),
-    on(AgentListActions.setGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.gridFiltration.filter((item: Filtration) => item.field !== filtration.field);
-
-        return { ...state, gridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])] };
-    }),
-    on(AgentListActions.setGridFiltrationByTag, (state, { tag }) => {
-        const updatedFiltration = state.gridFiltration.filter((item: Filtration) => item.field !== 'tags');
-
-        return { ...state, gridFiltration: [...updatedFiltration, { field: 'tags', value: [tag] }] };
-    }),
+    on(AgentListActions.setGridFiltration, (state, { filtration }) => ({
+        ...state,
+        gridFiltration: getGridFiltration(filtration, state.gridFiltration)
+    })),
+    on(AgentListActions.setGridFiltrationByTag, (state, { tag }) => ({
+        ...state,
+        gridFiltration: getGridFiltrationByTag(state.gridFiltration, tag)
+    })),
     on(AgentListActions.setGridSearch, (state, { value }) => ({ ...state, gridSearch: value })),
     on(AgentListActions.resetFiltration, (state) => ({ ...state, gridFiltration: [] })),
     on(AgentListActions.setGridSorting, (state, { sorting }) => ({ ...state, sorting })),

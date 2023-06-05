@@ -41,7 +41,6 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
     agents$ = this.policiesFacade.policyAgents$.pipe(
         map((agents) => this.dateFormatterService.formatToRelativeDate(agents, 'connected_date'))
     );
-    agentsGridFiltration$ = this.policiesFacade.agentsGridFiltration$;
     agentsGridFiltrationByFields$ = this.policiesFacade.agentsGridFiltrationByFields$;
     agentsPage$ = this.policiesFacade.agentsPage$;
     agentsSearchValue$ = this.policiesFacade.agentsSearchValue$;
@@ -82,6 +81,7 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
     policy$ = this.policiesFacade.policy$;
     selectedAgent$ = this.policiesFacade.selectedAgent$;
     selectedGroup$ = this.policiesFacade.selectedPolicyGroup$;
+
     selectedModuleName: string;
     sidebarPositions = SidebarPositions;
     subscription = new Subscription();
@@ -285,17 +285,11 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     onSetAgentsTag(tag: string) {
-        this.policiesFacade.setAgentsGridFiltration({
-            field: 'tags',
-            value: [tag]
-        });
+        this.policiesFacade.setAgentsGridFiltrationByTag(tag);
     }
 
     onSetGroupsTag(tag: string) {
-        this.policiesFacade.setGroupsGridFiltration({
-            field: 'tags',
-            value: [tag]
-        });
+        this.policiesFacade.setGroupsGridFiltrationByTag(tag);
     }
 
     onSelectModule(module: EntityModule) {

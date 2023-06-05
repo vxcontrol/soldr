@@ -411,6 +411,14 @@ export class GroupsFacade {
         this.store.dispatch(GroupsActions.setGridFiltrationByTag({ tag }));
     }
 
+    setAgentsGridFiltrationByTag(tag: string): void {
+        this.store.dispatch(GroupsActions.setAgentsGridFiltrationByTag({ tag }));
+    }
+
+    setPoliciesGridFiltrationByTag(tag: string): void {
+        this.store.dispatch(GroupsActions.setPoliciesGridFiltrationByTag({ tag }));
+    }
+
     setGridSearch(value: string): void {
         this.store.dispatch(GroupsActions.setGridSearch({ value }));
     }
