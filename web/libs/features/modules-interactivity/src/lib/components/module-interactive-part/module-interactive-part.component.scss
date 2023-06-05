@@ -1,3 +1,5 @@
+$pagination-height: 58px;
+
 .module-interactivity-part {
     display: block;
     box-sizing: border-box;
@@ -11,8 +13,6 @@
     .drag-select {
         .sortable-ghost {
             opacity: 0.8;
-            color: #fff !important;
-            background: #909399 !important;
         }
 
         .el-tag {
@@ -86,13 +86,8 @@
         }
     }
 
-    .el-table .el-table__row_selected {
-        background-color: #f0f7ff;
-    }
-
     .el-pagination__selected {
         font-weight: normal;
-        color: #606266;
     }
 
     .el-table .el-table__row .cell {
@@ -110,9 +105,16 @@
         text-overflow: ellipsis;
     }
 
+    .el-table--fit {
+        height: calc(100% - $pagination-height) !important;
+    }
+
+    .el-pagination {
+        padding: 15px 15px;
+    }
+
     .vue-grid__search-input .el-input-group__prepend {
         width: 140px;
-        background-color: #fff;
     }
 
     .vue-grid__search-container_has-searchable-fields {
@@ -149,6 +151,14 @@
 
     .vue-grid__container {
         position: relative;
+        border-top: 1px solid transparent;
+    }
+
+    .sidebar {
+        width: 280px;
+        min-width: 280px;
+        padding: 15px 15px 0;
+        border-left: 1px solid transparent;
     }
 
     .vue-grid_no-selectable {
@@ -165,5 +175,9 @@
         bottom: 6px;
         right: 0;
         padding: 0 10px;
+    }
+
+    .el-button.el-button--default {
+        border-color: transparent;
     }
 }

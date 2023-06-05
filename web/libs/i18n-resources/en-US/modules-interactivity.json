@@ -1,8 +1,9 @@
 {
+    "ModulesInteractivity.Grid.DropdownItemText.ClearSelection": "Clear selection",
     "ModulesInteractivity.Grid.DropdownItemText.SelectAll": "Select All",
     "ModulesInteractivity.Grid.DropdownItemText.SelectPage": "Select everything on the page",
-    "ModulesInteractivity.Grid.DropdownItemText.ClearSelection": "Clear selection",
-    "ModulesInteractivity.Grid.Text.RowsSummary": "Total: {total}, {selected, select, all {all selected} other {selected: {selected}}}",
     "ModulesInteractivity.Grid.SelectPlaceholder.SelectColumns": "Select the displayed columns in the table",
+    "ModulesInteractivity.Grid.Text.RowsSummary": "Total: {total}",
+    "ModulesInteractivity.Grid.Text.RowsSummarySelected": "Total: {total}, {selected, select, all {all selected} other {selected: {selected}}}",
     "ModulesInteractivity.Grid.TooltipText.ColumnsSettings": "Columns setting"
 }

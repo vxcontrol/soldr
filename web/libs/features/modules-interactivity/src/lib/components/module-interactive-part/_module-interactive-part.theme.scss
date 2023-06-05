@@ -1,0 +1,30 @@
+$grid-border-color: #e4e7ed;
+
+@mixin module-interactive-part-theme($mosaic-theme) {
+    .module-interactivity-container {
+        .drag-select {
+            .sortable-ghost {
+                color: #fff !important;
+                background: #909399 !important;
+            }
+        }
+
+        .el-table .el-table__row_selected {
+            background-color: #f0f7ff;
+        }
+
+        .el-pagination__selected {
+            color: #606266;
+        }
+
+        .vue-grid__search-input .el-input-group__prepend {
+            background-color: #fff;
+        }
+
+        .vue-grid__container,
+        .sidebar,
+        .el-button.el-button--default {
+            border-color: $grid-border-color;
+        }
+    }
+}
