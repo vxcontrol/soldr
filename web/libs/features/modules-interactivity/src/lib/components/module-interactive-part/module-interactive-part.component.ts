@@ -156,28 +156,20 @@ export class ModuleInteractivePartComponent implements OnInit, OnChanges, OnDest
         );
         const subview = modulesAPI.getView(this.module.info.name);
         let protoAPI: VXAPI;
-        let vxHostPort: string;
-        if (window.location.protocol === 'https:') {
-            vxHostPort = `wss://${window.location.host}`;
-        } else {
-            vxHostPort = `ws://${window.location.host}`;
-        }
 
-        if (this.viewMode === ViewMode.Agents) {
+        if (this.viewMode === ViewMode.Agents || this.viewMode === ViewMode.Groups) {
+            let vxHostPort: string;
+            if (window.location.protocol === 'https:') {
+                vxHostPort = `wss://${window.location.host}`;
+            } else {
+                vxHostPort = `ws://${window.location.host}`;
+            }
+            const type = this.viewMode === ViewMode.Agents ? 'browser' : 'aggregate';
             protoAPI = new VXAPI({
                 hash: this.entity.hash,
-                type: "browser",
                 moduleName: this.module.info.name,
                 hostPort: vxHostPort,
-                agentProto,
-                protocolProto
-            });
-        } else if (this.viewMode === ViewMode.Groups) {
-            protoAPI = new VXAPI({
-                hash: this.entity.hash,
-                type: "aggregate",
-                moduleName: this.module.info.name,
-                hostPort: vxHostPort,
+                type,
                 agentProto,
                 protocolProto
             });
