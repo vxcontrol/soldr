@@ -702,8 +702,8 @@ func (vxp *vxProto) DropAgent(ctx context.Context, aid string) {
 		return
 	}
 
-	vxp.mutex.RLock()
-	defer vxp.mutex.RUnlock()
+	vxp.mutex.Lock()
+	defer vxp.mutex.Unlock()
 
 	agents := make([]*agentSocket, 0)
 	for _, asocket := range vxp.agents {
@@ -1334,16 +1334,14 @@ func (vxp *vxProto) notifyAgentConnected(ctx context.Context, src string) {
 				// use nonblocking sending notification to avoid concurent blocking
 				// when msocket wants to send some data via vxproto and blocks reader
 				receiver := msocket.GetReceiver()
-				select {
-				case receiver <- packet:
-				default:
-					// get more guaranty by deferred send this notification
-					go func() {
-						select {
-						case receiver <- packet:
-						case <-ctx.Done():
-						}
-					}()
+				if msocket.name == "main" {
+					receiver <- packet
+				} else {
+					select {
+					case receiver <- packet:
+					default:
+						asyncSendPacket(packet, receiver, msocket.router.control)
+					}
 				}
 			}
 		}
@@ -1378,16 +1376,14 @@ func (vxp *vxProto) notifyAgentDisconnected(ctx context.Context, src string) {
 				// use nonblocking sending notification to avoid concurent blocking
 				// when msocket wants to send some data via vxproto and blocks reader
 				receiver := msocket.GetReceiver()
-				select {
-				case receiver <- packet:
-				default:
-					// get more guaranty by deferred send this notification
-					go func(quit chan struct{}) {
-						select {
-						case receiver <- packet:
-						case <-quit:
-						}
-					}(msocket.router.control)
+				if msocket.name == "main" {
+					receiver <- packet
+				} else {
+					select {
+					case receiver <- packet:
+					default:
+						asyncSendPacket(packet, receiver, msocket.router.control)
+					}
 				}
 			}
 		}
@@ -1405,6 +1401,16 @@ func (ti *topicInfo) GetGroupID() string {
 func (ti *topicInfo) GetSubscriptions() []string {
 	subs := make([]string, 0, len(ti.subscriptions))
 	return append(subs, ti.subscriptions...)
+}
+
+func asyncSendPacket(packet *Packet, receiver chan *Packet, quit chan struct{}) {
+	// get more guaranty by deferred send this notification
+	go func() {
+		select {
+		case receiver <- packet:
+		case <-quit:
+		}
+	}()
 }
 
 func getURLFromHost(host string) (*url.URL, error) {

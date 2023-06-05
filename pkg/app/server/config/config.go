@@ -143,7 +143,7 @@ var defaultConfig = &Config{
 	DB: DB{
 		MigrationsPath: "db/server/migrations",
 	},
-	MaxConcSyncingAgents: 100,
+	MaxConcSyncingAgents: 20,
 }
 
 func parseConfigFile(path string) (*Config, error) {

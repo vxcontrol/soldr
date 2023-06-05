@@ -1450,14 +1450,17 @@ func (mm *MainModule) runSyncAgentModules(ctx context.Context, mxSync *sync.Mute
 				"agent_id": ainfo.info.ID,
 				"group_id": ainfo.info.GID,
 			}).Error(msg)
-			// do some a little bit delay before retry sync modules to prevent loop fast call
-			time.Sleep(500 * time.Millisecond)
-			// try to rerun sync modules and here uses nonblocking
-			// because agent can get quit message in concurrent time
-			select {
-			case ainfo.update <- struct{}{}:
-			default:
+			// try to close agent connection because modules synchronization has failed
+			mm.proto.DropAgent(syncCtx, ainfo.info.ID)
+			// do some a little bit delay before force closing to prevent loop fast call
+			time.Sleep(time.Second)
+			// fallback to force close agent sync routine if connection has already closed
+			ainfo.mxdone.Lock()
+			if !ainfo.isfin {
+				ainfo.quit <- struct{}{}
+				<-ainfo.done
 			}
+			ainfo.mxdone.Unlock()
 		}
 
 		mStatusList, err := mm.getStatusModules(syncCtx, dst, ainfo)

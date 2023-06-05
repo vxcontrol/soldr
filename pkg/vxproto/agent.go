@@ -120,7 +120,7 @@ type AgentInfo struct {
 
 const (
 	PingerInterval time.Duration = time.Second * 20
-	PingerTimeout  time.Duration = PingerInterval * 3
+	PingerTimeout  time.Duration = PingerInterval * 6
 )
 
 type Pinger interface {
