@@ -41,8 +41,6 @@ import { defaultGroupsPageState, GroupsPageState } from '../../utils';
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GroupsPageComponent implements OnInit, OnDestroy {
-    @ViewChild('groupsGrid') groupsGridComponent: GridComponent;
-
     direction = Direction;
     emptyText$: Observable<string>;
     dataGrid$: Observable<Group[]>;
@@ -139,9 +137,9 @@ export class GroupsPageComponent implements OnInit, OnDestroy {
     }
 
     refreshSelected() {
-        this.groupsFacade.createdGroup$.pipe(filter(Boolean), first()).subscribe(({ id }) =>
+        this.groupsFacade.createdGroup$.pipe(filter(Boolean), first()).subscribe(({ hash }) =>
             setTimeout(() => {
-                this.groupsGridComponent.gridApi.getRowNode(`${id}`).setSelected(true);
+                this.router.navigate(['/groups', hash]);
                 this.groupsFacade.resetCreatedGroup();
             })
         );

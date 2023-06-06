@@ -59,8 +59,6 @@ import { defaultPoliciesPageState, PoliciesPageState, defaultFilters } from '../
     changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PoliciesPageComponent implements OnInit, OnDestroy {
-    @ViewChild('policiesGrid') policiesGridComponent: GridComponent;
-
     dataGrid$: Observable<Policy[]>;
     direction = Direction;
     emptyText$: Observable<string>;
@@ -194,7 +192,9 @@ export class PoliciesPageComponent implements OnInit, OnDestroy {
     onGridSelectRows(policies: Policy[]) {
         this.policiesFacade.resetPolicyErrors();
         this.policiesFacade.selectPolicies(policies);
-        this.policiesFacade.fetchModules(policies[0].hash);
+        if (policies.length) {
+            this.policiesFacade.fetchModules(policies[0].hash);
+        }
     }
 
     onResetFiltration() {
@@ -214,9 +214,9 @@ export class PoliciesPageComponent implements OnInit, OnDestroy {
     }
 
     refreshSelected() {
-        this.policiesFacade.createdPolicy$.pipe(filter(Boolean), first()).subscribe(({ id }) =>
+        this.policiesFacade.createdPolicy$.pipe(filter(Boolean), first()).subscribe(({ hash }) =>
             setTimeout(() => {
-                this.policiesGridComponent.gridApi.getRowNode(`${id}`).setSelected(true);
+                this.router.navigate(['/policies', hash]);
                 this.policiesFacade.resetCreatedPolicy();
             })
         );
