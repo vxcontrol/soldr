@@ -190,6 +190,7 @@ export const GridComponent = Vue.extend({
         ignoreEvents: { type: Boolean },
         canSelect: { type: Boolean },
         multiple: { type: Boolean },
+        showSelectionMenu: { type: Boolean, default: true },
         query: { type: Object },
         data: { type: Array },
         total: { type: Number },
