@@ -530,6 +530,7 @@
                                         [loadingFlag]="isLoadingPolicyInfo">
                                         <soldr-policy-info
                                             *ngIf="data.selected[0]"
+                                            class="scrollable-y layout-fill"
                                             [stateStorageKey]="'policies.list.rightSidebar'"
                                             [modules]="data.policyModules"
                                             [state]="pageState.rightSidebar"

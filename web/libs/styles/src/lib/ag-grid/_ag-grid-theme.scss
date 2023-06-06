@@ -47,11 +47,6 @@
 
         color: theming.mc-color(map-get($mosaic-theme, foreground), text);
 
-        .ag-body-viewport.ag-layout-normal,
-        .ag-body-horizontal-scroll-viewport {
-            @extend .mc-scrollbar;
-        }
-
         .ag-tab {
             display: inline-block;
             margin: $grid-size $grid-size 0;

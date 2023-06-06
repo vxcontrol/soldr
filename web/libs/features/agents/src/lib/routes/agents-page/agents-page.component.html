@@ -615,6 +615,7 @@
                                     soldrProgressSpinner
                                     [loadingFlag]="data.isLoadingAgent">
                                     <soldr-agent-info
+                                        class="scrollable-y layout-fill"
                                         *ngIf="data.selected.length === 1"
                                         [agent]="data.selected[0]"
                                         [latestBinaryVersion]="data.latestAgentBinaryVersion"

@@ -426,6 +426,7 @@
 
                             <div class="sidebar-content flex-auto" soldrProgressSpinner [loadingFlag]="data.isLoadingGroup">
                                 <soldr-group-info
+                                    class="scrollable-y layout-fill"
                                     *ngIf="data.selected[0]"
                                     [stateStorageKey]="'groups.list.rightSidebar'"
                                     [state]="pageState.rightSidebar"

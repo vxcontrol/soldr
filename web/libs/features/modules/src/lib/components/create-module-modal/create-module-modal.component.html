@@ -11,7 +11,7 @@
         <mc-sidepanel-header [closeable]="true">
             <span>{{ t('Modules.CreateModule.Text.Header') }}</span>
         </mc-sidepanel-header>
-        <mc-sidepanel-body [class]="'create-module-modal'">
+        <mc-sidepanel-body [class]="'create-module-modal'" class="mc-scrollbar">
             <ng-container
                 *ngIf="({
                 tags: tags$ | async
