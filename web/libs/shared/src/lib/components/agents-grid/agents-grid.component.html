@@ -20,6 +20,7 @@
                 (nextPage)="nextPage()"
                 (selectRows)="onGridSelectRows($event)"
                 (sortChanged)="onGridSort($event)"
+                (refresh)="refresh.emit()"
                 (resetFiltration)="onResetFiltration()"
                 *transloco="let tShared; read: 'shared'">
                 <ng-template #descriptionCell let-node="params.data">

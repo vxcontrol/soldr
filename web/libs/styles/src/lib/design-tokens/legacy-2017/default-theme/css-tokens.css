@@ -39,6 +39,16 @@
   --mc-checkbox-size-border-width: 1px;
   --mc-checkbox-size-border-radius: 4px;
   --mc-checkbox-size-toggle-box-shadow: inset 0 0 1px 0 rgba(0, 0, 0, 0.2);
+  --mc-code-block-size-border-radius: 4px;
+  --mc-code-block-size-padding: 12px;
+  --mc-code-block-size-actionbar-border-radius: 4px;
+  --mc-code-block-size-actionbar-gap: 0;
+  --mc-code-block-size-actionbar-header-gap: 8px;
+  --mc-code-block-size-actionbar-margin-top: 6px;
+  --mc-code-block-size-actionbar-margin-right: 6px;
+  --mc-code-block-size-actionbar-padding: 8px;
+  --mc-code-block-size-line-numbers-padding: 2px 12px 0 0;
+  --mc-code-block-size-line-numbers-border-width: 0;
   --mc-datepicker-toggle-size-width: 30px;
   --mc-datepicker-toggle-size-height: 30px;
   --mc-datepicker-body-size-label-paddings: 8px 28px 12px 12px;

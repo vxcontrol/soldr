@@ -49,6 +49,7 @@ export class AgentsGridComponent implements OnInit, OnChanges, OnDestroy {
     @Output() changeSelection = new EventEmitter<Agent>();
     @Output() filter = new EventEmitter<Filtration>();
     @Output() loadNextPage = new EventEmitter();
+    @Output() refresh = new EventEmitter();
     @Output() resetFiltration = new EventEmitter();
     @Output() search = new EventEmitter<string>();
     @Output() setTag = new EventEmitter<string>();

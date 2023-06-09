@@ -134,13 +134,12 @@
                                         class="mc-button_transparent"
                                         e2e-id="btnFilterByGroupsTags"
                                         [mcTooltip]="tShared('Shared.Pseudo.TooltipText.GroupsTags')">
-                                        <i mc-icon="soldr-icons-tags_16" class="soldr-icons">
-                                    <span
-                                        *ngIf="data.selectedGroupsTags?.length > 0"
-                                        class="mc-badge mc-badge_mini mc-badge_solid mc-badge_primary">
-                                        {{data.selectedGroupsTags?.length < 99 ? data.selectedGroupsTags?.length : '99+'}}
-                                    </span>
-                                        </i>
+                                        <i mc-icon="soldr-icons-tags_16" class="soldr-icons"></i>
+                                        <span
+                                            *ngIf="data.selectedGroupsTags?.length > 0"
+                                            class="mc-extra-small-text policies-page__tags-counter">
+                                            {{data.selectedGroupsTags?.length < 99 ? data.selectedGroupsTags?.length : '99+'}}
+                                        </span>
                                     </button>
                                 </soldr-tree-popover>
                             </header>
@@ -211,6 +210,7 @@
                                     (search)="onGridSearch($event)"
                                     (sortChanged)="onGridSort($event)"
                                     (selectRows)="onGridSelectRows($event)"
+                                    (refresh)="refreshData()"
                                     (resetFiltration)="onResetFiltration()"
                                     (nextPage)="loadNextPage(data.page + 1)">
 

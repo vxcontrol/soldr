@@ -29,11 +29,13 @@
 
 @use '../../../../apps/soldr-ui/src/app/components/navbar/navbar.theme';
 
+@use '../../../features/agents/src/lib/routes/agents-page/agents-page.theme';
 @use '../../../features/distributions/src/lib/routes/distributions-page/distributions-page.theme';
 @use '../../../features/login/src/lib/routes/login-page/login-page.theme';
 @use '../../../features/modules/src/lib/components/import-module-modal/import-module-modal.theme';
 @use '../../../features/modules/src/lib/components/toggle-item/toggle-item.theme';
 @use '../../../features/password/src/lib/routes/password-change/password-change.theme';
+@use '../../../features/policies/src/lib/routes/policies-page/policies-page.theme';
 
 @use 'ag-grid/ag-grid-theme';
 @use 'mc-tabs/mc-tabs.theme';
@@ -47,6 +49,7 @@
     @include actionbar.actionbar-theme($mosaic-theme);
     @include agent-connection-status.agent-connection-status-theme($mosaic-theme);
     @include agent-version.agent-version-theme($mosaic-theme);
+    @include agents-page.agents-page-component-theme($mosaic-theme);
     @include assigning-actions-master.assigning-actions-master-theme($mosaic-theme);
     @include assigning-actions-to-event.assigning-actions-to-event-theme($mosaic-theme);
     @include autocomplete-tags.autocomplete-tags-theme($mosaic-theme);
@@ -72,6 +75,7 @@
     @include page-layout.page-layout-theme($mosaic-theme);
     @include progress-container.progress-container-theme($mosaic-theme);
     @include password-change.password-change-theme($mosaic-theme);
+    @include policies-page.policies-page-component-theme($mosaic-theme);
     @include ag-grid-theme.ag-grid-theme($mosaic-theme);
     @include related-list.related-list-theme($mosaic-theme);
     @include secure-module-config.secure-module-config-theme($mosaic-theme);

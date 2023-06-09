@@ -77,14 +77,17 @@
                     [class.mc-active]="canShowFiltersBlock"
                     [mcTooltip]="tShared('Shared.Grid.TooltipText.ShowFilters')"
                     (click)="toggleFiltersBlock()">
-                    <i mc-icon="soldr-icons-filter_16" class="soldr-icons">
-                        <span
-                            *ngIf="filtration?.length > 0 && !canShowFiltersBlock"
-                            class="mc-badge mc-badge_mini mc-badge_solid mc-badge_primary">
-                            {{ filtration.length }}
-                        </span>
-                    </i>
+                    <i mc-icon="soldr-icons-filter_16" class="soldr-icons"></i>
+                    <span
+                        *ngIf="filtration?.length > 0 && !canShowFiltersBlock"
+                        class="mc-extra-small-text grid__filters-counter">
+                        {{ filtration.length }}
+                    </span>
                 </button>
+
+                <mc-divider [vertical]="true" class="layout-margin-left-s layout-margin-right-s"></mc-divider>
+
+                <soldr-refresher (refresh)="refresh.emit()"></soldr-refresher>
             </div>
         </ng-template>
 

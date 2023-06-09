@@ -1,5 +1,6 @@
 @use '@ptsecurity/mosaic/theming';
 @use '@ptsecurity/mosaic/visual';
+@use '@mosaic-design/infosec-components/components/refresher';
 
 @use '../element-ui/element-ui-components.theme';
 @use '../base/base.theme';
@@ -27,10 +28,12 @@
     @include components.soldr-ui-components-theme($theme);
     @include element-ui-components.element-ui-components($elementTheme);
     @include overriden-vue.overriden-vue-theme($theme);
+    @include refresher.theme($theme);
 }
 
 @mixin soldr-typography($config) {
     @include theming.mosaic-typography($config);
     @include theming.mc-typography-level-to-styles($config, body);
     @include components.soldr-ui-components-typography($config);
+    @include refresher.typography($config);
 }

@@ -55,6 +55,7 @@ export * from './password-form/password-form.component';
 export * from './policies-grid/policies-grid.component';
 export * from './policy-info/policy-info.component';
 export * from './progress-container/progress-container.component';
+export * from './refresher/refresher.component';
 export * from './related-list/related-list.component';
 export * from './secure-module-config/secure-module-config.component';
 export * from './tag/tag.component';

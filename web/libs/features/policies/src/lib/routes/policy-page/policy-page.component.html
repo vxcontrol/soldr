@@ -203,7 +203,7 @@
                                     [selectModuleName]="selectedModuleName"
                                     (selectModule)="onSelectModule($event)"
                                     (refresh)="refreshModules()"
-                                    (afterChangeModuleState)="refreshAfterChangeModuleState($event)"
+                                    (afterChangeModuleState)="refreshAfterChangeModuleState()"
                                     (afterChangeModuleConfig)="updateModuleConfig($event)">
                                 </soldr-modules-config>
                                 <ng-template #moduleInstanceLink let-moduleName="moduleName">
@@ -236,6 +236,7 @@
                                 [moduleLink]="moduleLink"
                                 (search)="eventsSearch($event)"
                                 (filter)="eventsFilter($event)"
+                                (refresh)="refreshEvents(data.policy.id)"
                                 (resetFiltration)="eventsResetFiltration()"
                                 (loadNextPage)="loadNextEventsPage(data.policy.id, data.eventsPage + 1)"
                                 (sort)="eventsSort($event)">
@@ -258,7 +259,8 @@
                                 <soldr-dependencies-grid
                                     e2e-id="grPolicyDependencies"
                                     [dependencies]="data.dependencies"
-                                    [viewMode]="viewModeEnum.Policies">
+                                    [viewMode]="viewModeEnum.Policies"
+                                    (refresh)="refreshDependencies()">
                                 </soldr-dependencies-grid>
                             </soldr-progress-container>
                         </mc-tab>
@@ -285,6 +287,7 @@
                                     (changeSelection)="groupsSelect($event)"
                                     (search)="groupsSearch($event)"
                                     (filter)="groupsFilter($event)"
+                                    (refresh)="refreshGroups(data.policy?.id)"
                                     (resetFiltration)="resetGroupsFiltration()"
                                     (loadNextPage)="loadNextGroupsPage(data.policy.id, data.groupsPage + 1)"
                                     (setTag)="onSetGroupsTag($event)"
@@ -316,6 +319,7 @@
                                     (changeSelection)="agentsSelect($event)"
                                     (search)="agentsSearch($event)"
                                     (filter)="agentsFilter($event)"
+                                    (refresh)="refreshAgents(data.policy?.id)"
                                     (resetFiltration)="resetAgentsFiltration()"
                                     (loadNextPage)="loadNextAgentsPage(data.policy.id, data.agentsPage + 1)"
                                     (setTag)="onSetAgentsTag($event)"
