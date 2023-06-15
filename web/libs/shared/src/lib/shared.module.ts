@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { IcRefresherModule } from '@mosaic-design/infosec-components/components/refresher';
 import { TranslocoModule } from '@ngneat/transloco';
 import { LetModule } from '@ngrx/component';
 import { DateAdapter, MC_DATE_LOCALE } from '@ptsecurity/cdk/datetime';
@@ -36,6 +37,7 @@ import {
     DependencyStatusComponent,
     DividerComponent,
     SoldrUnavailableActionForEventDirective,
+    EmptyGridContentComponent,
     EventDataBlockComponent,
     EventDetailsPanelComponent,
     EventInfoComponent,
@@ -61,10 +63,12 @@ import {
     NcformWrapperComponent,
     NoRowsOverlayComponent,
     OsComponent,
+    PasswordFormComponent,
     PoliciesGridComponent,
     PolicyInfoComponent,
     ProgressContainerComponent,
     ProgressSpinnerDirective,
+    RefresherComponent,
     RelatedListComponent,
     SecureModuleConfigComponent,
     TagComponent,
@@ -72,9 +76,7 @@ import {
     TextOverflowComponent,
     TextOverflowDirective,
     TreePopoverComponent,
-    UpgradeStatusMessageComponent,
-    EmptyGridContentComponent,
-    PasswordFormComponent
+    UpgradeStatusMessageComponent
 } from './components';
 import {
     SoldrGridScrollToBodyEndDirective,
@@ -175,6 +177,7 @@ const components = [
     PolicyInfoComponent,
     ProgressContainerComponent,
     ProgressSpinnerDirective,
+    RefresherComponent,
     RelatedListComponent,
     SecureModuleConfigComponent,
     TagComponent,
@@ -219,7 +222,8 @@ const pipes = [
         ReactiveFormsModule,
         RouterModule,
         TranslocoModule,
-        LetModule
+        LetModule,
+        IcRefresherModule
     ],
     exports: [...components, ...directives, ...pipes, MosaicModule, TranslocoModule],
     providers: [

@@ -274,6 +274,15 @@ export class AgentPageComponent implements OnInit, AfterViewInit, OnDestroy {
         this.agentCardFacade.cancelUpgradeAgent(event.hash, event.task);
     }
 
+    refreshEvents(agentId: number) {
+        this.agentCardFacade.fetchEvents(agentId);
+    }
+
+    refreshDependencies() {
+        this.agentCardFacade.fetchAgent(this.activatedRoute.snapshot.params.hash as string);
+        this.sharedFacade.fetchAllModules();
+    }
+
     private saveState() {
         const tab = this.tabsEl.tabs.get(this.tabsEl.selectedIndex)?.tabId;
         const queryParams: Record<string, string> = {

@@ -13,6 +13,10 @@
     .grid__footer-block {
         color: map-get($foreground, text);
     }
+
+    .grid__filters-counter {
+        color: map.get($mosaic-theme, components, button, primary_transparent, color);
+    }
 }
 
 @mixin grid-typography($typography) {

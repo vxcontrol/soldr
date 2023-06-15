@@ -126,6 +126,7 @@
                         [hideModuleColumn]="true"
                         (search)="eventsSearch($event)"
                         (filter)="eventsFilter($event)"
+                        (refresh)="refreshEvents()"
                         (resetFiltration)="eventsResetFiltration()"
                         (loadNextPage)="loadNextEventsPage(data.eventsPage + 1)"
                         (sort)="eventsSort($event)">

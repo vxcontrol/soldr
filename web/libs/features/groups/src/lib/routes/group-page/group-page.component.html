@@ -198,6 +198,7 @@
                             (search)="eventsSearch($event)"
                             (filter)="eventsFilter($event)"
                             (loadNextPage)="loadNextEventsPage(data.group.id, data.eventsPage + 1)"
+                            (refresh)="refreshEvents(data.group.id)"
                             (resetFiltration)="resetEventsFiltration()"
                             (sort)="eventsSort($event)">
                         </soldr-events-grid>
@@ -222,7 +223,8 @@
                             <soldr-dependencies-grid
                                 e2e-id="grGroupDependencies"
                                 [dependencies]="data.dependencies"
-                                [viewMode]="viewModeEnum.Groups">
+                                [viewMode]="viewModeEnum.Groups"
+                                (refresh)="refreshDependencies()">
                             </soldr-dependencies-grid>
                         </soldr-progress-container>
                     </mc-tab>
@@ -250,6 +252,7 @@
                                 (search)="policySearch($event)"
                                 (filter)="policyFilter($event)"
                                 (sort)="policiesSort($event)"
+                                (refresh)="refreshPolicies(data.group?.id)"
                                 (resetFiltration)="resetPolicyFiltration()"
                                 (loadNextPage)="loadNextPolicyPage(data.group.id, data.policiesPage + 1)"
                                 (setTag)="onSetPolicyTag($event)">
@@ -279,6 +282,7 @@
                                 (changeSelection)="agentsSelect($event)"
                                 (search)="agentsSearch($event)"
                                 (filter)="agentsFilter($event)"
+                                (refresh)="refreshAgents(data.group?.id)"
                                 (resetFiltration)="resetAgentsFiltration()"
                                 (loadNextPage)="loadNextAgentsPage(data.group.id, data.agentsPage + 1)"
                                 (setTag)="onSetAgentsTag($event)"

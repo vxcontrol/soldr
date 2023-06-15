@@ -1,0 +1,7 @@
+@use 'sass:map';
+
+@mixin policies-page-component-theme($mosaic-theme) {
+    .policies-page__tags-counter {
+        color: map.get($mosaic-theme, components, button, primary_transparent, color);
+    }
+}

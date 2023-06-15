@@ -249,6 +249,7 @@
                             (search)="eventsSearch($event)"
                             (filter)="eventsFilter($event)"
                             (loadNextPage)="loadNextEventsPage(data.agent.id, data.eventsPage + 1)"
+                            (refresh)="refreshEvents(data.agent.id)"
                             (resetFiltration)="resetFiltration()"
                             (sort)="eventsSort($event)">
                         </soldr-events-grid>
@@ -274,7 +275,8 @@
                             <soldr-dependencies-grid
                                 e2e-id="grAgentDependencies"
                                 [dependencies]="data.dependencies"
-                                [viewMode]="viewModeEnum.Agents">
+                                [viewMode]="viewModeEnum.Agents"
+                                (refresh)="refreshDependencies()">
                             </soldr-dependencies-grid>
                         </soldr-progress-container>
                     </mc-tab>

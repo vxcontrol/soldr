@@ -197,8 +197,12 @@ export class ModulePageComponent implements OnInit, OnChanges, AfterViewInit, On
         this.modulesInstancesFacade.setEventsGridSorting(sorting);
     }
 
+    refreshEvents() {
+        this.modulesInstancesFacade.fetchEvents();
+    }
+
     get hasManagementTab() {
-        return (this.viewMode === ViewMode.Groups || this.viewMode === ViewMode.Agents) && 
+        return (this.viewMode === ViewMode.Groups || this.viewMode === ViewMode.Agents) &&
             this.permitted.ViewModulesOperations && this.hasModuleOperations;
     }
 

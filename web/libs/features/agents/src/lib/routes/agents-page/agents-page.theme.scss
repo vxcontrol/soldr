@@ -1,0 +1,7 @@
+@use 'sass:map';
+
+@mixin agents-page-component-theme($mosaic-theme) {
+    .agents-page__tags-counter {
+        color: map.get($mosaic-theme, components, button, primary_transparent, color);
+    }
+}

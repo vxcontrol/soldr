@@ -6,6 +6,7 @@ import { Direction } from '@ptsecurity/mosaic/splitter';
 import { McTabGroup } from '@ptsecurity/mosaic/tabs';
 import { combineLatest, filter, map, merge, pairwise, Subscription, switchMap } from 'rxjs';
 
+import { ModelsModuleA } from '@soldr/api';
 import { PERMISSIONS_TOKEN } from '@soldr/core';
 import { Agent, AgentUpgradeTask, Group, Policy } from '@soldr/models';
 import {
@@ -29,7 +30,6 @@ import { SharedFacade } from '@soldr/store/shared';
 
 import { PolicyDependenciesFacadeService } from '../../services/policy-dependencies-facade.service';
 import { defaultPolicyPageState, PolicyPageState } from '../../utils';
-import { ModelsModuleA } from '@soldr/api';
 
 @Component({
     selector: 'soldr-policy-page',
@@ -166,6 +166,15 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
         this.sharedFacade.fetchAllModules();
         this.sharedFacade.fetchAllGroups();
         this.sharedFacade.fetchLatestAgentBinary();
+    }
+
+    refreshAgents(policyId: number) {
+        this.policiesFacade.fetchAgents(policyId);
+    }
+
+    refreshDependencies() {
+        this.policiesFacade.fetchPolicy(this.activatedRoute.snapshot.params.hash as string);
+        this.sharedFacade.fetchAllModules();
     }
 
     refreshModules() {
@@ -308,6 +317,14 @@ export class PolicyPageComponent implements OnInit, AfterViewInit, OnDestroy {
 
     updateModuleConfig(module: ModelsModuleA) {
         this.policiesFacade.updateModuleConfig(module);
+    }
+
+    refreshGroups(policyId: number) {
+        this.policiesFacade.fetchGroups(policyId);
+    }
+
+    refreshEvents(policyId: number) {
+        this.policiesFacade.fetchEvents(policyId);
     }
 
     private saveState() {

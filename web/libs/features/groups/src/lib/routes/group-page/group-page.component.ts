@@ -162,6 +162,10 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
         this.sharedFacade.fetchLatestAgentBinary();
     }
 
+    refreshAgents(groupId: number) {
+        this.groupsFacade.fetchAgents(groupId);
+    }
+
     selectTag(tag: string) {
         this.router.navigate(['/groups'], {
             queryParams: {
@@ -278,6 +282,23 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
         this.groupsFacade.cancelUpgradeAgent(event.hash, event.task);
     }
 
+    afterUpgradeAgent(agent: Agent) {
+        this.groupsFacade.updateAgentData(agent);
+    }
+
+    refreshPolicies(groupId: number) {
+        this.groupsFacade.fetchPolicies(groupId);
+    }
+
+    refreshEvents(groupId: number) {
+        this.groupsFacade.fetchEvents(groupId);
+    }
+
+    refreshDependencies() {
+        this.groupsFacade.fetchGroup(this.activatedRoute.snapshot.params.hash as string);
+        this.sharedFacade.fetchAllModules();
+    }
+
     private saveState() {
         const tab = this.tabsEl.tabs.get(this.tabsEl.selectedIndex)?.tabId;
         const queryParams: Record<string, string> = {
@@ -314,9 +335,5 @@ export class GroupPageComponent implements OnInit, AfterViewInit, OnDestroy {
             .subscribe((segments) => this.pageTitleService.setTitle(segments));
 
         this.subscription.add(titlesSubscription);
-    }
-
-    afterUpgradeAgent(agent: Agent) {
-        this.groupsFacade.updateAgentData(agent);
     }
 }

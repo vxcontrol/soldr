@@ -19,6 +19,7 @@
                 (nextPage)="nextPage()"
                 (selectRows)="onGridSelectRows($event)"
                 (sortChanged)="onGridSort($event)"
+                (refresh)="refresh.emit()"
                 (resetFiltration)="onResetFiltration()">
                 <ng-template #consistencyCell let-node="params.data">
                     <soldr-consistency-icon

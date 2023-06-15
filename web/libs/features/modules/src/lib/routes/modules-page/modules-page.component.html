@@ -59,6 +59,7 @@
                 (search)="onGridSearch($event)"
                 (sortChanged)="onGridSort($event)"
                 (selectRows)="onGridSelectRows($event)"
+                (refresh)="refreshData()"
                 (resetFiltration)="onResetFiltration()"
                 (nextPage)="loadNextPage(data.page + 1)"
                 *transloco="let tShared; read 'shared'">

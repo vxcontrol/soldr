@@ -1,0 +1,36 @@
+<ng-container *transloco="let tShared; read: 'shared'">
+    <ic-refresher
+        [(ngModel)]="value"
+        [options]="defaultRefresherOptions"
+        [automaticUpdateTextTemplate]="automaticUpdateTextTemplate"
+        [refreshTurnedOffTextTemplate]="refreshTurnedOffTextTemplate"
+        [hoursAndMinutesTextTemplate]="hoursAndMinutesTextTemplate"
+        [hoursTextTemplate]="hoursTextTemplate"
+        [minutesTextTemplate]="minutesTextTemplate"
+        [settingsTooltipTextTemplate]="settingsTooltipTextTemplate"
+        [refresherTooltipTextTemplate]="refresherTooltipTextTemplate"
+        (refresh)="refresh.emit()">
+    </ic-refresher>
+
+    <ng-template #automaticUpdateTextTemplate>
+        {{ tShared('Shared.Grid.CheckboxText.AutomaticUpdate') }}
+    </ng-template>
+    <ng-template #refreshTurnedOffTextTemplate>
+        {{ tShared('Shared.Grid.ButtonText.RefreshTurnedOff') }}
+    </ng-template>
+    <ng-template #hoursAndMinutesTextTemplate let-interval="interval">
+        {{ tShared('Shared.Grid.ButtonText.HoursAndMinutes', interval) }}
+    </ng-template>
+    <ng-template #hoursTextTemplate let-interval="interval">
+        {{ tShared('Shared.Grid.ButtonText.Hours', interval) }}
+    </ng-template>
+    <ng-template #minutesTextTemplate let-interval="interval">
+        {{ tShared('Shared.Grid.ButtonText.Minutes', interval) }}
+    </ng-template>
+    <ng-template #settingsTooltipTextTemplate>
+        {{ tShared('Shared.Grid.TooltipText.Settings') }}
+    </ng-template>
+    <ng-template #refresherTooltipTextTemplate>
+        {{ tShared('Shared.Grid.TooltipText.Refresh') }}
+    </ng-template>
+</ng-container>

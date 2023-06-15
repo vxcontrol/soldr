@@ -1,4 +1,4 @@
-import { Component, Inject, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Inject, Input, OnChanges, OnInit, Output, SimpleChanges } from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
 import { BehaviorSubject, map, Observable, combineLatest } from 'rxjs';
 
@@ -16,6 +16,8 @@ import { Dependency, ProxyPermission, ViewMode } from '../../types';
 export class DependenciesGridComponent implements OnInit, OnChanges {
     @Input() dependencies: Dependency[];
     @Input() viewMode: ViewMode;
+
+    @Output() refresh = new EventEmitter();
 
     DependencyType = DependencyType;
     dependencies$ = new BehaviorSubject<Dependency[]>([]);

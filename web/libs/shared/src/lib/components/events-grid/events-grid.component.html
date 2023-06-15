@@ -21,6 +21,7 @@
                     (search)="onSearch($event)"
                     (nextPage)="nextPage()"
                     (selectRows)="onGridSelectRows($event)"
+                    (refresh)="refresh.emit()"
                     (resetFiltration)="onResetFiltration()"
                     (sortChanged)="onGridSort($event)">
 

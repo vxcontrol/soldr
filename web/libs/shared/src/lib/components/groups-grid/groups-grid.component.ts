@@ -35,6 +35,7 @@ export class GroupsGridComponent implements OnChanges, OnDestroy {
     @Output() filter = new EventEmitter<Filtration>();
     @Output() loadNextPage = new EventEmitter();
     @Output() search = new EventEmitter<string>();
+    @Output() refresh = new EventEmitter();
     @Output() resetFiltration = new EventEmitter();
     @Output() setTag = new EventEmitter<string>();
     @Output() sort = new EventEmitter<Sorting>();

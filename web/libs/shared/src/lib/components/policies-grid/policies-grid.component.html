@@ -19,6 +19,7 @@
                 (sortChanged)="onGridSort($event)"
                 (nextPage)="nextPage()"
                 (selectRows)="onGridSelectRows($event)"
+                (refresh)="refresh.emit()"
                 (resetFiltration)="onResetFiltration()"
                 *transloco="let tShared; read: 'shared'">
 

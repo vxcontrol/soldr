@@ -12,6 +12,7 @@
             [placeholder]="searchPlaceholder"
             [storageKey]="viewMode + 'dependencies-list'"
             [total]="dependencies?.length"
+            (refresh)="refresh.emit()"
             [searchString]="data.search"
             (search)="onSearch($event)">
 

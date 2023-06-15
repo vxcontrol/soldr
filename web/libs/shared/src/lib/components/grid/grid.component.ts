@@ -17,11 +17,13 @@ import {
     ViewChild,
     ViewEncapsulation
 } from '@angular/core';
+import { defaultRefresherOptions } from '@mosaic-design/infosec-components/components/refresher';
 import { TranslocoService } from '@ngneat/transloco';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
 import { McListSelectionChange } from '@ptsecurity/mosaic/list';
 import { McPopoverComponent } from '@ptsecurity/mosaic/popover';
 import { AgGridEvent, ColDef, ColumnApi, GridApi, GridOptions, ICellRendererParams } from 'ag-grid-community';
+import { GetRowIdParams } from 'ag-grid-community/dist/lib/entities/iCallbackParams';
 import {
     BehaviorSubject,
     combineLatest,
@@ -47,7 +49,6 @@ import { GridFooterDirective } from './footer/grid-footer.directive';
 import { GridColumnDef, GridsState, LocalizedData, Selection, Sorting, SortingDirection } from './grid.types';
 import { NoRowsOverlayComponent } from './no-rows-overlay/no-rows-overlay.component';
 import { TemplateCellComponent } from './template-cell/template-cell.component';
-import { GetRowIdParams } from 'ag-grid-community/dist/lib/entities/iCallbackParams';
 
 const AG_GRID_FOCUSED_CLASS = 'ag-grid-focused';
 
@@ -81,6 +82,7 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
     @Output() addedNewRows = new EventEmitter();
     @Output() export = new EventEmitter<{ selected?: any[]; columns: string[] }>();
     @Output() nextPage = new EventEmitter();
+    @Output() refresh = new EventEmitter();
     @Output() resetFiltration = new EventEmitter();
     @Output() search = new EventEmitter<string>();
     @Output() selectRows = new EventEmitter();
