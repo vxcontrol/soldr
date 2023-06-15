@@ -99,7 +99,6 @@ export class GridComponent implements OnInit, OnChanges, OnDestroy {
     columnsDefs: GridColumnDef[];
     columnsSearch = new Subject<string>();
     columnsSearch$ = this.columnsSearch.asObservable().pipe(shareReplay({ bufferSize: 1, refCount: true }));
-    defaultRefresherOptions = defaultRefresherOptions;
     foundColumns$: Observable<GridColumnDef[]>;
     components = {
         cellRenderer: TemplateCellComponent,
