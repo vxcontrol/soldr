@@ -74,7 +74,7 @@
             "env": {},
             "args": [
                 "--key=${workspaceFolder}/security/certs/example/vxca.key",
-                "--expires=2025-01-01T12:00:00+00:00",
+                "--expires=2026-01-01T12:00:00+00:00",
                 "--file=${workspaceFolder}/security/vconf/lic/sbh.json",
                 "--version=example",
                 "--force=true"

@@ -8,4 +8,4 @@ build:
 
 .PHONY: generate
 generate: build
-	./sbh_generator --key=$(VXCA_FILE) --expires=2025-01-01T12:00:00+00:00 --file=$(SBH_FILE) --version=$(SERVER_NAME) --force=true
+	./sbh_generator --key=$(VXCA_FILE) --expires=2026-01-01T12:00:00+00:00 --file=$(SBH_FILE) --version=$(SERVER_NAME) --force=true
