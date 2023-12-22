@@ -5,7 +5,7 @@ import Vue from 'vue';
 import { DraggableSelect as draggableSelect, GridComponent as grid } from '..';
 
 const template = `
-    <div class="module-interactivity-container layout-padding-l">
+    <div class="module-interactivity-container">
         <component
             v-if="canShow"
             :view-mode="$root.viewMode"

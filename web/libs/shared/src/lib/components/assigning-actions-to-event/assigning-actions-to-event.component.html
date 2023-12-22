@@ -12,7 +12,7 @@
                     {{ tShared('Shared.ModuleConfig.SidePanelTitle.AssigningActions') }}
                 </mc-sidepanel-header>
 
-                <mc-sidepanel-body>
+                <mc-sidepanel-body class="mc-scrollbar">
                     <div class="layout-fill layout-row layout-align-space-between">
                         <div class="flex-50 layout-column layout-align-space-between">
                             <mc-loader-overlay fixed-top *ngIf="data.isLoading; else list">

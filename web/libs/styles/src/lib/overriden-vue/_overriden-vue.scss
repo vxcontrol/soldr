@@ -37,3 +37,19 @@ div.__array-form-item > legend {
     min-width: $input-number-width;
     max-width: $input-number-width;
 }
+
+.el-table--border td {
+    border-right: none;
+}
+
+.el-table--border th {
+    border-right: none;
+}
+
+.el-table--border {
+    border: none;
+
+    &::after {
+        content: none;
+    }
+}

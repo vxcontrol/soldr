@@ -54,6 +54,12 @@
 
         // table--border
         @include mixins.m(border) {
+            th {
+                &:hover {
+                    border-right: map-get($tokens, table-border);
+                }
+            }
+
             .el-table__cell {
                 border-right: map-get($tokens, table-border);
             }

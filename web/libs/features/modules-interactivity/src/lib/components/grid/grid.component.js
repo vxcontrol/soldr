@@ -17,7 +17,7 @@ const template = `
                                 :indeterminate="selected.length > 0 && !isSelectedAll"
                                 @change="toggleAllSelection()">
                                 </el-checkbox>
-    
+
                                 <el-dropdown trigger="click" placement="bottom-start" @command="onSelectionCommand">
                                     <span class="el-dropdown-link">
                                         <i class="el-icon-arrow-down el-icon--right"></i>
@@ -35,7 +35,7 @@ const template = `
                                     </el-dropdown-menu>
                                 </el-dropdown>
                             </div>
-    
+
                             <div class="flex-auto layout-row layout-align-space-between"
                                  :class="{ 'vue-grid__search-container_has-searchable-fields': hasSelectSearchableFields }">
                                 <el-select
@@ -52,7 +52,7 @@ const template = `
                                         :value="column">
                                     </el-option>
                                 </el-select>
-    
+
                                 <el-input
                                     v-if="isSearchByText"
                                     class="vue-grid__search-input flex-auto"
@@ -60,7 +60,7 @@ const template = `
                                     :placeholder="currentSearchPlaceholder"
                                     @change="search()">
                                 </el-input>
-    
+
                                 <el-select
                                     ref="searchValuesSelect"
                                     v-if="isSearchBySelect"
@@ -77,7 +77,7 @@ const template = `
                                         @change="search()">
                                     </el-option>
                                 </el-select>
-    
+
                                 <el-button
                                     class="vue-grid__search-button flex-none"
                                     size="medium"
@@ -86,11 +86,11 @@ const template = `
                                 </el-button>
                             </div>
                         </div>
-    
+
                         <div class="flex-none" v-bind:class="{'layout-margin-left-xl': $slots.toolbar }">
                             <slot name="toolbar" v-bind:selected="selected" v-bind:isSelectedAll="isSelectedAll"></slot>
                         </div>
-    
+
                         <div v-if="hasSettings" class="flex-none layout-margin-left-xl">
                             <el-tooltip :content="$t('ModulesInteractivity.Grid.TooltipText.ColumnsSettings')">
                                 <el-button icon="el-icon-setting" v-popover:columnsSelectorPopover></el-button>
@@ -98,29 +98,29 @@ const template = `
                         </div>
                     </div>
                 </div>
-    
+
                 <div
                     class="vue-grid__container flex-auto"
                     :class="{ 'vue-grid_no-selectable': noSelectionText }">
-    
+
                     <data-tables-server
                         ref="table"
                         :loading="isLoading"
-                    :data="data"
-                    :page-size="parseInt(query.pageSize || 50)"
-                    :current-page="parseInt(query.page || 1)"
-                    :table-props="tableProps"
-                    :row-class-name="calcTableRowClassName"
-                    :pagination-props="{
-                        layout: 'slot, prev, pager, next, jumper, sizes',
-                        pageSizes: [10, 30, 50],
-                        total: this.total
-                    }"
-                    @query-change="loadData"
-                    @row-click="onRowClick"
-                    @selection-change="onSelectionChange"
-                    @header-dragend="saveSettings">
-    
+                        :data="data"
+                        :page-size="parseInt(query.pageSize || 50)"
+                        :current-page="parseInt(query.page || 1)"
+                        :table-props="tableProps"
+                        :row-class-name="calcTableRowClassName"
+                        :pagination-props="{
+                            layout: 'slot, prev, pager, next, jumper, sizes',
+                            pageSizes: [10, 30, 50],
+                            total: this.total
+                        }"
+                        @query-change="loadData"
+                        @row-click="onRowClick"
+                        @selection-change="onSelectionChange"
+                        @header-dragend="saveSettings">
+
                     <template v-slot:empty>
                         <template v-if="$slots['custom-no-rows']">
                             <slot name="custom-no-rows"></slot>
@@ -129,11 +129,11 @@ const template = `
                             {{ searchValue ? $t('Common.Pseudo.Text.NotFound') : emptyText || $t('Common.Pseudo.Text.NoData') }}
                         </template>
                     </template>
-    
+
                     <template v-if="renderComponent">
                         <slot v-for="column in visibleColumns" :name="'column-' + column.prop"></slot>
                     </template>
-    
+
                     <template v-slot:pagination v-if="canSelect">
                         <span class="layout-row">
                             <div class="el-pagination__selected">
@@ -147,7 +147,7 @@ const template = `
                         </span>
                     </template>
                 </data-tables-server>
-    
+
                 <el-popover
                     ref="columnsSelectorPopover"
                     placement="bottom-end"
@@ -172,7 +172,7 @@ const template = `
                     </div>
                 </el-popover>
             </div>
-    
+
             <div class="flex-none" ref="footerText">
                 {{ footerText }}
             </div>
@@ -190,6 +190,7 @@ export const GridComponent = Vue.extend({
         ignoreEvents: { type: Boolean },
         canSelect: { type: Boolean },
         multiple: { type: Boolean },
+        showSelectionMenu: { type: Boolean, default: true },
         query: { type: Object },
         data: { type: Array },
         total: { type: Number },
@@ -202,7 +203,8 @@ export const GridComponent = Vue.extend({
         fullTextSearch: { type: Boolean, default: true },
         noSelectionText: { type: Boolean, default: true },
         defaultSort: { type: Object },
-        hasSettings: { type: Boolean, default: true }
+        hasSettings: { type: Boolean, default: true },
+        resizeColumns: { type: Boolean, default: false }
     },
 
     data() {
@@ -277,7 +279,8 @@ export const GridComponent = Vue.extend({
             return {
                 rowClassName: this.calcTableRowClassName,
                 height: this.tableHeight,
-                defaultSort: this.defaultSort
+                defaultSort: this.defaultSort,
+                border: this.resizeColumns
             };
         },
         searchableColumns() {

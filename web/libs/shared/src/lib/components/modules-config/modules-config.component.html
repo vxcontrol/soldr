@@ -267,7 +267,7 @@
             <mc-sidepanel-header [closeable]="true" *transloco="let t; read: 'policies'">
                 {{ t('Policies.ChangeModuleVersion.SidePanelTitle.InstallModuleVersion') }}
             </mc-sidepanel-header>
-            <mc-sidepanel-body class="layout-padding">
+            <mc-sidepanel-body class="layout-padding mc-scrollbar">
                 <soldr-changelog
                     [module]="data.selectedModule"
                     [versions]="data.selectedModuleVersions"

@@ -7,7 +7,10 @@
                 [@showHeaderOnScroll]="scrolled ? 'showed' : 'hidden'">
                 {{ eventDetails?.localizedName }}
             </mc-sidepanel-header>
-            <mc-sidepanel-body (scroll)="onScrollBody($event)" [style]="{ marginTop: scrolled ? '56px' : 0 }">
+            <mc-sidepanel-body
+                class="mc-scrollbar"
+                (scroll)="onScrollBody($event)"
+                [style]="{ marginTop: scrolled ? '56px' : 0 }">
                 <div class="layout-padding-l">
                     <div class="event-details-panel__close-button-wrapper">
                         <button
