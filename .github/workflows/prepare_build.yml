@@ -16,8 +16,6 @@ jobs:
           fetch-depth: 0
       - name: Generate ALL
         run: |
-          git status
-          git config --global --add safe.directory $(pwd)
           find . -type f -name "*.sh" -print0 |xargs -0 chmod 755
           make generate-all
       - name: Upload result for generate_all
