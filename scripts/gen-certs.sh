@@ -2,8 +2,8 @@
 
 set -ex
 
-git status
 git config --global --add safe.directory $(pwd)
+git status
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ROOT_DIR=$(realpath "$DIR/../")
