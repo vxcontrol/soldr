@@ -7,7 +7,7 @@ jobs:
     name: Generate all
     runs-on: ubuntu-latest
     container:
-      image: vxcontrol/vxbuild-cross
+      image: vxcontrol/vxbuild-cross:1.19
       options: --user 1001
 
     steps:

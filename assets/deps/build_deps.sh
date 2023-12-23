@@ -3,8 +3,8 @@
 set -e
 
 if [ "$#" -ne 2 ]; then
-    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps vxcontrol/vxbuild-cross bash -c "/tmp/deps/build_deps.sh libraries_amd64.tar.gz x86_64"
-    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps vxcontrol/vxbuild-cross bash -c "/tmp/deps/build_deps.sh libraries_386.tar.gz '\(i386\|lib32\)'"
+    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps vxcontrol/vxbuild-cross:1.19 bash -c "/tmp/deps/build_deps.sh libraries_amd64.tar.gz x86_64"
+    docker run -it --rm -v $(pwd):/tmp/deps -w /tmp/deps vxcontrol/vxbuild-cross:1.19 bash -c "/tmp/deps/build_deps.sh libraries_386.tar.gz '\(i386\|lib32\)'"
     echo ">>> dependency libraries was updated successful"
     ls -lah libraries_*
     md5sum libraries_*

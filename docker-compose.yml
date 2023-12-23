@@ -379,7 +379,7 @@ services:
     profiles: ["obs"]
 
   observability-config:
-    image: vxcontrol/soldr-observability-stack-config:latest
+    image: vxcontrol/soldr-observability-stack-config
     container_name: vx_observability_config
     hostname: observability-config.local
     restart: unless-stopped
@@ -409,7 +409,7 @@ services:
     profiles: ["obs"]
 
   elasticsearch-config:
-    image: vxcontrol/soldr-elastic-config:latest
+    image: vxcontrol/soldr-elastic-config
     container_name: vx_elasticsearch_config
     hostname: elasticsearch-config.local
     restart: unless-stopped

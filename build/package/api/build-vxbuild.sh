@@ -10,4 +10,4 @@ docker run --rm -it \
         -v $(go env GOMODCACHE):/go/pkg/mod \
         -e GOCACHE=/tmp \
         --workdir=/go/src/soldr \
-        vxcontrol/vxbuild-cross:latest /bin/bash -c "build/package/api/build-local.sh"
+        vxcontrol/vxbuild-cross:1.19 /bin/bash -c "build/package/api/build-local.sh"

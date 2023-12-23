@@ -24,7 +24,7 @@ jobs:
     name: Code test with go test
     runs-on: ubuntu-latest
     container:
-      image: vxcontrol/vxbuild-cross
+      image: vxcontrol/vxbuild-cross:1.19
 
     steps:
       - name: Checkout
