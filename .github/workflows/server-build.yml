@@ -23,6 +23,7 @@ jobs:
           name: decode_environment
       - name: Build
         run: |
+          git config --global --add safe.directory /__w/soldr/soldr
           make build-server
           ls -la ./build/artifacts/server/version || true
           ls -la ./build/bin/vxserver || true

@@ -23,6 +23,7 @@ jobs:
           name: decode_environment
       - name: Build
         run: |
+          git config --global --add safe.directory /__w/soldr/soldr
           cd build/package/agent/
           # Linux
           mkdir -p /usr/lib/vxagent

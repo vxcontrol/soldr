@@ -23,6 +23,7 @@ jobs:
           name: decode_environment
       - name: Build
         run: |
+          git config --global --add safe.directory /__w/soldr/soldr
           cd build/package/agent/
           # windows
           bash -x ./build-windows-386.sh && mv -v ../../bin/vxagent.exe  _tmp/windows/386/

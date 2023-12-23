@@ -23,6 +23,7 @@ jobs:
           name: decode_environment
       - name: Build
         run: |
+          git config --global --add safe.directory /__w/soldr/soldr
           make build-api
           echo "./build/bin/vxapi"
           ls -la ./build/bin/vxapi || true
