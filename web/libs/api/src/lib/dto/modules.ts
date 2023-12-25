@@ -57,13 +57,19 @@ export interface ModelsEventConfigSeq {
 export interface ModelsLocale {
     action_config: Record<string, Record<string, ModelsModuleLocaleDesc>>;
     actions: Record<string, ModelsModuleLocaleDesc>;
+    actions_additional_args?: Record<string, Record<string, string>>;
     config: Record<string, ModelsModuleLocaleDesc>;
+    config_additional_args?: Record<string, Record<string, string>>;
     event_config: Record<string, Record<string, ModelsModuleLocaleDesc>>;
     events: Record<string, ModelsModuleLocaleDesc>;
+    events_additional_args?: Record<string, Record<string, string>>;
     fields: Record<string, ModelsModuleLocaleDesc>;
+    fields_additional_args?: Record<string, Record<string, string>>;
     module: ModelsModuleLocaleDesc;
-    secure_config: Record<string, ModelsModuleLocaleDesc>;
+    secure_config?: Record<string, ModelsModuleLocaleDesc>;
+    secure_config_additional_args?: Record<string, Record<string, string>>;
     tags: Record<string, ModelsModuleLocaleDesc>;
+    ui?: Record<string, Record<string, string>>;
 }
 
 export interface ModelsLocaleDesc {

@@ -15,3 +15,8 @@ mc-tab-body {
         white-space: normal;
     }
 }
+
+.mc-tab-group .mc-tab-list {
+    position: inherit;
+    transform: none !important;
+}

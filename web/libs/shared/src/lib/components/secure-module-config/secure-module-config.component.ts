@@ -19,7 +19,7 @@ import { PERMISSIONS_TOKEN } from '@soldr/core';
 
 import { LanguageService } from '../../services';
 import { EntityModule, NcFormProperty, NcformSchema, PropertyType, ProxyPermission } from '../../types';
-import { clone } from '../../utils';
+import { clone, localizeSchemaAdditionalKeys } from '../../utils';
 import { NcformWrapperApi } from '../ncform-wrapper/ncform-wrapper.component';
 
 interface SecureParam {
@@ -110,7 +110,7 @@ export class SecureModuleConfigComponent implements OnChanges {
                     localizedTitle,
                     isComplexType: [PropertyType.ARRAY, PropertyType.OBJECT].includes(type),
                     isFetchValueForView: false,
-                    schema,
+                    schema: localizeSchemaAdditionalKeys(schema, this.module.locale?.secure_config_additional_args),
                     type,
                     required: this.module.secure_config_schema.required.includes(name)
                 } as SecureParam;
@@ -290,6 +290,8 @@ export class SecureModuleConfigComponent implements OnChanges {
         } else {
             param.model = { value };
         }
+
+        param.schema = localizeSchemaAdditionalKeys(param.schema, this.module.locale?.secure_config_additional_args);
         this.currentParam = clone(param);
     }
 

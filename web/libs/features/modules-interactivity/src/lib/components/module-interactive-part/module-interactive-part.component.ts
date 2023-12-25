@@ -1,13 +1,24 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { HttpClient } from '@angular/common/http';
-import { Component, ElementRef, HostBinding, Input, OnInit, ViewEncapsulation } from '@angular/core';
+import {
+    Component,
+    ElementRef,
+    HostBinding,
+    Input,
+    OnChanges,
+    OnDestroy,
+    OnInit,
+    SimpleChanges,
+    ViewEncapsulation
+} from '@angular/core';
+import { TranslocoService } from '@ngneat/transloco';
 import ElementUI from 'element-ui';
 // @ts-ignore
 import element_ui_locale_en from 'element-ui/lib/locale/lang/en';
 // @ts-ignore
 import element_ui_locale_ru from 'element-ui/lib/locale/lang/ru-RU';
 import * as pb from 'protobufjs';
-import { concat, forkJoin, Observable, of } from 'rxjs';
+import { BehaviorSubject, combineLatest, forkJoin, map, Observable, Subject, takeUntil } from 'rxjs';
 // @ts-ignore
 import Vue from 'vue';
 // @ts-ignore
@@ -19,7 +30,7 @@ import { LANGUAGES } from '@soldr/i18n';
 import { Entity, EntityModule, LanguageService, ViewMode, VueMessageFormatter } from '@soldr/shared';
 
 // @ts-ignore
-import { ModulesApiService, ModuleEventsApiService, NotificationsService } from '../../services';
+import { ModuleEventsApiService, ModulesApiService, NotificationsService } from '../../services';
 // @ts-ignore
 import { VXAPI } from '../../utils/proto.js';
 
@@ -30,55 +41,37 @@ const COMMON_LOCALE_SCOPE = 'common';
 const FEATURE_LOCALE_SCOPE = 'modules-interactivity';
 const MODULES_LOCALE_SCOPE = 'modules';
 
-type LocaleSet = [VueI18n.LocaleMessageObject, VueI18n.LocaleMessageObject];
-
 @Component({
     selector: 'soldr-module-interactive-part',
     templateUrl: './module-interactive-part.component.html',
     styleUrls: ['./module-interactive-part.component.scss'],
     encapsulation: ViewEncapsulation.None
 })
-export class ModuleInteractivePartComponent implements OnInit {
+export class ModuleInteractivePartComponent implements OnInit, OnChanges, OnDestroy {
     @Input() viewMode: ViewMode;
     @Input() module: EntityModule;
     @Input() entity: Entity;
 
     @HostBinding('class.module-interactivity-part') class = true;
 
+    private interactiveModule$ = new BehaviorSubject<any>({});
+    private readonly destroyed$: Subject<void> = new Subject();
     private elementUiLocale = {
         [LANGUAGES.en]: element_ui_locale_en as VueI18n.LocaleMessageObject,
         [LANGUAGES.ru]: element_ui_locale_ru as VueI18n.LocaleMessageObject
     };
-    private locales$ = concat(
-        of([
-            [{}, {}],
-            [{}, {}]
-        ] as LocaleSet[]),
-        forkJoin([
-            forkJoin([
-                this.httpClient.get(`/assets/i18n/ru-RU/${COMMON_LOCALE_SCOPE}.json`),
-                this.httpClient.get(`/assets/i18n/en-US/${COMMON_LOCALE_SCOPE}.json`)
-            ]),
-            forkJoin([
-                this.httpClient.get(`/assets/i18n/ru-RU/${MODULES_LOCALE_SCOPE}.json`),
-                this.httpClient.get(`/assets/i18n/en-US/${MODULES_LOCALE_SCOPE}.json`)
-            ]),
-            forkJoin([
-                this.httpClient.get(`/assets/i18n/ru-RU/${FEATURE_LOCALE_SCOPE}.json`),
-                this.httpClient.get(`/assets/i18n/en-US/${FEATURE_LOCALE_SCOPE}.json`)
-            ])
-        ] as Observable<LocaleSet>[])
-    );
+    private locales$: Observable<VueI18n.LocaleMessageObject>;
     private app: Vue;
 
     constructor(
-        private httpClient: HttpClient,
-        private languageService: LanguageService,
-        private element: ElementRef,
         private agentsService: AgentsService,
+        private element: ElementRef,
         private eventsService: EventsService,
         private groupsService: GroupsService,
-        private policiesService: PoliciesService
+        private httpClient: HttpClient,
+        private languageService: LanguageService,
+        private policiesService: PoliciesService,
+        private transloco: TranslocoService
     ) {}
 
     ngOnInit(): void {
@@ -88,7 +81,41 @@ export class ModuleInteractivePartComponent implements OnInit {
             }
         );
 
-        this.locales$.subscribe((value) => this.setAppLocale(value));
+        const locale = this.transloco.getActiveLang();
+        this.locales$ = forkJoin([
+            this.httpClient.get(`/assets/i18n/${locale}/${COMMON_LOCALE_SCOPE}.json`),
+            this.httpClient.get(`/assets/i18n/${locale}/${MODULES_LOCALE_SCOPE}.json`),
+            this.httpClient.get(`/assets/i18n/${locale}/${FEATURE_LOCALE_SCOPE}.json`)
+        ] as Observable<VueI18n.LocaleMessageObject>[]).pipe(map((locales) => Object.assign({}, ...locales)));
+
+        combineLatest([this.locales$, this.interactiveModule$])
+            .pipe(takeUntil(this.destroyed$))
+            .subscribe(([appLocalization, module]) => {
+                const lang = this.languageService.lang;
+                const moduleLocalization = this.getModuleLocalization(module, lang);
+
+                this.setAppLocale({ ...appLocalization, ...moduleLocalization }, lang);
+            });
+    }
+
+    ngOnChanges({ module }: SimpleChanges) {
+        if (module?.currentValue && this.viewMode !== ViewMode.Policies) {
+            this.interactiveModule$.next(this.module);
+        }
+    }
+
+    ngOnDestroy() {
+        this.destroyed$.next();
+        this.destroyed$.complete();
+    }
+
+    private getModuleLocalization(module: any, lang: string): VueI18n.LocaleMessageObject {
+        const ui = module?.locale?.ui as Record<string, Record<string, string>>;
+
+        return Object.keys(ui || {}).reduce(
+            (uiLocaleSet, key) => Object.assign(uiLocaleSet, { [key]: ui[key][lang] }),
+            {}
+        );
     }
 
     private initVueApp(agentProto: any, protocolProto: any) {
@@ -178,8 +205,7 @@ export class ModuleInteractivePartComponent implements OnInit {
         this.app.$root.NotificationsService = new NotificationsService(this.app);
     }
 
-    private setAppLocale(locales: LocaleSet[]) {
-        this.app?.$i18n.setLocaleMessage('ru', { ...locales.reduce((acc, item) => ({ ...acc, ...item[0] }), {}) });
-        this.app?.$i18n.setLocaleMessage('en', { ...locales.reduce((acc, item) => ({ ...acc, ...item[1] }), {}) });
+    private setAppLocale(translations: VueI18n.LocaleMessageObject, lang: string) {
+        this.app?.$i18n.setLocaleMessage(lang, translations);
     }
 }

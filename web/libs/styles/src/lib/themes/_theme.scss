@@ -27,7 +27,7 @@
     @include base.base-theme($theme);
     @include components.soldr-ui-components-theme($theme);
     @include element-ui-components.element-ui-components($elementTheme);
-    @include overriden-vue.overriden-vue-theme($theme);
+    @include overriden-vue.overriden-vue-theme($theme, $elementTheme);
     @include refresher.theme($theme);
 }
 

@@ -1,7 +1,14 @@
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { TranslocoService } from '@ngneat/transloco';
 
-import { clone, EntityModule, LanguageService, NcformSchema, PropertyType, replaceByProperties } from '@soldr/shared';
+import {
+    clone,
+    EntityModule,
+    LanguageService,
+    localizeSchemaAdditionalKeys,
+    NcformSchema,
+    PropertyType
+} from '@soldr/shared';
 
 import { NcformWrapperApi } from '../ncform-wrapper/ncform-wrapper.component';
 
@@ -39,32 +46,10 @@ export class ModuleConfigComponent implements OnChanges {
     }
 
     processSchema(schema: any) {
-        replaceByProperties(
-            schema.properties,
-            [
-                '*.rules.*.errMsg',
-                '*.rules.customRule.*.errMsg',
-                '*.properties.*.rules.*.errMsg',
-                '*.properties.*.rules.customRule.*.errMsg',
-                '*.items.rules.*.errMsg',
-                '*.items.rules.customRule.*.errMsg',
-                '*.items.properties.*.rules.*.errMsg',
-                '*.items.properties.*.rules.customRule.*.errMsg'
-            ],
-            (key: string) => {
-                if (/^[A-z\d]+\.[A-z\d]+\.[A-z\d]+\.[A-z\d]+$/.test(key)) {
-                    const scope = key.split('.', 1)[0];
-
-                    return this.transloco.translate(`${scope.toLowerCase()}.${key}`);
-                } else {
-                    return key;
-                }
-            }
-        );
-
-        this.localizeProperties(
+        schema.properties = this.localizeProperties(
             schema.properties as Record<string, any>,
-            this.module?.locale.config as Record<string, any>
+            this.module.locale.config as Record<string, any>,
+            this.module.locale?.config_additional_args
         );
 
         return schema;
@@ -91,7 +76,11 @@ export class ModuleConfigComponent implements OnChanges {
         return this.api?.getIsDirty();
     }
 
-    private localizeProperties(properties: Record<string, any>, locales: Record<string, any>) {
+    private localizeProperties(
+        properties: Record<string, any>,
+        locales: Record<string, any>,
+        additional: Record<string, Record<string, string>>
+    ) {
         const lang = this.languageService.lang;
 
         Object.keys(properties)
@@ -112,5 +101,7 @@ export class ModuleConfigComponent implements OnChanges {
                     ui.description = (propertyLocale[lang] || {}).description;
                 }
             });
+
+        return localizeSchemaAdditionalKeys(properties, additional);
     }
 }

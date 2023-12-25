@@ -3,7 +3,14 @@ import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ThemePalette } from '@ptsecurity/mosaic/core';
 import { first, pairwise, reduce, startWith, Subject, Subscription, take } from 'rxjs';
 
-import { getChangesArrays, getEmptySchema, NcformSchema, NcformWrapperApi, usedPropertyTypes } from '@soldr/shared';
+import {
+    getChangesArrays,
+    getEmptySchema,
+    localizeSchemaAdditionalKeys,
+    NcformSchema,
+    NcformWrapperApi,
+    usedPropertyTypes
+} from '@soldr/shared';
 import { ModuleEditFacade } from '@soldr/store/modules';
 
 import { DialogsService } from '../../services';
@@ -94,7 +101,10 @@ export class EditConfigSectionComponent implements OnInit, OnDestroy, ModuleSect
         this.subscription.add(updateSchemaSubscription);
 
         const defaultSubscription = this.moduleEditFacade.module$.subscribe((module) => {
-            this.defaultSchema = module.config_schema;
+            this.defaultSchema = localizeSchemaAdditionalKeys(
+                module.config_schema,
+                module.locale?.config_additional_args
+            );
             this.defaultModel = module.default_config;
         });
         this.subscription.add(defaultSubscription);
