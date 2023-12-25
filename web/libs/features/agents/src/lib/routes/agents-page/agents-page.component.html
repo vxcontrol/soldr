@@ -6,17 +6,18 @@
         canBlockSelectedAgents: canBlockSelectedAgents$ | async,
         canUpgradeSelectedAgents: canUpgradeSelectedAgents$ | async,
         deleteError: deleteError$ | async,
+        gridFiltrationByField: gridFiltrationByField$ | async,
         isBlockingAgents: isBlockingAgents$ | async,
         isCancelUpgradingAgent: isCancelUpgradingAgent$ | async,
         isDeletingAgent: isDeletingAgent$ | async,
         isDeletingFromGroup: isDeletingFromGroup$ | async,
-        language: language$ | async,
-        latestAgentBinaryVersion: latestAgentBinaryVersion$ | async,
         isLoadingAgent: isLoadingAgent$ | async,
         isLoadingAllGroups: isLoadingAllGroups$ | async,
         isMovingAgents: isMovingAgents$ | async,
         isUpdatingAgent: isUpdatingAgent$ | async,
         isUpgradingAgents: isUpgradingAgents$ | async,
+        language: language$ | async,
+        latestAgentBinaryVersion: latestAgentBinaryVersion$ | async,
         moveToGroupError: moveToGroupError$ | async,
         page: page$ | async,
         selected: selected$ | async,
@@ -452,7 +453,7 @@
                                     e2e-id="grFilterConnection"
                                     [field]="'status'"
                                     [title]="t('Agents.AgentsList.GridColumnsTitle.Connection')"
-                                    [selectedValues]="(gridFiltrationByField$ | async).status?.value"
+                                    [selectedValues]="data.gridFiltrationByField.status?.value"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item
                                         *ngFor="let item of gridColumnsFilters.status"
@@ -467,7 +468,7 @@
                                     [title]="t('Agents.AgentsList.GridColumnsTitle.Os')"
                                     [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByOs')"
                                     [multiple]="true"
-                                    [selectedValues]="(gridFiltrationByField$ | async).os?.value"
+                                    [selectedValues]="data.gridFiltrationByField.os?.value"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item
                                         *ngFor="let item of gridColumnsFilters?.os"
@@ -480,7 +481,7 @@
                                     e2e-id="grFilterAuthorization"
                                     [field]="'auth_status'"
                                     [title]="t('Agents.AgentsList.GridColumnsTitle.Authorization')"
-                                    [selectedValues]="(gridFiltrationByField$ | async).auth_status?.value"
+                                    [selectedValues]="data.gridFiltrationByField.auth_status?.value"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item
                                         *ngFor="let item of gridColumnsFilters?.auth_status"
@@ -494,7 +495,7 @@
                                     [field]="'version'"
                                     [title]="t('Agents.AgentsList.GridColumnsTitle.Version')"
                                     [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByVersion')"
-                                    [selectedValues]="(gridFiltrationByField$ | async).version?.value"
+                                    [selectedValues]="data.gridFiltrationByField.version?.value"
                                     [multiple]="true"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item
@@ -510,7 +511,7 @@
                                     [title]="t('Agents.AgentsList.GridColumnsTitle.Modules')"
                                     [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByModule')"
                                     [multiple]="true"
-                                    [selectedValues]="(gridFiltrationByField$ | async).module_name?.value"
+                                    [selectedValues]="data.gridFiltrationByField.module_name?.value"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item
                                         *ngFor="let item of gridColumnsFilters?.modules"
@@ -524,7 +525,7 @@
                                     [field]="'group_id'"
                                     [title]="t('Agents.AgentsList.GridColumnsTitle.Group')"
                                     [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByGroup')"
-                                    [selectedValues]="(gridFiltrationByField$ | async).group_id?.value"
+                                    [selectedValues]="data.gridFiltrationByField.group_id?.value"
                                     [multiple]="true"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item
@@ -539,7 +540,7 @@
                                     [field]="'tags'"
                                     [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
                                     [placeholder]="t('Agents.AgentsList.InputPlaceholder.FilterByTag')"
-                                    [selectedValues]="(gridFiltrationByField$ | async).tags?.value"
+                                    [selectedValues]="data.gridFiltrationByField.tags?.value"
                                     [multiple]="true"
                                     (changeValue)="onGridFilter($event)">
                                     <soldr-filter-item

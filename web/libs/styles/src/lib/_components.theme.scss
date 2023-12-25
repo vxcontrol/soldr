@@ -32,6 +32,7 @@
 @use '../../../features/agents/src/lib/routes/agents-page/agents-page.theme';
 @use '../../../features/distributions/src/lib/routes/distributions-page/distributions-page.theme';
 @use '../../../features/login/src/lib/routes/login-page/login-page.theme';
+@use '../../../features/modules-interactivity/src/lib/components/module-interactive-part/module-interactive-part.theme';
 @use '../../../features/modules/src/lib/components/import-module-modal/import-module-modal.theme';
 @use '../../../features/modules/src/lib/components/toggle-item/toggle-item.theme';
 @use '../../../features/password/src/lib/routes/password-change/password-change.theme';
@@ -47,6 +48,7 @@
     @include action-details-panel.action-details-panel-theme($mosaic-theme);
     @include action-priority.action-priority-theme($mosaic-theme);
     @include actionbar.actionbar-theme($mosaic-theme);
+    @include ag-grid-theme.ag-grid-theme($mosaic-theme);
     @include agent-connection-status.agent-connection-status-theme($mosaic-theme);
     @include agent-version.agent-version-theme($mosaic-theme);
     @include agents-page.agents-page-component-theme($mosaic-theme);
@@ -68,15 +70,15 @@
     @include import-module-modal.import-module-modal-theme($mosaic-theme);
     @include login-page.login-page-theme($mosaic-theme);
     @include mc-tabs.mc-tabs($mosaic-theme);
+    @include module-interactive-part.module-interactive-part-theme($mosaic-theme);
     @include modules-config.modules-config-theme($mosaic-theme);
     @include multiple-selection-panel.multiple-selection-panel-theme($mosaic-theme);
     @include navbar.navbar-theme($mosaic-theme);
     @include os.os-theme($mosaic-theme);
     @include page-layout.page-layout-theme($mosaic-theme);
-    @include progress-container.progress-container-theme($mosaic-theme);
     @include password-change.password-change-theme($mosaic-theme);
     @include policies-page.policies-page-component-theme($mosaic-theme);
-    @include ag-grid-theme.ag-grid-theme($mosaic-theme);
+    @include progress-container.progress-container-theme($mosaic-theme);
     @include related-list.related-list-theme($mosaic-theme);
     @include secure-module-config.secure-module-config-theme($mosaic-theme);
     @include sidebar.sidebar-theme($mosaic-theme);

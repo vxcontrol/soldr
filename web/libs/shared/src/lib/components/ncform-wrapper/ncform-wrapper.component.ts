@@ -67,7 +67,7 @@ export class NcformWrapperComponent implements OnInit, OnChanges {
             return;
         }
 
-        if (schema && !compareObjects(this.app.$data.schema, this.schema)) {
+        if (schema) {
             this.app.$data.schema = this.schema;
         }
 

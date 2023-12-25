@@ -14,7 +14,7 @@ import {
     Group,
     privateGroupsToModels
 } from '@soldr/models';
-import { clone, Filter, Filtration, Sorting } from '@soldr/shared';
+import { clone, Filter, Filtration, getGridFiltration, getGridFiltrationByTag, Sorting } from '@soldr/shared';
 
 import * as PoliciesActions from './policies.actions';
 
@@ -275,18 +275,10 @@ export const reducer = createReducer(
     })),
     on(PoliciesActions.fetchPolicyEventsFailure, (state) => ({ ...state, isLoadingEvents: false })),
 
-    on(PoliciesActions.setEventsGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.eventsGridFiltration.filter(
-            (item: Filtration) => item.field !== filtration.field
-        );
-
-        return {
-            ...state,
-            eventsGridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])]
-        };
-    }),
+    on(PoliciesActions.setEventsGridFiltration, (state, { filtration }) => ({
+        ...state,
+        eventsGridFiltration: getGridFiltration(filtration, state.eventsGridFiltration)
+    })),
     on(PoliciesActions.setEventsGridSearch, (state, { value }) => ({ ...state, eventsGridSearch: value })),
     on(PoliciesActions.resetEventsFiltration, (state) => ({ ...state, eventsGridFiltration: [] })),
     on(PoliciesActions.setEventsGridSorting, (state, { sorting }) => ({ ...state, eventsSorting: sorting })),
@@ -301,18 +293,10 @@ export const reducer = createReducer(
     })),
     on(PoliciesActions.fetchPolicyAgentsFailure, (state) => ({ ...state, isLoadingAgents: false })),
 
-    on(PoliciesActions.setAgentsGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.agentsGridFiltration.filter(
-            (item: Filtration) => item.field !== filtration.field
-        );
-
-        return {
-            ...state,
-            agentsGridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])]
-        };
-    }),
+    on(PoliciesActions.setAgentsGridFiltration, (state, { filtration }) => ({
+        ...state,
+        agentsGridFiltration: getGridFiltration(filtration, state.agentsGridFiltration)
+    })),
     on(PoliciesActions.setAgentsGridSearch, (state, { value }) => ({ ...state, agentsGridSearch: value })),
     on(PoliciesActions.resetAgentsFiltration, (state) => ({ ...state, agentsGridFiltration: [] })),
     on(PoliciesActions.setAgentsGridSorting, (state, { sorting }) => ({ ...state, agentsSorting: sorting })),
@@ -342,18 +326,10 @@ export const reducer = createReducer(
     })),
     on(PoliciesActions.fetchPolicyGroupsFailure, (state) => ({ ...state, isLoadingGroups: false })),
 
-    on(PoliciesActions.setGroupsGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.groupsGridFiltration.filter(
-            (item: Filtration) => item.field !== filtration.field
-        );
-
-        return {
-            ...state,
-            groupsGridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])]
-        };
-    }),
+    on(PoliciesActions.setGroupsGridFiltration, (state, { filtration }) => ({
+        ...state,
+        groupsGridFiltration: getGridFiltration(filtration, state.groupsGridFiltration)
+    })),
     on(PoliciesActions.setGroupsGridSearch, (state, { value }) => ({ ...state, groupsGridSearch: value })),
     on(PoliciesActions.resetGroupsFiltration, (state) => ({ ...state, groupsGridFiltration: [] })),
     on(PoliciesActions.setGroupsGridSorting, (state, { sorting }) => ({ ...state, groupsSorting: sorting })),
@@ -440,16 +416,22 @@ export const reducer = createReducer(
         gridFiltration: [],
         gridSearch: ''
     })),
-    on(PoliciesActions.setGridFiltration, (state, { filtration }) => {
-        const updatedFiltration = state.gridFiltration.filter((item: Filtration) => item.field !== filtration.field);
-
-        return { ...state, gridFiltration: [...updatedFiltration, filtration], page: 1 };
-    }),
-    on(PoliciesActions.setGridFiltrationByTag, (state, { tag }) => {
-        const updatedFiltration = state.gridFiltration.filter((item: Filtration) => item.field !== 'tags');
-
-        return { ...state, gridFiltration: [...updatedFiltration, { field: 'tags', value: [tag] }], page: 1 };
-    }),
+    on(PoliciesActions.setGridFiltration, (state, { filtration }) => ({
+        ...state,
+        gridFiltration: getGridFiltration(filtration, state.gridFiltration)
+    })),
+    on(PoliciesActions.setGridFiltrationByTag, (state, { tag }) => ({
+        ...state,
+        gridFiltration: getGridFiltrationByTag(state.gridFiltration, tag)
+    })),
+    on(PoliciesActions.setAgentsGridFiltrationByTag, (state, { tag }) => ({
+        ...state,
+        agentsGridFiltration: getGridFiltrationByTag(state.agentsGridFiltration, tag)
+    })),
+    on(PoliciesActions.setGroupsGridFiltrationByTag, (state, { tag }) => ({
+        ...state,
+        groupsGridFiltration: getGridFiltrationByTag(state.groupsGridFiltration, tag)
+    })),
     on(PoliciesActions.setGridSearch, (state, { value }) => ({ ...state, gridSearch: value, page: 1 })),
     on(PoliciesActions.resetFiltration, (state) => ({ ...state, gridFiltration: [], page: 1 })),
     on(PoliciesActions.setGridSorting, (state, { sorting }) => ({ ...state, sorting, page: 1 })),

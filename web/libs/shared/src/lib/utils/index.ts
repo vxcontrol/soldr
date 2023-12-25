@@ -14,6 +14,8 @@ export * from './get-default-value-by-type';
 export * from './get-dependency-description-key';
 export * from './get-empty-schema';
 export * from './get-event-params-schema';
+export * from './get-grid-filtration';
+export * from './get-grid-filtration-by-tag';
 export * from './get-locale-description-by-value';
 export * from './get-name-for-new-item';
 export * from './http';

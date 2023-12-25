@@ -1,16 +1,17 @@
 <ng-container
     *ngIf="({
-        language: language$ | async,
-        selected: selected$ | async,
-        isCreatingGroup: isCreatingGroup$ | async,
-        isUpdatingGroup: isUpdatingGroup$ | async,
-        isCopyingGroup: isCopyingGroup$ | async,
-        isDeletingGroup: isDeletingGroup$ | async,
-        page: page$ | async,
-        total: total$ | async,
+        gridFiltrationByField: gridFiltrationByField$ | async,
         group: group$ | async,
+        groupModules: groupModules$ | async,
+        isCopyingGroup: isCopyingGroup$ | async,
+        isCreatingGroup: isCreatingGroup$ | async,
+        isDeletingGroup: isDeletingGroup$ | async,
         isLoadingGroup: isLoadingGroup$ | async,
-        groupModules: groupModules$ | async
+        isUpdatingGroup: isUpdatingGroup$ | async,
+        language: language$ | async,
+        page: page$ | async,
+        selected: selected$ | async,
+        total: total$ | async
     }) as data">
     <ng-container *transloco="let tShared; read: 'shared'">
         <ng-container *transloco="let tCommon; read: 'common'">
@@ -329,7 +330,7 @@
                                 [title]="t('Groups.GroupsList.GridColumnsTitle.Policies')"
                                 [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByPolicy')"
                                 [multiple]="true"
-                                [selectedValues]="(gridFiltrationByField$ | async).policy_id?.value"
+                                [selectedValues]="data.gridFiltrationByField.policy_id?.value"
                                 (changeValue)="onGridFilter($event)">
                                 <soldr-filter-item
                                     *ngFor="let item of gridColumnsFilters?.policies"
@@ -344,7 +345,7 @@
                                 [title]="t('Groups.GroupsList.GridColumnsTitle.Modules')"
                                 [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByModule')"
                                 [multiple]="true"
-                                [selectedValues]="(gridFiltrationByField$ | async).module_name?.value"
+                                [selectedValues]="data.gridFiltrationByField.module_name?.value"
                                 (changeValue)="onGridFilter($event)">
                                 <soldr-filter-item
                                     *ngFor="let item of gridColumnsFilters?.modules"
@@ -358,7 +359,7 @@
                                 [field]="'tags'"
                                 [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
                                 [placeholder]="t('Groups.GroupsList.InputPlaceholder.FilterByTag')"
-                                [selectedValues]="(gridFiltrationByField$ | async).tags?.value"
+                                [selectedValues]="data.gridFiltrationByField.tags?.value"
                                 [multiple]="true"
                                 (changeValue)="onGridFilter($event)">
                                 <soldr-filter-item

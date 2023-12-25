@@ -2,7 +2,7 @@ import { createReducer, on } from '@ngrx/store';
 
 import { ErrorResponse, ModelsModuleSShort } from '@soldr/api';
 import { Event, privateEventsToModels } from '@soldr/models';
-import { Filtration, Sorting, ViewMode } from '@soldr/shared';
+import { Filtration, getGridFiltration, Sorting, ViewMode } from '@soldr/shared';
 
 import * as Actions from './modules-instances.actions';
 
@@ -92,18 +92,10 @@ export const reducer = createReducer(
     })),
     on(Actions.fetchModuleEventsFilterItemsFailure, (state) => ({ ...state, isLoadingModuleEventsFilterItems: false })),
 
-    on(Actions.setEventsGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.eventsGridFiltration.filter(
-            (item: Filtration) => item.field !== filtration.field
-        );
-
-        return {
-            ...state,
-            eventsGridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])]
-        };
-    }),
+    on(Actions.setEventsGridFiltration, (state, { filtration }) => ({
+        ...state,
+        eventsGridFiltration: getGridFiltration(filtration, state.eventsGridFiltration)
+    })),
     on(Actions.setEventsGridSearch, (state, { value }) => ({ ...state, eventsGridSearch: value })),
     on(Actions.resetEventsFiltration, (state) => ({ ...state, eventsGridFiltration: [] })),
     on(Actions.setEventsGridSorting, (state, { sorting }) => ({ ...state, eventsSorting: sorting })),

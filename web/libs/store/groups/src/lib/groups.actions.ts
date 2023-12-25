@@ -88,6 +88,8 @@ export enum ActionType {
 
     SetFiltrationGrid = '[groups] Set filtration grid',
     SetFiltrationGridByTag = '[groups] Set filtration grid by tag',
+    SetAgentsGridFiltrationByTag = '[groups] Set agents filtration grid by tag',
+    SetPoliciesGridFiltrationByTag = '[groups] Set policies filtration grid by tag',
     SetSearchGrid = '[groups] Set search grid',
     ResetFiltration = '[groups] Reset filtration',
     SetGridSorting = '[groups] Set sorting grid',
@@ -238,6 +240,14 @@ export const selectPolicy = createAction(ActionType.SelectPolicy, props<{ id: nu
 
 export const setGridFiltration = createAction(ActionType.SetFiltrationGrid, props<{ filtration: Filtration }>());
 export const setGridFiltrationByTag = createAction(ActionType.SetFiltrationGridByTag, props<{ tag: string }>());
+export const setAgentsGridFiltrationByTag = createAction(
+    ActionType.SetAgentsGridFiltrationByTag,
+    props<{ tag: string }>()
+);
+export const setPoliciesGridFiltrationByTag = createAction(
+    ActionType.SetPoliciesGridFiltrationByTag,
+    props<{ tag: string }>()
+);
 export const setGridSearch = createAction(ActionType.SetSearchGrid, props<{ value: string }>());
 export const resetFiltration = createAction(ActionType.ResetFiltration);
 export const setGridSorting = createAction(ActionType.SetGridSorting, props<{ sorting: Sorting }>());

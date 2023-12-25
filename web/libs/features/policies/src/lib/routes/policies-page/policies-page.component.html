@@ -1,11 +1,12 @@
 <ng-container
     *ngIf="({
+        gridFiltrationByField: gridFiltrationByField$ | async,
         language: language$ | async,
         page: page$ | async,
+        policyModules: policyModules$ | async,
         selected: selected$ | async,
         selectedGroupsTags: selectedGroupsTags$ | async,
-        total: total$ | async,
-        policyModules: policyModules$ | async
+        total: total$ | async
     }) as data">
     <ng-container *transloco="let tShared; read: 'shared'">
         <ng-container *transloco="let tCommon; read: 'common'">
@@ -412,7 +413,7 @@
                                         [title]="t('Policies.PoliciesList.GridColumnsTitle.Os')"
                                         [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByOs')"
                                         [multiple]="true"
-                                        [selectedValues]="(gridFiltrationByField$ | async).module_os?.value"
+                                        [selectedValues]="data.gridFiltrationByField.module_os?.value"
                                         (changeValue)="onGridFilter($event)">
                                         <soldr-filter-item
                                             *ngFor="let item of gridColumnsFilters?.os"
@@ -427,7 +428,7 @@
                                         [title]="t('Policies.PoliciesList.DropdownButtonText.Modules')"
                                         [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByModule')"
                                         [multiple]="true"
-                                        [selectedValues]="(gridFiltrationByField$ | async).module_name?.value"
+                                        [selectedValues]="data.gridFiltrationByField.module_name?.value"
                                         (changeValue)="onGridFilter($event)">
                                         <soldr-filter-item
                                             *ngFor="let item of gridColumnsFilters?.modules"
@@ -441,7 +442,7 @@
                                         [field]="'tags'"
                                         [title]="tShared('Shared.Pseudo.GridColumnsTitle.Tags')"
                                         [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByTag')"
-                                        [selectedValues]="(gridFiltrationByField$ | async).tags?.value"
+                                        [selectedValues]="data.gridFiltrationByField.tags?.value"
                                         [multiple]="true"
                                         (changeValue)="onGridFilter($event)">
                                         <soldr-filter-item
@@ -456,7 +457,7 @@
                                         [field]="'group_id'"
                                         [title]="t('Policies.PoliciesList.GridColumnsTitle.Groups')"
                                         [placeholder]="t('Policies.PoliciesList.InputPlaceholder.FilterByGroup')"
-                                        [selectedValues]="(gridFiltrationByField$ | async).group_id?.value"
+                                        [selectedValues]="data.gridFiltrationByField.group_id?.value"
                                         [multiple]="true"
                                         (changeValue)="onGridFilter($event)">
                                         <soldr-filter-item

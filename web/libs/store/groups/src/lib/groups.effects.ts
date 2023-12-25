@@ -276,6 +276,8 @@ export class GroupsEffects {
                 ...[
                     GroupsActions.setGridFiltration,
                     GroupsActions.setGridFiltrationByTag,
+                    GroupsActions.setAgentsGridFiltrationByTag,
+                    GroupsActions.setPoliciesGridFiltrationByTag,
                     GroupsActions.setGridSearch,
                     GroupsActions.setGridSorting,
                     GroupsActions.resetFiltration

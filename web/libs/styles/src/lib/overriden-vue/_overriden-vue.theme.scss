@@ -26,4 +26,12 @@
     .vue_error-text {
         color: theming.mc-color(map-get($theme, error), 400) !important;
     }
+
+    .el-pagination .el-select .el-input .el-input__inner {
+        border-color: map-get($theme, foreground, divider);
+    }
+
+    .el-tabs--left .el-tabs__header.is-left {
+        margin-right: theming.$size-l;
+    }
 }

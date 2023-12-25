@@ -9,7 +9,7 @@ import {
     privateEventsToModels,
     Event
 } from '@soldr/models';
-import { Filtration, Sorting } from '@soldr/shared';
+import { Filtration, getGridFiltration, Sorting } from '@soldr/shared';
 
 import * as AgentCardActions from './agent-card.actions';
 
@@ -96,18 +96,10 @@ export const reducer = createReducer(
     })),
     on(AgentCardActions.fetchEventFilterItemsFailure, (state) => ({ ...state, isLoadingEventFilterItems: false })),
 
-    on(AgentCardActions.setEventsGridFiltration, (state, { filtration }) => {
-        const needRemoveFiltration =
-            Array.isArray(filtration.value) && filtration.value.length === 1 && !filtration.value[0];
-        const updatedFiltration = state.eventsGridFiltration.filter(
-            (item: Filtration) => item.field !== filtration.field
-        );
-
-        return {
-            ...state,
-            eventsGridFiltration: [...updatedFiltration, ...(needRemoveFiltration ? [] : [filtration])]
-        };
-    }),
+    on(AgentCardActions.setEventsGridFiltration, (state, { filtration }) => ({
+        ...state,
+        eventsGridFiltration: getGridFiltration(filtration, state.eventsGridFiltration)
+    })),
     on(AgentCardActions.setEventsGridSearch, (state, { value }) => ({ ...state, eventsGridSearch: value })),
     on(AgentCardActions.resetEventsFiltration, (state) => ({ ...state, eventsGridFiltration: [] })),
     on(AgentCardActions.setEventsGridSorting, (state, { sorting }) => ({ ...state, eventsSorting: sorting })),

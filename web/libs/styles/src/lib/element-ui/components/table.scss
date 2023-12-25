@@ -48,10 +48,6 @@
             }
         }
 
-        &::before {
-            @include mixins.extend-rule(border-pseudo);
-        }
-
         // table--border
         @include mixins.m(border) {
             th {

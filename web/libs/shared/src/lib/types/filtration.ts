@@ -6,3 +6,5 @@ export interface Filtration {
     field: string;
     value: FiltrationValue;
 }
+
+export type GridFilters = { [key: string]: Filtration };
